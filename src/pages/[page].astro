@@ -1,0 +1,65 @@
+---
+// Static pages (about, contact, privacy, terms, disclaimer, disclosure).
+// Copy lives in SQL (site_content, twoai/static/*.json), is rendered by the
+// pipeline into twoai-content/static/, and is only read here. Nothing on this
+// page is authored in the template.
+import Base from '../layouts/Base.astro';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+
+export function getStaticPaths() {
+  if (!existsSync('content/static')) return [];
+  return readdirSync('content/static')
+    .filter((f) => f.endsWith('.json'))
+    .map((f) => {
+      const d = JSON.parse(readFileSync(`content/static/${f}`, 'utf8'));
+      return { params: { page: d.slug }, props: { d } };
+    });
+}
+const { d } = Astro.props;
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: d.title,
+  description: d.description,
+  url: `https://theworldofai.org/${d.slug}/`,
+  dateModified: d.updated,
+  isPartOf: { '@type': 'WebSite', name: 'The World of AI', url: 'https://theworldofai.org/' },
+  publisher: {
+    '@type': 'Organization',
+    name: 'SRJ Consulting & Services LLC',
+    url: 'https://srjconsultingservices.com/',
+  },
+});
+---
+
+<Base title={`${d.title} — The World of AI`} description={d.description} jsonld={jsonld}>
+  <article class="doc">
+    <h1>{d.title}</h1>
+    <p class="lede">{d.description}</p>
+    <p class="verified">Last updated: {d.updated}</p>
+    {d.sections.map((s) => (
+      <section>
+        <h2>{s.h}</h2>
+        <div set:html={s.body} />
+      </section>
+    ))}
+    <p class="doc-foot">
+      Questions about this page? Email
+      <a href="mailto:info@srjconsultingservices.com">info@srjconsultingservices.com</a>.
+    </p>
+  </article>
+</Base>
+
+<style>
+  .doc { max-width: 760px; }
+  .lede { font-size: 1.08rem; color: #3d3d46; margin: 0 0 .5em; }
+  .verified { font-size: .82rem; color: var(--gray); margin: 0 0 2.2em;
+    padding-bottom: 1.2em; border-bottom: 1px solid #e7e7ee; }
+  .doc section { margin-bottom: 1.9em; }
+  .doc h2 { font-size: 1.22rem; margin-top: 0; }
+  .doc :global(p) { margin: 0 0 .9em; }
+  .doc :global(ul) { margin: 0 0 .9em; padding-left: 1.2em; }
+  .doc :global(li) { margin-bottom: .4em; }
+  .doc-foot { margin-top: 2.6em; padding-top: 1.2em; border-top: 1px solid #e7e7ee;
+    font-size: .9rem; color: var(--gray); }
+</style>
