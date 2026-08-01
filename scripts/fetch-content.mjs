@@ -15,7 +15,7 @@ mkdirSync('content', { recursive: true });
 for (const d of dirs) mkdirSync(`content/${d}`, { recursive: true });
 
 try {
-  execSync(`curl -sL ${REPO}/archive/refs/heads/main.tar.gz -o /tmp/twoai-content.tar.gz`, { stdio: 'inherit' });
+  execSync(`curl -fsL ${REPO}/archive/refs/heads/main.tar.gz -o /tmp/twoai-content.tar.gz`, { stdio: 'inherit' });
   execSync('mkdir -p /tmp/twoai-content && tar -xzf /tmp/twoai-content.tar.gz -C /tmp/twoai-content --strip-components=1', { stdio: 'inherit' });
   for (const d of dirs) {
     if (existsSync(`/tmp/twoai-content/${d}`)) {

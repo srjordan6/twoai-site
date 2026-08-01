@@ -1,0 +1,16 @@
+// Static-assets-only Worker for theworldofai.org.
+//
+// This file's presence is load-bearing: without it, `npx wrangler deploy`
+// auto-configures the project, runs `astro add cloudflare`, and converts the
+// build to SSR ("hybrid"), which breaks the node:fs reads our pages use at
+// build time. With it, wrangler deploys ./dist as static assets and touches
+// nothing. There is deliberately no "main": this site has no worker code.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "twoai-site",
+  "compatibility_date": "2026-08-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "404-page"
+  }
+}

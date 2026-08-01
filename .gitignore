@@ -3,3 +3,4 @@ dist/
 .astro/
 content/
 public/api/
+.wrangler/
