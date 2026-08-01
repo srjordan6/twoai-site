@@ -1,0 +1,72 @@
+---
+import Base from '../../layouts/Base.astro';
+import { readFileSync, existsSync } from 'node:fs';
+
+export function getStaticPaths() {
+  if (!existsSync('content/lawsuits/lawsuits.json')) return [];
+  const s = JSON.parse(readFileSync('content/lawsuits/lawsuits.json', 'utf8'));
+  return (s.cases ?? []).map((c) => ({ params: { slug: c.slug }, props: { c, generated: s.generated ?? '' } }));
+}
+const { c, generated } = Astro.props;
+const lead = c.executive_summary || c.summary || `${c.case_name}, in the ${c.court}.`;
+const desc = lead.length > 152 ? lead.slice(0, 149) + '...' : lead;
+const timeline = Array.isArray(c.timeline) ? c.timeline : [];
+const claims = Array.isArray(c.claims) ? c.claims : [];
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: `${c.case_name}: case tracker`,
+  dateModified: generated,
+  author: { '@type': 'Organization', name: 'The World of AI' },
+  mainEntityOfPage: `https://theworldofai.org/ai-lawsuits/${c.slug}/`,
+});
+---
+<Base title={`${c.case_name} — AI lawsuit tracker`} description={desc} current="/ai-lawsuits/" jsonld={jsonld}>
+  <h1>{c.case_name}</h1>
+  <p class="meta-line"><span class="badge">{c.status_badge || c.status}</span> &nbsp; {c.category}
+    {c.filed_date && <> · Filed {c.filed_date}</>}{generated && <> · Verified {generated}</>}</p>
+  <p class="answer">{lead}</p>
+
+  <table>
+    <tbody>
+      <tr><td><b>Court</b></td><td>{c.court}{c.judge && <> · Judge {c.judge}</>}</td></tr>
+      {c.docket && <tr><td><b>Docket</b></td><td>{c.docket}</td></tr>}
+      <tr><td><b>Plaintiffs</b></td><td>{c.plaintiffs}</td></tr>
+      <tr><td><b>Defendants</b></td><td>{c.defendants}</td></tr>
+      <tr><td><b>Status</b></td><td>{c.status}</td></tr>
+      {c.latest_development && <tr><td><b>Latest</b></td>
+        <td>{c.latest_development_date && <b>{c.latest_development_date}: </b>}{c.latest_development}</td></tr>}
+    </tbody>
+  </table>
+
+  {c.why_it_matters && (<><h2>Why this case matters</h2><p>{c.why_it_matters}</p></>)}
+
+  {claims.length > 0 && (
+    <>
+      <h2>Claims</h2>
+      <ul>{claims.map((cl) => (<li>{typeof cl === 'string' ? cl : (cl.claim ?? JSON.stringify(cl))}</li>))}</ul>
+    </>
+  )}
+
+  {timeline.length > 0 && (
+    <>
+      <h2>Case timeline</h2>
+      <table>
+        <thead><tr><th>Date</th><th>Event</th></tr></thead>
+        <tbody>
+          {timeline.map((e) => (
+            <tr><td style="white-space:nowrap;">{e.date ?? ''}</td><td>{e.event ?? e.description ?? (typeof e === 'string' ? e : '')}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  )}
+
+  <p>
+    {c.courtlistener_url && <a href={c.courtlistener_url} rel="noopener">Docket on CourtListener</a>}
+    {c.courtlistener_url && c.source_url && ' · '}
+    {c.source_url && <a href={c.source_url} rel="noopener">Primary source</a>}
+  </p>
+  <div class="cite-box">Cite this page: <code>"{c.case_name}." The World of AI Lawsuit Tracker,
+    theworldofai.org/ai-lawsuits/{c.slug}/.{generated ? ` Verified ${generated}.` : ''}</code></div>
+</Base>

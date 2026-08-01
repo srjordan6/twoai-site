@@ -1,0 +1,16 @@
+name: Deploy to Cloudflare
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Cloudflare deploy hook
+        run: |
+          if [ -z "${{ secrets.TWOAI_DEPLOY_HOOK }}" ]; then
+            echo "TWOAI_DEPLOY_HOOK secret not set; Cloudflare's own git integration will build instead."
+            exit 0
+          fi
+          curl -fsS -X POST "${{ secrets.TWOAI_DEPLOY_HOOK }}"

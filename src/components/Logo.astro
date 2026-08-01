@@ -1,0 +1,38 @@
+---
+// The World of AI lockup, inline so it inherits the page's self-hosted Lora
+// and Poppins. Geometry matches the delivered logo kit: navy globe with
+// meridian, orange orbit at -22 degrees with a node riding the path.
+interface Props { variant?: 'horizontal' | 'stacked-navy'; }
+const { variant = 'horizontal' } = Astro.props;
+const onNavy = variant === 'stacked-navy';
+const ink = onNavy ? '#FFFFFF' : '#201868';
+---
+{variant === 'horizontal' ? (
+  <svg viewBox="0 0 560 96" width="286" height="49" role="img" aria-label="The World of AI">
+    <g fill="none" stroke="#201868" stroke-width="4.4">
+      <circle cx="48" cy="48" r="27.5" />
+      <ellipse cx="48" cy="48" rx="12.1" ry="27.5" stroke-width="2.4" opacity=".9" />
+    </g>
+    <ellipse cx="48" cy="48" rx="36.9" ry="13.8" transform="rotate(-22 48 48)"
+      fill="none" stroke="#F07800" stroke-width="3.1" />
+    <circle cx="61.7" cy="29.9" r="4.6" fill="#F07800" />
+    <text x="94" y="52" font-family="Lora, Georgia, serif" font-weight="700" font-size="40"
+      fill={ink}>The World of <tspan fill="#F07800">AI</tspan></text>
+    <text x="96" y="78" font-family="Poppins, sans-serif" font-weight="600" font-size="12.5"
+      letter-spacing="5.5" fill="#7A8A9E">THEWORLDOFAI.ORG</text>
+  </svg>
+) : (
+  <svg viewBox="0 0 300 210" width="150" height="105" role="img" aria-label="The World of AI">
+    <g fill="none" stroke={onNavy ? '#FFFFFF' : '#201868'} stroke-width="5.4">
+      <circle cx="150" cy="62" r="34" />
+      <ellipse cx="150" cy="62" rx="15" ry="34" stroke-width="2.9" opacity=".9" />
+    </g>
+    <ellipse cx="150" cy="62" rx="45.6" ry="17" transform="rotate(-22 150 62)"
+      fill="none" stroke="#F07800" stroke-width="3.8" />
+    <circle cx="167" cy="39.6" r="5.6" fill="#F07800" />
+    <text x="150" y="140" text-anchor="middle" font-family="Lora, Georgia, serif" font-weight="700"
+      font-size="30" fill={onNavy ? '#FFFFFF' : '#201868'}>The World of <tspan fill="#F07800">AI</tspan></text>
+    <text x="150" y="166" text-anchor="middle" font-family="Poppins, sans-serif" font-weight="600"
+      font-size="10.5" letter-spacing="4.2" fill={onNavy ? 'rgba(255,255,255,.6)' : '#7A8A9E'}>THEWORLDOFAI.ORG</text>
+  </svg>
+)}

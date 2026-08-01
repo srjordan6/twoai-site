@@ -1,0 +1,38 @@
+---
+import Base from '../../layouts/Base.astro';
+import { readFileSync, existsSync } from 'node:fs';
+
+const g = existsSync('content/glossary/glossary.json')
+  ? JSON.parse(readFileSync('content/glossary/glossary.json', 'utf8'))
+  : { terms: [], count: 0, generated: '' };
+const terms = [...(g.terms ?? [])].sort((a, b) => a.term.localeCompare(b.term));
+const byLetter = {};
+for (const t of terms) {
+  const L = t.term[0].toUpperCase();
+  (byLetter[L] ??= []).push(t);
+}
+const letters = Object.keys(byLetter).sort();
+const desc = `${g.count || terms.length} artificial intelligence terms defined in plain English, each with its origin and a real example. The AI glossary built to be cited.`;
+---
+<Base title={`AI Glossary: ${g.count || terms.length} artificial intelligence terms in plain English`} description={desc} current="/ai-glossary/">
+  <h1>The AI Glossary</h1>
+  <p class="answer">Plain-English definitions for <b>{g.count || terms.length} artificial
+    intelligence terms</b>, from agent to zero-shot, each with where the term came from and an
+    example of it in use. No jargon defined with more jargon.</p>
+  {g.generated && <p class="meta-line">Last verified: {g.generated}</p>}
+  <p>{letters.map((L) => (<a href={`#${L}`} style="margin-right:10px;font-weight:600;">{L}</a>))}</p>
+  {letters.map((L) => (
+    <section id={L}>
+      <h2>{L}</h2>
+      <ul class="grid">
+        {byLetter[L].map((t) => (
+          <li class="card">
+            <a href={`/ai-glossary/${t.slug}/`}>{t.term}</a>
+            <p>{t.category}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))}
+  {terms.length === 0 && <p>The first data synchronization is running; the glossary appears within the day.</p>}
+</Base>

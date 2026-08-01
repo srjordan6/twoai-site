@@ -1,0 +1,199 @@
+---
+// Site chrome for theworldofai.org. Brand: SRJ system (navy #201868, orange
+// #F07800, Lora headlines, Poppins body), fonts self-hosted via Fontsource.
+import '@fontsource/poppins/400.css';
+import '@fontsource/poppins/500.css';
+import '@fontsource/poppins/600.css';
+import '@fontsource/poppins/700.css';
+import '@fontsource/lora/600.css';
+import '@fontsource/lora/700.css';
+
+import Logo from '../components/Logo.astro';
+
+interface Props { title: string; description: string; current?: string; jsonld?: string; }
+const { title, description, current = '', jsonld } = Astro.props;
+const nav = [
+  { href: '/ai-laws/', label: 'AI Laws by State' },
+  { href: '/ai-glossary/', label: 'AI Glossary' },
+  { href: '/ai-lawsuits/', label: 'Lawsuit Tracker' },
+];
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title}</title>
+  <meta name="description" content={description} />
+  <link rel="canonical" href={canonical} />
+  <link rel="icon" type="image/svg+xml" href="/brand/mark.svg" />
+  <link rel="sitemap" href="/sitemap-index.xml" />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:url" content={canonical} />
+  <meta property="og:site_name" content="The World of AI" />
+  <meta property="og:image" content="https://theworldofai.org/brand/og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  {jsonld && <script type="application/ld+json" set:html={jsonld} />}
+</head>
+<body>
+  <header class="site-head">
+    <div class="wrap bar">
+      <a href="/" class="logo" aria-label="The World of AI home">
+        <Logo variant="horizontal" />
+      </a>
+      <nav aria-label="Primary" class="main-nav">
+        <ul>
+          {nav.map((n) => (
+            <li><a href={n.href} aria-current={current === n.href ? 'page' : undefined}>{n.label}</a></li>
+          ))}
+        </ul>
+      </nav>
+      <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Open menu"
+        aria-expanded="false" aria-controls="mobile-panel">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+  <div class="scrim" id="scrim"></div>
+  <nav class="mobile-panel" id="mobile-panel" aria-label="Mobile navigation" aria-hidden="true">
+    <ul>
+      {nav.map((n) => (
+        <li><a href={n.href} aria-current={current === n.href ? 'page' : undefined}>{n.label}</a></li>
+      ))}
+    </ul>
+  </nav>
+
+  <main class="wrap">
+    <slot />
+  </main>
+
+  <footer class="site-foot">
+    <div class="wrap foot-grid">
+      <div class="foot-mark">
+        <Logo variant="stacked-navy" />
+      </div>
+      <div>
+        <p class="foot-title">The World of AI</p>
+        <p>The atlas of artificial intelligence: laws, lawsuits, and language, rebuilt from primary
+          sources every day. Free to read, free to cite.</p>
+        <p class="foot-links">
+          <a href="/ai-laws/">AI Laws by State</a> · <a href="/ai-glossary/">Glossary</a> ·
+          <a href="/ai-lawsuits/">Lawsuit Tracker</a> · <a href="/api/laws.json">Data API</a> · <a href="/llms.txt">llms.txt</a>
+        </p>
+        <p class="foot-credit">An independent publication of
+          <a href="https://srjconsultingservices.com/" rel="noopener">SRJ Consulting &amp; Services LLC</a>,
+          Frisco, Texas. Facts trace to LegiScan, CourtListener, and the Federal Register.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script is:inline>
+  (function () {
+    var t = document.getElementById('nav-toggle'), p = document.getElementById('mobile-panel'),
+        s = document.getElementById('scrim');
+    if (!t || !p || !s) return;
+    function set(o) {
+      p.classList.toggle('open', o); s.classList.toggle('open', o); t.classList.toggle('open', o);
+      t.setAttribute('aria-expanded', o ? 'true' : 'false');
+      p.setAttribute('aria-hidden', o ? 'false' : 'true');
+      document.body.classList.toggle('locked', o);
+    }
+    t.addEventListener('click', function () { set(!p.classList.contains('open')); });
+    s.addEventListener('click', function () { set(false); });
+    p.addEventListener('click', function (e) { if (e.target.closest('a')) set(false); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') set(false); });
+  })();
+  </script>
+
+  <style is:global>
+    :root {
+      --navy: #201868; --navy-deep: #1A1357; --orange: #F07800;
+      --gray: #7A8A9E; --cream: #FFF6EC; --ink: #26262b;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; font-family: 'Poppins', system-ui, sans-serif; font-size: 16px;
+      line-height: 1.65; color: var(--ink); background: #fff; }
+    body.locked { overflow: hidden; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 22px; }
+    h1, h2, h3 { font-family: 'Lora', Georgia, serif; color: var(--navy); line-height: 1.22;
+      margin: 0 0 .5em; }
+    h1 { font-size: clamp(1.7rem, 4vw, 2.5rem); }
+    h2 { font-size: clamp(1.3rem, 3vw, 1.7rem); margin-top: 1.6em; }
+    a { color: var(--orange); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    main { min-height: 55vh; padding: 34px 22px 64px; }
+
+    .site-head { border-bottom: 3px solid var(--orange); background: #fff; position: sticky;
+      top: 0; z-index: 100; }
+    .bar { display: flex; align-items: center; justify-content: space-between; gap: 24px;
+      padding-top: 14px; padding-bottom: 14px; }
+    .logo svg { display: block; }
+    .main-nav ul { display: flex; gap: 26px; list-style: none; margin: 0; padding: 0; }
+    .main-nav a { font-weight: 500; font-size: 15px; color: var(--navy); }
+    .main-nav a[aria-current="page"] { color: var(--orange); }
+    .nav-toggle { display: none; background: none; border: 0; cursor: pointer; padding: 8px; }
+    .nav-toggle span { display: block; width: 24px; height: 2px; background: var(--navy);
+      margin: 5px 0; transition: transform .25s, opacity .2s; }
+    .nav-toggle.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .nav-toggle.open span:nth-child(2) { opacity: 0; }
+    .nav-toggle.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+    .scrim { position: fixed; inset: 0; background: rgba(16,12,52,.55); opacity: 0;
+      visibility: hidden; transition: opacity .25s; z-index: 998; }
+    .scrim.open { opacity: 1; visibility: visible; }
+    .mobile-panel { position: fixed; top: 0; right: 0; height: 100%; width: min(84vw, 340px);
+      background: var(--navy); transform: translateX(100%); transition: transform .3s;
+      z-index: 999; padding: 70px 0 0; visibility: hidden; }
+    .mobile-panel.open { transform: none; visibility: visible; }
+    .mobile-panel ul { list-style: none; margin: 0; padding: 0; }
+    .mobile-panel a { display: block; padding: 15px 26px; color: rgba(255,255,255,.9);
+      font-weight: 500; border-left: 3px solid transparent; }
+    .mobile-panel a[aria-current="page"], .mobile-panel a:hover { color: var(--orange);
+      border-left-color: var(--orange); text-decoration: none; background: rgba(255,255,255,.05); }
+    @media (max-width: 900px) { .main-nav { display: none; } .nav-toggle { display: block; } }
+
+    .site-foot { background: var(--navy-deep); color: rgba(255,255,255,.82); font-size: 14.5px; }
+    .foot-grid { display: grid; grid-template-columns: 170px 1fr; gap: 28px; padding: 44px 22px; }
+    .foot-mark { opacity: .95; }
+    .foot-title { font-family: 'Lora', serif; font-size: 19px; color: #fff; margin: 0 0 8px; }
+    .site-foot a { color: var(--orange); }
+    .foot-links { margin: 14px 0 6px; }
+    .foot-credit { color: rgba(255,255,255,.55); font-size: 13px; }
+    @media (max-width: 700px) { .foot-grid { grid-template-columns: 1fr; } .foot-mark { width: 110px; height: auto; } }
+
+    .answer { background: var(--cream); border-left: 4px solid var(--orange); padding: 16px 20px;
+      margin: 0 0 26px; font-size: 17px; }
+    .meta-line { color: var(--gray); font-size: 14px; margin: 0 0 18px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px;
+      list-style: none; margin: 22px 0; padding: 0; }
+    .card { border: 1px solid #e6e6ee; border-top: 3px solid var(--navy); padding: 16px 18px;
+      transition: border-color .15s, transform .15s; }
+    .card:hover { border-top-color: var(--orange); transform: translateY(-2px); }
+    .card a { color: var(--navy); font-weight: 600; }
+    .card .n { color: var(--orange); font-weight: 700; }
+    .card p { margin: 6px 0 0; font-size: 14px; color: var(--gray); }
+    table { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 15px; }
+    th { text-align: left; background: var(--navy); color: #fff; padding: 9px 12px;
+      font-weight: 600; font-size: 13.5px; }
+    td { padding: 9px 12px; border-bottom: 1px solid #ececf2; vertical-align: top; }
+    tr:hover td { background: var(--cream); }
+    .badge { display: inline-block; background: var(--cream); color: var(--navy);
+      border: 1px solid var(--orange); font-size: 12.5px; font-weight: 600; padding: 2px 10px;
+      border-radius: 20px; }
+    .cite-box { border: 1px dashed var(--gray); padding: 14px 18px; margin: 30px 0 0;
+      font-size: 13.5px; color: var(--gray); }
+    .cite-box code { color: var(--ink); font-size: 13px; }
+    .btn { display: inline-block; background: var(--orange); color: var(--navy); font-weight: 700;
+      padding: 12px 22px; font-size: 14px; letter-spacing: .04em; }
+    .btn:hover { background: #ff8c1a; text-decoration: none; }
+    .home-hero { padding: 26px 0 8px; max-width: 780px; }
+    .home-hero p.lead { font-size: 18.5px; }
+    .stat-row { display: flex; gap: 34px; flex-wrap: wrap; margin: 26px 0 8px; }
+    .stat b { display: block; font-family: 'Lora', serif; font-size: 34px; color: var(--navy);
+      line-height: 1.1; }
+    .stat span { color: var(--gray); font-size: 14px; }
+  </style>
+</body>
+</html>

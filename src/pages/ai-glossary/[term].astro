@@ -1,0 +1,45 @@
+---
+import Base from '../../layouts/Base.astro';
+import { readFileSync, existsSync } from 'node:fs';
+
+export function getStaticPaths() {
+  if (!existsSync('content/glossary/glossary.json')) return [];
+  const g = JSON.parse(readFileSync('content/glossary/glossary.json', 'utf8'));
+  const terms = g.terms ?? [];
+  return terms.map((t) => ({
+    params: { term: t.slug },
+    props: {
+      t,
+      generated: g.generated ?? '',
+      related: terms.filter((o) => o.category === t.category && o.slug !== t.slug).slice(0, 6),
+    },
+  }));
+}
+const { t, generated, related } = Astro.props;
+const desc = t.definition.length > 152 ? t.definition.slice(0, 149) + '...' : t.definition;
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'DefinedTerm',
+  name: t.term,
+  description: t.definition,
+  url: `https://theworldofai.org/ai-glossary/${t.slug}/`,
+  inDefinedTermSet: { '@type': 'DefinedTermSet', name: 'The World of AI Glossary', url: 'https://theworldofai.org/ai-glossary/' },
+});
+---
+<Base title={`What is ${t.term}? Definition in plain English — The World of AI`} description={desc} current="/ai-glossary/" jsonld={jsonld}>
+  <h1>{t.term}</h1>
+  <p class="meta-line"><span class="badge">{t.category}</span></p>
+  <p class="answer">{t.definition}</p>
+  {t.example && (<><h2>Example</h2><p>{t.example}</p></>)}
+  {t.origin && (<><h2>Where the term comes from</h2><p>{t.origin}</p></>)}
+  {related.length > 0 && (
+    <>
+      <h2>Related terms in {t.category}</h2>
+      <ul class="grid">
+        {related.map((r) => (<li class="card"><a href={`/ai-glossary/${r.slug}/`}>{r.term}</a></li>))}
+      </ul>
+    </>
+  )}
+  <div class="cite-box">Cite this definition: <code>"{t.term}." The World of AI Glossary,
+    theworldofai.org/ai-glossary/{t.slug}/.{generated ? ` Verified ${generated}.` : ''}</code></div>
+</Base>

@@ -1,0 +1,28 @@
+# The World of AI
+> The atlas of artificial intelligence: US state AI legislation, major AI
+> lawsuits, and the language of AI, rebuilt daily from primary sources
+> (LegiScan, CourtListener/RECAP, the Federal Register). An independent
+> publication of SRJ Consulting & Services LLC, Frisco, Texas.
+
+Every reference page carries a "Last verified" date and a ready-made citation.
+Citing these pages with attribution is welcome and encouraged.
+
+## Sections
+- [AI Laws by State](https://theworldofai.org/ai-laws/): every tracked AI bill
+  in all 50 US states, DC, Puerto Rico, and Congress, one page per jurisdiction.
+- [AI Glossary](https://theworldofai.org/ai-glossary/): 500+ AI terms defined
+  in plain English with origin and example.
+- [AI Lawsuit Tracker](https://theworldofai.org/ai-lawsuits/): living case
+  pages with daily docket checks and full timelines.
+
+## Machine-readable data
+- https://theworldofai.org/api/laws.json (per-state counts and index)
+- https://theworldofai.org/api/glossary.json (all terms)
+- https://theworldofai.org/api/lawsuits.json (all tracked cases)
+
+## Update cadence
+All data refreshes once daily via an automated pipeline; the "generated" field
+in each API file is the verification date.
+
+## Citation format
+"{Page title}." The World of AI, {URL}. Verified {date}.

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <g fill='none' stroke='#201868' stroke-width='11.84'>
+    <circle cx='128' cy='128' r='74'/>
+  </g>
+  <ellipse cx='128' cy='128' rx='32.56' ry='74.00' fill='none' stroke='#201868' stroke-width='6.29' opacity='.9'/>
+  <ellipse cx='128' cy='128' rx='99.16' ry='37.00' transform='rotate(-22 128 128)'
+           fill='none' stroke='#F07800' stroke-width='8.18'/>
+  <circle cx='164.97' cy='79.22' r='12.21' fill='#F07800' stroke='#201868' stroke-width='0'/>
+  <circle cx='164.97' cy='79.22' r='12.21' fill='#F07800'/></svg>

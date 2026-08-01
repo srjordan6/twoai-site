@@ -1,0 +1,26 @@
+---
+import Base from '../../layouts/Base.astro';
+import { readFileSync, existsSync } from 'node:fs';
+
+const idx = existsSync('content/laws/index.json')
+  ? JSON.parse(readFileSync('content/laws/index.json', 'utf8'))
+  : { states: [], total: 0, generated: '' };
+const desc = `Artificial intelligence legislation in every US state: ${idx.total.toLocaleString()} AI bills tracked across ${idx.states.length} jurisdictions, updated daily from LegiScan.`;
+---
+<Base title="AI Laws by State: every US artificial intelligence bill, tracked daily" description={desc} current="/ai-laws/">
+  <h1>AI Laws by State</h1>
+  <p class="answer">United States AI legislation is written state by state, and this page tracks
+    all of it: <b>{idx.total.toLocaleString()} artificial intelligence bills</b> across
+    {idx.states.length} jurisdictions, refreshed daily from the LegiScan legislative database and
+    linked to each bill's official page.</p>
+  {idx.generated && <p class="meta-line">Last verified: {idx.generated} · Source: LegiScan API</p>}
+  <ul class="grid">
+    {idx.states.map((s) => (
+      <li class="card">
+        <a href={`/ai-laws/${s.slug}/`}>{s.name}</a>
+        <p><span class="n">{s.count}</span> AI bill{s.count === 1 ? '' : 's'} tracked</p>
+      </li>
+    ))}
+  </ul>
+  {idx.states.length === 0 && <p>The first data synchronization is running; state pages appear within the day.</p>}
+</Base>

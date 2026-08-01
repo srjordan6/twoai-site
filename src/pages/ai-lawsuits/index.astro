@@ -1,0 +1,33 @@
+---
+import Base from '../../layouts/Base.astro';
+import { readFileSync, existsSync } from 'node:fs';
+
+const s = existsSync('content/lawsuits/lawsuits.json')
+  ? JSON.parse(readFileSync('content/lawsuits/lawsuits.json', 'utf8'))
+  : { cases: [], count: 0, generated: '' };
+const desc = `Live tracker for ${s.count} major AI lawsuits: copyright, privacy, and safety cases against AI companies, with court dockets checked daily.`;
+---
+<Base title={`AI Lawsuit Tracker: ${s.count} cases followed live — The World of AI`} description={desc} current="/ai-lawsuits/">
+  <h1>The AI Lawsuit Tracker</h1>
+  <p class="answer">The courts are deciding what AI may legally learn from and say. This tracker
+    follows <b>{s.count} major AI lawsuits</b> as living pages, not one-time headlines: dockets
+    are checked against CourtListener daily and each case page carries its full timeline.</p>
+  {s.generated && <p class="meta-line">Last verified: {s.generated} · Source: CourtListener / RECAP</p>}
+  {s.cases.length > 0 ? (
+    <table>
+      <thead><tr><th>Case</th><th>Category</th><th>Status</th><th>Latest development</th></tr></thead>
+      <tbody>
+        {s.cases.map((c) => (
+          <tr>
+            <td><a href={`/ai-lawsuits/${c.slug}/`}>{c.case_name}</a></td>
+            <td>{c.category}</td>
+            <td><span class="badge">{c.status_badge || c.status}</span></td>
+            <td>{c.latest_development_date && <b>{c.latest_development_date}: </b>}{c.latest_development}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  ) : (
+    <p>The first data synchronization is running; case pages appear within the day.</p>
+  )}
+</Base>

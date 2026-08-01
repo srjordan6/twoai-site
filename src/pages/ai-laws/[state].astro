@@ -1,0 +1,78 @@
+---
+import Base from '../../layouts/Base.astro';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+
+export function getStaticPaths() {
+  if (!existsSync('content/laws')) return [];
+  return readdirSync('content/laws')
+    .filter((f) => f.endsWith('.json') && f !== 'index.json')
+    .map((f) => {
+      const d = JSON.parse(readFileSync(`content/laws/${f}`, 'utf8'));
+      return { params: { state: d.slug }, props: { d } };
+    });
+}
+const { d } = Astro.props;
+const recent = d.bills.slice(0, 8).map((b) => b.number).join(', ');
+const desc = `${d.name} artificial intelligence legislation: ${d.count} AI bill${d.count === 1 ? '' : 's'} tracked with official links, updated daily from LegiScan.`;
+const faq = [
+  {
+    q: `How many AI bills does ${d.name} have?`,
+    a: `${d.name} currently has ${d.count} artificial intelligence bill${d.count === 1 ? '' : 's'} tracked in the LegiScan legislative database, as of ${d.generated}.`,
+  },
+  {
+    q: `What are the most recent AI bills in ${d.name}?`,
+    a: d.count ? `The most recently active include ${recent}. Each links to the full official text below.` : `No AI bills are currently tracked for ${d.name}; this page updates automatically the day one appears.`,
+  },
+];
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'AI Laws by State', item: 'https://theworldofai.org/ai-laws/' },
+        { '@type': 'ListItem', position: 2, name: d.name, item: `https://theworldofai.org/ai-laws/${d.slug}/` },
+      ],
+    },
+    {
+      '@type': 'FAQPage',
+      mainEntity: faq.map((f) => ({
+        '@type': 'Question', name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    },
+  ],
+});
+---
+<Base title={`${d.name} AI Laws (${d.count} bills tracked) — The World of AI`} description={desc} current="/ai-laws/" jsonld={jsonld}>
+  <h1>{d.name} AI Laws</h1>
+  <p class="answer"><b>{d.name} has {d.count} artificial intelligence bill{d.count === 1 ? '' : 's'}</b> tracked
+    as of {d.generated}, drawn daily from the LegiScan legislative database. Every bill below
+    links to its official page with full text, sponsors, and status history.</p>
+  <p class="meta-line">Last verified: {d.generated} · Source: LegiScan API ·
+    <a href="/ai-laws/">All states</a></p>
+
+  {d.count > 0 ? (
+    <table>
+      <thead><tr><th>Bill</th><th>Title</th><th>Last action date</th></tr></thead>
+      <tbody>
+        {d.bills.map((b) => (
+          <tr>
+            <td><a href={b.url} rel="noopener">{d.code} {b.number}</a></td>
+            <td>{b.title}</td>
+            <td>{b.date}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  ) : (
+    <p>No AI bills are currently tracked for {d.name}. The moment one enters the legislative
+      record, it appears here automatically.</p>
+  )}
+
+  <h2>Frequently asked questions</h2>
+  {faq.map((f) => (<><h3 style="font-family:Poppins;font-size:16.5px;">{f.q}</h3><p>{f.a}</p></>))}
+
+  <div class="cite-box">Cite this page: <code>"{d.name} AI Laws." The World of AI,
+    theworldofai.org/ai-laws/{d.slug}/. Verified {d.generated}.</code></div>
+</Base>
