@@ -1,0 +1,20 @@
+---
+import Base from '../../layouts/Base.astro';
+const desc = 'Free AI calculators: LLM token cost calculator and GPU VRAM estimator for running local models. No signup, answers instantly.';
+---
+<Base title="AI Calculators: token cost and VRAM estimators — The World of AI" description={desc} current="/calculators/">
+  <h1>AI Calculators</h1>
+  <p class="answer">Working tools for two questions every AI builder asks: <b>what will these
+    tokens cost</b>, and <b>how much GPU memory does this model need</b>. Enter your numbers,
+    get the answer instantly, nothing is uploaded anywhere.</p>
+  <ul class="grid">
+    <li class="card">
+      <a href="/calculators/token-cost/">LLM Token Cost Calculator</a>
+      <p>Turn per-million-token pricing and your usage into a monthly bill.</p>
+    </li>
+    <li class="card">
+      <a href="/calculators/vram/">GPU VRAM Estimator</a>
+      <p>How much memory a model needs at FP16, 8-bit, or 4-bit, with headroom for context.</p>
+    </li>
+  </ul>
+</Base>

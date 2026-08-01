@@ -1,0 +1,65 @@
+---
+import Base from '../../layouts/Base.astro';
+const desc = 'Free GPU VRAM estimator for local LLMs: enter parameter count and quantization to see how much memory a model needs, with KV-cache headroom.';
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org', '@type': 'WebApplication',
+  name: 'GPU VRAM Estimator', applicationCategory: 'DeveloperApplication',
+  operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  url: 'https://theworldofai.org/calculators/vram/',
+});
+---
+<Base title="GPU VRAM Estimator: memory needed to run any LLM locally — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
+  <h1>GPU VRAM Estimator</h1>
+  <p class="answer">A language model's memory footprint is its parameter count times the bytes
+    each parameter takes at your chosen precision, plus working overhead for the KV cache and
+    activations. A 7B model needs roughly 14 GB at FP16 but closer to 4-5 GB at 4-bit
+    quantization, which is why quantization is what makes local models practical. Enter any
+    model's parameter count below.</p>
+
+  <div class="calc">
+    <label>Model parameters (billions) <input type="number" id="params" value="7" step="0.5" min="0.1" /></label>
+    <label>Precision
+      <select id="prec">
+        <option value="2">FP16 / BF16 (2 bytes per parameter)</option>
+        <option value="1">8-bit (1 byte per parameter)</option>
+        <option value="0.55" selected>4-bit (about 0.55 bytes per parameter)</option>
+      </select>
+    </label>
+    <label>Overhead for KV cache and activations (%) <input type="number" id="oh" value="20" step="5" min="0" max="100" /></label>
+    <div class="out" id="out" aria-live="polite"></div>
+  </div>
+
+  <h2>How the math works</h2>
+  <p>Weights = parameters × bytes per parameter. The 4-bit figure is slightly above 0.5 bytes
+    because practical quantization formats keep some values at higher precision. Overhead covers
+    the KV cache, which grows with context length, so long-context work deserves a higher
+    percentage. The result is an estimate for inference; training takes several times more.</p>
+
+  <div class="cite-box">Cite this tool: <code>"GPU VRAM Estimator." The World of AI,
+    theworldofai.org/calculators/vram/.</code></div>
+
+  <script is:inline>
+  (function () {
+    function calc() {
+      var p = parseFloat(document.getElementById('params').value) || 0;
+      var b = parseFloat(document.getElementById('prec').value);
+      var oh = 1 + (parseFloat(document.getElementById('oh').value) || 0) / 100;
+      var gb = p * b * oh;
+      document.getElementById('out').innerHTML =
+        'Estimated VRAM: <b>' + gb.toLocaleString(undefined, { maximumFractionDigits: 1 }) + ' GB</b>' +
+        ' &nbsp;·&nbsp; weights alone: ' + (p * b).toLocaleString(undefined, { maximumFractionDigits: 1 }) + ' GB';
+    }
+    ['params', 'prec', 'oh'].forEach(function (i) {
+      document.getElementById(i).addEventListener('input', calc);
+      document.getElementById(i).addEventListener('change', calc);
+    });
+    calc();
+  })();
+  </script>
+  <style>
+    .calc { border: 1px solid #e6e6ee; border-top: 3px solid var(--orange); padding: 20px 22px; max-width: 560px; }
+    .calc label { display: block; margin: 0 0 12px; font-size: 14.5px; font-weight: 500; color: var(--navy); }
+    .calc input, .calc select { display: block; width: 100%; margin-top: 4px; padding: 9px 12px; font: inherit; border: 1px solid #ccd; background: #fff; }
+    .calc .out { margin-top: 16px; padding: 14px 16px; background: var(--cream); font-size: 17px; }
+  </style>
+</Base>

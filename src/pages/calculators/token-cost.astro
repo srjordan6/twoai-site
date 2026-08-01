@@ -1,0 +1,58 @@
+---
+import Base from '../../layouts/Base.astro';
+const desc = 'Free LLM token cost calculator: enter input and output price per million tokens and your usage to get cost per request and per month. Works for any model or provider.';
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org', '@type': 'WebApplication',
+  name: 'LLM Token Cost Calculator', applicationCategory: 'DeveloperApplication',
+  operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  url: 'https://theworldofai.org/calculators/token-cost/',
+});
+---
+<Base title="LLM Token Cost Calculator: price any model's API usage — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
+  <h1>LLM Token Cost Calculator</h1>
+  <p class="answer">API model pricing is quoted per million tokens, split into input (your prompt)
+    and output (the model's reply). Enter your model's two prices from its provider's pricing
+    page and your expected usage; this calculator turns them into cost per request and per month.
+    It works for any model from any provider, and nothing you type leaves this page.</p>
+
+  <div class="calc">
+    <label>Input price per 1M tokens ($) <input type="number" id="pin" value="3" step="0.01" min="0" /></label>
+    <label>Output price per 1M tokens ($) <input type="number" id="pout" value="15" step="0.01" min="0" /></label>
+    <label>Input tokens per request <input type="number" id="tin" value="2000" step="100" min="0" /></label>
+    <label>Output tokens per request <input type="number" id="tout" value="800" step="100" min="0" /></label>
+    <label>Requests per day <input type="number" id="req" value="1000" step="10" min="0" /></label>
+    <div class="out" id="out" aria-live="polite"></div>
+  </div>
+
+  <h2>How the math works</h2>
+  <p>Cost per request = (input tokens ÷ 1,000,000) × input price + (output tokens ÷ 1,000,000)
+    × output price. Monthly cost assumes 30 days. A rough rule of thumb for English text: one
+    token is about four characters, so 1,000 tokens is roughly 750 words.</p>
+  <p>Prices change often, which is exactly why this page does not hardcode any provider's
+    numbers: copy them from the provider's own pricing page and they are current by definition.</p>
+
+  <div class="cite-box">Cite this tool: <code>"LLM Token Cost Calculator." The World of AI,
+    theworldofai.org/calculators/token-cost/.</code></div>
+
+  <script is:inline>
+  (function () {
+    var ids = ['pin', 'pout', 'tin', 'tout', 'req'];
+    function calc() {
+      var v = {}; ids.forEach(function (i) { v[i] = parseFloat(document.getElementById(i).value) || 0; });
+      var per = (v.tin / 1e6) * v.pin + (v.tout / 1e6) * v.pout;
+      var day = per * v.req, mo = day * 30;
+      var f = function (n) { return n >= 100 ? n.toLocaleString(undefined, { maximumFractionDigits: 0 }) : n.toLocaleString(undefined, { maximumFractionDigits: n >= 1 ? 2 : 4 }); };
+      document.getElementById('out').innerHTML =
+        '<b>$' + f(per) + '</b> per request &nbsp;·&nbsp; <b>$' + f(day) + '</b> per day &nbsp;·&nbsp; <b>$' + f(mo) + '</b> per month';
+    }
+    ids.forEach(function (i) { document.getElementById(i).addEventListener('input', calc); });
+    calc();
+  })();
+  </script>
+  <style>
+    .calc { border: 1px solid #e6e6ee; border-top: 3px solid var(--orange); padding: 20px 22px; max-width: 560px; }
+    .calc label { display: block; margin: 0 0 12px; font-size: 14.5px; font-weight: 500; color: var(--navy); }
+    .calc input { display: block; width: 100%; margin-top: 4px; padding: 9px 12px; font: inherit; border: 1px solid #ccd; }
+    .calc .out { margin-top: 16px; padding: 14px 16px; background: var(--cream); font-size: 17px; }
+  </style>
+</Base>
