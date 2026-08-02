@@ -1,0 +1,102 @@
+---
+import Base from '../../layouts/Base.astro';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+
+export function getStaticPaths() {
+  if (!existsSync('content/tools')) return [];
+  return readdirSync('content/tools')
+    .filter((f) => f.endsWith('.json') && f !== 'index.json' && !f.startsWith('cat-'))
+    .map((f) => {
+      const t = JSON.parse(readFileSync(`content/tools/${f}`, 'utf8'));
+      return { params: { tool: t.slug }, props: { t } };
+    });
+}
+const { t } = Astro.props;
+const desc = (t.tagline || t.value || t.name).slice(0, 155);
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: t.name,
+  description: t.tagline || t.value,
+  applicationCategory: t.category || 'Artificial Intelligence',
+  url: `https://theworldofai.org/ai-tools/${t.slug}/`,
+  ...(t.vendor ? { author: { '@type': 'Organization', name: t.vendor } } : {}),
+});
+---
+<Base title={`${t.name}: what it does, what it costs, and where it falls short`} description={desc} current="/ai-tools/" jsonld={jsonld}>
+  <h1>{t.name}</h1>
+  {t.tagline && <p class="answer">{t.tagline}</p>}
+  <p class="meta-line">
+    {t.vendor && <>Vendor: {t.vendor} · </>}
+    {t.status && <>Status: {t.status} · </>}
+    {t.generated && <>Last verified: {t.generated}</>}
+  </p>
+  {t.url && <p><a href={t.url} rel="noopener nofollow">Visit the {t.name} site</a></p>}
+
+  {t.value && (<><h2>What it is for</h2><p>{t.value}</p></>)}
+
+  {t.use_cases?.length > 0 && (
+    <><h2>Where it fits</h2><ul>{t.use_cases.map((u) => <li>{u}</li>)}</ul></>
+  )}
+
+  {(t.pros?.length > 0 || t.cons?.length > 0) && (
+    <>
+      <h2>Strengths and weaknesses</h2>
+      {t.pros?.length > 0 && (<><h3>Strengths</h3><ul>{t.pros.map((p) => <li>{p}</li>)}</ul></>)}
+      {t.cons?.length > 0 && (<><h3>Weaknesses</h3><ul>{t.cons.map((c) => <li>{c}</li>)}</ul></>)}
+    </>
+  )}
+
+  {t.pricing?.length > 0 && (
+    <>
+      <h2>Pricing</h2>
+      <table>
+        <thead><tr><th>Tier</th><th>Model</th><th>Includes</th><th>Limits</th></tr></thead>
+        <tbody>
+          {t.pricing.map((p) => (
+            <tr><td>{p.tier}</td><td>{p.model}</td><td>{p.includes}</td><td>{p.limits}</td></tr>
+          ))}
+        </tbody>
+      </table>
+      <p class="meta-line">Pricing changes often. Confirm with the vendor before you buy.</p>
+    </>
+  )}
+
+  {(t.engine || t.quality || t.latency || t.files || t.api) && (
+    <>
+      <h2>How it works</h2>
+      {t.engine && <p><b>Engine.</b> {t.engine}</p>}
+      {t.quality && <p><b>Quality.</b> {t.quality}</p>}
+      {t.latency && <p><b>Speed.</b> {t.latency}</p>}
+      {t.files && <p><b>Files and context.</b> {t.files}</p>}
+      {t.api && <p><b>API.</b> {t.api}</p>}
+    </>
+  )}
+
+  {(t.governance_note || t.training_optout) && (
+    <>
+      <h2>Governance and data</h2>
+      {t.governance_note && <p>{t.governance_note}</p>}
+      {t.training_optout && <p><b>Training opt-out.</b> {t.training_optout}</p>}
+    </>
+  )}
+
+  {t.integrations?.length > 0 && (
+    <><h2>Integrations</h2><ul>{t.integrations.map((i) => <li>{i}</li>)}</ul></>
+  )}
+
+  {t.alternatives?.length > 0 && (
+    <><h2>Alternatives</h2><p>{t.alternatives.join(', ')}</p></>
+  )}
+
+  {t.audience?.length > 0 && (
+    <p class="meta-line">Best suited to: {t.audience.join(', ')}
+      {t.tags?.length > 0 && <> · {t.tags.join(' · ')}</>}</p>
+  )}
+
+  <div class="cite-box">Cite this profile: <code>"{t.name}." The World of AI Tools Directory,
+    theworldofai.org/ai-tools/{t.slug}/.{t.generated ? ` Verified ${t.generated}.` : ''}</code></div>
+
+  <p class="meta-line">We are not paid by the vendors we profile. Verdicts are never for sale:
+    <a href="/disclosure/">disclosure</a>.</p>
+</Base>

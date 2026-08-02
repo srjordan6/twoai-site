@@ -1,0 +1,55 @@
+---
+import Base from '../../layouts/Base.astro';
+import { readFileSync, existsSync } from 'node:fs';
+
+const idx = existsSync('content/tools/index.json')
+  ? JSON.parse(readFileSync('content/tools/index.json', 'utf8'))
+  : { total: 0, categories: [], profiled: [], generated: '' };
+const desc = `A catalog of ${idx.total} AI tools across ${idx.categories.length} categories, with in-depth profiles covering pricing, strengths, weaknesses, and governance notes.`;
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'AI Tools Directory',
+  description: desc,
+  url: 'https://theworldofai.org/ai-tools/',
+  dateModified: idx.generated,
+});
+---
+<Base title="AI Tools Directory: what each tool does, what it costs, what it risks" description={desc} current="/ai-tools/" jsonld={jsonld}>
+  <h1>AI Tools Directory</h1>
+  <p class="answer">This directory catalogs <b>{idx.total} AI tools</b> across {idx.categories.length} categories,
+    from chat assistants and coding agents to governance platforms. {idx.profiled.length} of them have
+    a full profile covering what the tool is actually for, how it is priced, where it is weak,
+    and what a vendor review should ask about. The rest are listed with a vendor link,
+    because a page holding nothing but a name is not worth your click.</p>
+  {idx.generated && <p class="meta-line">Last verified: {idx.generated} · Source: SRJ tool catalog</p>}
+
+  <h2>Browse by category</h2>
+  <ul class="grid">
+    {idx.categories.map((c) => (
+      <li class="card">
+        <a href={`/ai-tools/category/${c.slug}/`}>{c.name}</a>
+        <p><span class="n">{c.count}</span> tool{c.count === 1 ? '' : 's'}</p>
+      </li>
+    ))}
+  </ul>
+
+  {idx.profiled.length > 0 && (
+    <>
+      <h2>Tools with a full profile</h2>
+      <ul class="grid">
+        {idx.profiled.map((p) => (
+          <li class="card">
+            <a href={`/ai-tools/${p.slug}/`}>{p.name}</a>
+            {p.tagline && <p>{p.tagline}</p>}
+          </li>
+        ))}
+      </ul>
+    </>
+  )}
+
+  {idx.total === 0 && <p>The first data synchronization is running; tool pages appear within the day.</p>}
+
+  <p class="meta-line">How this directory is funded and what that never changes:
+    <a href="/disclosure/">read the disclosure</a>.</p>
+</Base>
