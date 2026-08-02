@@ -1,8 +1,9 @@
 # The World of AI
 > The atlas of artificial intelligence: US state AI legislation, major AI
-> lawsuits, and the language of AI, rebuilt daily from primary sources
-> (LegiScan, CourtListener/RECAP, the Federal Register). An independent
-> publication of SRJ Consulting & Services LLC, Frisco, Texas.
+> lawsuits, the language of AI, and the tools people actually use, rebuilt
+> daily from primary sources (LegiScan, CourtListener/RECAP, the Federal
+> Register). An independent publication of SRJ Consulting & Services LLC,
+> Frisco, Texas.
 
 Every reference page carries a "Last verified" date and a ready-made citation.
 Citing these pages with attribution is welcome and encouraged.
@@ -14,11 +15,22 @@ Citing these pages with attribution is welcome and encouraged.
   in plain English with origin and example.
 - [AI Lawsuit Tracker](https://theworldofai.org/ai-lawsuits/): living case
   pages with daily docket checks and full timelines.
+- [AI Tools Directory](https://theworldofai.org/ai-tools/): 320 tools across 23
+  categories, with in-depth profiles covering pricing, strengths, weaknesses,
+  and governance notes for the tools we have researched directly.
+- [AI Calculators](https://theworldofai.org/calculators/): token cost and GPU
+  VRAM estimators.
 
 ## Machine-readable data
 - https://theworldofai.org/api/laws.json (per-state counts and index)
 - https://theworldofai.org/api/glossary.json (all terms)
 - https://theworldofai.org/api/lawsuits.json (all tracked cases)
+- https://theworldofai.org/api/tools.json (tool catalog, categories, profiles)
+
+## About this publication
+- https://theworldofai.org/about/ (who publishes this and how pages are made)
+- https://theworldofai.org/contact/ (corrections, press, data questions)
+- https://theworldofai.org/disclosure/ (advertising and affiliate policy)
 
 ## Update cadence
 All data refreshes once daily via an automated pipeline; the "generated" field
