@@ -69,7 +69,7 @@ const jsonld = JSON.stringify({
       <h2>What the week was about</h2>
       <p>Bills and federal documents are grouped by subject using the language they use about
         themselves. An item can appear under more than one subject, and {a.unthemed_bills > 0
-          ? `${plural(a.unthemed_bills, 'bill')} matched none of these and are listed in the table below without a subject.`
+          ? `${plural(a.unthemed_bills, 'bill')} matched none of these, appearing below without a subject rather than being forced into one.`
           : 'every item this week matched at least one.'}</p>
       <dl class="themes">
         {themes.map((t) => (
