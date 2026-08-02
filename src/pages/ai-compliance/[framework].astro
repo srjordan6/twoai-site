@@ -1,0 +1,116 @@
+---
+/**
+ * One AI governance framework, standard, or enforcement record.
+ *
+ * Body HTML is SRJ's own writing, carried from site_content unchanged. While
+ * the copy at srjconsultingservices.com/ai-governance/ remains the indexed
+ * original, each page declares that URL as its canonical, so the two sites do
+ * not compete. Removing the row in twoai_canonicals flips a page to
+ * self-canonical on the next pipeline run.
+ */
+import Base from '../../layouts/Base.astro';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+
+export function getStaticPaths() {
+  if (!existsSync('content/compliance')) return [];
+  const files = readdirSync('content/compliance').filter((f) => f.endsWith('.json') && f !== 'index.json');
+  const titles = {};
+  for (const f of files) {
+    const d = JSON.parse(readFileSync(`content/compliance/${f}`, 'utf8'));
+    titles[d.slug] = d.title;
+  }
+  return files.map((f) => {
+    const d = JSON.parse(readFileSync(`content/compliance/${f}`, 'utf8'));
+    return { params: { framework: d.slug }, props: { d, titles } };
+  });
+}
+const { d, titles } = Astro.props;
+const desc = (d.meta_description || d.short || d.subtitle || d.title).slice(0, 300);
+const steps = d.howto?.steps || [];
+const cites = d.citations || [];
+const kids = (d.children || []).filter((k) => titles[k]);
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': steps.length ? 'HowTo' : 'Article',
+  name: d.howto?.name || d.title,
+  headline: d.title,
+  description: desc,
+  url: `https://theworldofai.org/ai-compliance/${d.slug}/`,
+  dateModified: d.generated,
+  ...(steps.length
+    ? { step: steps.map((s) => ({ '@type': 'HowToStep', name: s.name, text: s.text })) }
+    : {}),
+  publisher: {
+    '@type': 'Organization',
+    name: 'SRJ Consulting & Services LLC',
+    url: 'https://srjconsultingservices.com/',
+  },
+});
+---
+<Base title={d.seo_title || `${d.title} — The World of AI`} description={desc}
+  current="/ai-compliance/" jsonld={jsonld} canonicalOverride={d.canonical}>
+  <p class="meta-line"><a href="/ai-ecosystem/">AI Ecosystem</a> ·
+    <a href="/ai-compliance/">Governance frameworks</a>
+    {d.parent && titles[d.parent] && <> · <a href={`/ai-compliance/${d.parent}/`}>{titles[d.parent]}</a></>}</p>
+
+  <h1>{d.title}</h1>
+  {d.subtitle && <p class="lede">{d.subtitle}</p>}
+  {d.short && <p class="answer">{d.short}</p>}
+  {d.generated && <p class="meta-line">Last verified: {d.generated}</p>}
+
+  <div class="body" set:html={d.body_html} />
+
+  {steps.length > 0 && (
+    <>
+      <h2>{d.howto?.name || 'How to comply'}</h2>
+      <ol class="steps">
+        {steps.map((s) => (
+          <li><b>{s.name}.</b> {s.text}</li>
+        ))}
+      </ol>
+    </>
+  )}
+
+  {kids.length > 0 && (
+    <>
+      <h2>Within this framework</h2>
+      <ul>{kids.map((k) => <li><a href={`/ai-compliance/${k}/`}>{titles[k]}</a></li>)}</ul>
+    </>
+  )}
+
+  {cites.length > 0 && (
+    <>
+      <h2>Sources</h2>
+      <ul class="cites">
+        {cites.map((c) => (
+          <li>{c.url
+            ? <a href={c.url} rel="noopener">{c.title || c.url}</a>
+            : (c.title || '')}{c.publisher && <> · {c.publisher}</>}</li>
+        ))}
+      </ul>
+    </>
+  )}
+
+  <div class="cite-box">Cite this page: <code>"{d.title}." The World of AI,
+    theworldofai.org/ai-compliance/{d.slug}/.{d.generated ? ` Verified ${d.generated}.` : ''}</code></div>
+
+  <p class="meta-line">This is reference material, not legal advice. See our
+    <a href="/disclaimer/">disclaimer</a>. Advisory work on these frameworks is handled by
+    <a href="https://srjconsultingservices.com/" rel="noopener">SRJ Consulting &amp; Services</a>.</p>
+</Base>
+
+<style>
+  .lede { font-size: 1.08rem; color: #3d3d46; margin: 0 0 .6em; }
+  .body :global(h2) { font-size: 1.2rem; margin-top: 1.6em; }
+  .body :global(h3) { font-size: 1.03rem; margin-top: 1.3em; }
+  .body :global(p) { margin: 0 0 .9em; }
+  .body :global(ul), .body :global(ol) { margin: 0 0 1em; padding-left: 1.2em; }
+  .body :global(li) { margin-bottom: .4em; }
+  .body :global(table) { width: 100%; border-collapse: collapse; margin: 0 0 1.2em; }
+  .body :global(th), .body :global(td) {
+    border: 1px solid #e7e7ee; padding: 8px 10px; text-align: left; font-size: .93rem;
+  }
+  .steps li { margin-bottom: .7em; }
+  .cites { font-size: .92rem; }
+  .cites li { margin-bottom: .35em; }
+</style>

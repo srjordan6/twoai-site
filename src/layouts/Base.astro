@@ -12,8 +12,8 @@ import Logo from '../components/Logo.astro';
 import Footer from '../components/Footer.astro';
 import Topbar from '../components/Topbar.astro';
 
-interface Props { title: string; description: string; current?: string; jsonld?: string; }
-const { title, description, current = '', jsonld } = Astro.props;
+interface Props { title: string; description: string; current?: string; jsonld?: string; canonicalOverride?: string; }
+const { title, description, current = '', jsonld, canonicalOverride } = Astro.props;
 const nav = [
   { href: '/ai-laws/', label: 'AI Laws by State' },
   { href: '/ai-glossary/', label: 'AI Glossary' },
@@ -21,7 +21,11 @@ const nav = [
   { href: '/ai-tools/', label: 'AI Tools' },
   { href: '/this-week-in-ai/', label: 'This Week' },
 ];
-const canonical = new URL(Astro.url.pathname, Astro.site).href;
+// Canonical defaults to this page's own URL. A page may override it while a
+// copy elsewhere is still the indexed original, which is how the governance
+// library migrates from srjconsultingservices.com without the two sites
+// competing with each other in the meantime.
+const canonical = canonicalOverride || new URL(Astro.url.pathname, Astro.site).href;
 ---
 <!doctype html>
 <html lang="en">

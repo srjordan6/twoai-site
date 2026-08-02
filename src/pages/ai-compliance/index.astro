@@ -1,0 +1,62 @@
+---
+/**
+ * The governance framework library hub, grouped by top-level framework so the
+ * hierarchy in the data is the hierarchy on the page.
+ */
+import Base from '../../layouts/Base.astro';
+import { readFileSync, existsSync } from 'node:fs';
+
+const idx = existsSync('content/compliance/index.json')
+  ? JSON.parse(readFileSync('content/compliance/index.json', 'utf8'))
+  : { frameworks: [], total: 0, generated: '' };
+const all = idx.frameworks || [];
+const tops = all.filter((f) => !f.parent);
+const kidsOf = (slug) => all.filter((f) => f.parent === slug);
+const desc =
+  `${idx.total} AI governance frameworks, standards, laws, and enforcement records explained in plain English: ` +
+  `ISO 42001, the NIST AI RMF, the EU AI Act, SOC 2, sector rules, and the agencies actually bringing cases.`;
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'AI Governance Frameworks',
+  description: desc,
+  url: 'https://theworldofai.org/ai-compliance/',
+  dateModified: idx.generated,
+});
+---
+<Base title="AI governance frameworks, standards, and enforcement, explained" description={desc} current="/ai-compliance/" jsonld={jsonld}>
+  <p class="meta-line"><a href="/ai-ecosystem/">AI Ecosystem</a> ·
+    <a href="/ai-ecosystem/enterprise-applications-governance-and-tools/">Enterprise Applications, Governance and Tools</a></p>
+  <h1>AI Governance Frameworks</h1>
+  <p class="answer">This library covers <b>{idx.total} frameworks, standards, laws, and
+    enforcement records</b> that govern how organisations build and use AI, each explained in
+    plain English with what it requires, who it applies to, and what to do about it. It is
+    reference material rather than legal advice.</p>
+  {idx.generated && <p class="meta-line">Last verified: {idx.generated}</p>}
+
+  {tops.map((f) => (
+    <div class="fw">
+      <h2><a href={`/ai-compliance/${f.slug}/`}>{f.title}</a></h2>
+      {f.subtitle && <p>{f.subtitle}</p>}
+      {kidsOf(f.slug).length > 0 && (
+        <p class="kids">{kidsOf(f.slug).map((k, i) => (
+          <>{i > 0 && ' · '}<a href={`/ai-compliance/${k.slug}/`}>{k.title}</a></>
+        ))}</p>
+      )}
+    </div>
+  ))}
+
+  {all.length === 0 && <p>The framework library publishes on the next pipeline run.</p>}
+
+  <p class="meta-line">Looking for legislation rather than frameworks? See
+    <a href="/ai-laws/">AI laws by state</a>. For cases in court, see the
+    <a href="/ai-lawsuits/">lawsuit tracker</a>.</p>
+</Base>
+
+<style>
+  .fw { padding: 1em 0; border-bottom: 1px solid #ececf2; }
+  .fw:last-of-type { border-bottom: 0; }
+  .fw h2 { margin: 0 0 .25em; font-size: 1.1rem; }
+  .fw p { margin: 0 0 .3em; color: #3d3d46; }
+  .kids { font-size: .9rem; }
+</style>
