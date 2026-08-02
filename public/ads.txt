@@ -1,1 +1,4 @@
-# ads.txt placeholder until AdSense approves a publisher ID.
+# ads.txt for theworldofai.org
+# Authorized Digital Sellers, IAB Tech Lab spec.
+# Publisher: SRJ Consulting & Services LLC.
+google.com, pub-4489551395134574, DIRECT, f08c47fec0942fa0

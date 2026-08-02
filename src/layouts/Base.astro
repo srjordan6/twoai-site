@@ -37,6 +37,14 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
   <meta property="og:site_name" content="The World of AI" />
   <meta property="og:image" content="https://theworldofai.org/brand/og.png" />
   <meta name="twitter:card" content="summary_large_image" />
+  {/* Google AdSense. The tag is sitewide because AdSense verification and ad
+      serving both require it on every page. Auto ads stay OFF in the AdSense
+      console: units are placed deliberately and never above the answer block.
+      EEA and UK consent is handled by Google's own certified message, enabled
+      under Privacy and messaging in the AdSense console, which is what makes
+      this tag lawful there without a separate CMP on our side. */}
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4489551395134574"
+    crossorigin="anonymous"></script>
   {jsonld && <script type="application/ld+json" set:html={jsonld} />}
 </head>
 <body>
