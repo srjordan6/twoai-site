@@ -1,0 +1,60 @@
+---
+import Base from '../../../layouts/Base.astro';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+
+export function getStaticPaths() {
+  if (!existsSync('content/tools')) return [];
+  const profiledSlugs = new Set(
+    readdirSync('content/tools')
+      .filter((f) => f.endsWith('.json') && f !== 'index.json' && !f.startsWith('cat-'))
+      .map((f) => JSON.parse(readFileSync(`content/tools/${f}`, 'utf8')))
+      .map((t) => [String(t.name).toLowerCase(), t.slug])
+  );
+  const nameToSlug = new Map([...profiledSlugs]);
+  return readdirSync('content/tools')
+    .filter((f) => f.startsWith('cat-'))
+    .map((f) => {
+      const c = JSON.parse(readFileSync(`content/tools/${f}`, 'utf8'));
+      return { params: { cat: c.slug }, props: { c, nameToSlug: Object.fromEntries(nameToSlug) } };
+    });
+}
+const { c, nameToSlug } = Astro.props;
+const desc = `${c.tools.length} AI tools in ${c.name}, with vendors, what each one does, and links to full profiles where we have them.`;
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: `${c.name} AI Tools`,
+  description: desc,
+  url: `https://theworldofai.org/ai-tools/category/${c.slug}/`,
+  dateModified: c.generated,
+});
+---
+<Base title={`${c.name}: ${c.tools.length} AI tools compared`} description={desc} current="/ai-tools/" jsonld={jsonld}>
+  <h1>{c.name}</h1>
+  <p class="answer">This category tracks <b>{c.tools.length} AI tools</b> in {c.name.toLowerCase()}.
+    Each entry names the vendor and what the tool actually does. Where we have researched a tool
+    in depth, the name links to a full profile with pricing, weaknesses, and governance notes.</p>
+  {c.generated && <p class="meta-line">Last verified: {c.generated} · Source: SRJ tool catalog</p>}
+
+  <table>
+    <thead><tr><th>Tool</th><th>Vendor</th><th>What it does</th></tr></thead>
+    <tbody>
+      {c.tools.map((t) => {
+        const slug = nameToSlug[String(t.name).toLowerCase()];
+        return (
+          <tr>
+            <td>{slug
+              ? <a href={`/ai-tools/${slug}/`}>{t.name}</a>
+              : (t.url ? <a href={t.url} rel="noopener nofollow">{t.name}</a> : t.name)}</td>
+            <td>{t.vendor}</td>
+            <td>{t.note}</td>
+          </tr>
+        );
+      })}
+    </tbody>
+  </table>
+
+  <p><a href="/ai-tools/">All AI tool categories</a></p>
+  <p class="meta-line">How this directory is funded, and what that never changes:
+    <a href="/disclosure/">disclosure</a>.</p>
+</Base>
