@@ -1,58 +1,104 @@
 ---
+/**
+ * Home page: the AI Ecosystem map.
+ *
+ * The site's front door is its structure, on Stephen's instruction 2026-08-02.
+ * A reader landing here should see the whole field laid out, what is covered
+ * and what is not, rather than a marketing page for four sections.
+ *
+ * This renders the same taxonomy as /ai-ecosystem/, so that path now redirects
+ * here rather than serving a second copy: two URLs with identical content is a
+ * duplicate we would be creating on purpose. The category pages stay where they
+ * are at /ai-ecosystem/{category}/.
+ */
 import Base from '../layouts/Base.astro';
 import { readFileSync, existsSync } from 'node:fs';
 
-const j = (p) => existsSync(p) ? JSON.parse(readFileSync(p, 'utf8')) : null;
+const j = (p) => (existsSync(p) ? JSON.parse(readFileSync(p, 'utf8')) : null);
+const idx = j('content/ecosystem/index.json') || { categories: [], generated: '' };
+const cats = idx.categories || [];
 const laws = j('content/laws/index.json');
 const glossary = j('content/glossary/glossary.json');
 const suits = j('content/lawsuits/lawsuits.json');
+
 const billTotal = laws?.total ?? 0;
 const termTotal = glossary?.count ?? glossary?.terms?.length ?? 0;
 const caseTotal = suits?.count ?? 0;
-const generated = laws?.generated ?? suits?.generated ?? '';
-const desc = 'The atlas of artificial intelligence: every state AI law, every major AI lawsuit, and the language of AI, rebuilt from primary sources daily.';
+const liveDomains = cats.reduce((n, c) => n + c.live, 0);
+const totalDomains = cats.reduce((n, c) => n + c.total, 0);
+const totalPages = cats.reduce((n, c) => n + c.pages, 0);
+const generated = idx.generated || laws?.generated || '';
+
+const desc =
+  'The AI Ecosystem: an atlas of artificial intelligence organised into four categories, ' +
+  'covering the technology, the companies and market, the research and reference layer, and ' +
+  'enterprise use and governance. Rebuilt daily from primary sources.';
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'The World of AI',
+  description: desc,
+  url: 'https://theworldofai.org/',
+  dateModified: generated,
+  hasPart: cats.map((c) => ({
+    '@type': 'CollectionPage',
+    name: c.name,
+    url: `https://theworldofai.org/ai-ecosystem/${c.slug}/`,
+  })),
+});
 ---
-<Base title="The World of AI — AI laws, lawsuits, and language, tracked daily" description={desc}>
+<Base title="The World of AI — the AI Ecosystem, mapped and tracked daily" description={desc} jsonld={jsonld}>
   <section class="home-hero">
-    <h1>The atlas of artificial intelligence.</h1>
-    <p class="lead">AI is being legislated, litigated, and renamed faster than anyone can follow by
-      hand. This site follows it by machine: every page below is rebuilt daily from primary
-      sources, LegiScan for legislation, CourtListener for dockets, and the Federal Register,
-      then published with the date it was last verified.</p>
+    <h1>The AI Ecosystem.</h1>
+    <p class="lead">AI is being built, funded, legislated, litigated, and renamed faster than
+      anyone can follow by hand. This site follows it by machine and lays the whole field out in
+      four categories. Every page is rebuilt daily from primary sources, LegiScan for
+      legislation, CourtListener for dockets, the Federal Register and govinfo for federal
+      action, and published with the date it was last verified.</p>
     <div class="stat-row">
       <div class="stat"><b>{billTotal.toLocaleString()}</b><span>state AI bills tracked</span></div>
       <div class="stat"><b>{termTotal}</b><span>terms defined</span></div>
       <div class="stat"><b>{caseTotal}</b><span>lawsuits followed live</span></div>
+      <div class="stat"><b>{liveDomains}/{totalDomains}</b><span>domains live</span></div>
     </div>
     {generated && <p class="meta-line">Last data refresh: {generated}</p>}
   </section>
 
-  <ul class="grid">
-    <li class="card">
-      <a href="/ai-laws/">AI Laws by State</a>
-      <p>Every AI bill in all 50 states, DC, Puerto Rico, and Congress, grouped by jurisdiction
-        and linked to the official text.</p>
-    </li>
-    <li class="card">
-      <a href="/ai-glossary/">AI Glossary</a>
-      <p>{termTotal || 'Hundreds of'} AI terms defined in plain English, each with origin and a
-        real example. Built to be cited.</p>
-    </li>
-    <li class="card">
-      <a href="/ai-lawsuits/">AI Lawsuit Tracker</a>
-      <p>Living case pages for the copyright, privacy, and safety suits shaping AI, with dockets
-        checked daily.</p>
-    </li>
-    <li class="card">
-      <a href="/calculators/">AI Calculators</a>
-      <p>Token cost and GPU VRAM estimators: enter your numbers, get the answer, free.</p>
-    </li>
-  </ul>
+  {cats.map((c) => (
+    <div class="cat">
+      <h2><a href={`/ai-ecosystem/${c.slug}/`}>{c.name}</a></h2>
+      <p>{c.blurb}</p>
+      <p class="meta-line">{c.live} of {c.total} domains live
+        {c.pages > 0 && <> · {c.pages.toLocaleString()} pages published</>}</p>
+    </div>
+  ))}
+
+  {cats.length === 0 && (
+    <ul class="grid">
+      <li class="card"><a href="/ai-laws/">AI Laws by State</a><p>Every AI bill in all 50 states, DC, Puerto Rico, and Congress.</p></li>
+      <li class="card"><a href="/ai-glossary/">AI Glossary</a><p>AI terms defined in plain English, built to be cited.</p></li>
+      <li class="card"><a href="/ai-lawsuits/">AI Lawsuit Tracker</a><p>Living case pages with dockets checked daily.</p></li>
+      <li class="card"><a href="/calculators/">AI Calculators</a><p>Cost, memory, context, energy, and ROI estimators.</p></li>
+    </ul>
+  )}
+
+  <h2>What is not here yet</h2>
+  <p>{totalDomains - liveDomains} of the {totalDomains} domains above are named but not yet
+    built, and they are listed rather than hidden on purpose. A reference whose gaps you cannot
+    see is a reference you cannot rely on. Nothing gets published until it traces to a source we
+    can name, so a section that is empty is empty rather than filled with guesses.</p>
 
   <h2>Free data, free citations</h2>
-  <p>Everything here is also machine-readable: <a href="/api/laws.json">laws.json</a>,
-    <a href="/api/glossary.json">glossary.json</a>, and
-    <a href="/api/lawsuits.json">lawsuits.json</a> mirror the pages exactly, and
+  <p>Everything here is machine-readable: <a href="/api/laws.json">laws.json</a>,
+    <a href="/api/glossary.json">glossary.json</a>, <a href="/api/lawsuits.json">lawsuits.json</a>,
+    <a href="/api/tools.json">tools.json</a>, <a href="/api/compliance.json">compliance.json</a>,
+    and <a href="/api/weeks.json">weeks.json</a> mirror the pages exactly, and
     <a href="/llms.txt">llms.txt</a> explains the site to AI assistants. Cite any page; every one
     carries its own verification date.</p>
 </Base>
+
+<style>
+  .cat { padding: 1.2em 0; border-bottom: 1px solid #ececf2; }
+  .cat h2 { margin: 0 0 .3em; font-size: 1.18rem; }
+  .cat p { margin: 0 0 .35em; }
+</style>

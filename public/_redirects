@@ -1,0 +1,5 @@
+# The AI Ecosystem map is the home page, so /ai-ecosystem/ would be a second
+# copy of it. Redirect rather than publish the duplicate. The category pages
+# beneath it are real and are not affected.
+/ai-ecosystem/  /  301
+/ai-ecosystem   /  301

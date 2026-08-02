@@ -32,12 +32,12 @@ const jsonld = JSON.stringify({
   isPartOf: {
     '@type': 'CollectionPage',
     name: 'The AI Ecosystem',
-    url: 'https://theworldofai.org/ai-ecosystem/',
+    url: 'https://theworldofai.org/',
   },
 });
 ---
 <Base title={`${c.name} — The AI Ecosystem`} description={desc} current="/ai-ecosystem/" jsonld={jsonld}>
-  <p class="meta-line"><a href="/ai-ecosystem/">The AI Ecosystem</a></p>
+  <p class="meta-line"><a href="/">The AI Ecosystem</a></p>
   <h1>{c.name}</h1>
   <p class="answer">{c.blurb} This category holds <b>{c.total} domains</b>, of which
     <b>{c.live} are live</b>{c.pages > 0 && <> across {c.pages.toLocaleString()} published pages</>}.</p>
