@@ -1,0 +1,86 @@
+---
+import Base from '../../layouts/Base.astro';
+const desc = 'Free context window calculator: convert words, pages, or characters into tokens and see whether your document fits in a model context window, with room left for the answer.';
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org', '@type': 'WebApplication',
+  name: 'Context Window Calculator', applicationCategory: 'DeveloperApplication',
+  operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  url: 'https://theworldofai.org/calculators/context-window/',
+});
+---
+<Base title="Context Window Calculator: will your document fit? — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
+  <h1>Context Window Calculator</h1>
+  <p class="answer">English text runs roughly <b>0.75 tokens per word</b>, or about 4 characters
+    per token, so a 200,000 token window holds on the order of 150,000 words, near enough two
+    full-length novels. The number that actually matters is what is left after your input,
+    because the model needs room to answer. Enter your document below.</p>
+
+  <div class="calc">
+    <label>Amount
+      <input type="number" id="amt" value="10000" step="500" min="0" />
+    </label>
+    <label>Measured in
+      <select id="unit">
+        <option value="words" selected>Words</option>
+        <option value="chars">Characters</option>
+        <option value="pages">Pages (500 words each)</option>
+      </select>
+    </label>
+    <label>Context window (tokens)
+      <select id="win">
+        <option value="8192">8K</option>
+        <option value="32768">32K</option>
+        <option value="128000" selected>128K</option>
+        <option value="200000">200K</option>
+        <option value="1000000">1M</option>
+      </select>
+    </label>
+    <label>Reserve for the answer (tokens) <input type="number" id="reserve" value="4000" step="500" min="0" /></label>
+    <div class="out" id="out" aria-live="polite"></div>
+  </div>
+
+  <h2>How the math works</h2>
+  <p>Tokens are pieces of words, not words. Common words are usually one token, longer or
+    unusual words split into several, and punctuation and spaces cost tokens too. The 0.75
+    tokens per word ratio holds well for ordinary English prose. It does not hold for code,
+    which is denser, for languages that do not use spaces, or for text full of names and
+    numbers, all of which tokenize higher. Treat the result as a planning estimate and confirm
+    against your model's own tokenizer before you rely on it.</p>
+  <p>The reserve matters more than people expect. Filling a window to the brim leaves nothing
+    for the response, and many APIs count input and output against the same limit.</p>
+
+  <div class="cite-box">Cite this tool: <code>"Context Window Calculator." The World of AI,
+    theworldofai.org/calculators/context-window/.</code></div>
+
+  <p class="meta-line">Costing the same text instead? Use the
+    <a href="/calculators/token-cost/">token cost calculator</a>.</p>
+
+  <script is:inline>
+  (function () {
+    function fmt(n) { return Math.round(n).toLocaleString(); }
+    function calc() {
+      var amt = parseFloat(document.getElementById('amt').value) || 0;
+      var unit = document.getElementById('unit').value;
+      var win = parseFloat(document.getElementById('win').value);
+      var res = parseFloat(document.getElementById('reserve').value) || 0;
+      var words = unit === 'words' ? amt : unit === 'pages' ? amt * 500 : amt / 5;
+      var tokens = unit === 'chars' ? amt / 4 : words * 0.75;
+      var usable = win - res;
+      var pct = usable > 0 ? (tokens / usable) * 100 : 0;
+      var verdict = tokens <= usable
+        ? 'Fits, with ' + fmt(usable - tokens) + ' tokens to spare.'
+        : 'Does not fit. You are over by ' + fmt(tokens - usable) +
+          ' tokens, so split the input or move to a larger window.';
+      document.getElementById('out').innerHTML =
+        '<b>' + fmt(tokens) + ' tokens</b> (about ' + fmt(words) + ' words)<br>' +
+        fmt(usable) + ' usable tokens after the reserve, so you are at ' +
+        pct.toFixed(0) + '% of it.<br>' + verdict;
+    }
+    ['amt', 'unit', 'win', 'reserve'].forEach(function (id) {
+      document.getElementById(id).addEventListener('input', calc);
+      document.getElementById(id).addEventListener('change', calc);
+    });
+    calc();
+  })();
+  </script>
+</Base>

@@ -1,0 +1,89 @@
+---
+import Base from '../../layouts/Base.astro';
+const desc = 'Free AI energy and carbon estimator: turn GPU hours into kilowatt hours and CO2e using datacenter PUE and a grid emissions factor you choose.';
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org', '@type': 'WebApplication',
+  name: 'AI Energy and Carbon Estimator', applicationCategory: 'UtilitiesApplication',
+  operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  url: 'https://theworldofai.org/calculators/energy-carbon/',
+});
+---
+<Base title="AI Energy and Carbon Estimator: kWh and CO2e from GPU hours — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
+  <h1>AI Energy and Carbon Estimator</h1>
+  <p class="answer">The energy a training or inference run consumes is <b>GPU power times hours
+    times PUE</b>, where PUE is the datacenter's power usage effectiveness, the multiplier that
+    accounts for cooling and everything else in the building. Emissions are that figure times
+    the carbon intensity of the grid supplying it, which varies by more than tenfold between
+    regions and is the single largest lever on the answer.</p>
+
+  <div class="calc">
+    <label>GPU hours <input type="number" id="hours" value="10000" step="100" min="0" /></label>
+    <label>GPU power draw (watts)
+      <select id="watts">
+        <option value="700" selected>H100 SXM, 700 W</option>
+        <option value="400">A100 80GB, 400 W</option>
+        <option value="1000">B200 class, 1000 W</option>
+        <option value="300">Workstation GPU, 300 W</option>
+      </select>
+    </label>
+    <label>Datacenter PUE <input type="number" id="pue" value="1.2" step="0.05" min="1" max="3" /></label>
+    <label>Grid carbon intensity (g CO2e per kWh)
+      <select id="grid">
+        <option value="369" selected>United States average, about 369</option>
+        <option value="230">European Union average, about 230</option>
+        <option value="30">Low-carbon grid, hydro or nuclear heavy, about 30</option>
+        <option value="580">Coal-heavy grid, about 580</option>
+        <option value="0">Contracted zero-carbon supply</option>
+      </select>
+    </label>
+    <label>Electricity price (USD per kWh) <input type="number" id="price" value="0.08" step="0.01" min="0" /></label>
+    <div class="out" id="out" aria-live="polite"></div>
+  </div>
+
+  <h2>How the math works and where the numbers come from</h2>
+  <p>Energy in kWh is watts ÷ 1000 × GPU hours × PUE. Emissions are kWh × grid intensity. The
+    GPU wattages are the manufacturers' published board power figures; a real run averages
+    somewhat below peak, so the result skews conservative. PUE of 1.2 is typical of a modern
+    hyperscale facility, while older enterprise datacenters run 1.5 to 2.0.</p>
+  <p>The grid intensity presets are rounded regional averages and are the weakest number here.
+    Real intensity swings hour by hour with what is on the grid, so a run scheduled overnight in
+    a wind-heavy region can differ several-fold from the same run at a summer peak. If you need
+    a defensible figure, use your provider's own regional data rather than an average, and say
+    which you used.</p>
+  <p>Excluded: embodied carbon in manufacturing the hardware, networking and storage outside the
+    GPU, and the water footprint of cooling. Each is a live research area and none is trivial.</p>
+
+  <div class="cite-box">Cite this tool: <code>"AI Energy and Carbon Estimator." The World of AI,
+    theworldofai.org/calculators/energy-carbon/.</code></div>
+
+  <script is:inline>
+  (function () {
+    function fmt(n, d) { return n.toLocaleString(undefined, { maximumFractionDigits: d === undefined ? 0 : d }); }
+    function calc() {
+      var h = parseFloat(document.getElementById('hours').value) || 0;
+      var w = parseFloat(document.getElementById('watts').value);
+      var pue = parseFloat(document.getElementById('pue').value) || 1;
+      var g = parseFloat(document.getElementById('grid').value);
+      var price = parseFloat(document.getElementById('price').value) || 0;
+
+      var kwh = (w / 1000) * h * pue;
+      var kg = (kwh * g) / 1000;
+      var cost = kwh * price;
+      var homes = kwh / 10500; // US average household annual electricity use
+      var miles = kg / 0.4;    // approx kg CO2e per mile, average petrol car
+
+      document.getElementById('out').innerHTML =
+        '<b>' + fmt(kwh) + ' kWh</b> and <b>' + fmt(kg) + ' kg CO2e</b><br>' +
+        '$' + fmt(cost) + ' of electricity at the price entered.<br>' +
+        'For scale, that is about ' + fmt(homes, 2) + ' US households\u2019 annual electricity use' +
+        (g > 0 ? ', and roughly the emissions of driving ' + fmt(miles) + ' miles.' : '.') +
+        '<br><span class="note">Excludes embodied carbon, networking, storage, and cooling water.</span>';
+    }
+    ['hours', 'watts', 'pue', 'grid', 'price'].forEach(function (id) {
+      document.getElementById(id).addEventListener('input', calc);
+      document.getElementById(id).addEventListener('change', calc);
+    });
+    calc();
+  })();
+  </script>
+</Base>

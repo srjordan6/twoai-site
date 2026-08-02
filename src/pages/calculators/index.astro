@@ -1,20 +1,56 @@
 ---
 import Base from '../../layouts/Base.astro';
-const desc = 'Free AI calculators: LLM token cost calculator and GPU VRAM estimator for running local models. No signup, answers instantly.';
+const desc = 'Free AI calculators: token cost, GPU VRAM, context window fit, training cost, energy and carbon, and AI ROI. No signup, nothing uploaded, answers instantly.';
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'AI Calculators',
+  description: desc,
+  url: 'https://theworldofai.org/calculators/',
+});
 ---
-<Base title="AI Calculators: token cost and VRAM estimators — The World of AI" description={desc} current="/calculators/">
+<Base title="AI Calculators: cost, memory, context, energy, and ROI — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
+  <p class="meta-line"><a href="/ai-ecosystem/">AI Ecosystem</a> ·
+    <a href="/ai-ecosystem/enterprise-applications-governance-and-tools/">Enterprise Applications, Governance and Tools</a></p>
   <h1>AI Calculators</h1>
-  <p class="answer">Working tools for two questions every AI builder asks: <b>what will these
-    tokens cost</b>, and <b>how much GPU memory does this model need</b>. Enter your numbers,
-    get the answer instantly, nothing is uploaded anywhere.</p>
+  <p class="answer">Six working tools for the questions that decide whether an AI project is
+    viable: <b>what it costs to run</b>, <b>what hardware it needs</b>, <b>whether your input
+    fits</b>, <b>what a training run costs</b>, <b>what it burns</b>, and <b>whether it pays
+    back</b>. Everything runs in your browser. Nothing you type is uploaded or stored.</p>
+
+  <h2>Cost and return</h2>
   <ul class="grid">
     <li class="card">
       <a href="/calculators/token-cost/">LLM Token Cost Calculator</a>
       <p>Turn per-million-token pricing and your usage into a monthly bill.</p>
     </li>
     <li class="card">
+      <a href="/calculators/training-cost/">Training Cost Estimator</a>
+      <p>GPU hours and dollars for a pre-training or fine-tuning run, from parameters and tokens.</p>
+    </li>
+    <li class="card">
+      <a href="/calculators/roi/">AI ROI Calculator</a>
+      <p>Payback period and the adoption rate a deployment has to hit to break even.</p>
+    </li>
+  </ul>
+
+  <h2>Capacity and footprint</h2>
+  <ul class="grid">
+    <li class="card">
       <a href="/calculators/vram/">GPU VRAM Estimator</a>
       <p>How much memory a model needs at FP16, 8-bit, or 4-bit, with headroom for context.</p>
     </li>
+    <li class="card">
+      <a href="/calculators/context-window/">Context Window Calculator</a>
+      <p>Words, pages, or characters into tokens, and whether it fits with room for the answer.</p>
+    </li>
+    <li class="card">
+      <a href="/calculators/energy-carbon/">Energy and Carbon Estimator</a>
+      <p>Kilowatt hours and CO2e from GPU hours, datacenter PUE, and grid intensity.</p>
+    </li>
   </ul>
+
+  <p class="meta-line">Each tool shows its own arithmetic and says what it leaves out, so you can
+    check the answer rather than trust it. These are planning tools, not financial or legal
+    advice: see our <a href="/disclaimer/">disclaimer</a>.</p>
 </Base>

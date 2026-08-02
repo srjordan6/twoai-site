@@ -1,0 +1,97 @@
+---
+import Base from '../../layouts/Base.astro';
+const desc = 'Free training and fine-tuning cost estimator: work out GPU hours and dollars from parameter count and training tokens, or price a run you have already scoped.';
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org', '@type': 'WebApplication',
+  name: 'Training Cost Estimator', applicationCategory: 'DeveloperApplication',
+  operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  url: 'https://theworldofai.org/calculators/training-cost/',
+});
+---
+<Base title="Training Cost Estimator: GPU hours and dollars for a model run — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
+  <h1>Training Cost Estimator</h1>
+  <p class="answer">Training compute is estimated with a rule that has held for years:
+    <b>roughly 6 FLOPs per parameter per token</b> for a full pre-training run, and about a
+    third of that for fine-tuning, which skips most of the backward pass work per token. Divide
+    by what your GPUs actually deliver, not their peak specification, and multiply by the hourly
+    rate. Enter a run below.</p>
+
+  <div class="calc">
+    <label>Model parameters (billions) <input type="number" id="params" value="7" step="0.5" min="0.01" /></label>
+    <label>Training tokens (billions) <input type="number" id="tokens" value="140" step="10" min="0.01" /></label>
+    <label>Run type
+      <select id="mode">
+        <option value="6" selected>Full pre-training (6 FLOPs per parameter-token)</option>
+        <option value="2">Fine-tuning, full weights (about 2)</option>
+        <option value="0.6">Parameter-efficient fine-tuning, LoRA style (about 0.6)</option>
+      </select>
+    </label>
+    <label>GPU peak throughput (TFLOP/s, BF16)
+      <select id="gpu">
+        <option value="989" selected>H100 SXM, about 989</option>
+        <option value="312">A100 80GB, about 312</option>
+        <option value="2250">B200 class, about 2250</option>
+      </select>
+    </label>
+    <label>Model FLOPs utilisation (%) <input type="number" id="mfu" value="40" step="5" min="1" max="90" /></label>
+    <label>Number of GPUs <input type="number" id="n" value="64" step="1" min="1" /></label>
+    <label>Price per GPU hour (USD) <input type="number" id="rate" value="2.50" step="0.10" min="0" /></label>
+    <div class="out" id="out" aria-live="polite"></div>
+  </div>
+
+  <h2>How the math works</h2>
+  <p>Total compute is 6 × parameters × tokens for pre-training. Realised throughput is the
+    GPU's peak figure times model FLOPs utilisation, which is the fraction of theoretical peak a
+    real run achieves once communication, memory movement, and pipeline bubbles are accounted
+    for. Published large runs commonly report 35 to 55 percent, so 40 is a reasonable default
+    and anything above 60 should be treated as optimistic.</p>
+  <p>What this deliberately excludes: data preparation, failed runs and restarts, evaluation,
+    checkpoint storage, and the salaries of the people doing it. On real projects those are
+    frequently larger than the compute line. Treat the output as the floor of a budget, not the
+    budget.</p>
+
+  <div class="cite-box">Cite this tool: <code>"Training Cost Estimator." The World of AI,
+    theworldofai.org/calculators/training-cost/.</code></div>
+
+  <p class="meta-line">Power and emissions for the same run:
+    <a href="/calculators/energy-carbon/">energy and carbon estimator</a>.</p>
+
+  <script is:inline>
+  (function () {
+    function fmt(n) {
+      if (n >= 1e9) return (n / 1e9).toFixed(2) + ' billion';
+      if (n >= 1e6) return (n / 1e6).toFixed(2) + ' million';
+      return Math.round(n).toLocaleString();
+    }
+    function calc() {
+      var p = parseFloat(document.getElementById('params').value) || 0;
+      var t = parseFloat(document.getElementById('tokens').value) || 0;
+      var k = parseFloat(document.getElementById('mode').value);
+      var peak = parseFloat(document.getElementById('gpu').value);
+      var mfu = (parseFloat(document.getElementById('mfu').value) || 0) / 100;
+      var n = parseFloat(document.getElementById('n').value) || 1;
+      var rate = parseFloat(document.getElementById('rate').value) || 0;
+
+      var flops = k * (p * 1e9) * (t * 1e9);
+      var perGpu = peak * 1e12 * mfu;
+      var gpuSeconds = perGpu > 0 ? flops / perGpu : 0;
+      var gpuHours = gpuSeconds / 3600;
+      var wallHours = gpuHours / n;
+      var cost = gpuHours * rate;
+      var days = wallHours / 24;
+
+      document.getElementById('out').innerHTML =
+        '<b>$' + fmt(cost) + '</b> in GPU time<br>' +
+        fmt(gpuHours) + ' GPU hours total, ' + (flops / 1e21).toFixed(2) + ' zettaFLOPs of compute<br>' +
+        'About ' + (wallHours < 48 ? wallHours.toFixed(1) + ' hours' : days.toFixed(1) + ' days') +
+        ' of wall-clock time on ' + n + ' GPUs.<br>' +
+        '<span class="note">Compute only. Data work, restarts, evaluation, and people are not included.</span>';
+    }
+    ['params', 'tokens', 'mode', 'gpu', 'mfu', 'n', 'rate'].forEach(function (id) {
+      document.getElementById(id).addEventListener('input', calc);
+      document.getElementById(id).addEventListener('change', calc);
+    });
+    calc();
+  })();
+  </script>
+</Base>
