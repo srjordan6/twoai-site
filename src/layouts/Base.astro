@@ -9,6 +9,7 @@ import '@fontsource/lora/600.css';
 import '@fontsource/lora/700.css';
 
 import Logo from '../components/Logo.astro';
+import Footer from '../components/Footer.astro';
 
 interface Props { title: string; description: string; current?: string; jsonld?: string; }
 const { title, description, current = '', jsonld } = Astro.props;
@@ -70,30 +71,9 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
     <slot />
   </main>
 
-  <footer class="site-foot">
-    <div class="wrap foot-grid">
-      <div class="foot-mark">
-        <Logo variant="stacked-navy" />
-      </div>
-      <div>
-        <p class="foot-title">The World of AI</p>
-        <p>The atlas of artificial intelligence: laws, lawsuits, and language, rebuilt from primary
-          sources every day. Free to read, free to cite.</p>
-        <p class="foot-links">
-          <a href="/ai-laws/">AI Laws by State</a> · <a href="/ai-glossary/">Glossary</a> ·
-          <a href="/ai-lawsuits/">Lawsuit Tracker</a> · <a href="/ai-tools/">AI Tools</a> · <a href="/calculators/">Calculators</a> · <a href="/api/laws.json">Data API</a> · <a href="/llms.txt">llms.txt</a>
-        </p>
-        <p class="foot-links foot-legal">
-          <a href="/about/">About</a> · <a href="/contact/">Contact</a> ·
-          <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a> ·
-          <a href="/disclaimer/">Disclaimer</a> · <a href="/disclosure/">Disclosure</a>
-        </p>
-        <p class="foot-credit">An independent publication of
-          <a href="https://srjconsultingservices.com/" rel="noopener">SRJ Consulting &amp; Services LLC</a>,
-          Frisco, Texas. Facts trace to LegiScan, CourtListener, and the Federal Register.</p>
-      </div>
-    </div>
-  </footer>
+  <Footer>
+    <Logo slot="logo" variant="stacked-navy" />
+  </Footer>
 
   <script is:inline>
   (function () {
@@ -159,15 +139,6 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
     .mobile-panel a[aria-current="page"], .mobile-panel a:hover { color: var(--orange);
       border-left-color: var(--orange); text-decoration: none; background: rgba(255,255,255,.05); }
     @media (max-width: 900px) { .main-nav { display: none; } .nav-toggle { display: block; } }
-
-    .site-foot { background: var(--navy-deep); color: rgba(255,255,255,.82); font-size: 14.5px; }
-    .foot-grid { display: grid; grid-template-columns: 170px 1fr; gap: 28px; padding: 44px 22px; }
-    .foot-mark { opacity: .95; }
-    .foot-title { font-family: 'Lora', serif; font-size: 19px; color: #fff; margin: 0 0 8px; }
-    .site-foot a { color: var(--orange); }
-    .foot-links { margin: 14px 0 6px; }
-    .foot-credit { color: rgba(255,255,255,.55); font-size: 13px; }
-    @media (max-width: 700px) { .foot-grid { grid-template-columns: 1fr; } .foot-mark { width: 110px; height: auto; } }
 
     .answer { background: var(--cream); border-left: 4px solid var(--orange); padding: 16px 20px;
       margin: 0 0 26px; font-size: 17px; }
