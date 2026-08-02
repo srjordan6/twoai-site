@@ -1,0 +1,107 @@
+---
+/**
+ * One week of AI policy and litigation, permalinked as /this-week-in-ai/{ISO week}/.
+ *
+ * Everything on the page comes from content/week/*.json, which the pipeline
+ * assembles from LegiScan, the Federal Register, and CourtListener. A week with
+ * nothing in it says so plainly rather than filling the space.
+ */
+import Base from '../../layouts/Base.astro';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+
+export function getStaticPaths() {
+  if (!existsSync('content/week')) return [];
+  return readdirSync('content/week')
+    .filter((f) => f.endsWith('.json') && f !== 'index.json')
+    .map((f) => {
+      const w = JSON.parse(readFileSync(`content/week/${f}`, 'utf8'));
+      return { params: { week: w.slug }, props: { w } };
+    });
+}
+const { w } = Astro.props;
+const c = w.counts || { bills: 0, federal: 0, courts: 0, total: 0 };
+const desc =
+  c.total === 0
+    ? `AI policy and litigation for ${w.start} to ${w.end}: no state bills moved, no federal AI documents published, and no tracked lawsuit saw docket activity.`
+    : `AI policy and litigation for ${w.start} to ${w.end}: ${c.bills} state bill movements, ${c.federal} federal documents, and ${c.courts} lawsuit updates, each linked to its primary record.`;
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: `AI policy and litigation, ${w.start} to ${w.end}`,
+  description: desc,
+  url: `https://theworldofai.org/this-week-in-ai/${w.slug}/`,
+  datePublished: w.end,
+  dateModified: w.generated,
+  isAccessibleForFree: true,
+  publisher: {
+    '@type': 'Organization',
+    name: 'SRJ Consulting & Services LLC',
+    url: 'https://srjconsultingservices.com/',
+  },
+});
+---
+<Base title={`This Week in AI: ${w.start} to ${w.end}`} description={desc} current="/this-week-in-ai/" jsonld={jsonld}>
+  <h1>{w.label}</h1>
+  <p class="answer">{desc}</p>
+  {w.generated && <p class="meta-line">Last verified: {w.generated} · Sources: LegiScan, the Federal Register, CourtListener</p>}
+
+  {c.bills > 0 && (
+    <>
+      <h2>State and federal legislation</h2>
+      <table>
+        <thead><tr><th>Jurisdiction</th><th>Bill</th><th>Title</th><th>Date</th></tr></thead>
+        <tbody>
+          {w.bills.map((b) => (
+            <tr>
+              <td><a href={`/ai-laws/${b.slug}/`}>{b.state}</a></td>
+              <td><a href={b.url} rel="noopener nofollow">{b.number}</a></td>
+              <td>{b.title}</td>
+              <td>{b.date}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p class="meta-line">A row here means the bill's LegiScan record changed status during
+        this week. It does not by itself mean the bill passed.</p>
+    </>
+  )}
+
+  {c.federal > 0 && (
+    <>
+      <h2>Federal Register</h2>
+      <ul>
+        {w.federal.map((f) => (
+          <li>
+            <a href={f.url} rel="noopener nofollow">{f.title}</a>
+            {f.note && <> ({f.note})</>} · {f.date}
+          </li>
+        ))}
+      </ul>
+    </>
+  )}
+
+  {c.courts > 0 && (
+    <>
+      <h2>Courts</h2>
+      <ul>
+        {w.courts.map((t) => (
+          <li>
+            <a href={t.url}>{t.title}</a>{t.state && <>, {t.state}</>} · {t.date}
+            {t.note && <><br /><span class="meta-line">{t.note}</span></>}
+          </li>
+        ))}
+      </ul>
+    </>
+  )}
+
+  {c.total === 0 && (
+    <p>Nothing moved this week that we track. That happens, particularly when legislatures
+      are out of session, and we would rather say so than manufacture a story.</p>
+  )}
+
+  <div class="cite-box">Cite this week: <code>"AI policy and litigation, {w.start} to {w.end}."
+    The World of AI, theworldofai.org/this-week-in-ai/{w.slug}/.
+    {w.generated ? ` Verified ${w.generated}.` : ''}</code></div>
+
+  <p><a href="/this-week-in-ai/">All weeks</a></p>
+</Base>
