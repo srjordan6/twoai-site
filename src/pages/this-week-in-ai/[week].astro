@@ -62,6 +62,15 @@ const jsonld = JSON.stringify({
 <Base title={`This Week in AI: ${w.start} to ${w.end}`} description={desc} current="/this-week-in-ai/" jsonld={jsonld}>
   <h1>{w.label}</h1>
   <p class="answer">{lede}</p>
+  {w.recap && (
+    <div class="recap">
+      {w.recap.split('\n').filter((p) => p.trim()).map((p) => <p>{p}</p>)}
+      <p class="meta-line recap-note">This recap is written by {w.recap_model || 'a language model'}
+        from the computed counts on this page only. It is not shown the individual bills or
+        cases, so it cannot characterise any single matter, and every figure in it appears in
+        the tables below.</p>
+    </div>
+  )}
   {w.generated && <p class="meta-line">Last verified: {w.generated} · Sources: LegiScan, the Federal Register, CourtListener</p>}
 
   {themes.length > 0 && (
@@ -148,6 +157,10 @@ const jsonld = JSON.stringify({
 </Base>
 
 <style>
+  .recap { margin: 0 0 1.6em; padding: 1.1em 1.3em; background: #fbfaff;
+    border-left: 3px solid var(--gray); border-radius: 0 4px 4px 0; }
+  .recap p { margin: 0 0 .7em; }
+  .recap-note { margin: .4em 0 0; font-size: .8rem; }
   .themes { margin: 0 0 1.4em; }
   .themes dt { font-weight: 600; margin-top: .9em; }
   .themes dt .n {
