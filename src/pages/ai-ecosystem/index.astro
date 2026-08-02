@@ -1,0 +1,63 @@
+---
+/**
+ * The AI Ecosystem root: the map of everything this site covers.
+ *
+ * Reads content/ecosystem/index.json, which the pipeline builds from
+ * twoai_taxonomy. Coverage numbers are computed, not asserted, so this page
+ * cannot claim more than the site has published.
+ */
+import Base from '../../layouts/Base.astro';
+import { readFileSync, existsSync } from 'node:fs';
+
+const idx = existsSync('content/ecosystem/index.json')
+  ? JSON.parse(readFileSync('content/ecosystem/index.json', 'utf8'))
+  : { categories: [], generated: '' };
+const cats = idx.categories || [];
+const liveDomains = cats.reduce((n, c) => n + c.live, 0);
+const totalDomains = cats.reduce((n, c) => n + c.total, 0);
+const totalPages = cats.reduce((n, c) => n + c.pages, 0);
+const desc =
+  `The AI Ecosystem: everything on this site organised into four categories and ${totalDomains} domains, ` +
+  `covering the technology, the companies and market, the research and reference layer, and enterprise use, governance, and tools.`;
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'The AI Ecosystem',
+  description: desc,
+  url: 'https://theworldofai.org/ai-ecosystem/',
+  dateModified: idx.generated,
+  hasPart: cats.map((c) => ({
+    '@type': 'CollectionPage',
+    name: c.name,
+    url: `https://theworldofai.org/ai-ecosystem/${c.slug}/`,
+  })),
+});
+---
+<Base title="The AI Ecosystem: a map of the whole field" description={desc} current="/ai-ecosystem/" jsonld={jsonld}>
+  <h1>The AI Ecosystem</h1>
+  <p class="answer">Everything published here belongs to one of four categories: the technology
+    itself, the companies and market around it, the research and reference layer, and what
+    organisations do with AI under the rules that constrain them. Together they cover
+    <b>{totalDomains} domains</b>, of which <b>{liveDomains} are live</b> today, holding
+    {totalPages.toLocaleString()} pages. The rest are named here rather than hidden, because a
+    reference whose gaps you cannot see is a reference you cannot rely on.</p>
+  {idx.generated && <p class="meta-line">Last verified: {idx.generated}</p>}
+
+  {cats.map((c) => (
+    <div class="cat">
+      <h2><a href={`/ai-ecosystem/${c.slug}/`}>{c.name}</a></h2>
+      <p>{c.blurb}</p>
+      <p class="meta-line">{c.live} of {c.total} domains live
+        {c.pages > 0 && <> · {c.pages.toLocaleString()} pages published</>}</p>
+    </div>
+  ))}
+
+  {cats.length === 0 && <p>The taxonomy publishes on the next pipeline run.</p>}
+</Base>
+
+<style>
+  .cat { padding: 1.2em 0; border-bottom: 1px solid #ececf2; }
+  .cat:last-of-type { border-bottom: 0; }
+  .cat h2 { margin: 0 0 .3em; font-size: 1.18rem; }
+  .cat p { margin: 0 0 .35em; }
+</style>

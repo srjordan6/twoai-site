@@ -1,0 +1,85 @@
+---
+/**
+ * One AI Ecosystem category, listing the domains beneath it.
+ *
+ * Live domains link to the section that exists. Planned domains are listed
+ * with their description and no link, which is the point: the reader can see
+ * what is coming and what is missing, and so can we.
+ */
+import Base from '../../layouts/Base.astro';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+
+export function getStaticPaths() {
+  if (!existsSync('content/ecosystem')) return [];
+  return readdirSync('content/ecosystem')
+    .filter((f) => f.endsWith('.json') && f !== 'index.json')
+    .map((f) => {
+      const c = JSON.parse(readFileSync(`content/ecosystem/${f}`, 'utf8'));
+      return { params: { category: c.slug }, props: { c } };
+    });
+}
+const { c } = Astro.props;
+const live = (c.domains || []).filter((d) => d.status === 'live');
+const rest = (c.domains || []).filter((d) => d.status !== 'live');
+const desc = `${c.name}: ${c.live} of ${c.total} domains live, ${c.pages} pages published. ${c.blurb}`.slice(0, 300);
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: c.name,
+  description: c.blurb,
+  url: `https://theworldofai.org/ai-ecosystem/${c.slug}/`,
+  dateModified: c.generated,
+  isPartOf: {
+    '@type': 'CollectionPage',
+    name: 'The AI Ecosystem',
+    url: 'https://theworldofai.org/ai-ecosystem/',
+  },
+});
+---
+<Base title={`${c.name} — The AI Ecosystem`} description={desc} current="/ai-ecosystem/" jsonld={jsonld}>
+  <p class="meta-line"><a href="/ai-ecosystem/">The AI Ecosystem</a></p>
+  <h1>{c.name}</h1>
+  <p class="answer">{c.blurb} This category holds <b>{c.total} domains</b>, of which
+    <b>{c.live} are live</b>{c.pages > 0 && <> across {c.pages.toLocaleString()} published pages</>}.</p>
+  {c.generated && <p class="meta-line">Last verified: {c.generated}</p>}
+
+  {live.length > 0 && (
+    <>
+      <h2>Live now</h2>
+      {live.map((d) => (
+        <div class="dom">
+          <h3><a href={d.path}>{d.name}</a> <span class="n">{d.pages.toLocaleString()}</span></h3>
+          <p>{d.blurb}</p>
+        </div>
+      ))}
+    </>
+  )}
+
+  {rest.length > 0 && (
+    <>
+      <h2>Not yet built</h2>
+      <p class="meta-line">Listed so the gaps are visible. Nothing here is published yet, and
+        none of it will be published from anything but a traceable source.</p>
+      {rest.map((d) => (
+        <div class="dom planned">
+          <h3>{d.name} <span class="tag">{d.status}</span></h3>
+          <p>{d.blurb}</p>
+        </div>
+      ))}
+    </>
+  )}
+</Base>
+
+<style>
+  .dom { padding: .95em 0; border-bottom: 1px solid #ececf2; }
+  .dom:last-of-type { border-bottom: 0; }
+  .dom h3 { margin: 0 0 .3em; font-size: 1.03rem; }
+  .dom p { margin: 0; color: #3d3d46; }
+  .dom.planned h3, .dom.planned p { color: #6b6b78; }
+  .n, .tag {
+    display: inline-block; margin-left: .4em; padding: 1px 8px;
+    background: var(--cream); border-radius: 10px;
+    font-size: .78rem; font-weight: 600; color: var(--navy);
+  }
+  .tag { background: #f0f0f5; color: #6b6b78; text-transform: lowercase; }
+</style>
