@@ -2,9 +2,12 @@
 /**
  * One week of AI policy and litigation, permalinked as /this-week-in-ai/{ISO week}/.
  *
- * Everything on the page comes from content/week/*.json, which the pipeline
- * assembles from LegiScan, the Federal Register, and CourtListener. A week with
- * nothing in it says so plainly rather than filling the space.
+ * The page is written to be read, not scanned. Every item carries the
+ * explanatory text the pipeline attached to it, and all of that text is
+ * sourced: LegiScan's own bill description, the Federal Register's abstract,
+ * which is government-written and public domain, and the why_it_matters
+ * paragraph from our lawsuit records. The thematic summary at the top is
+ * computed from the items below it, so the two can never disagree.
  */
 import Base from '../../layouts/Base.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
@@ -20,10 +23,26 @@ export function getStaticPaths() {
 }
 const { w } = Astro.props;
 const c = w.counts || { bills: 0, federal: 0, courts: 0, total: 0 };
-const desc =
-  c.total === 0
-    ? `AI policy and litigation for ${w.start} to ${w.end}: no state bills moved, no federal AI documents published, and no tracked lawsuit saw docket activity.`
-    : `AI policy and litigation for ${w.start} to ${w.end}: ${c.bills} state bill movements, ${c.federal} federal documents, and ${c.courts} lawsuit updates, each linked to its primary record.`;
+const a = w.analysis || { themes: [], jurisdictions: [], agencies: [], jurisdiction_count: 0 };
+const themes = a.themes || [];
+const jurs = a.jurisdictions || [];
+const plural = (n, s, p) => `${n} ${n === 1 ? s : p || s + 's'}`;
+
+// The opening paragraph. Built from counts, so it is true by construction.
+let lede;
+if (c.total === 0) {
+  lede = `Nothing we track moved between ${w.start} and ${w.end}. No state bill changed status, no AI document was published in the Federal Register, and no tracked lawsuit saw docket activity.`;
+} else {
+  const parts = [];
+  if (c.bills) parts.push(`${plural(c.bills, 'bill')} moved in ${plural(a.jurisdiction_count, 'jurisdiction')}`);
+  if (c.federal) parts.push(`${plural(c.federal, 'document')} appeared in the Federal Register`);
+  if (c.courts) parts.push(`${plural(c.courts, 'lawsuit')} saw new docket activity`);
+  const focus = themes.length
+    ? ` The week's dominant subject was ${themes[0].name.toLowerCase()}, on ${plural(themes[0].count, 'item')}.`
+    : '';
+  lede = `Between ${w.start} and ${w.end}, ${parts.join(', ')}.${focus}`;
+}
+const desc = lede.slice(0, 300);
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'Article',
@@ -42,61 +61,83 @@ const jsonld = JSON.stringify({
 ---
 <Base title={`This Week in AI: ${w.start} to ${w.end}`} description={desc} current="/this-week-in-ai/" jsonld={jsonld}>
   <h1>{w.label}</h1>
-  <p class="answer">{desc}</p>
+  <p class="answer">{lede}</p>
   {w.generated && <p class="meta-line">Last verified: {w.generated} · Sources: LegiScan, the Federal Register, CourtListener</p>}
+
+  {themes.length > 0 && (
+    <>
+      <h2>What the week was about</h2>
+      <p>Bills and federal documents are grouped by subject using the language they use about
+        themselves. An item can appear under more than one subject, and {a.unthemed_bills > 0
+          ? `${plural(a.unthemed_bills, 'bill')} matched none of these and are listed in the table below without a subject.`
+          : 'every item this week matched at least one.'}</p>
+      <dl class="themes">
+        {themes.map((t) => (
+          <>
+            <dt>{t.name} <span class="n">{t.count}</span></dt>
+            <dd>{t.blurb}{t.example && <> Example this week: {t.example}.</>}</dd>
+          </>
+        ))}
+      </dl>
+      {jurs.length > 1 && (
+        <p><b>Where the activity was.</b> {jurs.map((j, i) => (
+          <>{i > 0 && ', '}{j.name} ({j.count})</>
+        ))}{a.jurisdiction_count > jurs.length && <>, and {a.jurisdiction_count - jurs.length} more</>}.</p>
+      )}
+    </>
+  )}
 
   {c.bills > 0 && (
     <>
-      <h2>State and federal legislation</h2>
-      <table>
-        <thead><tr><th>Jurisdiction</th><th>Bill</th><th>Title</th><th>Date</th></tr></thead>
-        <tbody>
-          {w.bills.map((b) => (
-            <tr>
-              <td><a href={`/ai-laws/${b.slug}/`}>{b.state}</a></td>
-              <td><a href={b.url} rel="noopener nofollow">{b.number}</a></td>
-              <td>{b.title}</td>
-              <td>{b.date}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <p class="meta-line">A row here means the bill's LegiScan record changed status during
-        this week. It does not by itself mean the bill passed.</p>
+      <h2>Legislation</h2>
+      <p class="meta-line">A bill appears here because its LegiScan record changed status during
+        this week. That means it moved, not that it passed.</p>
+      {w.bills.map((b) => (
+        <div class="entry">
+          <h3><a href={b.url} rel="noopener nofollow">{b.state} {b.number}</a>: {b.title}</h3>
+          {b.detail && <p>{b.detail}</p>}
+          <p class="meta-line">{b.date}
+            {b.themes?.length > 0 && <> · {b.themes.join(' · ')}</>}
+            {' · '}<a href={`/ai-laws/${b.slug}/`}>All {b.state} AI bills</a></p>
+        </div>
+      ))}
     </>
   )}
 
   {c.federal > 0 && (
     <>
       <h2>Federal Register</h2>
-      <ul>
-        {w.federal.map((f) => (
-          <li>
-            <a href={f.url} rel="noopener nofollow">{f.title}</a>
-            {f.note && <> ({f.note})</>} · {f.date}
-          </li>
-        ))}
-      </ul>
+      <p class="meta-line">Rules, notices, and proposals published by federal agencies. The
+        summary under each is the agency's own abstract.</p>
+      {w.federal.map((f) => (
+        <div class="entry">
+          <h3><a href={f.url} rel="noopener nofollow">{f.title}</a></h3>
+          {f.detail && <p>{f.detail}</p>}
+          <p class="meta-line">{f.agency && <>{f.agency} · </>}{f.note && <>{f.note} · </>}{f.date}</p>
+        </div>
+      ))}
     </>
   )}
 
   {c.courts > 0 && (
     <>
       <h2>Courts</h2>
-      <ul>
-        {w.courts.map((t) => (
-          <li>
-            <a href={t.url}>{t.title}</a>{t.state && <>, {t.state}</>} · {t.date}
-            {t.note && <><br /><span class="meta-line">{t.note}</span></>}
-          </li>
-        ))}
-      </ul>
+      <p class="meta-line">Tracked AI lawsuits whose docket moved this week.</p>
+      {w.courts.map((t) => (
+        <div class="entry">
+          <h3><a href={t.url}>{t.title}</a></h3>
+          {t.note && <p><b>What happened.</b> {t.note}</p>}
+          {t.detail && <p><b>Why it matters.</b> {t.detail}</p>}
+          <p class="meta-line">{t.state && <>{t.state} · </>}{t.agency && <>{t.agency} · </>}{t.date}</p>
+        </div>
+      ))}
     </>
   )}
 
   {c.total === 0 && (
-    <p>Nothing moved this week that we track. That happens, particularly when legislatures
-      are out of session, and we would rather say so than manufacture a story.</p>
+    <p>That happens, particularly when legislatures are out of session, and we would rather
+      say so than manufacture a story. The archive shows which weeks were busy and which
+      were not, which is only useful if the quiet ones are reported honestly.</p>
   )}
 
   <div class="cite-box">Cite this week: <code>"AI policy and litigation, {w.start} to {w.end}."
@@ -105,3 +146,18 @@ const jsonld = JSON.stringify({
 
   <p><a href="/this-week-in-ai/">All weeks</a></p>
 </Base>
+
+<style>
+  .themes { margin: 0 0 1.4em; }
+  .themes dt { font-weight: 600; margin-top: .9em; }
+  .themes dt .n {
+    display: inline-block; margin-left: .4em; padding: 1px 8px;
+    background: var(--cream); border-radius: 10px;
+    font-size: .8rem; font-weight: 600; color: var(--navy);
+  }
+  .themes dd { margin: .2em 0 0; color: #3d3d46; }
+  .entry { padding: 1.1em 0; border-bottom: 1px solid #ececf2; }
+  .entry:last-of-type { border-bottom: 0; }
+  .entry h3 { font-size: 1.03rem; margin: 0 0 .35em; line-height: 1.4; }
+  .entry p { margin: 0 0 .4em; }
+</style>

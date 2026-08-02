@@ -2,21 +2,29 @@
 /**
  * This Week in AI, the weekly digest hub.
  *
- * Reads content/week/index.json, which the pipeline builds from our own
- * verified tables: state legislative movement, Federal Register documents, and
- * lawsuit docket movement. There is no news feed behind this page, which is
- * why every line on it can be traced to a primary source.
+ * The hub is a summary of the whole archive, not a table of contents for it:
+ * how much has moved, what the recurring subjects are, and which weeks were
+ * busy. Everything on it is computed by the pipeline from the items in the
+ * weeks below, so the numbers here and the pages they link to cannot disagree.
  */
 import Base from '../../layouts/Base.astro';
 import { readFileSync, existsSync } from 'node:fs';
 
 const idx = existsSync('content/week/index.json')
   ? JSON.parse(readFileSync('content/week/index.json', 'utf8'))
-  : { weeks: [], generated: '' };
+  : { weeks: [], themes: [], total_items: 0, generated: '' };
 const weeks = idx.weeks || [];
+const themes = idx.themes || [];
 const latest = weeks[0];
+const total = idx.total_items || 0;
+const plural = (n, s, p) => `${n} ${n === 1 ? s : p || s + 's'}`;
+const busiest = weeks.reduce((m, w) => (!m || w.total > m.total ? w : m), null);
+
+const lede = weeks.length
+  ? `Over the last ${plural(weeks.length, 'week')} we recorded ${plural(total, 'change')} across American AI policy and litigation: state and congressional bills that moved, documents published in the Federal Register, and lawsuits whose dockets saw activity. ${themes.length ? `The subject that came up most was ${themes[0].name.toLowerCase()}.` : ''}`
+  : 'The first weekly digest publishes on the next pipeline run.';
 const desc =
-  'A weekly record of what actually moved in AI policy and litigation: state bills that changed status, federal documents published, and lawsuits with new docket activity. Built from primary sources, quiet weeks included.';
+  'A weekly record of what actually moved in AI policy and litigation, grouped by subject and explained: state bills that changed status, federal documents published, and lawsuits with new docket activity.';
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',
@@ -28,29 +36,52 @@ const jsonld = JSON.stringify({
 ---
 <Base title="This Week in AI: what actually moved in policy and litigation" description={desc} current="/this-week-in-ai/" jsonld={jsonld}>
   <h1>This Week in AI</h1>
-  <p class="answer">Each week we publish what genuinely changed in American AI policy and
-    litigation: state bills that moved, documents the federal government published, and
-    lawsuits with new docket activity. Every entry links to the primary record. Nothing here
-    is aggregated from other people's coverage, and a quiet week is reported as a quiet week
-    rather than padded out.</p>
+  <p class="answer">{lede}</p>
   {idx.generated && <p class="meta-line">Last verified: {idx.generated} · Sources: LegiScan, the Federal Register, CourtListener</p>}
+
+  <p>Nothing here is aggregated from other people's coverage. Each entry is a record we
+    hold and check ourselves, and each links to the primary document. A quiet week is
+    reported as a quiet week, because a tracker that always claims a busy one is useless
+    for telling the difference.</p>
+
+  {themes.length > 0 && (
+    <>
+      <h2>What American AI policy is actually about</h2>
+      <p>Across every week in this archive, bills and federal documents fall into a small
+        number of recurring subjects. This is the shape of the field as legislators are
+        treating it, counted from their own language rather than from commentary.</p>
+      <dl class="themes">
+        {themes.map((t) => (
+          <>
+            <dt>{t.name} <span class="n">{t.count}</span></dt>
+            <dd>{t.blurb}</dd>
+          </>
+        ))}
+      </dl>
+    </>
+  )}
 
   {latest && (
     <>
-      <h2>Latest: {latest.label}</h2>
-      <p><a href={`/this-week-in-ai/${latest.slug}/`}>{latest.start} to {latest.end}</a>
+      <h2>Most recent week</h2>
+      <p><a href={`/this-week-in-ai/${latest.slug}/`}>{latest.label}, {latest.start} to {latest.end}</a>
         {latest.total === 0
-          ? ', nothing recorded yet this week.'
-          : `, ${latest.bills} bill${latest.bills === 1 ? '' : 's'}, ${latest.federal} federal document${latest.federal === 1 ? '' : 's'}, ${latest.courts} case update${latest.courts === 1 ? '' : 's'}.`}
+          ? ': nothing recorded yet.'
+          : `: ${plural(latest.bills, 'bill')} across ${plural(latest.jurisdictions || 0, 'jurisdiction')}, ${plural(latest.federal, 'federal document')}, and ${plural(latest.courts, 'case update')}.`}
+        {latest.top_theme && <> Leading subject: {latest.top_theme.toLowerCase()}.</>}
       </p>
+      {busiest && busiest.slug !== latest.slug && (
+        <p>The busiest week in the archive was <a href={`/this-week-in-ai/${busiest.slug}/`}>{busiest.label}</a>,
+          with {plural(busiest.total, 'recorded change')}.</p>
+      )}
     </>
   )}
 
   {weeks.length > 1 && (
     <>
-      <h2>Archive</h2>
+      <h2>Every week</h2>
       <table>
-        <thead><tr><th>Week</th><th>Dates</th><th>Bills</th><th>Federal</th><th>Courts</th></tr></thead>
+        <thead><tr><th>Week</th><th>Dates</th><th>Bills</th><th>Federal</th><th>Courts</th><th>Leading subject</th></tr></thead>
         <tbody>
           {weeks.map((w) => (
             <tr>
@@ -59,6 +90,7 @@ const jsonld = JSON.stringify({
               <td>{w.bills}</td>
               <td>{w.federal}</td>
               <td>{w.courts}</td>
+              <td>{w.top_theme || '—'}</td>
             </tr>
           ))}
         </tbody>
@@ -66,8 +98,18 @@ const jsonld = JSON.stringify({
     </>
   )}
 
-  {weeks.length === 0 && <p>The first weekly digest publishes on the next pipeline run.</p>}
-
-  <p class="meta-line">Want the underlying records instead? Every week is assembled from
-    <a href="/api/laws.json">the laws API</a> and <a href="/api/lawsuits.json">the lawsuits API</a>.</p>
+  <p class="meta-line">Prefer the underlying records? The archive is available as
+    <a href="/api/weeks.json">weeks.json</a>, and the sources behind it as
+    <a href="/api/laws.json">laws.json</a> and <a href="/api/lawsuits.json">lawsuits.json</a>.</p>
 </Base>
+
+<style>
+  .themes { margin: 0 0 1.4em; }
+  .themes dt { font-weight: 600; margin-top: .9em; }
+  .themes dt .n {
+    display: inline-block; margin-left: .4em; padding: 1px 8px;
+    background: var(--cream); border-radius: 10px;
+    font-size: .8rem; font-weight: 600; color: var(--navy);
+  }
+  .themes dd { margin: .2em 0 0; color: #3d3d46; }
+</style>
