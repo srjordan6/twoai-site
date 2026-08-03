@@ -20,31 +20,65 @@ const CATEGORY_NAME = 'Ecosystem Entities, Market and Operations';
 const BASE = `/ai-ecosystem/${CATEGORY}`;
 
 export function getStaticPaths() {
-  if (!existsSync('content/people/index.json')) return [];
-  const idx = JSON.parse(readFileSync('content/people/index.json', 'utf8'));
-  const paths = [{ params: { id: idx.uid }, props: { hub: idx } }];
-  for (const f of readdirSync('content/people')) {
-    if (!f.endsWith('.json') || f === 'index.json') continue;
-    const p = JSON.parse(readFileSync(`content/people/${f}`, 'utf8'));
-    paths.push({ params: { id: p.uid }, props: { person: p, hubUid: idx.uid } });
+  const paths = [];
+
+  if (existsSync('content/people/index.json')) {
+    const idx = JSON.parse(readFileSync('content/people/index.json', 'utf8'));
+    paths.push({ params: { id: idx.uid }, props: { hub: idx } });
+    for (const f of readdirSync('content/people')) {
+      if (!f.endsWith('.json') || f === 'index.json') continue;
+      const p = JSON.parse(readFileSync(`content/people/${f}`, 'utf8'));
+      paths.push({ params: { id: p.uid }, props: { person: p, hubUid: idx.uid } });
+    }
   }
+
+  if (existsSync('content/companies/index.json')) {
+    const cidx = JSON.parse(readFileSync('content/companies/index.json', 'utf8'));
+    paths.push({ params: { id: cidx.uid }, props: { chub: cidx } });
+    for (const f of readdirSync('content/companies')) {
+      if (!f.endsWith('.json') || f === 'index.json') continue;
+      const d = JSON.parse(readFileSync(`content/companies/${f}`, 'utf8'));
+      paths.push({ params: { id: d.company.uid }, props: { company: d.company, generated: d.generated, chubUid: cidx.uid } });
+    }
+  }
+
   return paths;
 }
-const { hub, person, hubUid } = Astro.props;
+const { hub, person, hubUid, chub, company, generated, chubUid } = Astro.props;
 
 const desc = hub
   ? `Profiles of ${hub.total} people shaping artificial intelligence: researchers, founders, executives, and policymakers, each with a timeline, achievements, and sources.`
+  : chub
+  ? `${chub.total} companies building AI, with what each one ships, whether it is a defendant in a tracked lawsuit, and whether it publishes to the Model Context Protocol registry.`
+  : company
+  ? `${company.name}: ${company.products.length} AI product${company.products.length === 1 ? '' : 's'} we track${company.cases?.length ? `, ${company.cases.length} tracked lawsuit${company.cases.length === 1 ? '' : 's'}` : ''}${company.mcp?.length ? `, ${company.mcp.length} MCP server${company.mcp.length === 1 ? '' : 's'}` : ''}.`
   : `${person.name}${person.moniker ? `, ${person.moniker}` : ''}. ${person.hook || ''}`.slice(0, 300);
+const title = hub
+  ? 'AI People Directory — The World of AI'
+  : chub
+  ? 'AI Company Directory — The World of AI'
+  : company
+  ? `${company.name}: AI products, lawsuits, and MCP servers`
+  : `${person.name} — AI People Directory`;
 
 const jsonld = JSON.stringify(
-  hub
+  hub || chub
     ? {
         '@context': 'https://schema.org',
         '@type': 'CollectionPage',
-        name: 'AI People Directory',
+        name: hub ? 'AI People Directory' : 'AI Company Directory',
         description: desc,
-        url: `https://theworldofai.org${BASE}/${hub.uid}/`,
-        dateModified: hub.generated,
+        url: `https://theworldofai.org${BASE}/${(hub || chub).uid}/`,
+        dateModified: (hub || chub).generated,
+      }
+    : company
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        name: company.name,
+        description: desc,
+        identifier: company.uid,
+        url: `https://theworldofai.org${BASE}/${company.uid}/`,
       }
     : {
         '@context': 'https://schema.org',
@@ -52,17 +86,98 @@ const jsonld = JSON.stringify(
         name: person.name,
         description: person.hook,
         nationality: person.nationality,
+        identifier: person.uid,
         url: `https://theworldofai.org${BASE}/${person.uid}/`,
         ...(person.fields?.length ? { knowsAbout: person.fields } : {}),
       }
 );
 ---
-<Base title={hub ? 'AI People Directory — The World of AI' : `${person.name} — AI People Directory`}
+<Base title={title}
   description={desc} current={`${BASE}/`} jsonld={jsonld}>
 
   <p class="meta-line"><a href="/">AI Ecosystem</a> ·
     <a href={`${BASE}/`}>{CATEGORY_NAME}</a>
-    {person && <> · <a href={`${BASE}/${hubUid}/`}>AI People</a></>}</p>
+    {person && <> · <a href={`${BASE}/${hubUid}/`}>AI People</a></>}
+    {company && <> · <a href={`${BASE}/${chubUid}/`}>AI Companies</a></>}</p>
+
+  {chub && (
+    <>
+      <h1>AI Company Directory</h1>
+      <p class="answer">Every company in our tools catalog, <b>{chub.total} of them</b>, with what
+        each one ships. <b>{chub.profiled}</b> have their own page, earned by shipping more than
+        one tool we track, being a defendant in a lawsuit we follow, or publishing to the Model
+        Context Protocol registry. The rest are listed here with their product, because a company
+        page repeating a single tool page would tell you nothing new.</p>
+      {chub.generated && <p class="meta-line">Last verified: {chub.generated}</p>}
+      <table>
+        <thead><tr><th>Company</th><th>Products</th><th>Lawsuits</th><th>MCP</th></tr></thead>
+        <tbody>
+          {chub.companies.map((c) => (
+            <tr>
+              <td>{c.has_page ? <a href={`${BASE}/${c.uid}/`}>{c.name}</a> : c.name}</td>
+              <td>{c.has_page ? c.products : (c.url ? <a href={c.url} rel="noopener nofollow">{c.product}</a> : c.product)}</td>
+              <td>{c.cases || ''}</td>
+              <td>{c.mcp || ''}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  )}
+
+  {company && (
+    <>
+      <h1>{company.name}</h1>
+      <p class="answer">{company.name} publishes <b>{company.products.length}</b> AI
+        product{company.products.length === 1 ? '' : 's'} we track
+        {company.cases?.length > 0 && <>, is a defendant in <b>{company.cases.length}</b> lawsuit{company.cases.length === 1 ? '' : 's'} on our tracker</>}
+        {company.mcp?.length > 0 && <>, and has published <b>{company.mcp.length}</b> server{company.mcp.length === 1 ? '' : 's'} to the MCP registry</>}.
+        Everything below is drawn from those records rather than from the company's own marketing.</p>
+      {generated && <p class="meta-line">Last verified: {generated} · Entity ID {company.uid}</p>}
+
+      <h2>Products</h2>
+      <table>
+        <thead><tr><th>Product</th><th>Category</th><th>What it does</th></tr></thead>
+        <tbody>
+          {company.products.map((p) => (
+            <tr>
+              <td>{p.profile
+                ? <a href={`/ai-tools/${p.profile}/`}>{p.name}</a>
+                : (p.url ? <a href={p.url} rel="noopener nofollow">{p.name}</a> : p.name)}</td>
+              <td>{p.category}</td>
+              <td>{p.note}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {company.cases?.length > 0 && (
+        <>
+          <h2>Lawsuits we track</h2>
+          <ul>{company.cases.map((c) => (
+            <li><a href={`/ai-lawsuits/${c.slug}/`}>{c.name}</a>{c.court && <>, {c.court}</>}</li>
+          ))}</ul>
+          <p class="meta-line">Matched on the defendant field of our tracker. Being named as a
+            defendant is not a finding of wrongdoing.</p>
+        </>
+      )}
+
+      {company.mcp?.length > 0 && (
+        <>
+          <h2>MCP servers</h2>
+          <ul>{company.mcp.map((m) => (
+            <li><a href={`/mcp/${m.slug}/`}>{m.name}</a>{m.description && <> — {m.description}</>}</li>
+          ))}</ul>
+        </>
+      )}
+
+      <div class="cite-box">Cite this page: <code>"{company.name}." AI Company Directory,
+        The World of AI, theworldofai.org{BASE}/{company.uid}/.
+        {generated ? ` Verified ${generated}.` : ''}</code></div>
+
+      <p><a href={`${BASE}/${chubUid}/`}>All companies</a></p>
+    </>
+  )}
 
   {hub && (
     <>
