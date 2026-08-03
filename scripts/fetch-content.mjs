@@ -26,7 +26,7 @@ import { createHash } from 'node:crypto';
 
 const REPO = 'https://github.com/srjordan6/twoai-content';
 const R2 = 'https://pub-b8347c6e4e8c40febe3c83d8860826e2.r2.dev';
-const dirs = ['laws', 'glossary', 'lawsuits', 'static', 'tools', 'week', 'ecosystem', 'compliance', 'mcp', 'people'];
+const dirs = ['laws', 'glossary', 'lawsuits', 'static', 'tools', 'week', 'ecosystem', 'compliance', 'mcp', 'people', 'companies'];
 
 mkdirSync('content', { recursive: true });
 for (const d of dirs) mkdirSync(`content/${d}`, { recursive: true });
@@ -55,6 +55,16 @@ function fromR2() {
   const n = copyDirs('/tmp/twoai-r2');
   console.log(`fetch-content: R2 bundle ${m.bundle}, ${m.files} files declared, ${n} copied, generated ${m.generated}`);
   if (n === 0) throw new Error('R2 bundle contained no content directories');
+  // A shortfall means the bundle holds a directory this script does not know
+  // about, which is how the company directory published to R2 and then never
+  // reached the site: the pages existed, the build succeeded, and 62 files were
+  // silently dropped on the floor. Name the gap rather than swallowing it.
+  if (n < m.files) {
+    const known = new Set(dirs);
+    const extra = readdirSync('/tmp/twoai-r2').filter((d) => !known.has(d));
+    console.warn(`fetch-content: WARNING ${m.files - n} file(s) in the bundle were not copied` +
+      (extra.length ? `; unknown content directories: ${extra.join(', ')}` : ''));
+  }
 }
 
 function fromGitHub() {
@@ -89,5 +99,6 @@ const api = [
   ['content/compliance/index.json', 'public/api/compliance.json'],
   ['content/mcp/index.json', 'public/api/mcp.json'],
   ['content/people/index.json', 'public/api/people.json'],
+  ['content/companies/index.json', 'public/api/companies.json'],
 ];
 for (const [src, dst] of api) if (existsSync(src)) copyFileSync(src, dst);
