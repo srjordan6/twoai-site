@@ -11,12 +11,15 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
 export function getStaticPaths() {
   if (!existsSync('content/research')) return [];
+  // Only build a page for the new-shape files (they carry a slug and the
+  // clean data the template renders). The uid-named files in R2 are the
+  // pipeline's older duplicate copies of the same topics and would collide
+  // on route slug if we included them.
   return readdirSync('content/research')
     .filter((f) => f.endsWith('.json') && f !== 'index.json')
-    .map((f) => {
-      const t = JSON.parse(readFileSync(`content/research/${f}`, 'utf8'));
-      return { params: { topic: t.slug || f.replace(/\.json$/, '') }, props: { t } };
-    });
+    .map((f) => JSON.parse(readFileSync(`content/research/${f}`, 'utf8')))
+    .filter((t) => t && t.slug)
+    .map((t) => ({ params: { topic: t.slug }, props: { t } }));
 }
 const { t } = Astro.props;
 const papers = t.papers ?? [];

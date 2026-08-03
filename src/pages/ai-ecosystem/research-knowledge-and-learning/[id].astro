@@ -34,10 +34,19 @@ export function getStaticPaths() {
   const idx = JSON.parse(readFileSync('content/research/index.json', 'utf8'));
   paths.push({ params: { id: idx.uid }, props: { hub: idx } });
 
+  // R2 currently ships two copies of every topic: the old uid-named file and
+  // the new slug-named file, and they share a uid. Prefer the new-shape row
+  // (has slug + blurb + citations) so the page renders with all the fields
+  // the template wants, and skip the older duplicate.
+  const byUid = new Map();
   for (const f of readdirSync('content/research')) {
     if (!f.endsWith('.json') || f === 'index.json') continue;
     const t = JSON.parse(readFileSync(`content/research/${f}`, 'utf8'));
     if (!t.uid) continue;
+    const existing = byUid.get(t.uid);
+    if (!existing || (!existing.slug && t.slug)) byUid.set(t.uid, t);
+  }
+  for (const t of byUid.values()) {
     paths.push({ params: { id: t.uid }, props: { topic: t, hubUid: idx.uid } });
   }
   return paths;
@@ -47,7 +56,7 @@ const { hub, topic, hubUid } = Astro.props;
 
 const desc = hub
   ? `${hub.total} peer-reviewed and preprint papers on AI capability, safety, governance and application, sorted into ${hub.topics.length} topics, each with the citation record and a plain note on why it matters.`
-  : `${topic.count} papers on ${topic.name.toLowerCase()} in AI, ${topic.citations.toLocaleString()} citations between them. ${topic.blurb}`.slice(0, 300);
+  : `${topic.count} papers on ${topic.name.toLowerCase()} in AI, ${(topic.citations || 0).toLocaleString()} citations between them. ${topic.blurb || ''}`.slice(0, 300);
 
 const title = hub
   ? 'AI Research Library — The World of AI'
@@ -106,7 +115,7 @@ const jsonld = JSON.stringify(
             <a href={`${BASE}/${t.uid}/`}>{t.name}</a>
             <p>{t.blurb}</p>
             <p class="mon">
-              {`${t.count} paper${t.count === 1 ? '' : 's'} · ${t.citations.toLocaleString()} citations${t.newest ? ` · newest ${t.newest}` : ''}`}
+              {`${t.count} paper${t.count === 1 ? '' : 's'}${typeof t.citations === 'number' ? ` · ${t.citations.toLocaleString()} citations` : ''}${t.newest ? ` · newest ${t.newest}` : ''}`}
             </p>
           </li>
         ))}
@@ -119,7 +128,7 @@ const jsonld = JSON.stringify(
       <h1>{topic.name}</h1>
       <p class="lede">{topic.blurb}</p>
       <p class="answer">
-        <b>{`${topic.count} paper${topic.count === 1 ? '' : 's'}`}</b>{`, ${topic.citations.toLocaleString()} citations between them, ordered by citation count. Each line links to the paper on Consensus.`}
+        <b>{`${topic.count} paper${topic.count === 1 ? '' : 's'}`}</b>{typeof topic.citations === 'number' ? `, ${topic.citations.toLocaleString()} citations between them, ordered by citation count.` : `, ordered by citation count.`} Each line links to the paper on Consensus.
       </p>
       {refreshed && <p class="meta-line">Shelf last refreshed: {refreshed}</p>}
       <ol class="papers">
@@ -127,7 +136,7 @@ const jsonld = JSON.stringify(
           <li>
             <a href={p.url} rel="nofollow noopener" target="_blank">{p.title}</a>
             <p class="mon">
-              {`${p.authors}${p.authors && p.year ? ' · ' : ''}${p.year || ''}${p.journal ? ` · ${p.journal}` : ''} · ${p.citations.toLocaleString()} citation${p.citations === 1 ? '' : 's'}`}
+              {`${p.authors || ''}${p.authors && p.year ? ' · ' : ''}${p.year || ''}${p.journal ? ` · ${p.journal}` : ''}${typeof p.citations === 'number' ? ` · ${p.citations.toLocaleString()} citation${p.citations === 1 ? '' : 's'}` : ''}`}
             </p>
             {p.note && <p>{p.note}</p>}
           </li>
