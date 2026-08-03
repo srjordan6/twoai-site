@@ -21,7 +21,7 @@
 // building a site from half a bundle, which would look like a successful build
 // with silently missing pages.
 import { execSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, readdirSync, copyFileSync, readFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
 const REPO = 'https://github.com/srjordan6/twoai-content';
@@ -86,6 +86,95 @@ try {
     // outcome than no deploy at all.
     console.warn('fetch-content: proceeding without remote content:', e2.message);
   }
+}
+
+// TAXONOMY IS READ LIVE FROM POSTGRES WHEN IT CAN BE.
+//
+// The site structure lives in twoai_taxonomy and changes far more often than
+// the content does: marking a section live, renaming a domain, adding a
+// category. Those changes used to require a full pipeline run to appear,
+// because only twoai_build turned the table into JSON. That is the wrong loop
+// for a one-row edit.
+//
+// So if DATABASE_URL is present in the build environment, this script queries
+// the taxonomy itself and writes content/ecosystem/ before the build, which
+// means any deploy of the site picks up a structural change immediately with
+// no pipeline involvement at all. Without the variable it silently uses the
+// ecosystem files from the bundle, so the build never depends on the database
+// being reachable.
+async function taxonomyFromSQL() {
+  const url = process.env.DATABASE_URL;
+  if (!url) return false;
+  let pg;
+  try {
+    pg = await import('pg');
+  } catch {
+    console.warn('fetch-content: DATABASE_URL set but pg is not installed, using bundled taxonomy');
+    return false;
+  }
+  const client = new pg.default.Client({ connectionString: url, ssl: { rejectUnauthorized: false } });
+  await client.connect();
+  try {
+    const { rows } = await client.query(`
+      SELECT t.slug, t.name, COALESCE(t.blurb,'') AS blurb, t.status,
+             COALESCE(t.live_path,'') AS path, COALESCE(t.parent_slug,'') AS parent,
+             t.level, t.sort,
+             (SELECT COALESCE(sum(p.url_count),0) FROM twoai_pages p WHERE p.taxonomy_slug = t.slug) AS pages
+      FROM twoai_taxonomy t WHERE t.level IN (1,2,3) ORDER BY t.level, t.sort`);
+    const today = new Date().toISOString().slice(0, 10);
+    const cats = [];
+    const byCat = new Map();
+    const byDom = new Map();
+    for (const r of rows.filter((r) => r.level === 1)) {
+      const c = { slug: r.slug, name: r.name, blurb: r.blurb, domains: [], live: 0, pages: 0 };
+      cats.push(c);
+      byCat.set(r.slug, c);
+    }
+    for (const r of rows.filter((r) => r.level === 2)) {
+      const c = byCat.get(r.parent);
+      if (!c) continue;
+      const d = { slug: r.slug, name: r.name, blurb: r.blurb, status: r.status,
+        path: r.path || undefined, pages: Number(r.pages), sections: [] };
+      c.domains.push(d);
+      byDom.set(r.slug, d);
+    }
+    for (const r of rows.filter((r) => r.level === 3)) {
+      const d = byDom.get(r.parent);
+      if (!d) continue;
+      d.sections.push({ slug: r.slug, name: r.name, blurb: r.blurb, status: r.status,
+        path: r.path || undefined, pages: Number(r.pages) });
+      d.pages += Number(r.pages);
+      if (r.status === 'live') d.status = 'live';
+    }
+    for (const c of cats) {
+      for (const d of c.domains) {
+        c.pages += d.pages;
+        if (d.status === 'live') c.live += 1;
+      }
+    }
+    mkdirSync('content/ecosystem', { recursive: true });
+    for (const c of cats) {
+      writeFileSync(`content/ecosystem/${c.slug}.json`, JSON.stringify({
+        slug: c.slug, name: c.name, blurb: c.blurb, domains: c.domains,
+        live: c.live, total: c.domains.length, pages: c.pages, generated: today,
+      }));
+    }
+    writeFileSync('content/ecosystem/index.json', JSON.stringify({
+      categories: cats.map((c) => ({ slug: c.slug, name: c.name, blurb: c.blurb,
+        live: c.live, total: c.domains.length, pages: c.pages })),
+      generated: today,
+    }));
+    console.log(`fetch-content: taxonomy read live from SQL, ${cats.length} categories`);
+    return true;
+  } finally {
+    await client.end();
+  }
+}
+
+try {
+  await taxonomyFromSQL();
+} catch (e) {
+  console.warn('fetch-content: live taxonomy unavailable, using bundled copy:', e.message);
 }
 
 // Public API mirrors of the aggregates.
