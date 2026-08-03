@@ -1,0 +1,97 @@
+---
+/**
+ * One research topic page at /research/{topic}/.
+ *
+ * Reads content/research/{slug}.json, which fetch-content.mjs writes from
+ * twoai_pages at build time. Every page is a table of the papers on that
+ * shelf, each with a plain note that says why it belongs on the shelf.
+ */
+import Base from '../../layouts/Base.astro';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+
+export function getStaticPaths() {
+  if (!existsSync('content/research')) return [];
+  return readdirSync('content/research')
+    .filter((f) => f.endsWith('.json') && f !== 'index.json')
+    .map((f) => {
+      const t = JSON.parse(readFileSync(`content/research/${f}`, 'utf8'));
+      return { params: { topic: t.slug || f.replace(/\.json$/, '') }, props: { t } };
+    });
+}
+const { t } = Astro.props;
+const papers = t.papers ?? [];
+const totalCites = papers.reduce((s, p) => s + (Number(p.citations) || 0), 0);
+const blurb = t.blurb || `Curated ${papers.length} papers on ${t.name} in artificial intelligence.`;
+const desc = `${papers.length} papers curated on ${t.name} in AI research. ${blurb}`.slice(0, 300);
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: `${t.name} — AI Research`,
+  description: blurb,
+  url: `https://theworldofai.org/research/${t.slug}/`,
+  dateModified: t.refreshed || t.generated,
+  isPartOf: {
+    '@type': 'CollectionPage',
+    name: 'AI Research Library',
+    url: 'https://theworldofai.org/research/',
+  },
+  mainEntity: {
+    '@type': 'ItemList',
+    numberOfItems: papers.length,
+    itemListElement: papers.slice(0, 25).map((p, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      item: {
+        '@type': 'ScholarlyArticle',
+        name: p.title,
+        author: p.authors,
+        datePublished: p.year ? String(p.year) : undefined,
+        url: p.url,
+      },
+    })),
+  },
+});
+---
+<Base title={`${t.name} in AI Research: ${papers.length} curated papers — The World of AI`} description={desc} current="/research/" jsonld={jsonld}>
+  <p class="meta-line"><a href="/research/">AI Research Library</a></p>
+  <h1>{t.name}</h1>
+  <p class="answer">{blurb}</p>
+  <p class="meta-line">
+    <b>{papers.length}</b> paper{papers.length === 1 ? '' : 's'}
+    {totalCites > 0 && <> · <b>{totalCites.toLocaleString()}</b> combined citations</>}
+    {(t.refreshed || t.generated) && <> · Last refreshed {t.refreshed || t.generated}</>}
+  </p>
+
+  {papers.length > 0 && (
+    <ol class="papers">
+      {papers.map((p) => (
+        <li>
+          <a href={p.url} rel="noopener nofollow">{p.title}</a>
+          <p class="meta-line">
+            {p.authors}{p.journal ? `, ${p.journal}` : ''}{p.year ? `, ${p.year}` : ''}
+            {typeof p.citations === 'number' && <> · <b>{p.citations.toLocaleString()} citations</b></>}
+          </p>
+          {p.note && <p class="note">{p.note}</p>}
+        </li>
+      ))}
+    </ol>
+  )}
+
+  {papers.length === 0 && (
+    <p>This shelf is being assembled. Papers will appear here once curated.</p>
+  )}
+
+  <div class="cite-box">Cite this shelf: <code>"{t.name}." AI Research Library, The World of AI,
+    theworldofai.org/research/{t.slug}/.{(t.refreshed || t.generated) ? ` Verified ${t.refreshed || t.generated}.` : ''}</code></div>
+</Base>
+
+<style>
+  .papers { list-style: decimal; padding-left: 1.4em; }
+  .papers li { margin-bottom: 1.1em; }
+  .papers li a { font-weight: 600; }
+  .papers .note { margin: .35em 0 0; color: #4a4a55; font-size: .95rem; }
+  .cite-box { margin-top: 2em; padding: .9em 1em; background: #f6f6fa; border-radius: 8px;
+    font-size: .9rem; color: #4a4a55; }
+  .cite-box code { display: block; margin-top: .35em; background: transparent; padding: 0;
+    font-family: ui-monospace, monospace; color: #201868; }
+</style>
