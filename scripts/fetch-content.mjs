@@ -9,7 +9,7 @@ import { execSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readdirSync, copyFileSync } from 'node:fs';
 
 const REPO = 'https://github.com/srjordan6/twoai-content';
-const dirs = ['laws', 'glossary', 'lawsuits', 'static', 'tools', 'week', 'ecosystem', 'compliance'];
+const dirs = ['laws', 'glossary', 'lawsuits', 'static', 'tools', 'week', 'ecosystem', 'compliance', 'mcp'];
 
 mkdirSync('content', { recursive: true });
 for (const d of dirs) mkdirSync(`content/${d}`, { recursive: true });
@@ -36,5 +36,6 @@ const api = [
   ['content/tools/index.json', 'public/api/tools.json'],
   ['content/week/index.json', 'public/api/weeks.json'],
   ['content/compliance/index.json', 'public/api/compliance.json'],
+  ['content/mcp/index.json', 'public/api/mcp.json'],
 ];
 for (const [src, dst] of api) if (existsSync(src)) copyFileSync(src, dst);

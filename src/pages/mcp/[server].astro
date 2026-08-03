@@ -1,0 +1,82 @@
+---
+/**
+ * One MCP server, as its publisher declared it to the official registry.
+ *
+ * Nothing on this page is our assessment. We report the declared name,
+ * publisher, description, version, transport, repository, and dates, and say
+ * plainly that we have not tested it.
+ */
+import Base from '../../layouts/Base.astro';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+
+export function getStaticPaths() {
+  if (!existsSync('content/mcp')) return [];
+  return readdirSync('content/mcp')
+    .filter((f) => f.endsWith('.json') && f !== 'index.json')
+    .map((f) => {
+      const d = JSON.parse(readFileSync(`content/mcp/${f}`, 'utf8'));
+      return { params: { server: d.server.slug }, props: { s: d.server, generated: d.generated } };
+    });
+}
+const { s, generated } = Astro.props;
+const label = s.title || s.name;
+const desc = `${label}: an MCP server published by ${s.vendor || 'its author'} to the official Model Context Protocol registry. ${s.description}`.slice(0, 300);
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: label,
+  description: s.description,
+  applicationCategory: 'DeveloperApplication',
+  softwareVersion: s.version,
+  url: `https://theworldofai.org/mcp/${s.slug}/`,
+  ...(s.repo_url ? { codeRepository: s.repo_url } : {}),
+  ...(s.vendor ? { author: { '@type': 'Organization', name: s.vendor } } : {}),
+});
+---
+<Base title={`${label} — MCP server — The World of AI`} description={desc} current="/mcp/" jsonld={jsonld}>
+  <p class="meta-line"><a href="/">AI Ecosystem</a> ·
+    <a href="/ai-ecosystem/technology-and-core-infrastructure/">Technology and Core Infrastructure</a> ·
+    <a href="/mcp/">MCP Servers</a></p>
+
+  <h1>{label}</h1>
+  <p class="answer">{s.description}</p>
+  <p class="meta-line">
+    {s.vendor && <>Published by {s.vendor} · </>}
+    {s.version && <>Version {s.version} · </>}
+    {s.transport && <>Runs as a {s.transport} · </>}
+    {generated && <>Last verified: {generated}</>}
+  </p>
+
+  <h2>Registry record</h2>
+  <table>
+    <tbody>
+      <tr><th>Registry name</th><td><code>{s.name}</code></td></tr>
+      {s.vendor && <tr><th>Publisher</th><td>{s.vendor}</td></tr>}
+      {s.version && <tr><th>Latest version</th><td>{s.version}</td></tr>}
+      {s.transport && <tr><th>How it runs</th><td>{s.transport === 'remote'
+        ? 'Hosted endpoint, connect over the network'
+        : 'Package you install and run yourself'}</td></tr>}
+      {s.repo_url && <tr><th>Repository</th><td><a href={s.repo_url} rel="noopener nofollow">{s.repo_url}</a></td></tr>}
+      {s.website && <tr><th>Website</th><td><a href={s.website} rel="noopener nofollow">{s.website}</a></td></tr>}
+      {s.published && <tr><th>First published</th><td>{s.published}</td></tr>}
+      {s.updated && <tr><th>Registry updated</th><td>{s.updated}</td></tr>}
+    </tbody>
+  </table>
+
+  <h2>Before you connect this to anything</h2>
+  <p>We have not installed or tested this server. Its presence in the official registry means
+    its publisher registered it, not that it is safe, maintained, or does what the description
+    says. An MCP server runs with whatever access you grant it, so read the repository, check
+    when it was last updated, and understand what data it can reach before connecting it to a
+    system that matters.</p>
+
+  <div class="cite-box">Cite this page: <code>"{label}." MCP Server Directory, The World of AI,
+    theworldofai.org/mcp/{s.slug}/.{generated ? ` Verified ${generated}.` : ''}</code></div>
+
+  <p><a href="/mcp/">All MCP servers</a></p>
+</Base>
+
+<style>
+  table th { width: 30%; text-align: left; vertical-align: top; }
+  code { word-break: break-all; }
+</style>

@@ -1,0 +1,67 @@
+---
+/**
+ * MCP server directory hub.
+ *
+ * Everything here mirrors the official registry at
+ * registry.modelcontextprotocol.io. We do not rate servers and do not claim any
+ * of them work; the value is that the list is complete, current, and browsable,
+ * which the registry API alone is not.
+ */
+import Base from '../../layouts/Base.astro';
+import { readFileSync, existsSync } from 'node:fs';
+
+const idx = existsSync('content/mcp/index.json')
+  ? JSON.parse(readFileSync('content/mcp/index.json', 'utf8'))
+  : { servers: [], total: 0, profiled: 0, remote: 0, local: 0, generated: '' };
+const servers = idx.servers || [];
+const desc =
+  `A browsable directory of ${idx.total} active Model Context Protocol servers from the official ` +
+  `MCP registry: who publishes each one, what it does, whether it is hosted or runs locally, and where to get it.`;
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'MCP Server Directory',
+  description: desc,
+  url: 'https://theworldofai.org/mcp/',
+  dateModified: idx.generated,
+});
+---
+<Base title="MCP Server Directory: every active Model Context Protocol server" description={desc} current="/mcp/" jsonld={jsonld}>
+  <p class="meta-line"><a href="/">AI Ecosystem</a> ·
+    <a href="/ai-ecosystem/technology-and-core-infrastructure/">Technology and Core Infrastructure</a></p>
+  <h1>MCP Server Directory</h1>
+  <p class="answer">The Model Context Protocol is how AI assistants connect to tools and data:
+    a server exposes something, a client consumes it. This directory tracks
+    <b>{idx.total.toLocaleString()} active servers</b> from the official MCP registry,
+    {idx.remote.toLocaleString()} reachable as hosted endpoints and {idx.local.toLocaleString()}
+    distributed as packages you run yourself. Every entry is what its publisher declared to the
+    registry, refreshed daily.</p>
+  {idx.generated && <p class="meta-line">Last verified: {idx.generated} · Source: registry.modelcontextprotocol.io</p>}
+
+  <p><b>What this list is not.</b> We have not installed these servers and we do not rate them.
+    Nothing here says a server is safe, maintained, or does what it claims. Treat it as a
+    catalog of what exists, then check the repository before you connect anything to your data.</p>
+
+  <h2>All servers</h2>
+  <table>
+    <thead><tr><th>Server</th><th>Publisher</th><th>What it does</th><th>Runs as</th></tr></thead>
+    <tbody>
+      {servers.map((s) => (
+        <tr>
+          <td>{s.description
+            ? <a href={`/mcp/${s.slug}/`}>{s.title || s.name}</a>
+            : (s.title || s.name)}</td>
+          <td>{s.vendor}</td>
+          <td>{s.description}</td>
+          <td>{s.transport}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+
+  {servers.length === 0 && <p>The directory publishes on the next pipeline run.</p>}
+
+  <p class="meta-line">Machine-readable: <a href="/api/mcp.json">mcp.json</a>. Building with MCP?
+    The protocol specification lives at
+    <a href="https://modelcontextprotocol.io/" rel="noopener">modelcontextprotocol.io</a>.</p>
+</Base>
