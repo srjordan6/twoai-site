@@ -15,11 +15,10 @@ import Topbar from '../components/Topbar.astro';
 interface Props { title: string; description: string; current?: string; jsonld?: string; canonicalOverride?: string; }
 const { title, description, current = '', jsonld, canonicalOverride } = Astro.props;
 const nav = [
-  { href: '/ai-laws/', label: 'AI Laws by State' },
-  { href: '/ai-glossary/', label: 'AI Glossary' },
-  { href: '/ai-lawsuits/', label: 'Lawsuit Tracker' },
-  { href: '/ai-tools/', label: 'AI Tools' },
-  { href: '/this-week-in-ai/', label: 'This Week' },
+  { href: '/ai-ecosystem/technology-and-core-infrastructure/', label: 'Technology' },
+  { href: '/ai-ecosystem/ecosystem-entities-market-and-operations/', label: 'Market' },
+  { href: '/ai-ecosystem/research-knowledge-and-learning/', label: 'Research' },
+  { href: '/ai-ecosystem/enterprise-applications-governance-and-tools/', label: 'Enterprise' },
 ];
 // Canonical defaults to this page's own URL. A page may override it while a
 // copy elsewhere is still the indexed original, which is how the governance
