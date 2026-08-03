@@ -1,0 +1,173 @@
+---
+/**
+ * AI people directory: hub and profiles, addressed by identifier.
+ *
+ * Per Stephen's instruction 2026-08-03, new sections publish below the category
+ * path under a short alphanumeric identifier rather than a name slug, so a page
+ * keeps its address when the person's name or title changes. The hub and every
+ * profile share this one route:
+ *
+ *   /ai-ecosystem/ecosystem-entities-market-and-operations/{id}/
+ *
+ * Source is site_people, the same records behind
+ * srjconsultingservices.com/ai-resources/ai-people/.
+ */
+import Base from '../../../layouts/Base.astro';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+
+const CATEGORY = 'ecosystem-entities-market-and-operations';
+const CATEGORY_NAME = 'Ecosystem Entities, Market and Operations';
+const BASE = `/ai-ecosystem/${CATEGORY}`;
+
+export function getStaticPaths() {
+  if (!existsSync('content/people/index.json')) return [];
+  const idx = JSON.parse(readFileSync('content/people/index.json', 'utf8'));
+  const paths = [{ params: { id: idx.uid }, props: { hub: idx } }];
+  for (const f of readdirSync('content/people')) {
+    if (!f.endsWith('.json') || f === 'index.json') continue;
+    const p = JSON.parse(readFileSync(`content/people/${f}`, 'utf8'));
+    paths.push({ params: { id: p.uid }, props: { person: p, hubUid: idx.uid } });
+  }
+  return paths;
+}
+const { hub, person, hubUid } = Astro.props;
+
+const desc = hub
+  ? `Profiles of ${hub.total} people shaping artificial intelligence: researchers, founders, executives, and policymakers, each with a timeline, achievements, and sources.`
+  : `${person.name}${person.moniker ? `, ${person.moniker}` : ''}. ${person.hook || ''}`.slice(0, 300);
+
+const jsonld = JSON.stringify(
+  hub
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: 'AI People Directory',
+        description: desc,
+        url: `https://theworldofai.org${BASE}/${hub.uid}/`,
+        dateModified: hub.generated,
+      }
+    : {
+        '@context': 'https://schema.org',
+        '@type': 'Person',
+        name: person.name,
+        description: person.hook,
+        nationality: person.nationality,
+        url: `https://theworldofai.org${BASE}/${person.uid}/`,
+        ...(person.fields?.length ? { knowsAbout: person.fields } : {}),
+      }
+);
+---
+<Base title={hub ? 'AI People Directory — The World of AI' : `${person.name} — AI People Directory`}
+  description={desc} current={`${BASE}/`} jsonld={jsonld}>
+
+  <p class="meta-line"><a href="/">AI Ecosystem</a> ·
+    <a href={`${BASE}/`}>{CATEGORY_NAME}</a>
+    {person && <> · <a href={`${BASE}/${hubUid}/`}>AI People</a></>}</p>
+
+  {hub && (
+    <>
+      <h1>AI People Directory</h1>
+      <p class="answer">Profiles of <b>{hub.total} people</b> shaping artificial intelligence:
+        the researchers behind the methods, the founders and executives running the companies,
+        and the policymakers writing the rules. Each profile carries a timeline, what the person
+        is actually known for, and the sources behind it.</p>
+      {hub.generated && <p class="meta-line">Last verified: {hub.generated}</p>}
+      <ul class="grid">
+        {hub.people.map((p) => (
+          <li class="card">
+            <a href={`${BASE}/${p.uid}/`}>{p.name}</a>
+            {p.moniker && <p class="mon">{p.moniker}</p>}
+            {p.hook && <p>{p.hook}</p>}
+          </li>
+        ))}
+      </ul>
+    </>
+  )}
+
+  {person && (
+    <>
+      <h1>{person.name}</h1>
+      {person.moniker && <p class="lede">{person.moniker}</p>}
+      {person.hook && <p class="answer">{person.hook}</p>}
+      <p class="meta-line">
+        {person.nationality && <>{person.nationality} · </>}
+        {person.born && <>Born {person.born}{person.died && <> · Died {person.died}</>} · </>}
+        {person.generated && <>Last verified: {person.generated}</>}
+      </p>
+
+      {person.quote && <blockquote class="pq">{person.quote}</blockquote>}
+
+      {person.fields?.length > 0 && (
+        <p class="meta-line"><b>Fields:</b> {person.fields.join(' · ')}</p>
+      )}
+
+      {person.quick_facts && (
+        <>
+          <h2>Quick facts</h2>
+          <table>
+            <tbody>
+              {Object.entries(person.quick_facts).map(([k, v]) => (
+                <tr><th>{k.replace(/_/g, ' ')}</th><td>{Array.isArray(v) ? v.join(', ') : v}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+
+      {person.achievements?.length > 0 && (
+        <>
+          <h2>Known for</h2>
+          <ul>{person.achievements.map((a) => <li>{typeof a === 'string' ? a : a.text || a.name}</li>)}</ul>
+        </>
+      )}
+
+      {person.timeline?.length > 0 && (
+        <>
+          <h2>Timeline</h2>
+          <table>
+            <thead><tr><th>Year</th><th>Event</th></tr></thead>
+            <tbody>
+              {person.timeline.map((t) => (
+                <tr><td>{t.year || t.date}</td><td>{t.event || t.text}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+
+      {person.sources?.length > 0 ? (
+        <>
+          <h2>Sources</h2>
+          <ul class="cites">
+            {person.sources.map((s) => (
+              <li>{typeof s === 'string'
+                ? s
+                : (s.url ? <a href={s.url} rel="noopener">{s.title || s.url}</a> : (s.title || ''))}
+                {typeof s !== 'string' && s.publisher && <> · {s.publisher}</>}</li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <p class="meta-line">This profile has no published sources attached yet. Treat the detail
+          above as unverified until it does, and tell us if any of it is wrong:
+          <a href="/contact/">contact</a>.</p>
+      )}
+
+      <div class="cite-box">Cite this profile: <code>"{person.name}." AI People Directory,
+        The World of AI, theworldofai.org{BASE}/{person.uid}/.
+        {person.generated ? ` Verified ${person.generated}.` : ''}</code></div>
+
+      <p><a href={`${BASE}/${hubUid}/`}>All people</a></p>
+    </>
+  )}
+</Base>
+
+<style>
+  .lede { font-size: 1.05rem; color: #3d3d46; margin: 0 0 .5em; }
+  .mon { font-size: .88rem; color: #6b6b78; margin: .1em 0 .3em; }
+  .pq { margin: 1.2em 0; padding: .6em 0 .6em 1.1em; border-left: 3px solid var(--orange);
+    font-family: 'Lora', serif; font-size: 1.06rem; color: #2c2c38; }
+  table th { text-align: left; vertical-align: top; }
+  .cites { font-size: .92rem; }
+  .cites li { margin-bottom: .35em; }
+</style>
