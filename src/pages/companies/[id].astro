@@ -24,10 +24,30 @@ export function getStaticPaths() {
     .map((d) => ({ params: { id: d.company.uid }, props: { company: d.company, generated: d.generated } }));
 }
 const { company, generated } = Astro.props;
+const profile = company.profile || {};
 const products = company.products || [];
 const cases = company.cases || [];
 const mcp = company.mcp || [];
 const categories = [...new Set(products.map((p) => p.category).filter(Boolean))];
+
+function fmtRevenue(usd) {
+  if (typeof usd !== 'number') return null;
+  if (usd >= 1e12) return `$${(usd / 1e12).toFixed(2)}T`;
+  if (usd >= 1e9) return `$${(usd / 1e9).toFixed(1)}B`;
+  if (usd >= 1e6) return `$${(usd / 1e6).toFixed(0)}M`;
+  return `$${usd.toLocaleString()}`;
+}
+const revenue = fmtRevenue(profile.last_revenue_usd);
+const orgLabels = {
+  'public-company': 'Public company',
+  'startup': 'Private company',
+  'research-lab': 'Research lab',
+  'university-lab': 'University lab',
+  'government-lab': 'Government lab',
+  'nonprofit': 'Nonprofit',
+  'open-source-foundation': 'Open source foundation',
+};
+const orgLabel = orgLabels[profile.org_type] || null;
 
 const desc = `${company.name}: ${products.length} AI product${products.length === 1 ? '' : 's'} we track${cases.length ? `, ${cases.length} tracked lawsuit${cases.length === 1 ? '' : 's'}` : ''}${mcp.length ? `, ${mcp.length} MCP server${mcp.length === 1 ? '' : 's'}` : ''}. What ships, what is contested, what is published.`;
 
@@ -49,6 +69,24 @@ const jsonld = JSON.stringify({
     {mcp.length > 0 && <>, and has published <b>{mcp.length}</b> server{mcp.length === 1 ? '' : 's'} to the MCP registry</>}.
     Everything below is drawn from those records rather than from the company's own marketing.</p>
   {generated && <p class="meta-line">Last verified: {generated} · Entity ID <code>{company.uid}</code></p>}
+
+  {(orgLabel || profile.founded || profile.headquarters || profile.ticker || revenue) && (
+    <table class="facts">
+      <tbody>
+        {orgLabel && <tr><th>Organisation</th><td>{orgLabel}{profile.for_profit === false && <> · not for profit</>}</td></tr>}
+        {profile.founded && <tr><th>Founded</th><td>{profile.founded}</td></tr>}
+        {profile.headquarters && <tr><th>Headquarters</th><td>{profile.headquarters}</td></tr>}
+        {profile.ticker && <tr><th>Ticker</th><td>{profile.ticker}{profile.cik && <> · SEC CIK <a href={`https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${profile.cik}`} rel="noopener">{profile.cik}</a></>}</td></tr>}
+        {revenue && (
+          <tr>
+            <th>Latest annual revenue</th>
+            <td>{revenue}{profile.last_revenue_end && <> for the fiscal year ending {profile.last_revenue_end}</>}{profile.last_revenue_form && <> ({profile.last_revenue_form})</>}</td>
+          </tr>
+        )}
+        {profile.verified_on && <tr><th>Company facts verified</th><td>{profile.verified_on} from primary sources</td></tr>}
+      </tbody>
+    </table>
+  )}
 
   {products.length > 0 && (
     <>
@@ -121,6 +159,7 @@ const jsonld = JSON.stringify({
   table th, table td { text-align: left; vertical-align: top; padding: .5em .7em;
     border-bottom: 1px solid #ececf2; }
   table th { font-weight: 600; background: #f7f7fb; }
+  table.facts th { white-space: nowrap; width: 12em; }
   code { font-family: ui-monospace, monospace; font-size: .92em; }
   .cite-box { margin-top: 1.6em; padding: .9em 1em; background: #f7f7fb; border-left: 3px solid #201868; font-size: .9rem; }
   .cite-box code { display: block; margin-top: .3em; }
