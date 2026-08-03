@@ -28,6 +28,7 @@ export function getStaticPaths() {
     for (const f of readdirSync('content/people')) {
       if (!f.endsWith('.json') || f === 'index.json') continue;
       const p = JSON.parse(readFileSync(`content/people/${f}`, 'utf8'));
+      if (!p.uid) continue;
       paths.push({ params: { id: p.uid }, props: { person: p, hubUid: idx.uid } });
     }
   }
@@ -182,17 +183,23 @@ const jsonld = JSON.stringify(
   {hub && (
     <>
       <h1>AI People Directory</h1>
-      <p class="answer">Profiles of <b>{hub.total} people</b> shaping artificial intelligence:
-        the researchers behind the methods, the founders and executives running the companies,
-        and the policymakers writing the rules. Each profile carries a timeline, what the person
-        is actually known for, and the sources behind it.</p>
+      <p class="answer">We track <b>{hub.total} people</b> shaping artificial intelligence: the
+        researchers behind the methods, the founders and executives running the companies, and the
+        policymakers writing the rules. <b>{hub.profiled ?? hub.total}</b> have a full profile with
+        a timeline, what they are known for, and sources.
+        {hub.tracked_only > 0 && <> The other {hub.tracked_only} are listed with their role and no
+        page yet, because a name and a job title is not a profile.</>}</p>
       {hub.generated && <p class="meta-line">Last verified: {hub.generated}</p>}
       <ul class="grid">
         {hub.people.map((p) => (
           <li class="card">
-            <a href={`${BASE}/${p.uid}/`}>{p.name}</a>
+            {p.uid ? <a href={`${BASE}/${p.uid}/`}>{p.name}</a> : <b>{p.name}</b>}
             {p.moniker && <p class="mon">{p.moniker}</p>}
             {p.hook && <p>{p.hook}</p>}
+            {!p.uid && (p.title || p.org) && (
+              <p class="mon">{p.title}{p.title && p.org ? ' · ' : ''}{p.org}</p>
+            )}
+            {!p.uid && <p class="mon">Tracked, profile not yet written.</p>}
           </li>
         ))}
       </ul>
