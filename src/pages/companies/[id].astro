@@ -1,0 +1,127 @@
+---
+/**
+ * One company profile at /companies/{uid}/.
+ *
+ * Reads content/companies/{uid}.json, which fetch-content.mjs writes from R2.
+ * The identifier is the short alphanumeric UID that pins the same organisation
+ * across every page on this site, so a source that spells "OpenAI Global, LLC"
+ * lands on the same page as one that spells "OpenAI, Inc."
+ *
+ * We show what the company publishes that we track, whether it is named as a
+ * defendant in a lawsuit we follow, and whether it has published to the Model
+ * Context Protocol registry. Everything is drawn from those records rather
+ * than from the company's own marketing.
+ */
+import Base from '../../layouts/Base.astro';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+
+export function getStaticPaths() {
+  if (!existsSync('content/companies')) return [];
+  return readdirSync('content/companies')
+    .filter((f) => f.endsWith('.json') && f !== 'index.json')
+    .map((f) => JSON.parse(readFileSync(`content/companies/${f}`, 'utf8')))
+    .filter((d) => d && d.company && d.company.uid)
+    .map((d) => ({ params: { id: d.company.uid }, props: { company: d.company, generated: d.generated } }));
+}
+const { company, generated } = Astro.props;
+const products = company.products || [];
+const cases = company.cases || [];
+const mcp = company.mcp || [];
+const categories = [...new Set(products.map((p) => p.category).filter(Boolean))];
+
+const desc = `${company.name}: ${products.length} AI product${products.length === 1 ? '' : 's'} we track${cases.length ? `, ${cases.length} tracked lawsuit${cases.length === 1 ? '' : 's'}` : ''}${mcp.length ? `, ${mcp.length} MCP server${mcp.length === 1 ? '' : 's'}` : ''}. What ships, what is contested, what is published.`;
+
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: company.name,
+  description: desc,
+  identifier: company.uid,
+  url: `https://theworldofai.org/companies/${company.uid}/`,
+  ...(products.some((p) => p.url) ? { sameAs: [...new Set(products.map((p) => p.url).filter(Boolean))] } : {}),
+});
+---
+<Base title={`${company.name}: AI products, lawsuits, and MCP servers`} description={desc} current="/companies/" jsonld={jsonld}>
+  <p class="meta-line"><a href="/companies/">AI Company Directory</a></p>
+  <h1>{company.name}</h1>
+  <p class="answer">{company.name} publishes <b>{products.length}</b> AI product{products.length === 1 ? '' : 's'} we track
+    {cases.length > 0 && <>, is a defendant in <b>{cases.length}</b> lawsuit{cases.length === 1 ? '' : 's'} on our tracker</>}
+    {mcp.length > 0 && <>, and has published <b>{mcp.length}</b> server{mcp.length === 1 ? '' : 's'} to the MCP registry</>}.
+    Everything below is drawn from those records rather than from the company's own marketing.</p>
+  {generated && <p class="meta-line">Last verified: {generated} · Entity ID <code>{company.uid}</code></p>}
+
+  {products.length > 0 && (
+    <>
+      <h2>Products</h2>
+      <table>
+        <thead><tr><th>Product</th><th>Category</th><th>What it does</th></tr></thead>
+        <tbody>
+          {products.map((p) => (
+            <tr>
+              <td>{p.profile
+                ? <a href={`/ai-tools/${p.profile}/`}>{p.name}</a>
+                : (p.url ? <a href={p.url} rel="noopener nofollow">{p.name}</a> : p.name)}</td>
+              <td>{p.category}</td>
+              <td>{p.note}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  )}
+
+  {cases.length > 0 && (
+    <>
+      <h2>Lawsuits we track</h2>
+      <ul>{cases.map((c) => (
+        <li><a href={`/ai-lawsuits/${c.slug}/`}>{c.name}</a>{c.court && <>, {c.court}</>}</li>
+      ))}</ul>
+      <p class="meta-line">Matched on the defendant field of our tracker. Being named as a
+        defendant is not a finding of wrongdoing.</p>
+    </>
+  )}
+
+  {mcp.length > 0 && (
+    <>
+      <h2>MCP servers</h2>
+      <ul>{mcp.map((m) => (
+        <li><a href={`/mcp/${m.slug}/`}>{m.name}</a>{m.description && <> — {m.description}</>}</li>
+      ))}</ul>
+    </>
+  )}
+
+  <h2>Elsewhere on this site</h2>
+  <p>Every page here that mentions {company.name}, so you can see the same organisation from
+    each angle we track it from.</p>
+  <ul>
+    <li><a href="/companies/">AI Company Directory</a> — all companies we track</li>
+    <li><a href="/ai-tools/">AI Tools Directory</a> — the catalog these products come from
+      {categories.length > 0 && <> · categories: {categories.join(', ')}</>}</li>
+    {cases.length > 0 && (
+      <li><a href="/ai-lawsuits/">AI Lawsuit Tracker</a> — {cases.length} case{cases.length === 1 ? '' : 's'} naming {company.name}</li>
+    )}
+    {mcp.length > 0 && (
+      <li><a href="/mcp/">MCP Server Directory</a> — {mcp.length} server{mcp.length === 1 ? '' : 's'} published by {company.name}</li>
+    )}
+    <li><a href="/ai-glossary/">AI Glossary</a> · <a href="/ai-laws/">AI Laws by State</a> · <a href="/ai-compliance/">Governance Frameworks</a></li>
+  </ul>
+
+  <div class="cite-box">Cite this page: <code>"{company.name}." AI Company Directory,
+    The World of AI, theworldofai.org/companies/{company.uid}/.{generated ? ` Verified ${generated}.` : ''}</code></div>
+
+  <p class="meta-line">Entity ID <code>{company.uid}</code>. That identifier is stable across
+    this whole site, so the same company is the same record wherever it appears, whatever
+    spelling a source used.</p>
+
+  <p><a href="/companies/">All companies</a></p>
+</Base>
+
+<style>
+  table { border-collapse: collapse; margin: 1em 0; width: 100%; }
+  table th, table td { text-align: left; vertical-align: top; padding: .5em .7em;
+    border-bottom: 1px solid #ececf2; }
+  table th { font-weight: 600; background: #f7f7fb; }
+  code { font-family: ui-monospace, monospace; font-size: .92em; }
+  .cite-box { margin-top: 1.6em; padding: .9em 1em; background: #f7f7fb; border-left: 3px solid #201868; font-size: .9rem; }
+  .cite-box code { display: block; margin-top: .3em; }
+</style>

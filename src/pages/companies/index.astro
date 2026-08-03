@@ -1,0 +1,101 @@
+---
+/**
+ * AI Company Directory hub at /companies/.
+ *
+ * Alphabetical listing of every organisation behind the tools in our catalog.
+ * Reads content/companies/index.json, which fetch-content.mjs writes from R2
+ * (or from twoai_pages via researchFromSQL-style live query if we add one).
+ *
+ * The full profile pages live at /companies/{uid}/, addressed by the same
+ * short alphanumeric identifier that pins the company in every other cross
+ * reference (lawsuit tracker, tools directory, MCP registry). The identifier
+ * is stable across the whole site, so the same company is the same record
+ * wherever it appears, whatever spelling a source used.
+ */
+import Base from '../../layouts/Base.astro';
+import { readFileSync, existsSync } from 'node:fs';
+
+const idx = existsSync('content/companies/index.json')
+  ? JSON.parse(readFileSync('content/companies/index.json', 'utf8'))
+  : { total: 0, profiled: 0, companies: [], generated: '' };
+
+// Alphabetical grouping with a jump index. Anything not starting A-Z lands
+// under # so nothing is silently dropped from the list.
+const grouped = {};
+for (const c of idx.companies || []) {
+  const ch = (c.name || '').trim().charAt(0).toUpperCase();
+  const key = /[A-Z]/.test(ch) ? ch : '#';
+  (grouped[key] ||= []).push(c);
+}
+for (const k of Object.keys(grouped)) grouped[k].sort((a, b) => a.name.localeCompare(b.name));
+const letters = Object.keys(grouped).sort((a, b) => (a === '#' ? 1 : b === '#' ? -1 : a.localeCompare(b)));
+
+const desc = `${idx.total || 0} companies building AI, listed alphabetically. Each entry says what the company publishes that we track, whether it is named as a defendant in a lawsuit we follow, and whether it has published to the Model Context Protocol registry. ${idx.profiled || 0} have full profiles.`;
+
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'AI Company Directory',
+  description: desc,
+  url: 'https://theworldofai.org/companies/',
+  dateModified: idx.generated,
+  isPartOf: { '@type': 'CollectionPage', name: 'The World of AI', url: 'https://theworldofai.org/' },
+});
+---
+<Base title={`AI Company Directory — ${idx.total || 0} companies building AI`} description={desc} current="/companies/" jsonld={jsonld}>
+  <p class="meta-line" id="top"><a href="/ai-ecosystem/ecosystem-entities-market-and-operations/">Ecosystem Entities, Market and Operations</a></p>
+  <h1>AI Company Directory</h1>
+  <p class="answer">Every organisation behind the tools in our catalog, <b>{idx.total || 0} of them</b>, listed alphabetically. Each entry says what the company publishes that we track, whether it is named as a defendant in a lawsuit we follow, and whether it has published to the Model Context Protocol registry. <b>{idx.profiled || 0}</b> have a full page here; the rest link to the company's own site, because repeating a single tool page under a company heading would tell you nothing new.</p>
+  {idx.generated && <p class="meta-line">Last verified: {idx.generated}</p>}
+
+  {letters.length > 0 && (
+    <nav class="alphabet" aria-label="Jump to letter">
+      {letters.map((l) => <a href={`#letter-${l}`}>{l}</a>)}
+    </nav>
+  )}
+
+  {letters.map((l) => (
+    <section class="letter-block">
+      <h2 id={`letter-${l}`}>{l}</h2>
+      <ul class="co-list">
+        {grouped[l].map((c) => (
+          <li>
+            {c.has_page
+              ? <a href={`/companies/${c.uid}/`}>{c.name}</a>
+              : (c.url
+                  ? <a href={c.url} rel="noopener nofollow">{c.name}</a>
+                  : <b>{c.name}</b>)}
+            {c.summary && <p>{c.summary}</p>}
+          </li>
+        ))}
+      </ul>
+      <p class="back"><a href="#top">Back to top</a></p>
+    </section>
+  ))}
+
+  {(idx.companies || []).length === 0 && <p>The first data synchronization is running; the directory appears within the day.</p>}
+
+  <div class="cite-box">Cite this directory: <code>"AI Company Directory." The World of AI, theworldofai.org/companies/.{idx.generated ? ` Verified ${idx.generated}.` : ''}</code></div>
+
+  <p class="api-line">Machine readable: <a href="/api/companies.json">/api/companies.json</a></p>
+</Base>
+
+<style>
+  .alphabet { display: flex; flex-wrap: wrap; gap: 6px; margin: 1.1em 0 1.6em;
+    padding: .7em .8em; background: var(--cream); border-radius: 6px; }
+  .alphabet a { display: inline-block; min-width: 1.6em; padding: 2px 6px; text-align: center;
+    font-weight: 600; font-size: .93rem; text-decoration: none; border-radius: 4px; }
+  .alphabet a:hover { background: var(--orange); color: #fff; }
+  .letter-block { margin-bottom: 1.4em; }
+  .letter-block h2 { font-size: 1.3rem; margin: 1.2em 0 .4em; padding-bottom: .15em;
+    border-bottom: 2px solid var(--orange); }
+  .co-list { list-style: none; margin: 0; padding: 0; }
+  .co-list li { padding: .7em 0; border-bottom: 1px solid #ececf2; }
+  .co-list li:last-child { border-bottom: 0; }
+  .co-list li > a, .co-list li > b { font-weight: 600; font-size: 1.02rem; }
+  .co-list li p { margin: .2em 0 0; color: #3d3d46; font-size: .95rem; }
+  .back { margin: .5em 0 0; font-size: .85rem; }
+  .cite-box { margin-top: 1.6em; padding: .9em 1em; background: #f7f7fb; border-left: 3px solid #201868; font-size: .9rem; }
+  .cite-box code { display: block; margin-top: .3em; }
+  .api-line { margin-top: .8em; font-size: .87rem; color: #6b6b78; }
+</style>
