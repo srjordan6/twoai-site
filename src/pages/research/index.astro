@@ -1,72 +1,62 @@
 ---
 /**
- * Research library hub at /research/.
- *
- * The AI Research and Publications shelf: ten topical shelves that together
- * catalogue the papers the field cites most, each with a plain note that says
- * why it belongs on that shelf. Reads live from content/research/index.json,
- * which fetch-content.mjs writes from twoai_pages at build time.
+ * The AI Research Library hub. Reads the same shape twoai_pages writes for
+ * kind='research-hub': uid, total, generated, last_added, topics[], most_cited[].
+ * If content/research/index.json is missing (build ran without DATABASE_URL and
+ * without a bundled copy), the page renders an honest empty state instead of
+ * crashing.
  */
 import Base from '../../layouts/Base.astro';
 import { readFileSync, existsSync } from 'node:fs';
 
 const hub = existsSync('content/research/index.json')
   ? JSON.parse(readFileSync('content/research/index.json', 'utf8'))
-  : { topics: [], most_cited: [], total: 0, generated: '', last_added: '' };
-const topics = hub.topics ?? [];
-const cited = hub.most_cited ?? [];
-const total = hub.total ?? 0;
-const desc = `${total} papers curated across ${topics.length} topics in artificial intelligence research, each with a plain note on why it matters. Updated ${hub.last_added || hub.generated || 'daily'}.`;
+  : { total: 0, generated: '', last_added: '', topics: [], most_cited: [] };
+
+const topics = (hub.topics || []).slice().sort((a, b) => (b.count || 0) - (a.count || 0));
+const cited = hub.most_cited || [];
+const desc = `${hub.total || 0} peer-reviewed and preprint AI papers, organised into ${topics.length} topics from architectures to bias, evaluation, and the EU AI Act. Each carries citation count and a plain-English note on why it matters.`;
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',
   name: 'AI Research Library',
   description: desc,
   url: 'https://theworldofai.org/research/',
-  dateModified: hub.last_added || hub.generated,
-  isPartOf: {
-    '@type': 'CollectionPage',
-    name: 'The AI Ecosystem',
-    url: 'https://theworldofai.org/ai-ecosystem/research-knowledge-and-learning/',
-  },
+  dateModified: hub.generated,
+  isPartOf: { '@type': 'CollectionPage', name: 'The World of AI', url: 'https://theworldofai.org/' },
 });
 ---
-<Base title={`AI Research Library: ${total} curated papers across ${topics.length} topics — The World of AI`} description={desc} current="/research/" jsonld={jsonld}>
+<Base title={`AI Research Library — ${hub.total || 0} papers across ${topics.length} topics`} description={desc} current="/research/" jsonld={jsonld}>
   <p class="meta-line"><a href="/ai-ecosystem/research-knowledge-and-learning/">Research, Knowledge and Learning</a></p>
   <h1>AI Research Library</h1>
-  <p class="answer">A curated shelf of the artificial intelligence papers the field cites, organised into
-    <b>{topics.length} topics</b> covering <b>{total} papers</b> in total. Each paper carries a plain
-    note that says why it is here, so a reader can decide whether to open the PDF before opening it.</p>
-  {(hub.last_added || hub.generated) && (
-    <p class="meta-line">Last added: {hub.last_added || hub.generated}</p>
-  )}
+  <p class="answer">A curated shelf of <b>{hub.total || 0} artificial intelligence papers</b>{topics.length > 0 && <> across <b>{topics.length} topics</b></>}, each with the citation count, the venue, the year, and a plain-English note on why it matters. Curated from Consensus, refreshed regularly, and free to cite.</p>
+  {hub.generated && <p class="meta-line">Last verified: {hub.generated}{hub.last_added && hub.last_added !== hub.generated && <> · Last paper added: {hub.last_added}</>}</p>}
 
   {topics.length > 0 && (
     <>
       <h2>Topics</h2>
       <ul class="grid">
-        {topics.map((t) => (
-          <li class="card">
-            <a href={`/research/${t.slug}/`}>{t.name}</a>
-            <p>{t.count} paper{t.count === 1 ? '' : 's'}</p>
-          </li>
-        ))}
+        {topics.map((t) => {
+          const slug = t.slug || t.topic || (t.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+          return (
+            <li class="card">
+              <a href={`/research/${slug}/`}>{t.name}</a>
+              <p>{t.count} paper{t.count === 1 ? '' : 's'}</p>
+            </li>
+          );
+        })}
       </ul>
     </>
   )}
 
   {cited.length > 0 && (
     <>
-      <h2>Most cited across all topics</h2>
-      <ol class="cited">
+      <h2>Most cited across the library</h2>
+      <ol class="papers">
         {cited.map((p) => (
           <li>
-            <a href={p.url} rel="noopener nofollow">{p.title}</a>
-            <p class="meta-line">
-              {p.authors}{p.journal ? `, ${p.journal}` : ''}{p.year ? `, ${p.year}` : ''}
-              {typeof p.citations === 'number' && <> · <b>{p.citations.toLocaleString()} citations</b></>}
-              {p.topic && <> · <a href={`/research/${p.topic}/`}>{p.topic.replace(/-/g, ' ')}</a></>}
-            </p>
+            <a href={p.url} rel="noopener">{p.title}</a>
+            <p class="meta">{p.authors}{p.journal && <> · {p.journal}</>}{p.year && <> · {p.year}</>}{typeof p.citations === 'number' && <> · <b>{p.citations.toLocaleString()}</b> citations</>}{p.topic && <> · <a href={`/research/${p.topic}/`}>{p.topic.replace(/-/g, ' ')}</a></>}</p>
             {p.note && <p class="note">{p.note}</p>}
           </li>
         ))}
@@ -74,19 +64,24 @@ const jsonld = JSON.stringify({
     </>
   )}
 
-  {topics.length === 0 && (
-    <p>The research library is being assembled and will appear here shortly.</p>
-  )}
+  {topics.length === 0 && <p>The first data synchronization is running; the library appears within the day.</p>}
+
+  <div class="cite-box">Cite this library: <code>"AI Research Library." The World of AI, theworldofai.org/research/.{hub.generated ? ` Verified ${hub.generated}.` : ''}</code></div>
+
+  <p class="api-line">Machine readable: <a href="/api/research.json">/api/research.json</a></p>
 </Base>
 
 <style>
-  .grid { list-style: none; margin: 0; padding: 0; display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .85em; }
-  .card { padding: .8em .95em; border: 1px solid #ececf2; border-radius: 8px; background: #fff; }
-  .card a { font-weight: 600; text-decoration: none; }
+  .grid { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .card { border: 1px solid #ececf2; border-radius: 6px; padding: 12px; }
+  .card a { font-weight: 600; }
   .card p { margin: .3em 0 0; font-size: .87rem; color: #6b6b78; }
-  .cited { list-style: decimal; padding-left: 1.4em; }
-  .cited li { margin-bottom: 1.1em; }
-  .cited li a { font-weight: 600; }
-  .cited .note { margin: .35em 0 0; color: #4a4a55; font-size: .95rem; }
+  .papers { padding-left: 1.4em; }
+  .papers li { margin-bottom: 1em; }
+  .papers li a { font-weight: 600; }
+  .papers .meta { margin: .2em 0 0; font-size: .87rem; color: #6b6b78; }
+  .papers .note { margin: .35em 0 0; font-size: .93rem; }
+  .cite-box { margin-top: 1.6em; padding: .9em 1em; background: #f7f7fb; border-left: 3px solid #201868; font-size: .9rem; }
+  .cite-box code { display: block; margin-top: .3em; }
+  .api-line { margin-top: .8em; font-size: .87rem; color: #6b6b78; }
 </style>
