@@ -15,10 +15,10 @@ import Topbar from '../components/Topbar.astro';
 interface Props { title: string; description: string; current?: string; jsonld?: string; canonicalOverride?: string; }
 const { title, description, current = '', jsonld, canonicalOverride } = Astro.props;
 const nav = [
-  { href: '/ai-ecosystem/technology-and-core-infrastructure/', label: 'Technology' },
-  { href: '/ai-ecosystem/ecosystem-entities-market-and-operations/', label: 'Market' },
-  { href: '/ai-ecosystem/research-knowledge-and-learning/', label: 'Research' },
-  { href: '/ai-ecosystem/enterprise-applications-governance-and-tools/', label: 'Enterprise' },
+  { href: '/ai-ecosystem/technology-and-core-infrastructure/', label: 'Technology & Infrastructure', short: 'Technology' },
+  { href: '/ai-ecosystem/ecosystem-entities-market-and-operations/', label: 'Market & Entities', short: 'Market' },
+  { href: '/ai-ecosystem/research-knowledge-and-learning/', label: 'Research & Learning', short: 'Research' },
+  { href: '/ai-ecosystem/enterprise-applications-governance-and-tools/', label: 'Enterprise & Governance', short: 'Enterprise' },
 ];
 // Canonical defaults to this page's own URL. A page may override it while a
 // copy elsewhere is still the indexed original, which is how the governance
@@ -62,7 +62,7 @@ const canonical = canonicalOverride || new URL(Astro.url.pathname, Astro.site).h
       <nav aria-label="Primary" class="main-nav">
         <ul>
           {nav.map((n) => (
-            <li><a href={n.href} aria-current={current === n.href ? 'page' : undefined}>{n.label}</a></li>
+            <li><a href={n.href} aria-current={current === n.href ? 'page' : undefined}><span class="nav-full">{n.label}</span><span class="nav-short">{n.short}</span></a></li>
           ))}
         </ul>
       </nav>
@@ -132,6 +132,15 @@ const canonical = canonicalOverride || new URL(Astro.url.pathname, Astro.site).h
       padding-top: 14px; padding-bottom: 14px; }
     .logo svg { display: block; }
     .main-nav ul { display: flex; gap: 26px; list-style: none; margin: 0; padding: 0; }
+    /* The full names carry meaning the one-word versions lose, so they show
+       wherever there is room and collapse to the short form on narrow screens
+       rather than wrapping the bar onto two lines. */
+    .nav-short { display: none; }
+    @media (max-width: 1180px) {
+      .main-nav ul { gap: 20px; }
+      .nav-full { display: none; }
+      .nav-short { display: inline; }
+    }
     .main-nav a { font-weight: 500; font-size: 15px; color: var(--navy); }
     .main-nav a[aria-current="page"] { color: var(--orange); }
     .nav-toggle { display: none; background: none; border: 0; cursor: pointer; padding: 8px; }
