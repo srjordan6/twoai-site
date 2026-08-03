@@ -1,0 +1,155 @@
+---
+/**
+ * AI Research Library: hub and topic reading lists, addressed by identifier.
+ *
+ * Per Stephen's instruction 2026-08-03, new sections publish below the category
+ * path under a short alphanumeric identifier rather than a name slug, so a page
+ * keeps its address when its title changes. The hub and every topic share this
+ * one route:
+ *
+ *   /ai-ecosystem/research-knowledge-and-learning/{id}/
+ *
+ * Source is twoai_research_papers, curated through the Consensus academic
+ * index, rendered from the twoai_pages rows that scripts/fetch-content.mjs
+ * reads live from Postgres. We publish the citation record, our one-sentence
+ * note, and a link out. WE DO NOT PUBLISH ABSTRACTS: an abstract is publisher
+ * copyrighted text, and reproducing hundreds of them on a site whose main asset
+ * is a lawsuit tracker would be indefensible. The link is how the reader gets
+ * the abstract.
+ *
+ * There is deliberately no page per paper. A citation and one sentence is a
+ * directory row, not a page worth indexing, which is the same rule the MCP
+ * tracker already applies to bare registry entries.
+ */
+import Base from '../../../layouts/Base.astro';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+
+const CATEGORY = 'research-knowledge-and-learning';
+const BASE = `/ai-ecosystem/${CATEGORY}`;
+
+export function getStaticPaths() {
+  const paths = [];
+  if (!existsSync('content/research/index.json')) return paths;
+
+  const idx = JSON.parse(readFileSync('content/research/index.json', 'utf8'));
+  paths.push({ params: { id: idx.uid }, props: { hub: idx } });
+
+  for (const f of readdirSync('content/research')) {
+    if (!f.endsWith('.json') || f === 'index.json') continue;
+    const t = JSON.parse(readFileSync(`content/research/${f}`, 'utf8'));
+    if (!t.uid) continue;
+    paths.push({ params: { id: t.uid }, props: { topic: t, hubUid: idx.uid } });
+  }
+  return paths;
+}
+
+const { hub, topic, hubUid } = Astro.props;
+
+const desc = hub
+  ? `${hub.total} peer-reviewed and preprint papers on AI capability, safety, governance and application, sorted into ${hub.topics.length} topics, each with the citation record and a plain note on why it matters.`
+  : `${topic.count} papers on ${topic.name.toLowerCase()} in AI, ${topic.citations.toLocaleString()} citations between them. ${topic.blurb}`.slice(0, 300);
+
+const title = hub
+  ? 'AI Research Library — The World of AI'
+  : `${topic.name}: AI research reading list`;
+
+const refreshed = (hub || topic).refreshed;
+
+const jsonld = JSON.stringify(
+  hub
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: 'AI Research Library',
+        description: desc,
+        url: `https://theworldofai.org${BASE}/${hub.uid}/`,
+        dateModified: refreshed || hub.generated,
+      }
+    : {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: `${topic.name}: AI research`,
+        description: topic.blurb,
+        url: `https://theworldofai.org${BASE}/${topic.uid}/`,
+        dateModified: refreshed || topic.generated,
+        isPartOf: {
+          '@type': 'CollectionPage',
+          name: 'AI Research Library',
+          url: `https://theworldofai.org${BASE}/${hubUid}/`,
+        },
+      }
+);
+---
+<Base title={title} description={desc} current="/ai-ecosystem/research-knowledge-and-learning/" jsonld={jsonld}>
+  <p class="meta-line" id="top">
+    <a href="/">AI Ecosystem</a> &middot;
+    <a href={`/ai-ecosystem/${CATEGORY}/`}>Research, Knowledge and Learning</a>
+    {topic && <> &middot; <a href={`${BASE}/${hubUid}/`}>AI Research Library</a></>}
+  </p>
+
+  {hub && (
+    <>
+      <h1>AI Research Library</h1>
+      <p class="answer">
+        <b>{`${hub.total} papers`}</b>{` on how AI works, where it fails, and how it is being governed, sorted into ${hub.topics.length} topics. Every entry carries its authors, venue and citation count, one sentence from us on why it matters, and a link to the paper.`}
+      </p>
+      <p class="mon">
+        We do not reproduce abstracts. Follow the link for the paper's own
+        summary, which is where it belongs.
+      </p>
+      {refreshed && (
+        <p class="meta-line">Shelf last refreshed: {refreshed}. Sourced through the Consensus academic index.</p>
+      )}
+      <ul class="co-list">
+        {hub.topics.map((t) => (
+          <li>
+            <a href={`${BASE}/${t.uid}/`}>{t.name}</a>
+            <p>{t.blurb}</p>
+            <p class="mon">
+              {`${t.count} paper${t.count === 1 ? '' : 's'} · ${t.citations.toLocaleString()} citations${t.newest ? ` · newest ${t.newest}` : ''}`}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </>
+  )}
+
+  {topic && (
+    <>
+      <h1>{topic.name}</h1>
+      <p class="lede">{topic.blurb}</p>
+      <p class="answer">
+        <b>{`${topic.count} paper${topic.count === 1 ? '' : 's'}`}</b>{`, ${topic.citations.toLocaleString()} citations between them, ordered by citation count. Each line links to the paper on Consensus.`}
+      </p>
+      {refreshed && <p class="meta-line">Shelf last refreshed: {refreshed}</p>}
+      <ol class="papers">
+        {topic.papers.map((p) => (
+          <li>
+            <a href={p.url} rel="nofollow noopener" target="_blank">{p.title}</a>
+            <p class="mon">
+              {`${p.authors}${p.authors && p.year ? ' · ' : ''}${p.year || ''}${p.journal ? ` · ${p.journal}` : ''} · ${p.citations.toLocaleString()} citation${p.citations === 1 ? '' : 's'}`}
+            </p>
+            {p.note && <p>{p.note}</p>}
+          </li>
+        ))}
+      </ol>
+      <p class="back"><a href={`${BASE}/${hubUid}/`}>All research topics</a></p>
+    </>
+  )}
+</Base>
+
+<style>
+  .co-list { list-style: none; margin: 1.2em 0 0; padding: 0; }
+  .co-list li { padding: .8em 0; border-bottom: 1px solid #ececf2; }
+  .co-list li:last-child { border-bottom: 0; }
+  .co-list li > a { font-weight: 600; font-size: 1.05rem; }
+  .co-list li p { margin: .25em 0 0; color: #3d3d46; font-size: .95rem; }
+  .papers { margin: 1.2em 0 0; padding-left: 1.4em; }
+  .papers li { padding: .75em 0; border-bottom: 1px solid #ececf2; }
+  .papers li:last-child { border-bottom: 0; }
+  .papers li > a { font-weight: 600; }
+  .papers li p { margin: .25em 0 0; color: #3d3d46; font-size: .95rem; }
+  .lede { font-size: 1.05rem; color: #3d3d46; margin: 0 0 .5em; }
+  .mon { font-size: .88rem; color: #6b6b78; margin: .1em 0 .3em; }
+  .back { margin: 1.4em 0 0; font-size: .9rem; }
+</style>

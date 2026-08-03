@@ -26,7 +26,7 @@ import { createHash } from 'node:crypto';
 
 const REPO = 'https://github.com/srjordan6/twoai-content';
 const R2 = 'https://pub-b8347c6e4e8c40febe3c83d8860826e2.r2.dev';
-const dirs = ['laws', 'glossary', 'lawsuits', 'static', 'tools', 'week', 'ecosystem', 'compliance', 'mcp', 'people', 'companies'];
+const dirs = ['laws', 'glossary', 'lawsuits', 'static', 'tools', 'week', 'ecosystem', 'compliance', 'mcp', 'people', 'companies', 'research'];
 
 mkdirSync('content', { recursive: true });
 for (const d of dirs) mkdirSync(`content/${d}`, { recursive: true });
@@ -177,6 +177,55 @@ try {
   console.warn('fetch-content: live taxonomy unavailable, using bundled copy:', e.message);
 }
 
+// THE RESEARCH LIBRARY IS READ LIVE FROM POSTGRES TOO, FOR THE SAME REASON.
+//
+// twoai_research_papers is refreshed by a scheduled Cowork task, because
+// Consensus is an MCP connector reachable only from a Claude session and not an
+// HTTP API the pipeline can call. Routing that refresh through the nightly cron
+// to reach the site would mean running twenty unrelated stages, LegiScan,
+// GDELT, CourtListener and the rest, to publish eleven small JSON files. That
+// is the wrong loop, exactly as it was for a one-row taxonomy edit.
+//
+// So the render rows are read straight from twoai_pages, which twoai_build
+// writes and the Cowork task can upsert directly. A deploy of this site then
+// picks up a refreshed shelf with no pipeline involvement at all. Without
+// DATABASE_URL it silently uses whatever the bundle carried, so the build never
+// depends on the database being reachable.
+async function researchFromSQL() {
+  const url = process.env.DATABASE_URL;
+  if (!url) return false;
+  let pg;
+  try {
+    pg = await import('pg');
+  } catch {
+    console.warn('fetch-content: DATABASE_URL set but pg is not installed, using bundled research');
+    return false;
+  }
+  const client = new pg.default.Client({ connectionString: url, ssl: { rejectUnauthorized: false } });
+  await client.connect();
+  try {
+    const { rows } = await client.query(`
+      SELECT path, data FROM twoai_pages
+      WHERE kind IN ('research-topic','research-hub') ORDER BY path`);
+    if (!rows.length) return false;
+    mkdirSync('content/research', { recursive: true });
+    for (const r of rows) {
+      // path is already the repo-relative content path, e.g. research/index.json
+      writeFileSync(`content/${r.path}`, JSON.stringify(r.data));
+    }
+    console.log(`fetch-content: research read live from SQL, ${rows.length} page(s)`);
+    return true;
+  } finally {
+    await client.end();
+  }
+}
+
+try {
+  await researchFromSQL();
+} catch (e) {
+  console.warn('fetch-content: live research unavailable, using bundled copy:', e.message);
+}
+
 // Public API mirrors of the aggregates.
 mkdirSync('public/api', { recursive: true });
 const api = [
@@ -189,5 +238,6 @@ const api = [
   ['content/mcp/index.json', 'public/api/mcp.json'],
   ['content/people/index.json', 'public/api/people.json'],
   ['content/companies/index.json', 'public/api/companies.json'],
+  ['content/research/index.json', 'public/api/research.json'],
 ];
 for (const [src, dst] of api) if (existsSync(src)) copyFileSync(src, dst);
