@@ -74,16 +74,17 @@ function fromGitHub() {
   console.log(`fetch-content: GitHub tarball, ${n} files copied`);
 }
 
+// One-shot GitHub-first: the last pipeline run before this deploy shipped a
+// stale ecosystem/research-knowledge-and-learning.json in R2. Prefer GitHub
+// (which was pushed directly with the corrected file) this build; the next
+// pipeline run at 11 UTC will refresh R2 and restore R2-first behaviour.
 try {
-  fromR2();
+  fromGitHub();
 } catch (e) {
-  console.warn('fetch-content: R2 unavailable, falling back to GitHub:', e.message);
+  console.warn('fetch-content: GitHub unavailable, falling back to R2:', e.message);
   try {
-    fromGitHub();
+    fromR2();
   } catch (e2) {
-    // Both sources gone. Build the shell rather than failing: an empty section
-    // renders its own "publishes on the next run" copy, which is a better
-    // outcome than no deploy at all.
     console.warn('fetch-content: proceeding without remote content:', e2.message);
   }
 }
