@@ -26,7 +26,7 @@ import { createHash } from 'node:crypto';
 
 const REPO = 'https://github.com/srjordan6/twoai-content';
 const R2 = 'https://pub-b8347c6e4e8c40febe3c83d8860826e2.r2.dev';
-const dirs = ['laws', 'glossary', 'lawsuits', 'static', 'tools', 'week', 'ecosystem', 'compliance', 'mcp', 'people', 'companies', 'research'];
+const dirs = ['laws', 'glossary', 'lawsuits', 'static', 'tools', 'week', 'ecosystem', 'compliance', 'mcp', 'people', 'companies', 'research', 'sources'];
 
 mkdirSync('content', { recursive: true });
 for (const d of dirs) mkdirSync(`content/${d}`, { recursive: true });
@@ -206,14 +206,21 @@ async function researchFromSQL() {
   try {
     const { rows } = await client.query(`
       SELECT path, data FROM twoai_pages
-      WHERE kind IN ('research-topic','research-hub') ORDER BY path`);
+      WHERE kind IN ('research-topic','research-hub','research-paper','sources-hub') ORDER BY path`);
     if (!rows.length) return false;
     mkdirSync('content/research', { recursive: true });
+    mkdirSync('content/research/paper', { recursive: true });
+    mkdirSync('content/sources', { recursive: true });
     for (const r of rows) {
-      // path is already the repo-relative content path, e.g. research/index.json
+      // path is already the repo-relative content path, e.g. research/index.json,
+      // research/paper/rXXXXXXX.json, or sources/index.json.
+      const parts = r.path.split('/');
+      if (parts.length > 1) {
+        mkdirSync(`content/${parts.slice(0, -1).join('/')}`, { recursive: true });
+      }
       writeFileSync(`content/${r.path}`, JSON.stringify(r.data));
     }
-    console.log(`fetch-content: research read live from SQL, ${rows.length} page(s)`);
+    console.log(`fetch-content: research + sources read live from SQL, ${rows.length} page(s)`);
     return true;
   } finally {
     await client.end();
@@ -239,5 +246,6 @@ const api = [
   ['content/people/index.json', 'public/api/people.json'],
   ['content/companies/index.json', 'public/api/companies.json'],
   ['content/research/index.json', 'public/api/research.json'],
+  ['content/sources/index.json', 'public/api/sources.json'],
 ];
 for (const [src, dst] of api) if (existsSync(src)) copyFileSync(src, dst);

@@ -69,12 +69,13 @@ const jsonld = JSON.stringify({
     <ol class="papers">
       {papers.map((p) => (
         <li>
-          <a href={p.url} rel="noopener nofollow">{p.title}</a>
+          <a href={`/research/paper/${p.uid}/`}>{p.title}</a>
           <p class="meta-line">
             {p.authors}{p.journal ? `, ${p.journal}` : ''}{p.year ? `, ${p.year}` : ''}
             {typeof p.citations === 'number' && <> · <b>{p.citations.toLocaleString()} citations</b></>}
           </p>
           {p.note && <p class="note">{p.note}</p>}
+          <p class="src-line">Source on <a href={p.url} rel="noopener nofollow">Consensus</a> (subscription required) · <a href={`/research/paper/${p.uid}/`}>Read our summary</a></p>
         </li>
       ))}
     </ol>
@@ -90,9 +91,10 @@ const jsonld = JSON.stringify({
 
 <style>
   .papers { list-style: decimal; padding-left: 1.4em; }
-  .papers li { margin-bottom: 1.1em; }
+  .papers li { margin-bottom: 1.4em; }
   .papers li a { font-weight: 600; }
   .papers .note { margin: .35em 0 0; color: #4a4a55; font-size: .95rem; }
+  .papers .src-line { margin: .35em 0 0; color: #6b6b78; font-size: .85rem; }
   .cite-box { margin-top: 2em; padding: .9em 1em; background: #f6f6fa; border-radius: 8px;
     font-size: .9rem; color: #4a4a55; }
   .cite-box code { display: block; margin-top: .35em; background: transparent; padding: 0;

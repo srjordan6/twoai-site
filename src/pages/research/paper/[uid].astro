@@ -1,0 +1,157 @@
+---
+/**
+ * One AI research paper page at /research/paper/{uid}/.
+ *
+ * Reads content/research/paper/{uid}.json, which the pipeline writes from
+ * twoai_research_papers (one row per paper). Every paper page carries the
+ * same fixed layout Stephen specified: title and paper type, then year,
+ * authors, journal, volume and DOI in a facts strip, then the abstract with
+ * an attribution line (Consensus, subscription required), then three plain-
+ * English explanations for a beginner, a practitioner and a business reader.
+ *
+ * The Consensus attribution and subscription notice appear on EVERY page,
+ * even when the abstract or explanations are still being written by the
+ * scheduled Cowork task. Missing fields render an honest note rather than
+ * silence, so a partial page is always readable.
+ */
+import Base from '../../../layouts/Base.astro';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+
+export function getStaticPaths() {
+  const dir = 'content/research/paper';
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir)
+    .filter((f) => f.endsWith('.json'))
+    .map((f) => JSON.parse(readFileSync(`${dir}/${f}`, 'utf8')))
+    .filter((p) => p && p.uid)
+    .map((p) => ({ params: { uid: p.uid }, props: { p } }));
+}
+
+const { p } = Astro.props;
+const doiUrl = p.doi ? `https://doi.org/${p.doi}` : '';
+const abstract = (p.abstract || '').trim();
+const beg = (p.explain_beginner || '').trim();
+const prac = (p.explain_practitioner || '').trim();
+const biz = (p.explain_business || '').trim();
+const paperType = p.paper_type || 'Journal Article';
+
+const authors = (p.authors || '').trim();
+const authorList = authors ? authors.split(/\s*,\s*|\s+and\s+/).filter(Boolean) : [];
+const authorCount = authorList.length;
+
+const desc = (abstract || p.note || `${p.title} by ${authors || 'unknown authors'}.`).slice(0, 300);
+
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'ScholarlyArticle',
+  headline: p.title,
+  name: p.title,
+  author: authorList.map((n) => ({ '@type': 'Person', name: n })),
+  datePublished: p.year ? String(p.year) : undefined,
+  isPartOf: p.journal ? { '@type': 'Periodical', name: p.journal, volumeNumber: p.volume || undefined } : undefined,
+  identifier: p.doi ? { '@type': 'PropertyValue', propertyID: 'DOI', value: p.doi } : undefined,
+  url: `https://theworldofai.org/research/paper/${p.uid}/`,
+  abstract: abstract || undefined,
+  dateModified: p.generated,
+});
+---
+<Base title={`${p.title} — AI Research — The World of AI`} description={desc} current="/research/" jsonld={jsonld}>
+  <p class="meta-line">
+    <a href="/research/">AI Research Library</a>
+    {p.topic_slug && p.topic_name && (
+      <> · <a href={`/research/${p.topic_slug}/`}>{p.topic_name}</a></>
+    )}
+  </p>
+
+  <h1>{p.title}</h1>
+
+  <table class="facts">
+    <tbody>
+      <tr><th>Type</th><td>{paperType}</td></tr>
+      {p.year > 0 && <tr><th>Year</th><td>{p.year}</td></tr>}
+      {authors && (
+        <tr>
+          <th>Authors{authorCount > 0 ? ` (${authorCount})` : ''}</th>
+          <td>{authors}</td>
+        </tr>
+      )}
+      {p.journal && <tr><th>Journal</th><td>{p.journal}</td></tr>}
+      {p.volume && <tr><th>Volume</th><td>{p.volume}</td></tr>}
+      {p.doi && (
+        <tr>
+          <th>DOI</th>
+          <td><a href={doiUrl} rel="noopener">{p.doi}</a></td>
+        </tr>
+      )}
+      {typeof p.citations === 'number' && p.citations > 0 && (
+        <tr><th>Citations</th><td>{p.citations.toLocaleString()}</td></tr>
+      )}
+    </tbody>
+  </table>
+
+  <h2>Abstract</h2>
+  {abstract ? (
+    <>
+      <p class="abstract">{abstract}</p>
+      <p class="attribution">
+        Abstract via <a href={p.url} rel="noopener">Consensus</a>. Reading the
+        source paper on Consensus requires a Consensus subscription.
+      </p>
+    </>
+  ) : (
+    <p class="pending">
+      The abstract for this paper is being fetched from Consensus. Read the
+      paper on <a href={p.url} rel="noopener">Consensus</a> (subscription
+      required).
+    </p>
+  )}
+
+  <h2>Three ways to read this paper</h2>
+
+  <section class="explain">
+    <h3>For a beginner</h3>
+    {beg ? <p>{beg}</p> : <p class="pending">This explanation is being written by our scheduled research task and will appear on the next refresh.</p>}
+  </section>
+
+  <section class="explain">
+    <h3>For a practitioner</h3>
+    {prac ? <p>{prac}</p> : <p class="pending">This explanation is being written by our scheduled research task and will appear on the next refresh.</p>}
+  </section>
+
+  <section class="explain">
+    <h3>For a business reader</h3>
+    {biz ? <p>{biz}</p> : <p class="pending">This explanation is being written by our scheduled research task and will appear on the next refresh.</p>}
+  </section>
+
+  {p.note && (
+    <>
+      <h2>Editor&apos;s note</h2>
+      <p>{p.note}</p>
+    </>
+  )}
+
+  <div class="cite-box">
+    Cite this paper on The World of AI: <code>{authors || 'Author(s)'}{p.year ? `. (${p.year}).` : '.'} {p.title}.{p.journal ? ` ${p.journal}` : ''}{p.volume ? `, ${p.volume}` : ''}.{p.doi ? ` https://doi.org/${p.doi}` : ''} Cataloged at theworldofai.org/research/paper/{p.uid}/.{p.generated ? ` Verified ${p.generated}.` : ''}</code>
+  </div>
+
+  <p class="meta-line">
+    Every source cited on this site is indexed on our <a href="/sources/">Sources page</a>.
+  </p>
+</Base>
+
+<style>
+  h1 { margin-bottom: .3em; }
+  .facts { width: 100%; margin: 1.2em 0 2em; border-collapse: collapse; }
+  .facts th, .facts td { text-align: left; padding: .55em .8em; vertical-align: top; border-bottom: 1px solid #ececf2; }
+  .facts th { width: 12em; color: #6b6b78; font-weight: 600; font-size: .92rem; }
+  .facts td { font-size: .95rem; }
+  h2 { margin-top: 1.6em; }
+  h3 { margin-top: 1.2em; margin-bottom: .3em; font-size: 1.05rem; color: #201868; }
+  .abstract { line-height: 1.55; }
+  .attribution { margin-top: .5em; color: #6b6b78; font-size: .9rem; padding: .6em .8em; background: #f7f7fb; border-left: 3px solid #F07800; }
+  .pending { color: #6b6b78; font-style: italic; }
+  .explain { margin: 1em 0; }
+  .explain p { margin: 0; line-height: 1.55; }
+  .cite-box { margin-top: 2em; padding: .9em 1em; background: #f7f7fb; border-left: 3px solid #201868; font-size: .9rem; }
+  .cite-box code { display: block; margin-top: .35em; font-family: ui-monospace, monospace; color: #201868; white-space: normal; }
+</style>

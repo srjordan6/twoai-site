@@ -55,7 +55,7 @@ const jsonld = JSON.stringify({
       <ol class="papers">
         {cited.map((p) => (
           <li>
-            <a href={p.url} rel="noopener">{p.title}</a>
+            <a href={`/research/paper/${p.uid}/`}>{p.title}</a>
             <p class="meta">{p.authors}{p.journal && <> · {p.journal}</>}{p.year && <> · {p.year}</>}{typeof p.citations === 'number' && <> · <b>{p.citations.toLocaleString()}</b> citations</>}{p.topic && <> · <a href={`/research/${p.topic}/`}>{p.topic.replace(/-/g, ' ')}</a></>}</p>
             {p.note && <p class="note">{p.note}</p>}
           </li>
@@ -65,6 +65,11 @@ const jsonld = JSON.stringify({
   )}
 
   {topics.length === 0 && <p>The first data synchronization is running; the library appears within the day.</p>}
+
+  <div class="references">
+    <h2>Where every source lives</h2>
+    <p>Every paper and primary instrument this site cites is indexed on the <a href="/sources/">Sources &amp; References</a> page — the site's central bibliography.</p>
+  </div>
 
   <div class="cite-box">Cite this library: <code>"AI Research Library." The World of AI, theworldofai.org/research/.{hub.generated ? ` Verified ${hub.generated}.` : ''}</code></div>
 
@@ -81,6 +86,9 @@ const jsonld = JSON.stringify({
   .papers li a { font-weight: 600; }
   .papers .meta { margin: .2em 0 0; font-size: .87rem; color: #6b6b78; }
   .papers .note { margin: .35em 0 0; font-size: .93rem; }
+  .references { margin-top: 2em; padding: 1em 1.2em; background: #fff7ec; border-left: 3px solid #F07800; }
+  .references h2 { margin: 0 0 .3em; font-size: 1.05rem; }
+  .references p { margin: 0; }
   .cite-box { margin-top: 1.6em; padding: .9em 1em; background: #f7f7fb; border-left: 3px solid #201868; font-size: .9rem; }
   .cite-box code { display: block; margin-top: .3em; }
   .api-line { margin-top: .8em; font-size: .87rem; color: #6b6b78; }
