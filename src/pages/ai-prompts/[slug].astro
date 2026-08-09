@@ -1,0 +1,89 @@
+---
+/**
+ * One prompt page at /ai-prompts/{slug}/, serving both kinds:
+ *  - technique pages (what / when it works / when it fails / how / paper)
+ *  - domain library pages (intro + templates with copyable prompt text)
+ *
+ * Reads content/prompts/{slug}.json; the kind field selects the layout.
+ */
+import Base from '../../layouts/Base.astro';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+
+export function getStaticPaths() {
+  if (!existsSync('content/prompts')) return [];
+  return readdirSync('content/prompts')
+    .filter((f) => f.endsWith('.json') && f !== 'index.json')
+    .map((f) => {
+      const p = JSON.parse(readFileSync(`content/prompts/${f}`, 'utf8'));
+      return { params: { slug: p.slug || f.replace(/\.json$/, '') }, props: { p } };
+    });
+}
+const { p } = Astro.props;
+const isDomain = p.kind === 'domain';
+const desc = (isDomain
+  ? `${p.name}: ${(p.templates ?? []).length} original working prompt templates. ${p.intro}`
+  : `${p.name}: ${p.what}`
+).slice(0, 300);
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: isDomain ? `${p.name}: Working Templates` : `${p.name}: When It Works and When It Fails`,
+  description: desc,
+  url: `https://theworldofai.org/ai-prompts/${p.slug}/`,
+  dateModified: p.generated,
+  author: { '@type': 'Organization', name: 'The World of AI' },
+  isPartOf: { '@type': 'CollectionPage', name: 'AI Prompt Library and Techniques', url: 'https://theworldofai.org/ai-prompts/' },
+});
+---
+<Base title={isDomain ? `${p.name}: Working AI Prompt Templates` : `${p.name}: When It Works and When It Fails`}
+  description={desc} current="/ai-ecosystem/enterprise-applications-governance-and-tools/" jsonld={jsonld}>
+  <p class="meta-line"><a href="/ai-prompts/">AI Prompts</a> › {isDomain ? 'Prompt Library' : 'Techniques'}</p>
+  <h1>{p.name}</h1>
+
+  {isDomain ? (
+    <>
+      <p class="answer">{p.intro}</p>
+      {(p.templates ?? []).map((t) => (
+        <section class="card">
+          <h2>{t.title}</h2>
+          <pre class="prompt-block"><code>{t.prompt}</code></pre>
+          <p><strong>Tokens:</strong> roughly {t.tokens} before your pasted material ·
+            <strong> Models:</strong> {t.models}</p>
+          <p><em>{t.tip}</em></p>
+        </section>
+      ))}
+      <p>Placeholders in braces are yours to replace. Token counts are estimates for the
+        template itself; pasted source material adds its own tokens on top.</p>
+    </>
+  ) : (
+    <>
+      <p class="answer"><strong>{p.name}</strong> is {p.what.charAt(0).toLowerCase() + p.what.slice(1)}</p>
+      <h2>When it works</h2>
+      <p>{p.when_works}</p>
+      <h2>When it fails</h2>
+      <p>{p.when_fails}</p>
+      <h2>How to use it</h2>
+      <p>{p.how}</p>
+      <h2>Source</h2>
+      <p>
+        {p.paper && (<>Original research: {p.paper}. </>)}
+        Reference entry: <a href={p.source_url} rel="noopener">{p.source_url}</a>.
+      </p>
+    </>
+  )}
+
+  <div class="cite-box">
+    <strong>Cite this page:</strong>
+    <code>The World of AI, "{p.name}," theworldofai.org/ai-prompts/{p.slug}/, verified {p.generated}.</code>
+  </div>
+</Base>
+<style>
+  .prompt-block {
+    background: #f6f7fa;
+    border-left: 3px solid #F07800;
+    padding: 1rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 0.9rem;
+  }
+</style>

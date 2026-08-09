@@ -1,0 +1,94 @@
+---
+/**
+ * Prompt engineering hub at /ai-prompts/.
+ *
+ * Reads content/prompts/index.json, published daily by the pipeline from
+ * twoai_pages, which is filled from twoai_prompt_techniques (techniques)
+ * and prompt-domain rows (the library). Editing SQL is the update path.
+ *
+ * Two halves: the library, original templates by business domain, and the
+ * techniques, reference pages for the established methods with when each
+ * works and when it fails. The failure conditions are the editorial value;
+ * most prompt collections skip them.
+ */
+import Base from '../../layouts/Base.astro';
+import { readFileSync, existsSync } from 'node:fs';
+
+const path = 'content/prompts/index.json';
+const hub = existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : { techniques: [], domains: [] };
+const techniques = hub.techniques ?? [];
+const domains = hub.domains ?? [];
+const templateCount = domains.reduce((s, d) => s + (d.count || 0), 0);
+const desc = `A working prompt library: ${templateCount} original templates across ${domains.length} business domains, plus reference pages for ${techniques.length} established prompting techniques with when each works and when it fails.`;
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'AI Prompt Library and Techniques',
+  description: desc,
+  url: 'https://theworldofai.org/ai-prompts/',
+  dateModified: hub.generated,
+  mainEntity: {
+    '@type': 'ItemList',
+    numberOfItems: techniques.length + domains.length,
+    itemListElement: [...domains, ...techniques].map((x, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      url: `https://theworldofai.org/ai-prompts/${x.slug}/`,
+      name: x.name,
+    })),
+  },
+});
+---
+<Base title="AI Prompt Library and Prompting Techniques"
+  description={desc} current="/ai-ecosystem/enterprise-applications-governance-and-tools/" jsonld={jsonld}>
+  <h1>AI Prompts: Library and Techniques</h1>
+  <p class="answer">This section has two halves. The <strong>prompt library</strong> is
+    {templateCount} original, working templates organized by business domain, sales, marketing,
+    finance, coding, HR, cybersecurity, healthcare, and education, each with a token estimate,
+    model notes, and a usage tip. The <strong>techniques</strong> are reference pages for the
+    {techniques.length} established prompting methods, and each one states not just when the
+    technique works but when it fails, which is the part most prompt guides leave out.</p>
+  <p class="meta-line">Last verified {hub.generated} · Templates are original to this site;
+    technique pages cite their source papers.</p>
+
+  <section id="library">
+    <h2>Prompt Library by Domain <span class="badge">{domains.length}</span></h2>
+    <ul class="grid">
+      {domains.map((d) => (
+        <li class="card">
+          <a href={`/ai-prompts/${d.slug}/`}>{d.name}</a>
+          <p>{d.intro}</p>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <section id="techniques">
+    <h2>Prompting Techniques <span class="badge">{techniques.length}</span></h2>
+    <ul class="grid">
+      {techniques.map((t) => (
+        <li class="card">
+          <a href={`/ai-prompts/${t.slug}/`}>{t.name}</a>
+          <p>{t.what}</p>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  {hub.sources && (
+    <section>
+      <h2>Sources that stay updated</h2>
+      <p>{hub.sources_note}</p>
+      <ul>
+        {hub.sources.map((s) => (
+          <li><a href={s.url} rel="noopener">{s.name}</a></li>
+        ))}
+      </ul>
+    </section>
+  )}
+
+  <div class="cite-box">
+    <strong>Cite this page:</strong>
+    <code>The World of AI, "AI Prompt Library and Techniques," theworldofai.org/ai-prompts/, verified {hub.generated}.</code>
+  </div>
+</Base>
