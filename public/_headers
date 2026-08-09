@@ -1,0 +1,16 @@
+# Security headers for every page and asset on theworldofai.org.
+# Served by Cloudflare Workers static assets, same mechanism as _redirects.
+#
+# The CSP allows exactly what this site actually loads: itself (including
+# Pagefind's WASM search, which needs wasm-unsafe-eval), Google AdSense and
+# its ad-serving and consent domains, and the Google Translate widget. Inline
+# scripts are part of the static build (Astro is:inline), so script-src keeps
+# unsafe-inline; there is no server to mint nonces. frame-ancestors and
+# X-Frame-Options are set together and agree: SAMEORIGIN.
+/*
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Frame-Options: SAMEORIGIN
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.google.com https://*.googleadservices.com https://translate.google.com https://translate.googleapis.com https://translate-pa.googleapis.com https://www.gstatic.com https://fundingchoicesmessages.google.com; style-src 'self' 'unsafe-inline' https://www.gstatic.com https://translate.googleapis.com; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.google.com https://*.googlesyndication.com https://*.doubleclick.net https://*.googleadservices.com https://translate.googleapis.com https://translate-pa.googleapis.com https://fundingchoicesmessages.google.com https://*.adtrafficquality.google; frame-src https://*.googlesyndication.com https://*.doubleclick.net https://www.google.com https://fundingchoicesmessages.google.com https://*.adtrafficquality.google; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests
