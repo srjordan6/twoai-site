@@ -58,12 +58,41 @@ const jsonld = JSON.stringify({
   ) : (
     <>
       <p class="answer"><strong>{p.name}</strong> is {p.what.charAt(0).toLowerCase() + p.what.slice(1)}</p>
+      {p.mechanism && (<><h2>Why it works</h2><p>{p.mechanism}</p></>)}
       <h2>When it works</h2>
       <p>{p.when_works}</p>
       <h2>When it fails</h2>
       <p>{p.when_fails}</p>
       <h2>How to use it</h2>
       <p>{p.how}</p>
+      {(p.examples ?? []).length > 0 && (
+        <>
+          <h2>Worked examples</h2>
+          {(p.examples ?? []).map((ex) => (
+            <section class="card">
+              <h3>{ex.label}</h3>
+              <pre class="prompt-block"><code>{ex.prompt}</code></pre>
+              <p><em>{ex.note}</em></p>
+            </section>
+          ))}
+        </>
+      )}
+      {(p.faq ?? []).length > 0 && (
+        <>
+          <h2>Frequently asked questions</h2>
+          {(p.faq ?? []).map((f) => (
+            <>
+              <h3>{f.q}</h3>
+              <p>{f.a}</p>
+            </>
+          ))}
+        </>
+      )}
+      {(p.related ?? []).length > 0 && (
+        <p><strong>Related techniques:</strong> {(p.related ?? []).map((r, i) => (
+          <>{i > 0 && ' · '}<a href={`/ai-prompts/${r}/`}>{r.replace(/-/g, ' ')}</a></>
+        ))}</p>
+      )}
       <h2>Source</h2>
       <p>
         {p.paper && (<>Original research: {p.paper}. </>)}
