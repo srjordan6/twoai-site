@@ -56,6 +56,13 @@ const jsonld = JSON.stringify({
     <p>{hub.seed_note} <a href={hub.seed_url} rel="noopener">See that comparison</a>.</p>
   )}
 
+  {(hub.how_to_read ?? []).length > 0 && (
+    <section id="how-to-read">
+      <h2>How to read any AI benchmark</h2>
+      {(hub.how_to_read ?? []).map((para) => (<p>{para}</p>))}
+    </section>
+  )}
+
   {sections.map((s) => (
     <section id={s.slug}>
       <h2>{s.name} <span class="badge">{(s.items ?? []).length}</span></h2>
@@ -70,6 +77,8 @@ const jsonld = JSON.stringify({
       </ul>
     </section>
   ))}
+
+  {hub.maintenance_note && (<p class="meta-line">{hub.maintenance_note}</p>)}
 
   <div class="cite-box">
     <strong>Cite this page:</strong>

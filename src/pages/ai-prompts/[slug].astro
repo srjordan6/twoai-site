@@ -43,6 +43,7 @@ const jsonld = JSON.stringify({
   {isDomain ? (
     <>
       <p class="answer">{p.intro}</p>
+      {p.guidance && (<><h2>How to use this library well</h2><p>{p.guidance}</p></>)}
       {(p.templates ?? []).map((t) => (
         <section class="card">
           <h2>{t.title}</h2>
@@ -54,6 +55,17 @@ const jsonld = JSON.stringify({
       ))}
       <p>Placeholders in braces are yours to replace. Token counts are estimates for the
         template itself; pasted source material adds its own tokens on top.</p>
+      {(p.faq ?? []).length > 0 && (
+        <>
+          <h2>Frequently asked questions</h2>
+          {(p.faq ?? []).map((f) => (
+            <>
+              <h3>{f.q}</h3>
+              <p>{f.a}</p>
+            </>
+          ))}
+        </>
+      )}
     </>
   ) : (
     <>
@@ -103,8 +115,11 @@ const jsonld = JSON.stringify({
 
   <div class="cite-box">
     <strong>Cite this page:</strong>
-    <code>The World of AI, "{p.name}," theworldofai.org/ai-prompts/{p.slug}/, verified {p.generated}.</code>
+    <code>The World of AI, "{p.name}," theworldofai.org/ai-prompts/{p.slug}/, verified {p.last_reviewed || p.generated}.</code>
   </div>
+  {p.last_reviewed && (
+    <p class="meta-line">Last verified {p.last_reviewed} · Reviewed on a {p.review_interval_days || 180}-day cycle · Corrections republish automatically on the next daily build.</p>
+  )}
 </Base>
 <style>
   .prompt-block {

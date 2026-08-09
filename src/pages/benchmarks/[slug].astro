@@ -21,6 +21,14 @@ export function getStaticPaths() {
     });
 }
 const { b } = Astro.props;
+const sectionNames = {
+  'bench-model': 'Model Benchmarks',
+  'bench-hardware': 'Hardware Benchmarks',
+  'bench-frameworks': 'Framework and Inference Benchmarks',
+  'bench-vector-db': 'Vector Database Benchmarks',
+  'bench-agents': 'Agent Benchmarks',
+};
+const sectionName = b.section_name || sectionNames[b.section] || 'Benchmarks';
 const desc = `${b.name}: ${b.measures}`.slice(0, 300);
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
@@ -35,7 +43,7 @@ const jsonld = JSON.stringify({
 ---
 <Base title={`${b.name}: What It Measures and What It Does Not`}
   description={desc} current="/ai-ecosystem/enterprise-applications-governance-and-tools/" jsonld={jsonld}>
-  <p class="meta-line"><a href="/benchmarks/">AI Benchmarks</a> › {b.section_name}</p>
+  <p class="meta-line"><a href="/benchmarks/">AI Benchmarks</a> › {sectionName}</p>
   <h1>{b.name}</h1>
   <p class="answer"><strong>{b.name}</strong> measures {b.measures.charAt(0).toLowerCase() + b.measures.slice(1)}</p>
 
@@ -47,6 +55,30 @@ const jsonld = JSON.stringify({
 
   {b.note && (<><h2>Worth knowing</h2><p>{b.note}</p></>)}
 
+  {b.history && (<><h2>Where it came from</h2><p>{b.history}</p></>)}
+
+  {b.criticism && (<><h2>Criticisms and limits</h2><p>{b.criticism}</p></>)}
+
+  {b.interpretation && (<><h2>How to read the results</h2><p>{b.interpretation}</p></>)}
+
+  {(b.faq ?? []).length > 0 && (
+    <>
+      <h2>Frequently asked questions</h2>
+      {(b.faq ?? []).map((f) => (
+        <>
+          <h3>{f.q}</h3>
+          <p>{f.a}</p>
+        </>
+      ))}
+    </>
+  )}
+
+  {(b.related ?? []).length > 0 && (
+    <p><strong>Related benchmarks:</strong> {(b.related ?? []).map((r, i) => (
+      <>{i > 0 && ' · '}<a href={`/benchmarks/${r}/`}>{r}</a></>
+    ))}</p>
+  )}
+
   <h2>Source</h2>
   <p>Maintained by {b.maintainer}. Official site and current results:
     <a href={b.url} rel="noopener">{b.url}</a>. Benchmark scores change as new models and
@@ -55,6 +87,9 @@ const jsonld = JSON.stringify({
 
   <div class="cite-box">
     <strong>Cite this page:</strong>
-    <code>The World of AI, "{b.name}: What It Measures," theworldofai.org/benchmarks/{b.slug}/, verified {b.generated}.</code>
+    <code>The World of AI, "{b.name}: What It Measures," theworldofai.org/benchmarks/{b.slug}/, verified {b.last_reviewed || b.generated}.</code>
   </div>
+  {b.last_reviewed && (
+    <p class="meta-line">Last verified {b.last_reviewed} · Reviewed on a {b.review_interval_days || 90}-day cycle · Corrections republish automatically on the next daily build.</p>
+  )}
 </Base>

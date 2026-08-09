@@ -65,6 +65,7 @@ const jsonld = JSON.stringify({
 
   <section id="techniques">
     <h2>Prompting Techniques <span class="badge">{techniques.length}</span></h2>
+    {hub.learning_path && (<p>{hub.learning_path}</p>)}
     <ul class="grid">
       {techniques.map((t) => (
         <li class="card">
@@ -86,6 +87,8 @@ const jsonld = JSON.stringify({
       </ul>
     </section>
   )}
+
+  {hub.maintenance_note && (<p class="meta-line">{hub.maintenance_note}</p>)}
 
   <div class="cite-box">
     <strong>Cite this page:</strong>
