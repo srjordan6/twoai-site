@@ -63,7 +63,7 @@ const jsonld = JSON.stringify({
           <ul class="src-list">
             {s.items.map((it) => (
               <li>
-                <a href={it.url} rel="noopener">{it.title}</a>
+                {it.url ? <a href={it.url} rel="noopener">{it.title}</a> : <b>{it.title}</b>}
                 {(it.authors || it.year || it.journal) && (
                   <span class="meta">
                     {it.authors && <> · {it.authors}</>}

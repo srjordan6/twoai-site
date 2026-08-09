@@ -29,7 +29,7 @@ const jsonld = JSON.stringify({
 <Base title={`AI Research Library — ${hub.total || 0} papers across ${topics.length} topics`} description={desc} current="/research/" jsonld={jsonld}>
   <p class="meta-line"><a href="/ai-ecosystem/research-knowledge-and-learning/">Research, Knowledge and Learning</a></p>
   <h1>AI Research Library</h1>
-  <p class="answer">A curated shelf of <b>{hub.total || 0} artificial intelligence papers</b>{topics.length > 0 && <> across <b>{topics.length} topics</b></>}, each with the citation count, the venue, the year, and a plain-English note on why it matters. Curated from Consensus, refreshed regularly, and free to cite.</p>
+  <p class="answer">A curated shelf of <b>{hub.total || 0} artificial intelligence papers</b>{topics.length > 0 && <> across <b>{topics.length} topics</b></>}, each with the citation count, the venue, the year, and a plain-English note on why it matters. Curated from the peer-reviewed literature, refreshed regularly, and free to cite.</p>
   {hub.generated && <p class="meta-line">Last verified: {hub.generated}{hub.last_added && hub.last_added !== hub.generated && <> · Last paper added: {hub.last_added}</>}</p>}
 
   {topics.length > 0 && (

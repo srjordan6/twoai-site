@@ -94,15 +94,15 @@ const jsonld = JSON.stringify({
     <>
       <p class="abstract">{abstract}</p>
       <p class="attribution">
-        Abstract via <a href={p.url} rel="noopener">Consensus</a>. Reading the
-        source paper on Consensus requires a Consensus subscription.
+        Read the <a href={p.url} rel="noopener">source paper</a> at the
+        original publisher.
       </p>
     </>
   ) : (
     <p class="pending">
-      The abstract for this paper is being fetched from Consensus. Read the
-      paper on <a href={p.url} rel="noopener">Consensus</a> (subscription
-      required).
+      The abstract for this paper has not been added yet. Read the
+      <a href={p.url} rel="noopener">source paper</a> at the original
+      publisher.
     </p>
   )}
 

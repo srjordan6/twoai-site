@@ -75,7 +75,7 @@ const jsonld = JSON.stringify({
             {typeof p.citations === 'number' && <> · <b>{p.citations.toLocaleString()} citations</b></>}
           </p>
           {p.note && <p class="note">{p.note}</p>}
-          <p class="src-line">Source on <a href={p.url} rel="noopener nofollow">Consensus</a> (subscription required) · <a href={`/research/paper/${p.uid}/`}>Read our summary</a></p>
+          <p class="src-line">Read the <a href={p.url} rel="noopener">source paper</a> · <a href={`/research/paper/${p.uid}/`}>Read our summary</a></p>
         </li>
       ))}
     </ol>
