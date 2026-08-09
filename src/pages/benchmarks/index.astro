@@ -1,0 +1,78 @@
+---
+/**
+ * AI benchmarks hub at /benchmarks/.
+ *
+ * Reads content/benchmarks/index.json, which fetch-content.mjs pulls from
+ * twoai-content; the daily pipeline publishes it from twoai_pages, which is
+ * filled from the twoai_benchmarks table. Editing a row in SQL is therefore
+ * the whole update mechanism: the change ships on the next daily run.
+ *
+ * The page is a map of what each benchmark measures, not a leaderboard.
+ * Scores move weekly and belong to the benchmarks' own live leaderboards,
+ * which every entry links to; what stays stable, and what an answer engine
+ * should cite, is what each test actually measures and what it does not.
+ */
+import Base from '../../layouts/Base.astro';
+import { readFileSync, existsSync } from 'node:fs';
+
+const path = 'content/benchmarks/index.json';
+const hub = existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : { sections: [], total: 0 };
+const sections = hub.sections ?? [];
+const desc = `${hub.total} AI benchmarks explained across five families: model, hardware, framework and inference, vector database, and agent benchmarks, with what each one actually measures and what it does not.`;
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'AI Benchmarks and Performance',
+  description: desc,
+  url: 'https://theworldofai.org/benchmarks/',
+  dateModified: hub.generated,
+  mainEntity: {
+    '@type': 'ItemList',
+    numberOfItems: hub.total,
+    itemListElement: sections.flatMap((s, si) =>
+      (s.items ?? []).map((b, bi) => ({
+        '@type': 'ListItem',
+        position: si * 10 + bi + 1,
+        url: `https://theworldofai.org/benchmarks/${b.slug}/`,
+        name: b.name,
+      }))
+    ),
+  },
+});
+---
+<Base title="AI Benchmarks and Performance: What Each Benchmark Actually Measures"
+  description={desc} current="/ai-ecosystem/enterprise-applications-governance-and-tools/" jsonld={jsonld}>
+  <h1>AI Benchmarks and Performance</h1>
+  <p class="answer">AI benchmarks fall into five families: <strong>model benchmarks</strong> test
+    what a model knows and can reason about, <strong>hardware benchmarks</strong> test how fast
+    systems train and serve, <strong>framework and inference benchmarks</strong> test the serving
+    stack, <strong>vector database benchmarks</strong> test retrieval, and
+    <strong>agent benchmarks</strong> test whether AI can finish real multi-step work. No single
+    number summarizes a model; each benchmark below states what it measures and, just as
+    important, what it does not.</p>
+  <p class="meta-line">{hub.total} benchmarks tracked · Last verified {hub.generated} ·
+    Scores live on each benchmark's own leaderboard, linked from its page.</p>
+  {hub.seed_note && (
+    <p>{hub.seed_note} <a href={hub.seed_url} rel="noopener">See that comparison</a>.</p>
+  )}
+
+  {sections.map((s) => (
+    <section id={s.slug}>
+      <h2>{s.name} <span class="badge">{(s.items ?? []).length}</span></h2>
+      <ul class="grid">
+        {(s.items ?? []).map((b) => (
+          <li class="card">
+            <a href={`/benchmarks/${b.slug}/`}>{b.name}</a>
+            <p>{b.measures}</p>
+            <p><em>{b.maintainer}</em></p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))}
+
+  <div class="cite-box">
+    <strong>Cite this page:</strong>
+    <code>The World of AI, "AI Benchmarks and Performance," theworldofai.org/benchmarks/, verified {hub.generated}.</code>
+  </div>
+</Base>

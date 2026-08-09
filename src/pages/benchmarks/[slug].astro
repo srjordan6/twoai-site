@@ -1,0 +1,60 @@
+---
+/**
+ * One benchmark page at /benchmarks/{slug}/.
+ *
+ * Reads content/benchmarks/{slug}.json. Each page answers three questions in
+ * a fixed order: what does this benchmark measure, what does it NOT measure,
+ * and how does it work. The not-measured block is the editorial point of the
+ * whole section: benchmark numbers get quoted without their limits, and a
+ * reference that states the limits is the one worth citing.
+ */
+import Base from '../../layouts/Base.astro';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+
+export function getStaticPaths() {
+  if (!existsSync('content/benchmarks')) return [];
+  return readdirSync('content/benchmarks')
+    .filter((f) => f.endsWith('.json') && f !== 'index.json')
+    .map((f) => {
+      const b = JSON.parse(readFileSync(`content/benchmarks/${f}`, 'utf8'));
+      return { params: { slug: b.slug || f.replace(/\.json$/, '') }, props: { b } };
+    });
+}
+const { b } = Astro.props;
+const desc = `${b.name}: ${b.measures}`.slice(0, 300);
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: `${b.name}: What It Measures and What It Does Not`,
+  description: desc,
+  url: `https://theworldofai.org/benchmarks/${b.slug}/`,
+  dateModified: b.generated,
+  author: { '@type': 'Organization', name: 'The World of AI' },
+  isPartOf: { '@type': 'CollectionPage', name: 'AI Benchmarks and Performance', url: 'https://theworldofai.org/benchmarks/' },
+});
+---
+<Base title={`${b.name}: What It Measures and What It Does Not`}
+  description={desc} current="/ai-ecosystem/enterprise-applications-governance-and-tools/" jsonld={jsonld}>
+  <p class="meta-line"><a href="/benchmarks/">AI Benchmarks</a> › {b.section_name}</p>
+  <h1>{b.name}</h1>
+  <p class="answer"><strong>{b.name}</strong> measures {b.measures.charAt(0).toLowerCase() + b.measures.slice(1)}</p>
+
+  <h2>What it does not measure</h2>
+  <p>{b.not_measured}</p>
+
+  <h2>How it works</h2>
+  <p>{b.how}</p>
+
+  {b.note && (<><h2>Worth knowing</h2><p>{b.note}</p></>)}
+
+  <h2>Source</h2>
+  <p>Maintained by {b.maintainer}. Official site and current results:
+    <a href={b.url} rel="noopener">{b.url}</a>. Benchmark scores change as new models and
+    systems are submitted; this page describes the test itself, and the link above is
+    where the live numbers belong.</p>
+
+  <div class="cite-box">
+    <strong>Cite this page:</strong>
+    <code>The World of AI, "{b.name}: What It Measures," theworldofai.org/benchmarks/{b.slug}/, verified {b.generated}.</code>
+  </div>
+</Base>
