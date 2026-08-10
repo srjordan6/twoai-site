@@ -1,0 +1,171 @@
+---
+/**
+ * AI Vendor News at /ai-news/vendor/: announcements from the companies,
+ * labs, and institutes building and governing AI, in their own words, from
+ * their own feeds. Every link goes to the vendor's original post.
+ *
+ * Data is news/vendor.json, built from the intel watch's curated vendor
+ * feeds: only sources that are the organisation itself (OpenAI, Google
+ * DeepMind, Hugging Face, Mistral, Stability, the European Commission, the
+ * UK AI Security Institute, CIFAR, AI Singapore), never press aggregation.
+ * Press coverage of the field lives in the Daily News briefing; this page is
+ * what the builders said themselves. Items carry the date the watch surfaced
+ * them, which for a newly added feed can trail the vendor's own publication
+ * date, and the page says so rather than implying otherwise.
+ */
+import Base from '../../../layouts/Base.astro';
+
+const mods = import.meta.glob('../../../../content/news/vendor.json', { eager: true });
+const vn: any = Object.values(mods)[0]?.default ?? null;
+const vendors: any[] = (vn?.vendors ?? []).map((v: any) => ({ ...v, items: v.items ?? [] }));
+
+const totalShown = vendors.reduce((n, v) => n + v.items.length, 0);
+const totalTracked = vendors.reduce((n, v) => n + (v.total ?? v.items.length), 0);
+const generated = vn?.generated ? new Date(vn.generated) : null;
+const stamp = generated ? `${generated.toUTCString().slice(0, 22)} UTC` : null;
+const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+const title = `AI Vendor News: Announcements from the Companies Building AI`;
+const description =
+  `Announcements from AI companies, labs, and institutes in their own words: OpenAI, Google ` +
+  `DeepMind, Hugging Face, Mistral, Stability, and more. Every link goes to the original post.`;
+
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'CollectionPage',
+      name: 'AI Vendor News',
+      url: 'https://theworldofai.org/ai-news/vendor/',
+      description,
+    },
+    {
+      '@type': 'ItemList',
+      name: 'AI vendors tracked',
+      itemListElement: vendors.map((v, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        name: v.vendor,
+      })),
+    },
+  ],
+});
+---
+<Base title={title} description={description} current="/ai-news/" jsonld={jsonld}>
+  <p class="meta-line"><a href="/ai-news/">AI News</a> · <a href="/ai-news/daily/">Daily News</a> · AI Vendor News</p>
+  <h1>AI Vendor News</h1>
+  {vn && (
+    <p class="dateline">
+      <strong>From the builders</strong> · {vn.date}
+      {stamp && <> · last updated {stamp}</>}
+      · past {vn.window_days} days
+    </p>
+  )}
+
+  <div class="answer-box">
+    <p class="answer-label">What this page is</p>
+    <p>
+      Announcements from the organisations building and governing AI, in their own words, drawn
+      from their own feeds rather than press coverage: {vendors.length} sources,
+      {' '}{totalShown} recent posts shown of {totalTracked} tracked over the past
+      {' '}{vn?.window_days ?? 30} days. Every link goes to the vendor&rsquo;s original post. For
+      how the field is being covered by the press, read the
+      <a href="/ai-news/daily/"> Daily News briefing</a>.
+    </p>
+  </div>
+
+  {vendors.length === 0 && (
+    <p class="empty">Vendor announcements publish with the pipeline&rsquo;s next run.</p>
+  )}
+
+  <div class="cols">
+    <div class="main">
+      {vendors.map((v) => (
+        <section class="vend" id={slugify(v.vendor)}>
+          <h2>{v.vendor} <span class="count">{v.total ?? v.items.length}</span></h2>
+          <div class="rule"></div>
+          <ul class="items">
+            {v.items.map((it: any) => (
+              <li>
+                <a href={it.url} rel="noopener nofollow" target="_blank">{it.title}</a>
+                <span class="meta">Surfaced {it.date}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+      {vendors.length > 0 && (
+        <p class="note">
+          Dates are when the intel watch surfaced each post, which for a newly added feed can
+          trail the vendor&rsquo;s own publication date. Being listed is not an endorsement, and
+          announcements are the vendor&rsquo;s claims, not verified facts.
+        </p>
+      )}
+    </div>
+
+    <aside class="side">
+      <div class="panel sticky">
+        <p class="box-label">Sources on this page</p>
+        <ul class="toc">
+          {vendors.map((v) => <li><a href={`#${slugify(v.vendor)}`}>{v.vendor} ({v.items.length})</a></li>)}
+          <li><a href="/ai-news/daily/">Daily News briefing &rarr;</a></li>
+        </ul>
+      </div>
+      <div class="panel">
+        <p class="box-label">The numbers</p>
+        <table class="dash">
+          <tbody>
+            <tr><th scope="row">Sources tracked</th><td>{vendors.length}</td></tr>
+            <tr><th scope="row">Posts shown</th><td>{totalShown}</td></tr>
+            <tr><th scope="row">Posts in window</th><td>{totalTracked}</td></tr>
+            <tr><th scope="row">Window</th><td>{vn?.window_days ?? 30} days</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </aside>
+  </div>
+</Base>
+
+<style>
+  .dateline { color: #7A8A9E; font-size: 14px; letter-spacing: .02em; }
+  .dateline strong { color: #201868; }
+
+  .answer-box { background: #FFF6EC; border: 1px solid #F0D6B0; border-radius: 6px; padding: 22px 26px; margin: 18px 0 28px; }
+  .answer-box p { font-size: 16px; line-height: 1.75; color: #2C2C2A; margin: 0; }
+  .answer-box a { color: #201868; font-weight: 600; }
+  .answer-label { font-size: 11px !important; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #F07800; margin: 0 0 8px !important; }
+
+  .cols { display: grid; grid-template-columns: minmax(0,1fr) 280px; gap: 40px; align-items: start; }
+  @media (max-width: 960px) { .cols { grid-template-columns: 1fr; } }
+
+  .box-label { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #F07800; margin: 0 0 10px; }
+
+  .vend { margin: 0 0 40px; scroll-margin-top: 80px; }
+  .vend h2 { font-size: 24px; color: #201868; margin: 0 0 2px; }
+  .vend .count { font-size: 13px; color: #fff; background: #F07800; border-radius: 999px; padding: 2px 9px; vertical-align: middle; margin-left: 6px; }
+  .rule { width: 56px; height: 3px; background: #F07800; margin: 0 0 14px; }
+
+  .items { list-style: none; margin: 0; padding: 0; max-width: 780px; }
+  .items li { padding: 12px 0; border-bottom: 1px solid #e8e6e0; }
+  .items li:last-child { border-bottom: none; }
+  .items a { color: #201868; text-decoration: none; font-weight: 500; }
+  .items a:hover { color: #F07800; }
+  .items .meta { display: block; font-size: 13px; color: #7A8A9E; margin-top: 3px; }
+
+  .note { margin-top: 30px; font-size: 14px; color: #7A8A9E; font-style: italic; max-width: 68ch; }
+
+  .side { display: flex; flex-direction: column; gap: 20px; }
+  .panel { border: 1px solid #e6e4de; border-radius: 10px; padding: 18px 20px; background: #fafaf6; }
+  .sticky { position: sticky; top: 20px; }
+  .toc { list-style: none; margin: 0; padding: 0; }
+  .toc li { margin: 0 0 7px; }
+  .toc a { font-size: 13.5px; color: #201868; text-decoration: none; }
+  .toc a:hover { color: #F07800; }
+  .dash { width: 100%; border-collapse: collapse; }
+  .dash th, .dash td { font-size: 13.5px; padding: 7px 0; border-bottom: 1px solid #eceae4; text-align: left; }
+  .dash th { color: #7A8A9E; font-weight: 500; }
+  .dash td { color: #201868; font-weight: 700; text-align: right; }
+  .dash tr:last-child th, .dash tr:last-child td { border-bottom: none; }
+
+  .empty { color: #7A8A9E; font-style: italic; font-size: 14px; }
+</style>

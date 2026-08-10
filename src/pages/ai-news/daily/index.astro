@@ -1,0 +1,295 @@
+---
+/**
+ * The daily AI briefing: today's top stories ranked by breadth of worldwide
+ * coverage. Lives at /ai-news/daily/ under the AI News section hub; story
+ * pages remain direct children at /ai-news/{slug}/.
+ *
+ * Both this site and srjconsultingservices.com render the same news.json
+ * artifact, written by the pipeline's publish_news stage every morning and
+ * fetched by scripts/fetch-content.mjs. Everything shown is derived
+ * deterministically from that data; anything the data cannot support is an
+ * empty slot, never an invention. The dateline carries the date AND the
+ * compile time, per the standing directive that every content page shows
+ * when it was produced.
+ */
+import Base from '../../../layouts/Base.astro';
+import {
+  groupByCategory, categoryOf, topEntities, summaryParagraph, readingMinutes, titleCase,
+  type Story,
+} from '../../../lib/newsTopics';
+
+const mods = import.meta.glob('../../../../content/news/news.json', { eager: true });
+const news: any = Object.values(mods)[0]?.default ?? null;
+const raw = news?.stories ?? [];
+const big = news?.big_picture ?? [];
+
+// Go marshals a nil slice to JSON null. The pipeline validates against that,
+// but the guard stays: templates should not assume their only writer.
+const stories: Story[] = raw.map((s: any) => ({
+  ...s,
+  Domains: s.Domains ?? [],
+  Orgs: s.Orgs ?? [],
+  Persons: s.Persons ?? [],
+  Articles: s.Articles ?? [],
+}));
+
+const grouped = groupByCategory(stories);
+const entities = topEntities(stories, 8);
+const summary = summaryParagraph(stories, 5);
+const top5 = stories.slice(0, 5);
+
+const totalArticles = stories.reduce((n, s) => n + (s.ArticleCount ?? 0), 0);
+const totalOutlets = new Set(stories.flatMap((s) => s.Domains)).size;
+const leader = stories[0];
+
+const minutes = readingMinutes(summary, ...stories.map((s) => s.Headline), ...big);
+const generated = news?.generated ? new Date(news.generated) : null;
+const stamp = generated ? `${generated.toUTCString().slice(0, 22)} UTC` : null;
+
+const title = `Daily News: Today's Top AI Stories, Ranked by Coverage`;
+const description =
+  `A daily AI briefing: the top stories in artificial intelligence, ranked by breadth of ` +
+  `global coverage, each with its sources. Compiled fresh every morning.`;
+
+const faqs = [
+  {
+    q: `How are these AI stories chosen and ranked?`,
+    a: `Stories are discovered from worldwide news coverage in the past 36 hours, clustered by ` +
+       `headline similarity, then ranked by how many distinct outlets are covering each one. ` +
+       `Breadth of independent coverage is the ranking signal, not editorial preference and not ` +
+       `raw article volume, which would let one prolific outlet dominate.`,
+  },
+  {
+    q: `How often is this briefing updated?`,
+    a: `Once every morning, automatically. Each edition carries the date and the time it was ` +
+       `compiled, so it is always clear how current the page is.`,
+  },
+  {
+    q: `How are stories sorted into categories?`,
+    a: `By an explicit, published keyword map applied to the headline, not by a language model. ` +
+       `It is deterministic and auditable: anyone can see why a story landed where it did, and ` +
+       `anything that does not match falls to a neutral General AI bucket rather than being ` +
+       `forced into a category. It trades some accuracy for the ability to check it.`,
+  },
+  {
+    q: `Is news coverage treated as evidence?`,
+    a: `No, and the distinction is deliberate. Coverage is a lead. A claim only enters the ` +
+       `AI compliance reference pages after verification against a primary source such as the ` +
+       `statute, the regulator's own publication, or the standard itself. Press is explicitly ` +
+       `inadmissible as evidence there.`,
+  },
+];
+
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'CollectionPage',
+      name: 'Daily News',
+      url: 'https://theworldofai.org/ai-news/daily/',
+      description,
+    },
+    {
+      '@type': 'ItemList',
+      name: `Top AI stories, ${news?.date ?? 'daily briefing'}`,
+      itemListElement: stories.map((s, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        name: s.Headline,
+        url: `https://theworldofai.org/ai-news/${s.Slug}/`,
+      })),
+    },
+    {
+      '@type': 'FAQPage',
+      mainEntity: faqs.map((f) => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    },
+  ],
+});
+---
+<Base title={title} description={description} current="/ai-news/" jsonld={jsonld}>
+  <p class="meta-line"><a href="/ai-news/">AI News</a> · Daily News · <a href="/ai-news/vendor/">AI Vendor News</a></p>
+  <h1>What&rsquo;s happening in the world of AI</h1>
+  {news && (
+    <p class="dateline">
+      <strong>Daily briefing</strong> · {news.date}
+      {stamp && <> · last updated {stamp}</>}
+      · {minutes}-minute read
+    </p>
+  )}
+  {entities.length > 0 && (
+    <div class="pills" aria-label="Entities named across today's coverage">
+      <span class="pill-label">In today&rsquo;s coverage</span>
+      {entities.map((e) => <span class="pill">{e}</span>)}
+    </div>
+  )}
+
+  <div class="cols">
+    <div class="main">
+      {big.length > 0 && (
+        <div class="big" id="big-picture">
+          <p class="box-label">The big picture</p>
+          <ul>{big.map((h: string) => <li>{h}</li>)}</ul>
+        </div>
+      )}
+
+      <div class="answer-box" id="summary">
+        <p class="answer-label">Today in one paragraph</p>
+        <p>{summary}</p>
+      </div>
+
+      {top5.length > 0 && (
+        <ol class="top5">
+          {top5.map((s) => (
+            <li>
+              <a href={`/ai-news/${s.Slug}/`}>{s.Headline}</a>
+              <span class="t5meta">{categoryOf(s).name} · <strong>{s.DomainCount}</strong> outlets</span>
+            </li>
+          ))}
+        </ol>
+      )}
+
+      {stories.length === 0 && (
+        <p class="empty">Today&rsquo;s briefing publishes with the pipeline&rsquo;s next morning run.</p>
+      )}
+
+      {grouped.map((g) => (
+        <section class="cat" id={g.slug}>
+          <h2>{g.name} <span class="count">{g.stories.length}</span></h2>
+          <p class="cat-blurb">{g.blurb}</p>
+          <div class="rule"></div>
+          {g.stories.map((s) => (
+            <article class="story">
+              <h3><a href={`/ai-news/${s.Slug}/`}>{s.Headline}</a></h3>
+              <p class="brief">
+                Covered by <strong>{s.DomainCount}</strong> outlets across
+                <strong> {s.ArticleCount}</strong> articles
+                {s.Domains.length > 0 && <>, including {s.Domains.slice(0, 4).join(', ')}{s.Domains.length > 4 ? ', and others' : ''}</>}.
+                {s.Persons.length > 0 && <> Named: {s.Persons.slice(0, 3).map(titleCase).join(', ')}.</>}
+              </p>
+              {s.Why && <p class="why"><span class="why-label">Why it matters</span>{s.Why}</p>}
+              <div class="nums">
+                <span class="num"><strong>{s.DomainCount}</strong> outlets</span>
+                <span class="num"><strong>{s.ArticleCount}</strong> articles</span>
+                <span class="num"><strong>{s.Orgs.length + s.Persons.length}</strong> entities</span>
+              </div>
+              <a class="more" href={`/ai-news/${s.Slug}/`}>Full coverage and sources &rarr;</a>
+            </article>
+          ))}
+        </section>
+      ))}
+
+      <section class="faq" id="faq">
+        <h2>Frequently asked questions</h2>
+        <div class="rule"></div>
+        {faqs.map((f) => (
+          <div class="faq-item">
+            <h3>{f.q}</h3>
+            <p>{f.a}</p>
+          </div>
+        ))}
+      </section>
+    </div>
+
+    <aside class="side">
+      <div class="panel sticky">
+        <p class="box-label">On this page</p>
+        <ul class="toc">
+          <li><a href="#summary">Today in one paragraph</a></li>
+          {grouped.map((g) => <li><a href={`#${g.slug}`}>{g.name} ({g.stories.length})</a></li>)}
+          <li><a href="#faq">FAQ</a></li>
+          <li><a href="/ai-news/vendor/">AI Vendor News &rarr;</a></li>
+        </ul>
+      </div>
+
+      <div class="panel">
+        <p class="box-label">Today&rsquo;s numbers</p>
+        <table class="dash">
+          <tbody>
+            <tr><th scope="row">Stories tracked</th><td>{stories.length}</td></tr>
+            <tr><th scope="row">Articles scanned</th><td>{totalArticles}</td></tr>
+            <tr><th scope="row">Distinct outlets</th><td>{totalOutlets}</td></tr>
+            <tr><th scope="row">Categories active</th><td>{grouped.length}</td></tr>
+            {leader && <tr><th scope="row">Widest coverage</th><td>{leader.DomainCount} outlets</td></tr>}
+          </tbody>
+        </table>
+        <p class="dash-note">
+          Counts are measured from today&rsquo;s scan. Market and regulatory
+          indicators are not shown because this pipeline does not collect them.
+        </p>
+      </div>
+    </aside>
+  </div>
+</Base>
+
+<style>
+  .dateline { color: #7A8A9E; font-size: 14px; letter-spacing: .02em; }
+  .dateline strong { color: #201868; }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 12px 0 26px; }
+  .pill-label { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #F07800; margin-right: 4px; }
+  .pill { display: inline-block; background: #201868; color: #fff; font-size: 12px; padding: 4px 12px; border-radius: 999px; }
+
+  .cols { display: grid; grid-template-columns: minmax(0,1fr) 280px; gap: 40px; align-items: start; }
+  @media (max-width: 960px) { .cols { grid-template-columns: 1fr; } }
+
+  .box-label { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #F07800; margin: 0 0 10px; }
+
+  .big { border: 1px solid #e6e4de; border-left: 4px solid #F07800; border-radius: 10px; background: #fafaf6; padding: 22px 26px; margin: 0 0 22px; }
+  .big ul { margin: 0; padding-left: 20px; }
+  .big li { margin: 0 0 8px; line-height: 1.55; font-size: 15.5px; color: #2c2c44; }
+
+  .answer-box { background: #FFF6EC; border: 1px solid #F0D6B0; border-radius: 6px; padding: 22px 26px; margin: 0 0 18px; }
+  .answer-box p { font-size: 16px; line-height: 1.75; color: #2C2C2A; margin: 0; }
+  .answer-label { font-size: 11px !important; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #F07800; margin: 0 0 8px !important; }
+
+  .top5 { margin: 0 0 46px; padding-left: 22px; }
+  .top5 li { margin: 0 0 10px; }
+  .top5 a { font-size: 17px; color: #201868; text-decoration: none; font-weight: 600; }
+  .top5 a:hover { color: #F07800; }
+  .t5meta { display: block; font-size: 12.5px; color: #7A8A9E; }
+
+  .cat { margin: 0 0 44px; scroll-margin-top: 80px; }
+  .cat h2 { font-size: 25px; color: #201868; margin: 0 0 2px; }
+  .cat .count { font-size: 13px; color: #fff; background: #F07800; border-radius: 999px; padding: 2px 9px; vertical-align: middle; margin-left: 6px; }
+  .cat-blurb { font-size: 13.5px; color: #7A8A9E; margin: 0 0 8px; }
+  .rule { width: 56px; height: 3px; background: #F07800; margin: 0 0 20px; }
+
+  .story { border: 1px solid #e8e6e0; border-radius: 8px; padding: 20px 22px; margin: 0 0 16px; background: #fff; }
+  .story h3 { font-size: 19px; line-height: 1.35; margin: 0 0 8px; }
+  .story h3 a { color: #201868; text-decoration: none; }
+  .story h3 a:hover { color: #F07800; }
+  .brief { font-size: 14.5px; line-height: 1.65; color: #2C2C2A; margin: 0 0 10px; }
+  .why { font-size: 14.5px; line-height: 1.65; color: #2C2C2A; background: #F6F5F1; border-left: 3px solid #F07800; padding: 10px 14px; margin: 0 0 10px; }
+  .why-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #F07800; margin-bottom: 4px; }
+  .nums { display: flex; flex-wrap: wrap; gap: 14px; margin: 0 0 10px; }
+  .num { font-size: 12.5px; color: #7A8A9E; }
+  .num strong { font-size: 17px; color: #201868; margin-right: 3px; }
+  .more { font-size: 13.5px; color: #201868; text-decoration: none; font-weight: 600; }
+  .more:hover { color: #F07800; }
+
+  .side { display: flex; flex-direction: column; gap: 20px; }
+  .panel { border: 1px solid #e6e4de; border-radius: 10px; padding: 18px 20px; background: #fafaf6; }
+  .sticky { position: sticky; top: 20px; }
+  .toc { list-style: none; margin: 0; padding: 0; }
+  .toc li { margin: 0 0 7px; }
+  .toc a { font-size: 13.5px; color: #201868; text-decoration: none; }
+  .toc a:hover { color: #F07800; }
+  .dash { width: 100%; border-collapse: collapse; }
+  .dash th, .dash td { font-size: 13.5px; padding: 7px 0; border-bottom: 1px solid #eceae4; text-align: left; }
+  .dash th { color: #7A8A9E; font-weight: 500; }
+  .dash td { color: #201868; font-weight: 700; text-align: right; }
+  .dash tr:last-child th, .dash tr:last-child td { border-bottom: none; }
+  .dash-note { font-size: 12px; line-height: 1.5; color: #7A8A9E; margin: 10px 0 0; font-style: italic; }
+
+  .faq { margin: 46px 0 0; scroll-margin-top: 80px; }
+  .faq h2 { font-size: 25px; color: #201868; margin: 0 0 4px; }
+  .faq-item { padding: 16px 0; border-bottom: 1px solid #EDEBE5; }
+  .faq-item:last-child { border-bottom: none; }
+  .faq-item h3 { font-size: 19px; font-weight: 700; color: #201868; margin: 0 0 6px; }
+  .faq-item p { font-size: 14.5px; line-height: 1.7; color: #2C2C2A; margin: 0; max-width: 74ch; }
+
+  .empty { color: #7A8A9E; font-style: italic; font-size: 14px; }
+</style>

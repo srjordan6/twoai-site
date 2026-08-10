@@ -72,7 +72,7 @@ const jsonld = JSON.stringify({
 });
 ---
 <Base title={`${title} | AI News`} description={description} current="/ai-news/" jsonld={jsonld}>
-  <p class="meta-line"><a href="/ai-news/">AI News</a> · <a href="/ai-ecosystem/ai-news/">In the ecosystem</a></p>
+  <p class="meta-line"><a href="/ai-news/">AI News</a> · <a href="/ai-news/daily/">Daily News</a></p>
   <h1>{story.Headline}</h1>
   <p class="dateline">
     <strong>Daily briefing</strong> · {date}
@@ -80,7 +80,7 @@ const jsonld = JSON.stringify({
     · {minutes}-minute read
   </p>
   <div class="pills">
-    <a class="pill pill-cat" href={`/ai-news/#${cat.slug}`}>{cat.name}</a>
+    <a class="pill pill-cat" href={`/ai-news/daily/#${cat.slug}`}>{cat.name}</a>
     {story.Orgs.slice(0, 4).map((o) => <span class="pill">{titleCase(o)}</span>)}
   </div>
 
@@ -162,7 +162,7 @@ const jsonld = JSON.stringify({
           {story.Why && <li><a href="#why">Why it matters</a></li>}
           <li><a href="#coverage">Coverage</a></li>
           {timeline.length > 0 && <li><a href="#timeline">Coverage timeline</a></li>}
-          <li><a href="/ai-news/">Back to the briefing</a></li>
+          <li><a href="/ai-news/daily/">Back to the briefing</a></li>
         </ul>
       </div>
 
