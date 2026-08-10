@@ -13,11 +13,22 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
 export function getStaticPaths() {
   if (!existsSync('content/benchmarks')) return [];
+  // Results sidecar: benchmark results landed in twoai_benchmarks.results on
+  // 2026-08-10, and the daily export embeds them into each benchmarks/*.json
+  // from the next publish onward. This file bridged launch night so the pages
+  // could show results before that export ran; embedded results win when both
+  // exist. It lives inside benchmarks/ because fetch-content only copies
+  // listed dirs; the underscore keeps it out of the page glob below.
+  const sidecar = existsSync('content/benchmarks/_results.json')
+    ? JSON.parse(readFileSync('content/benchmarks/_results.json', 'utf8'))
+    : {};
   return readdirSync('content/benchmarks')
-    .filter((f) => f.endsWith('.json') && f !== 'index.json')
+    .filter((f) => f.endsWith('.json') && f !== 'index.json' && !f.startsWith('_'))
     .map((f) => {
       const b = JSON.parse(readFileSync(`content/benchmarks/${f}`, 'utf8'));
-      return { params: { slug: b.slug || f.replace(/\.json$/, '') }, props: { b } };
+      const slug = b.slug || f.replace(/\.json$/, '');
+      if (!b.results && sidecar[slug]) b.results = sidecar[slug];
+      return { params: { slug }, props: { b } };
     });
 }
 const { b } = Astro.props;
@@ -46,6 +57,24 @@ const jsonld = JSON.stringify({
   <p class="meta-line"><a href="/benchmarks/">AI Benchmarks</a> › {sectionName}</p>
   <h1>{b.name}</h1>
   <p class="answer"><strong>{b.name}</strong> measures {b.measures.charAt(0).toLowerCase() + b.measures.slice(1)}</p>
+
+  {b.results && (
+    <>
+      <h2>Current results</h2>
+      <p class="results-meta">As of <strong>{b.results.as_of}</strong> · {b.results.metric} · Source: <a href={b.results.source_url} rel="noopener">{b.results.source}</a></p>
+      {(b.results.rows ?? []).length > 0 && (
+        <table class="results-table">
+          <thead><tr><th>System</th><th>Result</th></tr></thead>
+          <tbody>
+            {b.results.rows.map((r) => (
+              <tr><td>{r.system}</td><td>{r.score}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {b.results.note && <p class="results-note">{b.results.note}</p>}
+    </>
+  )}
 
   <h2>What it does not measure</h2>
   <p>{b.not_measured}</p>
@@ -93,3 +122,14 @@ const jsonld = JSON.stringify({
     <p class="meta-line">Last verified {b.last_reviewed} · Reviewed on a {b.review_interval_days || 90}-day cycle · Corrections republish automatically on the next daily build.</p>
   )}
 </Base>
+
+<style>
+  .results-meta { font-size: 14px; color: #7A8A9E; }
+  .results-meta strong { color: #201868; }
+  .results-meta a { color: #201868; }
+  .results-table { border-collapse: collapse; margin: 14px 0 10px; min-width: 60%; }
+  .results-table th, .results-table td { text-align: left; padding: 8px 18px 8px 0; border-bottom: 1px solid #e8e6e0; font-size: 15px; }
+  .results-table th { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #F07800; }
+  .results-table td:last-child { color: #201868; font-weight: 700; white-space: nowrap; }
+  .results-note { font-size: 14.5px; color: #444; max-width: 72ch; }
+</style>
