@@ -26,7 +26,7 @@ import { createHash } from 'node:crypto';
 
 const REPO = 'https://github.com/srjordan6/twoai-content';
 const R2 = 'https://pub-b8347c6e4e8c40febe3c83d8860826e2.r2.dev';
-const dirs = ['laws', 'glossary', 'lawsuits', 'static', 'tools', 'week', 'ecosystem', 'compliance', 'mcp', 'people', 'companies', 'research', 'sources', 'benchmarks', 'prompts'];
+const dirs = ['laws', 'glossary', 'lawsuits', 'static', 'tools', 'week', 'ecosystem', 'compliance', 'mcp', 'people', 'companies', 'research', 'sources', 'benchmarks', 'prompts', 'news'];
 
 mkdirSync('content', { recursive: true });
 for (const d of dirs) mkdirSync(`content/${d}`, { recursive: true });
@@ -87,6 +87,29 @@ try {
   } catch (e2) {
     console.warn('fetch-content: proceeding without remote content:', e2.message);
   }
+}
+
+// DAILY AI BRIEFING, FETCHED FROM ITS PUBLISHER.
+//
+// news/news.json is the artifact the pipeline's publish_news stage writes to
+// srj-content every morning: today's stories clustered from worldwide
+// coverage, ranked by outlet breadth, with sources and named entities. Both
+// sites render the same edition, so this script fetches it straight from the
+// publishing repo rather than duplicating the artifact into twoai-content.
+// The deploy_site hook fires after publish_news in the daily run, so every
+// build carries that morning's briefing. A twoai-owned publish path through
+// twoai_pages is queued; until then this is the single source of truth.
+function fetchNews() {
+  mkdirSync('content/news', { recursive: true });
+  execSync('curl -fsL --max-time 60 https://raw.githubusercontent.com/srjordan6/srj-content/main/news/news.json -o content/news/news.json', { stdio: 'inherit' });
+  const n = JSON.parse(readFileSync('content/news/news.json', 'utf8'));
+  if (!Array.isArray(n.stories)) throw new Error('news.json missing stories');
+  console.log(`content/news: briefing ${n.date}, ${n.stories.length} stories`);
+}
+try {
+  fetchNews();
+} catch (e) {
+  console.warn('fetch-content: news briefing unavailable, /ai-news/ renders its empty state:', e.message);
 }
 
 // TAXONOMY IS READ LIVE FROM POSTGRES WHEN IT CAN BE.
