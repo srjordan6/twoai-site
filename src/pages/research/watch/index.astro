@@ -1,0 +1,174 @@
+---
+/**
+ * arXiv Watch at /research/watch/: new preprints surfaced daily from arXiv's
+ * cs.AI, cs.CL, and cs.LG feeds, filtered to papers whose title or abstract
+ * mentions a tracked organisation or model family.
+ *
+ * HONESTY OF THE MATCH. arXiv's API does not expose author affiliations, so
+ * the filter matches names appearing in the title and abstract. A paper
+ * matched on "Qwen" is usually a paper that evaluates on or studies Qwen, not
+ * one written by Alibaba. The page labels each match as "mentions", never as
+ * authorship or affiliation, because claiming the latter from this data would
+ * be fabrication. These are also PREPRINTS: not yet peer reviewed, which the
+ * page states. The curated, peer-reviewed shelf is the Research Library at
+ * /research/; this page is the raw daily intake that feeds curation.
+ */
+import Base from '../../../layouts/Base.astro';
+import { readFileSync, existsSync } from 'node:fs';
+
+const wf = 'content/research/watch.json';
+const watch: any = existsSync(wf) ? JSON.parse(readFileSync(wf, 'utf8')) : null;
+const papers: any[] = watch?.papers ?? [];
+
+const byMatch = new Map<string, number>();
+for (const p of papers) byMatch.set(p.match, (byMatch.get(p.match) ?? 0) + 1);
+const matches = [...byMatch.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+const generated = watch?.generated ? new Date(watch.generated) : null;
+const stamp = generated ? `${generated.toUTCString().slice(0, 22)} UTC` : null;
+
+const title = `arXiv Watch: New AI Preprints, Surfaced Daily`;
+const description =
+  `New arXiv preprints in cs.AI, cs.CL, and cs.LG that mention tracked AI organisations and ` +
+  `model families, surfaced daily. ${papers.length} papers in the current window, each linking ` +
+  `to arXiv.`;
+
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'CollectionPage',
+      name: 'arXiv Watch',
+      url: 'https://theworldofai.org/research/watch/',
+      description,
+      dateModified: watch?.generated,
+    },
+    {
+      '@type': 'ItemList',
+      name: `arXiv preprints surfaced, past ${watch?.window_days ?? 30} days`,
+      itemListElement: papers.slice(0, 50).map((p, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        name: p.title,
+        url: p.url,
+      })),
+    },
+  ],
+});
+---
+<Base title={title} description={description} current="/research/" jsonld={jsonld}>
+  <p class="meta-line"><a href="/research/">AI Research Library</a> · arXiv Watch</p>
+  <h1>arXiv Watch</h1>
+  {watch && (
+    <p class="dateline">
+      <strong>New preprints, surfaced daily</strong> · {watch.date}
+      {stamp && <> · last updated {stamp}</>}
+      · past {watch.window_days} days
+    </p>
+  )}
+
+  <div class="answer-box">
+    <p class="answer-label">What this page is</p>
+    <p>
+      The newest submissions to arXiv&rsquo;s cs.AI, cs.CL, and cs.LG categories, filtered to
+      papers whose title or abstract mentions a tracked AI organisation or model family:
+      {' '}{papers.length} preprints in the past {watch?.window_days ?? 30} days. These are
+      preprints, not yet peer reviewed, and a mention is not authorship: a paper matched on a
+      model name is usually studying that model. The curated, peer-reviewed shelf is the
+      <a href="/research/"> Research Library</a>; this is the raw daily intake.
+    </p>
+  </div>
+
+  {papers.length === 0 && (
+    <p class="empty">The watch publishes with the pipeline&rsquo;s next morning run.</p>
+  )}
+
+  <div class="cols">
+    <div class="main">
+      <ul class="papers">
+        {papers.map((p) => (
+          <li>
+            <a href={p.url} rel="noopener" target="_blank">{p.title}</a>
+            <span class="meta"><span class="pill">mentions {p.match}</span> Surfaced {p.surfaced} · arXiv preprint</span>
+          </li>
+        ))}
+      </ul>
+      {papers.length > 0 && (
+        <p class="note">
+          Preprints have not been peer reviewed. Every link goes to the paper&rsquo;s arXiv
+          abstract page. The match label means the name appears in the title or abstract; arXiv
+          does not expose author affiliations, so no affiliation is claimed.
+        </p>
+      )}
+    </div>
+
+    <aside class="side">
+      <div class="panel sticky">
+        <p class="box-label">The numbers</p>
+        <table class="dash">
+          <tbody>
+            <tr><th scope="row">Preprints surfaced</th><td>{papers.length}</td></tr>
+            <tr><th scope="row">Window</th><td>{watch?.window_days ?? 30} days</td></tr>
+            <tr><th scope="row">Categories</th><td>cs.AI · cs.CL · cs.LG</td></tr>
+          </tbody>
+        </table>
+      </div>
+      {matches.length > 0 && (
+        <div class="panel">
+          <p class="box-label">Mentions in this window</p>
+          <ul class="toc">
+            {matches.map(([m, n]) => <li>{m} <span class="mn">{n}</span></li>)}
+          </ul>
+        </div>
+      )}
+      <div class="panel">
+        <p class="box-label">Go deeper</p>
+        <ul class="toc">
+          <li><a href="/research/">The curated Research Library &rarr;</a></li>
+          <li><a href="/ai-news/">Today&rsquo;s AI News &rarr;</a></li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+</Base>
+
+<style>
+  .dateline { color: #7A8A9E; font-size: 14px; letter-spacing: .02em; }
+  .dateline strong { color: #201868; }
+
+  .answer-box { background: #FFF6EC; border: 1px solid #F0D6B0; border-radius: 6px; padding: 22px 26px; margin: 18px 0 28px; }
+  .answer-box p { font-size: 16px; line-height: 1.75; color: #2C2C2A; margin: 0; }
+  .answer-box a { color: #201868; font-weight: 600; }
+  .answer-label { font-size: 11px !important; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #F07800; margin: 0 0 8px !important; }
+
+  .cols { display: grid; grid-template-columns: minmax(0,1fr) 280px; gap: 40px; align-items: start; }
+  @media (max-width: 960px) { .cols { grid-template-columns: 1fr; } }
+
+  .box-label { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #F07800; margin: 0 0 10px; }
+
+  .papers { list-style: none; margin: 0; padding: 0; max-width: 800px; }
+  .papers li { padding: 13px 0; border-bottom: 1px solid #e8e6e0; }
+  .papers li:last-child { border-bottom: none; }
+  .papers a { color: #201868; text-decoration: none; font-weight: 500; line-height: 1.4; }
+  .papers a:hover { color: #F07800; }
+  .papers .meta { display: block; font-size: 13px; color: #7A8A9E; margin-top: 4px; }
+  .pill { display: inline-block; background: #201868; color: #fff; font-size: 11px; padding: 2px 9px; border-radius: 999px; margin-right: 6px; }
+
+  .note { margin-top: 30px; font-size: 14px; color: #7A8A9E; font-style: italic; max-width: 68ch; }
+
+  .side { display: flex; flex-direction: column; gap: 20px; }
+  .panel { border: 1px solid #e6e4de; border-radius: 10px; padding: 18px 20px; background: #fafaf6; }
+  .sticky { position: sticky; top: 20px; }
+  .toc { list-style: none; margin: 0; padding: 0; }
+  .toc li { margin: 0 0 7px; font-size: 13.5px; color: #2C2C2A; }
+  .toc a { font-size: 13.5px; color: #201868; text-decoration: none; }
+  .toc a:hover { color: #F07800; }
+  .mn { color: #F07800; font-weight: 700; }
+  .dash { width: 100%; border-collapse: collapse; }
+  .dash th, .dash td { font-size: 13.5px; padding: 7px 0; border-bottom: 1px solid #eceae4; text-align: left; }
+  .dash th { color: #7A8A9E; font-weight: 500; }
+  .dash td { color: #201868; font-weight: 700; text-align: right; }
+  .dash tr:last-child th, .dash tr:last-child td { border-bottom: none; }
+
+  .empty { color: #7A8A9E; font-style: italic; font-size: 14px; }
+</style>

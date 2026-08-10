@@ -32,6 +32,8 @@ const jsonld = JSON.stringify({
   <p class="answer">A curated shelf of <b>{hub.total || 0} artificial intelligence papers</b>{topics.length > 0 && <> across <b>{topics.length} topics</b></>}, each with the citation count, the venue, the year, and a plain-English note on why it matters. Curated from the peer-reviewed literature, refreshed regularly, and free to cite.</p>
   {hub.generated && <p class="meta-line">Last verified: {hub.generated}{hub.last_added && hub.last_added !== hub.generated && <> · Last paper added: {hub.last_added}</>}</p>}
 
+  <p class="watch-link">New today: the <a href="/research/watch/">arXiv Watch</a> surfaces fresh preprints from cs.AI, cs.CL, and cs.LG every morning, before they reach peer review.</p>
+
   {topics.length > 0 && (
     <>
       <h2>Topics</h2>
