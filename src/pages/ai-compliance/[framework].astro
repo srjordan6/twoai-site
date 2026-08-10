@@ -13,7 +13,11 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
 export function getStaticPaths() {
   if (!existsSync('content/compliance')) return [];
-  const files = readdirSync('content/compliance').filter((f) => f.endsWith('.json') && f !== 'index.json');
+  // 'index.json' is the hub; 'what-changed.json' is the what-changed digest,
+  // not a framework page and has no slug field - excluding it by name here
+  // rather than renaming it keeps the digest's own frontend read
+  // (ai-compliance/index.astro) working off the same simple path.
+  const files = readdirSync('content/compliance').filter((f) => f.endsWith('.json') && f !== 'index.json' && f !== 'what-changed.json');
   const titles = {};
   for (const f of files) {
     const d = JSON.parse(readFileSync(`content/compliance/${f}`, 'utf8'));
