@@ -1,0 +1,94 @@
+---
+/**
+ * One vendor announcement at /ai-news/vendor/{slug}/: our page for the post,
+ * carrying the vendor's own published description so a reader knows why the
+ * outbound link is worth their click before they leave the site. The summary
+ * is the vendor's og:description, quoted as their words and labelled as
+ * such; where a vendor publishes no per-post description, the page says what
+ * it verifiably can (who posted it, when we surfaced it) and does not invent
+ * a summary. Slugs are name + 6 chars of the URL hash, permanent once
+ * published per the standing URL rule.
+ */
+import Base from '../../../layouts/Base.astro';
+
+export function getStaticPaths() {
+  const m = import.meta.glob('../../../../content/news/vendor.json', { eager: true });
+  const data: any = Object.values(m)[0]?.default ?? null;
+  const out: any[] = [];
+  for (const v of data?.vendors ?? []) {
+    for (const it of v.items ?? []) {
+      if (it.slug) out.push({ params: { post: it.slug }, props: { it, vendor: v.vendor } });
+    }
+  }
+  return out;
+}
+
+const { it, vendor } = Astro.props;
+const host = new URL(it.url).hostname.replace(/^www\./, '');
+const title = `${it.title} — ${vendor}`;
+const description = (it.summary || `An announcement from ${vendor}, surfaced ${it.date}, with a link to the original post at ${host}.`).slice(0, 300);
+
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'NewsArticle',
+  headline: it.title,
+  datePublished: it.date,
+  publisher: { '@type': 'Organization', name: 'The World of AI' },
+  isBasedOn: it.url,
+  description,
+});
+---
+<Base title={title} description={description} current="/ai-news/" jsonld={jsonld}>
+  <p class="meta-line"><a href="/ai-news/">AI News</a> · <a href="/ai-news/vendor/">AI Vendor News</a> · {vendor}</p>
+  <h1>{it.title}</h1>
+  <p class="dateline"><span class="pill">{vendor}</span> Surfaced {it.date} · Announcement · {host}</p>
+
+  <div class="answer-box">
+    <p class="answer-label">{it.summary ? `In ${vendor}\u2019s words` : 'What this is'}</p>
+    {it.summary ? (
+      <p>{it.summary}</p>
+    ) : (
+      <p>
+        An announcement published by {vendor} on its own site. {vendor} did not publish a
+        per-post description for this one, so rather than inventing a summary, this page sends
+        you straight to the source.
+      </p>
+    )}
+  </div>
+
+  <p class="cta-wrap">
+    <a class="cta" href={it.url} rel="noopener" target="_blank">Read the original at {host} &rarr;</a>
+  </p>
+
+  <p class="note">
+    {it.summary && <>The summary above is {vendor}&rsquo;s own published description of the post,
+    quoted from its page metadata, not our analysis. </>}
+    This is the vendor&rsquo;s announcement in the vendor&rsquo;s words: claims in it are
+    theirs, not verified facts, and being covered here is not an endorsement. The surfaced date
+    is when our intel watch first saw the post, which for a newly added feed can trail the
+    vendor&rsquo;s own publication date.
+  </p>
+
+  <p class="backlinks">
+    <a href="/ai-news/vendor/">&larr; All vendor announcements</a> ·
+    <a href="/ai-news/daily/">Today&rsquo;s Daily News briefing</a>
+  </p>
+</Base>
+
+<style>
+  .dateline { color: #7A8A9E; font-size: 14px; letter-spacing: .02em; }
+  .pill { display: inline-block; background: #201868; color: #fff; font-size: 11px; padding: 2px 10px; border-radius: 999px; margin-right: 8px; vertical-align: 1px; }
+
+  .answer-box { background: #FFF6EC; border: 1px solid #F0D6B0; border-radius: 6px; padding: 22px 26px; margin: 18px 0 24px; max-width: 760px; }
+  .answer-box p { font-size: 16.5px; line-height: 1.75; color: #2C2C2A; margin: 0; }
+  .answer-label { font-size: 11px !important; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #F07800; margin: 0 0 8px !important; }
+
+  .cta-wrap { margin: 22px 0; }
+  .cta { display: inline-block; background: #201868; color: #fff; font-weight: 600; font-size: 15px; padding: 12px 22px; border-radius: 6px; text-decoration: none; }
+  .cta:hover { background: #F07800; }
+
+  .note { font-size: 13.5px; color: #7A8A9E; font-style: italic; max-width: 68ch; }
+  .backlinks { margin-top: 26px; font-size: 14px; }
+  .backlinks a { color: #201868; text-decoration: none; font-weight: 600; }
+  .backlinks a:hover { color: #F07800; }
+</style>

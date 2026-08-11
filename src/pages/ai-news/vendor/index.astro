@@ -2,7 +2,9 @@
 /**
  * AI Vendor News at /ai-news/vendor/: announcements from the companies,
  * labs, and institutes building and governing AI, in their own words, from
- * their own feeds. Every link goes to the vendor's original post.
+ * their own feeds. Each item links to its own page on this site, which
+ * carries the vendor's published description (the reason to click) and the
+ * outbound link to the original post.
  *
  * Data is news/vendor.json, built from the intel watch's curated vendor
  * feeds: only sources that are the organisation itself (OpenAI, Google
@@ -68,7 +70,8 @@ const jsonld = JSON.stringify({
       Announcements from the organisations building and governing AI, in their own words, drawn
       from their own feeds rather than press coverage: {vendors.length} sources,
       {' '}{totalShown} recent posts shown of {totalTracked} tracked over the past
-      {' '}{vn?.window_days ?? 30} days. Every link goes to the vendor&rsquo;s original post. For
+      {' '}{vn?.window_days ?? 30} days. Each post has its own page here with the vendor&rsquo;s
+      published description and the link to the original. For
       how the field is being covered by the press, read the
       <a href="/ai-news/daily/"> Daily News briefing</a>.
     </p>
@@ -87,7 +90,9 @@ const jsonld = JSON.stringify({
           <ul class="items">
             {v.items.map((it: any) => (
               <li>
-                <a href={it.url} rel="noopener nofollow" target="_blank">{it.title}</a>
+                {it.slug
+                  ? <a href={`/ai-news/vendor/${it.slug}/`}>{it.title}</a>
+                  : <a href={it.url} rel="noopener nofollow" target="_blank">{it.title}</a>}
                 <span class="meta">Surfaced {it.date}</span>
               </li>
             ))}
