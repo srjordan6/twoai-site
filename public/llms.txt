@@ -31,6 +31,10 @@ is welcome and encouraged.
   researched directly.
 - [AI Companies](https://theworldofai.org/companies/): profiled AI companies
   with SEC EDGAR revenue and structure data where public.
+- [AI People Directory](https://theworldofai.org/ai-ecosystem/ecosystem-entities-market-and-operations/c53153c4/):
+  the people who built and shaped AI, from Lovelace and Turing to the
+  researchers running today's labs, each with what they did, when, and why it
+  mattered, sourced to primary documents.
 - [AI Benchmarks](https://theworldofai.org/benchmarks/): 18 benchmark pages
   covering what each benchmark actually measures, its known limitations, and
   current published results with the evaluator and as-of date named. Results
@@ -77,7 +81,7 @@ is welcome and encouraged.
 - https://theworldofai.org/api/lawsuits.json (all tracked cases)
 - https://theworldofai.org/api/tools.json (tool catalog, categories, profiles)
 - https://theworldofai.org/api/companies.json (company index)
-- https://theworldofai.org/api/people.json (people index)
+- https://theworldofai.org/api/people.json (AI People Directory index)
 - https://theworldofai.org/api/research.json (research library hub with all
   ten topics, most-cited papers, and per-paper metadata)
 - https://theworldofai.org/api/sources.json (primary sources, sorted and

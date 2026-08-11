@@ -44,7 +44,9 @@
 /prompts    /ai-prompts/        301
 /prompts/*  /ai-prompts/:splat  301
 
-# The people directory is not published on this site yet. Send the URL to the
-# ecosystem map rather than a 404 until it is.
-/people/  /  302
-/people   /  302
+# The AI People Directory is published inside the ecosystem map, at the
+# entity node for it, not at a top-level /people/ path. /people/ is the
+# obvious guess and was submitted to Search Console, so it 301s to the real
+# page rather than 404ing or being duplicated as a second directory.
+/people/  /ai-ecosystem/ecosystem-entities-market-and-operations/c53153c4/  301
+/people   /ai-ecosystem/ecosystem-entities-market-and-operations/c53153c4/  301
