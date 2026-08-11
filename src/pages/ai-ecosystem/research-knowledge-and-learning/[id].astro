@@ -135,35 +135,84 @@ const jsonld = JSON.stringify(
       <h1>{section.title}</h1>
       <p class="answer">{section.answer}</p>
       {section.generated && (
-        <p class="meta-line">Last reviewed: {section.generated}. Counts are read from the live database on each build.</p>
+        <p class="meta-line">Last reviewed: {section.generated}.</p>
       )}
 
-      <h2>What is built</h2>
-      <ul class="co-list">
-        {(section.built || []).map((b) => (
-          <li>
-            <b>{b.name}</b>
-            <p>{b.detail}</p>
-          </li>
-        ))}
-      </ul>
+      {section.chain && (
+        <p class="chain">
+          {section.chain.map((c, i) => (
+            <>{i > 0 && <span class="arrow">&#8596;</span>}<span class="link">{c}</span></>
+          ))}
+        </p>
+      )}
 
-      <h2>What is planned</h2>
-      {section.note && <p class="mon">{section.note}</p>}
-      <ul class="co-list">
-        {(section.planned || []).map((b) => (
-          <li>
-            <b>{b.name}</b>
-            <p>{b.detail}</p>
-          </li>
-        ))}
-      </ul>
+      {section.down && (
+        <>
+          <h2>{section.down_title || 'Reading down'}</h2>
+          {section.down_intro && <p>{section.down_intro}</p>}
+          <ol class="co-list">
+            {section.down.map((b) => (<li><b>{b.name}</b><p>{b.detail}</p></li>))}
+          </ol>
+        </>
+      )}
 
-      <p class="mon">
-        The identifiers described here are visible in the URL of every entity
-        page on this site, and the records behind them are published at
-        {' '}<a href="/api/">the public API</a>.
-      </p>
+      {section.up && (
+        <>
+          <h2>{section.up_title || 'Reading up'}</h2>
+          {section.up_intro && <p>{section.up_intro}</p>}
+          <ol class="co-list">
+            {section.up.map((b) => (<li><b>{b.name}</b><p>{b.detail}</p></li>))}
+          </ol>
+        </>
+      )}
+
+      {section.why && (
+        <>
+          <h2>{section.why_title || 'Why it matters'}</h2>
+          <ul class="co-list">
+            {section.why.map((b) => (<li><b>{b.name}</b><p>{b.detail}</p></li>))}
+          </ul>
+        </>
+      )}
+
+      {section.built && (
+        <>
+          <h2>What is built</h2>
+          <ul class="co-list">
+            {section.built.map((b) => (<li><b>{b.name}</b><p>{b.detail}</p></li>))}
+          </ul>
+        </>
+      )}
+
+      {section.planned && (
+        <>
+          <h2>What is planned</h2>
+          {section.note && <p class="mon">{section.note}</p>}
+          <ul class="co-list">
+            {section.planned.map((b) => (<li><b>{b.name}</b><p>{b.detail}</p></li>))}
+          </ul>
+        </>
+      )}
+
+      {section.sources && (
+        <>
+          <h2>Sources</h2>
+          {section.note && !section.planned && <p class="mon">{section.note}</p>}
+          <ul class="src-list">
+            {section.sources.map((s) => (
+              <li>{s.url ? <a href={s.url} rel="noopener" target="_blank">{s.name}</a> : s.name}</li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {!section.sources && (
+        <p class="mon">
+          The identifiers described here are visible in the URL of every entity
+          page on this site, and the records behind them are published at
+          {' '}<a href="/api/">the public API</a>.
+        </p>
+      )}
     </>
   )}
 
@@ -217,6 +266,16 @@ const jsonld = JSON.stringify(
     </>
   )}
 </Base>
+
+<style>
+  .chain { display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+    background: var(--cream); border-radius: 6px; padding: .9em 1em; margin: 1.2em 0 1.6em; }
+  .chain .link { background: #201868; color: #fff; border-radius: 4px;
+    padding: 4px 11px; font-size: .86rem; font-weight: 600; white-space: nowrap; }
+  .chain .arrow { color: #F07800; font-weight: 700; }
+  .src-list { margin: .5em 0 1.2em; }
+  .src-list li { margin: .35em 0; font-size: .93rem; }
+</style>
 
 <style>
   .co-list { list-style: none; margin: 1.2em 0 0; padding: 0; }
