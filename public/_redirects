@@ -1,5 +1,4 @@
-# Cloudflare Pages _redirects. First match wins, so the most specific rules
-# come first. Splats (:splat) carry the matched tail.
+# Cloudflare Pages _redirects. First match wins.
 
 # The AI Ecosystem map is the home page, so /ai-ecosystem/ would be a second
 # copy of it. Redirect rather than publish the duplicate. The category pages
@@ -12,30 +11,66 @@
 # a path on this site, but internal links carried it here and Search Console
 # reported the 404s. On this site the equivalent pages live flat under
 # /ai-compliance/{slug}/ with no parent segment, so the nested SRJ paths must
-# collapse their middle segment. Each parent below is itself a real page here,
-# so the bare parent redirects to its own page and the parent/* rule collapses
-# anything beneath it. Every leaf was verified to exist before these were
-# written. The bare /ai-governance/* catch-all is last so it only ever handles
-# the already-flat paths.
+# drop their middle segment.
+#
+# These 34 are written out one by one on purpose. The first version used eight
+# parent splat rules (/ai-governance/sector-rules/* -> /ai-compliance/:splat)
+# placed above the catch-all, and Cloudflare ignored every one of them: the
+# catch-all matched first and sent /ai-governance/sector-rules/hipaa-ai/ to
+# /ai-compliance/sector-rules/hipaa-ai/, which is a 404. Static rules are
+# matched literally and cannot lose a precedence argument to a splat, and 34
+# lines is nothing against the 2,000 static limit. Every target below was
+# verified to return 200 before this file was written.
+/ai-governance/agency-enforcement/cfpb-ai-enforcement/           /ai-compliance/cfpb-ai-enforcement/      301
+/ai-governance/agency-enforcement/eeoc-ai-enforcement/           /ai-compliance/eeoc-ai-enforcement/      301
+/ai-governance/agency-enforcement/ftc-ai-enforcement/            /ai-compliance/ftc-ai-enforcement/       301
+/ai-governance/agency-enforcement/hhs-ocr-ai-enforcement/        /ai-compliance/hhs-ocr-ai-enforcement/   301
+/ai-governance/agency-enforcement/sec-ai-enforcement/            /ai-compliance/sec-ai-enforcement/       301
+/ai-governance/data-management-frameworks/cdmc/                  /ai-compliance/cdmc/                     301
+/ai-governance/data-management-frameworks/dama-dmbok/            /ai-compliance/dama-dmbok/               301
+/ai-governance/data-management-frameworks/dcam/                  /ai-compliance/dcam/                     301
+/ai-governance/financial-reporting/aicpa-ai-guidance/            /ai-compliance/aicpa-ai-guidance/        301
+/ai-governance/financial-reporting/fasb-asu-2025-06/             /ai-compliance/fasb-asu-2025-06/         301
+/ai-governance/financial-reporting/pcaob-ai-guidance/            /ai-compliance/pcaob-ai-guidance/        301
+/ai-governance/financial-reporting/sox-302-404-ai/               /ai-compliance/sox-302-404-ai/           301
+/ai-governance/general-business-governance/coso-erm-ai/          /ai-compliance/coso-erm-ai/              301
+/ai-governance/general-business-governance/iso-27001-ai/         /ai-compliance/iso-27001-ai/             301
+/ai-governance/general-business-governance/nist-csf-ai/          /ai-compliance/nist-csf-ai/              301
+/ai-governance/general-business-governance/soc-2-ai/             /ai-compliance/soc-2-ai/                 301
+/ai-governance/nyc-ai-laws/nyc-ll-144/                           /ai-compliance/nyc-ll-144/               301
+/ai-governance/nyc-ai-laws/nyc-ll-35/                            /ai-compliance/nyc-ll-35/                301
+/ai-governance/sector-rules/coppa-ai/                            /ai-compliance/coppa-ai/                 301
+/ai-governance/sector-rules/ecoa-ai/                             /ai-compliance/ecoa-ai/                  301
+/ai-governance/sector-rules/fcra-ai/                             /ai-compliance/fcra-ai/                  301
+/ai-governance/sector-rules/gdpr-ai/                             /ai-compliance/gdpr-ai/                  301
+/ai-governance/sector-rules/glba-ai/                             /ai-compliance/glba-ai/                  301
+/ai-governance/sector-rules/hipaa-ai/                            /ai-compliance/hipaa-ai/                 301
+/ai-governance/sector-rules/title-vii-ai/                        /ai-compliance/title-vii-ai/             301
+/ai-governance/sector-rules/warn-ai/                             /ai-compliance/warn-ai/                  301
+/ai-governance/state-ai-laws/california-ai-laws/                 /ai-compliance/california-ai-laws/       301
+/ai-governance/state-ai-laws/colorado-ai-act/                    /ai-compliance/colorado-ai-act/          301
+/ai-governance/state-ai-laws/connecticut-ai-act/                 /ai-compliance/connecticut-ai-act/       301
+/ai-governance/state-ai-laws/illinois-ai-laws/                   /ai-compliance/illinois-ai-laws/         301
+/ai-governance/state-ai-laws/tennessee-elvis-act/                /ai-compliance/tennessee-elvis-act/      301
+/ai-governance/state-ai-laws/texas-ai-act/                       /ai-compliance/texas-ai-act/             301
+/ai-governance/vendor-disclosure/aibom/                          /ai-compliance/aibom/                    301
+/ai-governance/vendor-disclosure/sbom/                           /ai-compliance/sbom/                     301
+
+# The eight parent pages exist here under the same name, so they map straight
+# across. These sit after the leaves above and before the catch-all below.
 /ai-governance/agency-enforcement/           /ai-compliance/agency-enforcement/           301
-/ai-governance/agency-enforcement/*          /ai-compliance/:splat                        301
 /ai-governance/state-ai-laws/                /ai-compliance/state-ai-laws/                301
-/ai-governance/state-ai-laws/*               /ai-compliance/:splat                        301
 /ai-governance/sector-rules/                 /ai-compliance/sector-rules/                 301
-/ai-governance/sector-rules/*                /ai-compliance/:splat                        301
 /ai-governance/data-management-frameworks/   /ai-compliance/data-management-frameworks/   301
-/ai-governance/data-management-frameworks/*  /ai-compliance/:splat                        301
 /ai-governance/financial-reporting/          /ai-compliance/financial-reporting/          301
-/ai-governance/financial-reporting/*         /ai-compliance/:splat                        301
 /ai-governance/general-business-governance/  /ai-compliance/general-business-governance/  301
-/ai-governance/general-business-governance/* /ai-compliance/:splat                        301
 /ai-governance/nyc-ai-laws/                  /ai-compliance/nyc-ai-laws/                  301
-/ai-governance/nyc-ai-laws/*                 /ai-compliance/:splat                        301
 /ai-governance/vendor-disclosure/            /ai-compliance/vendor-disclosure/            301
-/ai-governance/vendor-disclosure/*           /ai-compliance/:splat                        301
-/ai-governance/                              /ai-compliance/                              301
-/ai-governance                               /ai-compliance/                              301
-/ai-governance/*                             /ai-compliance/:splat                        301
+
+# Already-flat governance paths, which map one to one.
+/ai-governance/   /ai-compliance/          301
+/ai-governance    /ai-compliance/          301
+/ai-governance/*  /ai-compliance/:splat    301
 
 # Prompt pages ship at /ai-prompts/, matching the /ai-* convention the rest of
 # the site uses. /prompts/ was never published but is the obvious guess, and a
@@ -44,9 +79,9 @@
 /prompts    /ai-prompts/        301
 /prompts/*  /ai-prompts/:splat  301
 
-# The AI People Directory is published inside the ecosystem map, at the
-# entity node for it, not at a top-level /people/ path. /people/ is the
-# obvious guess and was submitted to Search Console, so it 301s to the real
-# page rather than 404ing or being duplicated as a second directory.
+# The AI People Directory is published inside the ecosystem map, at the entity
+# node for it, not at a top-level /people/ path. /people/ is the obvious guess
+# and was submitted to Search Console, so it 301s to the real page rather than
+# 404ing or being duplicated as a second directory.
 /people/  /ai-ecosystem/ecosystem-entities-market-and-operations/c53153c4/  301
 /people   /ai-ecosystem/ecosystem-entities-market-and-operations/c53153c4/  301
