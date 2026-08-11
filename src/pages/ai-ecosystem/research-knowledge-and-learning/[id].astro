@@ -49,23 +49,57 @@ export function getStaticPaths() {
   for (const t of byUid.values()) {
     paths.push({ params: { id: t.uid }, props: { topic: t, hubUid: idx.uid } });
   }
+
+  // Section pages that belong to this category but are not research topics.
+  // They live in content/ecosystem/ and carry their own uid, so they share
+  // this route without competing with the research shelf for it. The category
+  // is written out rather than read from the CATEGORY const because Astro
+  // hoists getStaticPaths out of the module scope, so the const is not
+  // visible here at build time.
+  if (existsSync('content/ecosystem')) {
+    for (const f of readdirSync('content/ecosystem')) {
+      if (!f.endsWith('.json') || f === 'index.json') continue;
+      let s;
+      try {
+        s = JSON.parse(readFileSync(`content/ecosystem/${f}`, 'utf8'));
+      } catch {
+        continue;
+      }
+      if (!s || !s.uid || s.category !== 'research-knowledge-and-learning') continue;
+      paths.push({ params: { id: s.uid }, props: { section: s, hubUid: idx.uid } });
+    }
+  }
+
   return paths;
 }
 
-const { hub, topic, hubUid } = Astro.props;
+const { hub, topic, section, hubUid } = Astro.props;
 
-const desc = hub
+const desc = section
+  ? String(section.answer || '').slice(0, 300)
+  : hub
   ? `${hub.total} peer-reviewed and preprint papers on AI capability, safety, governance and application, sorted into ${hub.topics.length} topics, each with the citation record and a plain note on why it matters.`
   : `${topic.count} papers on ${topic.name.toLowerCase()} in AI, ${(topic.citations || 0).toLocaleString()} citations between them. ${topic.blurb || ''}`.slice(0, 300);
 
-const title = hub
+const title = section
+  ? `${section.title}: how this site is structured`
+  : hub
   ? 'AI Research Library — The World of AI'
   : `${topic.name}: AI research reading list`;
 
-const refreshed = (hub || topic).refreshed;
+const refreshed = (hub || topic || section || {}).refreshed;
 
 const jsonld = JSON.stringify(
-  hub
+  section
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'TechArticle',
+        headline: section.title,
+        description: desc,
+        url: `https://theworldofai.org${BASE}/${section.uid}/`,
+        dateModified: section.generated,
+      }
+    : hub
     ? {
         '@context': 'https://schema.org',
         '@type': 'CollectionPage',
@@ -95,6 +129,43 @@ const jsonld = JSON.stringify(
     <a href={`/ai-ecosystem/${CATEGORY}/`}>Research, Knowledge and Learning</a>
     {topic && <> &middot; <a href={`${BASE}/${hubUid}/`}>AI Research Library</a></>}
   </p>
+
+  {section && (
+    <>
+      <h1>{section.title}</h1>
+      <p class="answer">{section.answer}</p>
+      {section.generated && (
+        <p class="meta-line">Last reviewed: {section.generated}. Counts are read from the live database on each build.</p>
+      )}
+
+      <h2>What is built</h2>
+      <ul class="co-list">
+        {(section.built || []).map((b) => (
+          <li>
+            <b>{b.name}</b>
+            <p>{b.detail}</p>
+          </li>
+        ))}
+      </ul>
+
+      <h2>What is planned</h2>
+      {section.note && <p class="mon">{section.note}</p>}
+      <ul class="co-list">
+        {(section.planned || []).map((b) => (
+          <li>
+            <b>{b.name}</b>
+            <p>{b.detail}</p>
+          </li>
+        ))}
+      </ul>
+
+      <p class="mon">
+        The identifiers described here are visible in the URL of every entity
+        page on this site, and the records behind them are published at
+        {' '}<a href="/api/">the public API</a>.
+      </p>
+    </>
+  )}
 
   {hub && (
     <>
