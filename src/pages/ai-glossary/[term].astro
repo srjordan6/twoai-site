@@ -1,5 +1,20 @@
 ---
 import Base from '../../layouts/Base.astro';
+
+// Labels for the audience lenses. Kept here rather than in the data so that
+// renaming a label is a template change, not a migration across every term.
+const LENS_LABELS = {
+  child: 'For a child',
+  student: 'For a student',
+  developer: 'For a developer',
+  researcher: 'For a researcher',
+  executive: 'For an executive',
+  investor: 'For an investor',
+  journalist: 'For a journalist',
+  regulator: 'For a regulator',
+  ciso: 'For a CISO',
+  'small-business': 'For a small business owner',
+};
 import { readFileSync, existsSync } from 'node:fs';
 
 export function getStaticPaths() {
@@ -31,6 +46,27 @@ const jsonld = JSON.stringify({
   <p class="meta-line"><span class="badge">{t.category}</span></p>
   <p class="answer">{t.definition}</p>
   {t.example && (<><h2>Example</h2><p>{t.example}</p></>)}
+
+  {t.lenses && t.lenses.length > 0 && (
+    <>
+      <h2>The same term, explained for different readers</h2>
+      <p class="lens-intro">
+        The definition above is the one to cite. These are the same idea rewritten for the readers
+        who most often need it, and they are explanatory writing rather than sourced fact. Which
+        readings appear depends on the term: a governance term earns a regulator&rsquo;s reading,
+        an architecture term does not, and we would rather show four that differ than ten that
+        repeat each other.
+      </p>
+      <dl class="lenses">
+        {t.lenses.map((l) => (
+          <>
+            <dt>{LENS_LABELS[l.audience] || l.audience}</dt>
+            <dd>{l.body}</dd>
+          </>
+        ))}
+      </dl>
+    </>
+  )}
   {t.origin && (<><h2>Where the term comes from</h2><p>{t.origin}</p></>)}
   {related.length > 0 && (
     <>
