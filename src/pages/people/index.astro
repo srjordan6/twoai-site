@@ -1,0 +1,168 @@
+---
+/**
+ * AI People Directory hub at /people/.
+ *
+ * Alphabetical listing of the people who built and shaped AI, from Lovelace
+ * and Turing to the researchers running today's labs. Reads
+ * content/people/index.json, which fetch-content.mjs writes from R2.
+ *
+ * Two tiers, deliberately visible rather than blurred: people with a
+ * researched profile link to a page at /people/{uid}/, and people we track
+ * but have not yet profiled are listed without a link. Publishing a stub
+ * page for the second group would be a page that says nothing, so we say
+ * plainly that the profile is not written yet. The identifier is the same
+ * short alphanumeric UID that pins a person across every other cross
+ * reference on the site.
+ */
+import Base from '../../layouts/Base.astro';
+import { readFileSync, existsSync } from 'node:fs';
+
+const idx = existsSync('content/people/index.json')
+  ? JSON.parse(readFileSync('content/people/index.json', 'utf8'))
+  : { total: 0, profiled: 0, tracked_only: 0, people: [], generated: '' };
+
+// Alphabetical by surname where we can infer one, so Hinton files under H
+// rather than G. Mononyms and anything unparseable fall back to the full
+// name, and anything not starting A-Z lands under # so nobody is dropped.
+function sortKey(name) {
+  const parts = (name || '').trim().split(/\s+/);
+  return (parts.length > 1 ? parts[parts.length - 1] : parts[0] || '').toLowerCase();
+}
+const grouped = {};
+for (const p of idx.people || []) {
+  const ch = sortKey(p.name).charAt(0).toUpperCase();
+  const key = /[A-Z]/.test(ch) ? ch : '#';
+  (grouped[key] ||= []).push(p);
+}
+for (const k of Object.keys(grouped)) {
+  grouped[k].sort((a, b) => sortKey(a.name).localeCompare(sortKey(b.name)));
+}
+const letters = Object.keys(grouped).sort((a, b) => (a === '#' ? 1 : b === '#' ? -1 : a.localeCompare(b)));
+
+const total = idx.total || (idx.people || []).length;
+const profiled = idx.profiled || (idx.people || []).filter((p) => p.profiled).length;
+const trackedOnly = idx.tracked_only ?? Math.max(total - profiled, 0);
+
+const desc =
+  `${total} people who built and shaped artificial intelligence, listed alphabetically, ` +
+  `from Ada Lovelace and Alan Turing to the researchers running today's labs. ` +
+  `${profiled} have full profiles covering what they did, when, and why it mattered.`;
+
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'CollectionPage',
+      name: 'AI People Directory',
+      description: desc,
+      url: 'https://theworldofai.org/people/',
+    },
+    {
+      '@type': 'ItemList',
+      name: 'People in AI',
+      numberOfItems: total,
+      itemListElement: (idx.people || [])
+        .filter((p) => p.profiled && p.uid)
+        .slice(0, 100)
+        .map((p, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          name: p.name,
+          url: `https://theworldofai.org/people/${p.uid}/`,
+        })),
+    },
+  ],
+});
+---
+<Base title="AI People Directory: Who Built Artificial Intelligence" description={desc} current="/people/" jsonld={jsonld}>
+  <h1>AI People Directory</h1>
+
+  <div class="answer-box">
+    <p class="answer-label">The short answer</p>
+    <p>
+      <b>{total}</b> people who built and shaped artificial intelligence, listed alphabetically by
+      surname, from Ada Lovelace and Alan Turing to the researchers running today&rsquo;s labs.
+      <b>{profiled}</b> have a full profile covering what they did, when, and why it mattered,
+      each one sourced to primary documents.
+      {trackedOnly > 0 && <> The remaining <b>{trackedOnly}</b> are tracked but not yet written up,
+      and are listed here without a link rather than given a page that says nothing.</>}
+    </p>
+  </div>
+
+  {idx.generated && (
+    <p class="meta-line">Directory last reviewed: {idx.generated}</p>
+  )}
+
+  {total === 0 && (
+    <p class="empty">The people directory publishes with the pipeline&rsquo;s next run.</p>
+  )}
+
+  {letters.length > 0 && (
+    <nav class="alphabet" aria-label="Jump to letter">
+      {letters.map((l) => <a href={`#letter-${l === '#' ? 'other' : l}`}>{l}</a>)}
+    </nav>
+  )}
+
+  {letters.map((l) => (
+    <section class="letter-block" id={`letter-${l === '#' ? 'other' : l}`}>
+      <h2>{l}</h2>
+      <ul class="p-list">
+        {grouped[l].map((p) => (
+          <li>
+            {p.profiled && p.uid
+              ? <a href={`/people/${p.uid}/`}>{p.name}</a>
+              : <b>{p.name}</b>}
+            {p.moniker && <span class="moniker">{p.moniker}</span>}
+            {p.fields && p.fields.length > 0 && (
+              <p class="fields">{p.fields.join(' · ')}</p>
+            )}
+            {p.hook && <p class="hook">{p.hook}</p>}
+            {!(p.profiled && p.uid) && <p class="stub">Profile not yet written.</p>}
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))}
+
+  <div class="cite-box">
+    <p><b>Cite this page</b></p>
+    <code>"AI People Directory." The World of AI, https://theworldofai.org/people/. Verified {idx.generated || 'see above'}.</code>
+  </div>
+
+  <p class="api-line">
+    Machine-readable: <a href="/api/people.json">people.json</a>. See also the
+    <a href="/companies/"> AI Company Directory</a> and the
+    <a href="/research/"> AI Research Library</a>.
+  </p>
+</Base>
+
+<style>
+  .answer-box { background: #FFF6EC; border: 1px solid #F0D6B0; border-radius: 6px;
+    padding: 22px 26px; margin: 18px 0 24px; max-width: 780px; }
+  .answer-box p { font-size: 16.5px; line-height: 1.75; color: #2C2C2A; margin: 0; }
+  .answer-label { font-size: 11px !important; font-weight: 700; letter-spacing: .16em;
+    text-transform: uppercase; color: #F07800; margin: 0 0 8px !important; }
+
+  .alphabet { display: flex; flex-wrap: wrap; gap: 6px; margin: 1.1em 0 1.6em;
+    padding: .7em .8em; background: var(--cream); border-radius: 6px; }
+  .alphabet a { display: inline-block; min-width: 1.6em; padding: 2px 6px; text-align: center;
+    font-weight: 600; font-size: .93rem; text-decoration: none; border-radius: 4px; }
+  .alphabet a:hover { background: var(--orange); color: #fff; }
+
+  .letter-block { margin-bottom: 1.4em; }
+  .letter-block h2 { font-size: 1.3rem; margin: 1.2em 0 .4em; padding-bottom: .15em;
+    border-bottom: 2px solid var(--orange); }
+  .p-list { list-style: none; margin: 0; padding: 0; }
+  .p-list li { padding: .85em 0; border-bottom: 1px solid #ececf2; }
+  .p-list li:last-child { border-bottom: 0; }
+  .p-list li > a, .p-list li > b { font-weight: 600; font-size: 1.05rem; }
+  .moniker { margin-left: .5em; font-size: .9rem; color: #7A8A9E; font-style: italic; }
+  .fields { margin: .25em 0 0; font-size: .87rem; color: #6b6b78; }
+  .hook { margin: .35em 0 0; color: #3d3d46; font-size: .95rem; max-width: 74ch; }
+  .stub { margin: .25em 0 0; font-size: .87rem; color: #7A8A9E; font-style: italic; }
+  .empty { color: #7A8A9E; font-style: italic; }
+  .cite-box { margin-top: 1.6em; padding: .9em 1em; background: #f7f7fb;
+    border-left: 3px solid #201868; font-size: .9rem; }
+  .cite-box code { display: block; margin-top: .3em; }
+  .api-line { margin-top: .8em; font-size: .87rem; color: #6b6b78; }
+</style>

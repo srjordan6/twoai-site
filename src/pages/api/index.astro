@@ -1,0 +1,143 @@
+---
+/**
+ * API index at /api/.
+ *
+ * The JSON endpoints themselves are static mirrors written into public/api/
+ * by scripts/fetch-content.mjs, so they ship with the build and need no
+ * server. This page is the documentation for them, which the old llms.txt
+ * advertised before it existed: Search Console reported /api/ as a 404
+ * because we pointed crawlers at an index we had never built.
+ *
+ * The endpoint list is declared here rather than read from disk because the
+ * descriptions are editorial. If fetch-content.mjs gains an endpoint, add it
+ * here too; the shape check below at least keeps the page honest about the
+ * ones it claims.
+ */
+import Base from '../../layouts/Base.astro';
+import { existsSync } from 'node:fs';
+
+const endpoints = [
+  { file: 'laws.json', name: 'AI laws by state', page: '/ai-laws/',
+    desc: 'Per-jurisdiction bill counts and the index behind every state page, for all 50 states, DC, Puerto Rico, and Congress.' },
+  { file: 'glossary.json', name: 'AI glossary', page: '/ai-glossary/',
+    desc: 'Every tracked AI term with its plain-English definition, origin, example, and category.' },
+  { file: 'lawsuits.json', name: 'AI lawsuit tracker', page: '/ai-lawsuits/',
+    desc: 'Every tracked case with parties, court, claims, status, docket timeline, and the CourtListener record.' },
+  { file: 'compliance.json', name: 'Compliance frameworks', page: '/ai-compliance/',
+    desc: 'The framework index: scope, obligations, and deadlines for each regime we track.' },
+  { file: 'tools.json', name: 'AI tools directory', page: '/ai-tools/',
+    desc: 'Tool catalog with categories and the researched profiles behind the directory pages.' },
+  { file: 'companies.json', name: 'AI companies', page: '/companies/',
+    desc: 'Company index keyed by the stable entity identifier used across the site.' },
+  { file: 'people.json', name: 'AI people', page: '/people/',
+    desc: 'People index: who is tracked, who has a full profile, and the identifier for each.' },
+  { file: 'research.json', name: 'AI research library', page: '/research/',
+    desc: 'Papers sorted into ten topics, with authors, venue, year, and citation counts.' },
+  { file: 'mcp.json', name: 'MCP server registry', page: '/mcp/',
+    desc: 'Model Context Protocol servers mirrored from the official registry.' },
+  { file: 'weeks.json', name: 'This Week in AI', page: '/this-week-in-ai/',
+    desc: 'The weekly digest index with permalinked ISO-week archives.' },
+  { file: 'sources.json', name: 'Sources and references', page: '/sources/',
+    desc: 'The primary-source bibliography that grounds every fact on the site.' },
+];
+
+// Only advertise what actually shipped in this build. An endpoint listed here
+// but missing from public/api/ would be the same mistake that produced the
+// 404 this page exists to fix.
+const live = endpoints.filter((e) => existsSync(`public/api/${e.file}`));
+
+const desc =
+  `Public JSON endpoints for The World of AI: AI legislation, lawsuits, glossary, compliance ` +
+  `frameworks, tools, companies, people, research, and MCP servers. Free to use with ` +
+  `attribution, no key required, refreshed daily.`;
+
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'WebAPI',
+  name: 'The World of AI public data API',
+  description: desc,
+  url: 'https://theworldofai.org/api/',
+  documentation: 'https://theworldofai.org/api/',
+  provider: { '@type': 'Organization', name: 'SRJ Consulting & Services LLC' },
+});
+---
+<Base title="Public Data API: AI Laws, Lawsuits, Tools, and Research" description={desc} current="/api/" jsonld={jsonld}>
+  <h1>Public data API</h1>
+
+  <div class="answer-box">
+    <p class="answer-label">The short answer</p>
+    <p>
+      Every dataset behind this site is published as static JSON at
+      <code>https://theworldofai.org/api/</code>. There are <b>{live.length}</b> endpoints, no key
+      is required, and they refresh once daily on the same run that rebuilds the pages. Use them
+      freely with attribution back to the relevant page.
+    </p>
+  </div>
+
+  <h2>Endpoints</h2>
+  <table class="ep">
+    <thead>
+      <tr><th scope="col">Endpoint</th><th scope="col">What it holds</th><th scope="col">Page</th></tr>
+    </thead>
+    <tbody>
+      {live.map((e) => (
+        <tr>
+          <td><a href={`/api/${e.file}`}><code>/api/{e.file}</code></a></td>
+          <td>{e.desc}</td>
+          <td><a href={e.page}>{e.name}</a></td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+
+  <h2>How to use them</h2>
+  <p>
+    Every file is plain JSON served over HTTPS as a static asset, so a plain GET is all that is
+    needed and CORS is open. There is no rate limit beyond ordinary CDN fair use, no
+    authentication, and no versioning scheme: the shape of a file can gain fields but existing
+    fields are not renamed or removed, on the same principle that keeps published URLs stable.
+  </p>
+  <pre class="code"><code>curl -s https://theworldofai.org/api/laws.json | jq '.states | length'</code></pre>
+  <p>
+    Each file carries a <code>generated</code> date, which is the date the data was verified
+    rather than the date it was fetched. Where a daily refresh cannot reach a source, the last
+    verified snapshot is kept rather than publishing an unverified number, so a stale
+    <code>generated</code> date is a real signal and worth checking.
+  </p>
+
+  <h2>Attribution</h2>
+  <p>
+    Use of this data is welcome, including commercially, provided it is attributed. Link back to
+    the relevant page rather than to the JSON file, so readers land on the sourced version.
+  </p>
+  <div class="cite-box">
+    <p><b>Suggested attribution</b></p>
+    <code>Data from The World of AI, https://theworldofai.org/. Retrieved {new Date().toISOString().slice(0, 10)}.</code>
+  </div>
+
+  <p class="api-line">
+    See also <a href="/llms.txt">llms.txt</a> for the machine-readable site summary and
+    <a href="/sitemap-index.xml">sitemap-index.xml</a> for every URL.
+  </p>
+</Base>
+
+<style>
+  .answer-box { background: #FFF6EC; border: 1px solid #F0D6B0; border-radius: 6px;
+    padding: 22px 26px; margin: 18px 0 24px; max-width: 780px; }
+  .answer-box p { font-size: 16.5px; line-height: 1.75; color: #2C2C2A; margin: 0; }
+  .answer-label { font-size: 11px !important; font-weight: 700; letter-spacing: .16em;
+    text-transform: uppercase; color: #F07800; margin: 0 0 8px !important; }
+
+  .ep { width: 100%; border-collapse: collapse; margin: .6em 0 1.4em; font-size: .95rem; }
+  .ep th, .ep td { text-align: left; padding: .55em .6em; border-bottom: 1px solid #ececf2;
+    vertical-align: top; }
+  .ep th { font-size: .82rem; letter-spacing: .04em; text-transform: uppercase; color: #6b6b78; }
+  .ep code { font-size: .9rem; white-space: nowrap; }
+
+  .code { background: #f7f7fb; border-left: 3px solid #201868; padding: .8em 1em;
+    overflow-x: auto; font-size: .9rem; }
+  .cite-box { margin-top: 1.2em; padding: .9em 1em; background: #f7f7fb;
+    border-left: 3px solid #201868; font-size: .9rem; }
+  .cite-box code { display: block; margin-top: .3em; word-break: break-word; }
+  .api-line { margin-top: 1em; font-size: .87rem; color: #6b6b78; }
+</style>

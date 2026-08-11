@@ -1,0 +1,213 @@
+---
+/**
+ * One person profile at /people/{uid}/.
+ *
+ * Reads content/people/{uid}.json, which fetch-content.mjs writes from R2.
+ * Addressed by the short alphanumeric UID that pins the same person across
+ * every cross reference on this site, the same convention the company
+ * directory uses, so a source that writes "Geoff Hinton" and one that writes
+ * "Geoffrey E. Hinton" land on the same page.
+ *
+ * A profile renders only what the record actually holds: the hook, quick
+ * facts, achievements, a dated timeline, and the primary and secondary
+ * sources behind them. Sections with no data are omitted rather than shown
+ * empty. Every profile ends with its sources, because a biography without
+ * them is an assertion.
+ */
+import Base from '../../layouts/Base.astro';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+
+export function getStaticPaths() {
+  if (!existsSync('content/people')) return [];
+  return readdirSync('content/people')
+    .filter((f) => f.endsWith('.json') && f !== 'index.json')
+    .map((f) => {
+      try {
+        return JSON.parse(readFileSync(`content/people/${f}`, 'utf8'));
+      } catch {
+        return null;
+      }
+    })
+    .filter((d) => d && d.uid && d.name)
+    .map((d) => ({ params: { uid: d.uid }, props: { p: d } }));
+}
+
+const { p } = Astro.props;
+const fields = p.fields || [];
+const quickFacts = p.quick_facts || [];
+const achievements = p.achievements || [];
+const timeline = p.timeline || [];
+const primary = (p.sources && p.sources.primary) || [];
+const secondary = (p.sources && p.sources.secondary) || [];
+
+const lifespan = p.born ? `${p.born}\u2013${p.died || ''}` : null;
+const desc = (p.hook || `${p.name}, ${p.moniker || 'a figure in the history of artificial intelligence'}.`).slice(0, 300);
+
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: p.name,
+  identifier: p.uid,
+  url: `https://theworldofai.org/people/${p.uid}/`,
+  description: desc,
+  ...(p.moniker ? { alternateName: p.moniker } : {}),
+  ...(p.nationality ? { nationality: p.nationality } : {}),
+  ...(p.born ? { birthDate: p.born } : {}),
+  ...(p.died ? { deathDate: p.died } : {}),
+  ...(fields.length ? { knowsAbout: fields } : {}),
+  ...(primary.length || secondary.length
+    ? { sameAs: [...primary, ...secondary].map((s) => s.url).filter(Boolean) }
+    : {}),
+});
+---
+<Base title={`${p.name}${p.moniker ? `: ${p.moniker}` : ''}`} description={desc} current="/people/" jsonld={jsonld}>
+  <p class="meta-line"><a href="/people/">AI People Directory</a></p>
+  <h1>{p.name}</h1>
+  {(p.moniker || lifespan || p.nationality) && (
+    <p class="dateline">
+      {p.moniker && <b>{p.moniker}</b>}
+      {p.moniker && (lifespan || p.nationality) && <> · </>}
+      {lifespan}
+      {lifespan && p.nationality && <> · </>}
+      {p.nationality}
+    </p>
+  )}
+
+  {p.hook && (
+    <div class="answer-box">
+      <p class="answer-label">Why this person matters</p>
+      <p>{p.hook}</p>
+    </div>
+  )}
+
+  {p.generated && (
+    <p class="meta-line">Profile last reviewed: {p.generated} · Entity ID <code>{p.uid}</code></p>
+  )}
+
+  {fields.length > 0 && (
+    <p class="fields"><b>Fields:</b> {fields.join(' · ')}</p>
+  )}
+
+  {quickFacts.length > 0 && (
+    <section>
+      <h2>Quick facts</h2>
+      <ul class="facts">
+        {quickFacts.map((f) => <li>{f}</li>)}
+      </ul>
+    </section>
+  )}
+
+  {p.quote && p.quote.text && (
+    <blockquote class="pull">
+      <p>{p.quote.text}</p>
+      {p.quote.context && <cite>{p.quote.context}</cite>}
+    </blockquote>
+  )}
+
+  {achievements.length > 0 && (
+    <section>
+      <h2>Principal achievements</h2>
+      <dl class="ach">
+        {achievements.map((a) => (
+          <>
+            <dt>{a.title}</dt>
+            {a.impact && <dd>{a.impact}</dd>}
+          </>
+        ))}
+      </dl>
+    </section>
+  )}
+
+  {timeline.length > 0 && (
+    <section>
+      <h2>Timeline</h2>
+      <table class="tl">
+        <thead><tr><th scope="col">Year</th><th scope="col">Event</th><th scope="col">Why it mattered</th></tr></thead>
+        <tbody>
+          {timeline.map((t) => (
+            <tr>
+              <td class="yr">{t.year}</td>
+              <td>{t.event}</td>
+              <td class="imp">{t.impact}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  )}
+
+  {(primary.length > 0 || secondary.length > 0) && (
+    <section>
+      <h2>Sources</h2>
+      {primary.length > 0 && (
+        <>
+          <h3>Primary</h3>
+          <ul class="src">
+            {primary.map((s) => (
+              <li>{s.url ? <a href={s.url} rel="noopener" target="_blank">{s.name}</a> : s.name}</li>
+            ))}
+          </ul>
+        </>
+      )}
+      {secondary.length > 0 && (
+        <>
+          <h3>Secondary</h3>
+          <ul class="src">
+            {secondary.map((s) => (
+              <li>{s.url ? <a href={s.url} rel="noopener" target="_blank">{s.name}</a> : s.name}</li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
+  )}
+
+  <div class="cite-box">
+    <p><b>Cite this page</b></p>
+    <code>"{p.name}." The World of AI, https://theworldofai.org/people/{p.uid}/. Verified {p.generated || 'see above'}.</code>
+  </div>
+
+  <p class="backlinks">
+    <a href="/people/">&larr; All people</a> ·
+    <a href="/companies/">AI Company Directory</a> ·
+    <a href="/research/">AI Research Library</a>
+  </p>
+</Base>
+
+<style>
+  .dateline { color: #7A8A9E; font-size: 14.5px; margin-top: -.3em; }
+  .answer-box { background: #FFF6EC; border: 1px solid #F0D6B0; border-radius: 6px;
+    padding: 22px 26px; margin: 18px 0 24px; max-width: 780px; }
+  .answer-box p { font-size: 16.5px; line-height: 1.75; color: #2C2C2A; margin: 0; }
+  .answer-label { font-size: 11px !important; font-weight: 700; letter-spacing: .16em;
+    text-transform: uppercase; color: #F07800; margin: 0 0 8px !important; }
+
+  .fields { font-size: .95rem; color: #3d3d46; }
+  .facts { max-width: 76ch; }
+  .facts li { margin: .35em 0; }
+
+  .pull { margin: 1.4em 0; padding: .9em 1.2em; border-left: 3px solid var(--orange);
+    background: #f7f7fb; }
+  .pull p { margin: 0; font-size: 1.05rem; font-style: italic; color: #2C2C2A; }
+  .pull cite { display: block; margin-top: .45em; font-size: .85rem; color: #7A8A9E;
+    font-style: normal; }
+
+  .ach { margin: .6em 0; }
+  .ach dt { font-weight: 600; margin-top: .9em; }
+  .ach dd { margin: .25em 0 0; color: #3d3d46; max-width: 76ch; }
+
+  .tl { width: 100%; border-collapse: collapse; margin: .6em 0; font-size: .95rem; }
+  .tl th, .tl td { text-align: left; padding: .55em .6em; border-bottom: 1px solid #ececf2;
+    vertical-align: top; }
+  .tl th { font-size: .82rem; letter-spacing: .04em; text-transform: uppercase; color: #6b6b78; }
+  .tl .yr { white-space: nowrap; font-weight: 600; width: 4.5em; }
+  .tl .imp { color: #3d3d46; }
+
+  .src { margin: .4em 0 1em; }
+  .src li { margin: .3em 0; font-size: .93rem; }
+
+  .cite-box { margin-top: 1.6em; padding: .9em 1em; background: #f7f7fb;
+    border-left: 3px solid #201868; font-size: .9rem; }
+  .cite-box code { display: block; margin-top: .3em; word-break: break-word; }
+  .backlinks { margin-top: 1.4em; font-size: .9rem; }
+</style>

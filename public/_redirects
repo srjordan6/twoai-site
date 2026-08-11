@@ -1,5 +1,50 @@
+# Cloudflare Pages _redirects. First match wins, so the most specific rules
+# come first. Splats (:splat) carry the matched tail.
+
 # The AI Ecosystem map is the home page, so /ai-ecosystem/ would be a second
 # copy of it. Redirect rather than publish the duplicate. The category pages
 # beneath it are real and are not affected.
 /ai-ecosystem/  /  301
 /ai-ecosystem   /  301
+
+# SRJ-ERA GOVERNANCE PATHS.
+# /ai-governance/* is srjconsultingservices.com's URL structure and was never
+# a path on this site, but internal links carried it here and Search Console
+# reported the 404s. On this site the equivalent pages live flat under
+# /ai-compliance/{slug}/ with no parent segment, so the nested SRJ paths must
+# collapse their middle segment. Each parent below is itself a real page here,
+# so the bare parent redirects to its own page and the parent/* rule collapses
+# anything beneath it. Every leaf was verified to exist before these were
+# written. The bare /ai-governance/* catch-all is last so it only ever handles
+# the already-flat paths.
+/ai-governance/agency-enforcement/           /ai-compliance/agency-enforcement/           301
+/ai-governance/agency-enforcement/*          /ai-compliance/:splat                        301
+/ai-governance/state-ai-laws/                /ai-compliance/state-ai-laws/                301
+/ai-governance/state-ai-laws/*               /ai-compliance/:splat                        301
+/ai-governance/sector-rules/                 /ai-compliance/sector-rules/                 301
+/ai-governance/sector-rules/*                /ai-compliance/:splat                        301
+/ai-governance/data-management-frameworks/   /ai-compliance/data-management-frameworks/   301
+/ai-governance/data-management-frameworks/*  /ai-compliance/:splat                        301
+/ai-governance/financial-reporting/          /ai-compliance/financial-reporting/          301
+/ai-governance/financial-reporting/*         /ai-compliance/:splat                        301
+/ai-governance/general-business-governance/  /ai-compliance/general-business-governance/  301
+/ai-governance/general-business-governance/* /ai-compliance/:splat                        301
+/ai-governance/nyc-ai-laws/                  /ai-compliance/nyc-ai-laws/                  301
+/ai-governance/nyc-ai-laws/*                 /ai-compliance/:splat                        301
+/ai-governance/vendor-disclosure/            /ai-compliance/vendor-disclosure/            301
+/ai-governance/vendor-disclosure/*           /ai-compliance/:splat                        301
+/ai-governance/                              /ai-compliance/                              301
+/ai-governance                               /ai-compliance/                              301
+/ai-governance/*                             /ai-compliance/:splat                        301
+
+# Prompt pages ship at /ai-prompts/, matching the /ai-* convention the rest of
+# the site uses. /prompts/ was never published but is the obvious guess, and a
+# guessed URL that resolves costs nothing.
+/prompts/   /ai-prompts/        301
+/prompts    /ai-prompts/        301
+/prompts/*  /ai-prompts/:splat  301
+
+# The people directory is not published on this site yet. Send the URL to the
+# ecosystem map rather than a 404 until it is.
+/people/  /  302
+/people   /  302

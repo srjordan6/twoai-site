@@ -1,41 +1,66 @@
 # The World of AI
 > The atlas of artificial intelligence: US state AI legislation, major AI
 > lawsuits, the language of AI, the tools people actually use, the companies
-> that build them, the peer-reviewed research behind the field, and the
+> that build them, the compliance frameworks that govern them, the benchmarks
+> that measure them, the MCP servers that connect them, the peer-reviewed
+> research behind the field, what the labs announce themselves, and the
 > primary-source bibliography that grounds every fact. Rebuilt daily from
 > primary sources (LegiScan, CourtListener/RECAP, the Federal Register, the
-> govinfo USCOURTS opinion feed, and the Consensus academic index). An
-> independent publication of SRJ Consulting & Services LLC, Frisco, Texas.
+> govinfo USCOURTS opinion feed, arXiv, the official MCP registry, and
+> published academic indexes). An independent publication of SRJ Consulting &
+> Services LLC, Frisco, Texas.
 
-Every reference page carries a "Last verified" date and a ready-made citation.
-Citing these pages with attribution is welcome and encouraged.
+Every reference page carries a visible date stamp (generated, last verified, or
+last reviewed) and a ready-made citation. Citing these pages with attribution
+is welcome and encouraged.
 
 ## Sections
 - [AI Laws by State](https://theworldofai.org/ai-laws/): every tracked AI bill
   in all 50 US states, DC, Puerto Rico, and Congress, one page per jurisdiction.
 - [AI Glossary](https://theworldofai.org/ai-glossary/): 522 AI terms defined
   in plain English with origin, example, and related terms.
-- [AI Lawsuit Tracker](https://theworldofai.org/ai-lawsuits/): 22+ living case
+- [AI Lawsuit Tracker](https://theworldofai.org/ai-lawsuits/): 99 living case
   pages with daily docket checks, full timelines, and both the CourtListener
   docket record and the govinfo opinion text where available.
-- [AI Tools Directory](https://theworldofai.org/ai-tools/): 320 tools across 23
-  categories, with in-depth profiles covering pricing, strengths, weaknesses,
-  and governance notes for the tools we have researched directly.
-- [AI Companies](https://theworldofai.org/companies/): 62 profiled AI companies
+- [AI Compliance Frameworks](https://theworldofai.org/ai-compliance/): 62
+  framework pages covering the EU AI Act, NIST AI RMF, ISO/IEC 42001, sector
+  regulators, and agency enforcement, each with scope, obligations, deadlines,
+  and what changed most recently.
+- [AI Tools Directory](https://theworldofai.org/ai-tools/): profiles covering
+  pricing, strengths, weaknesses, and governance notes for the tools we have
+  researched directly.
+- [AI Companies](https://theworldofai.org/companies/): profiled AI companies
   with SEC EDGAR revenue and structure data where public.
+- [AI Benchmarks](https://theworldofai.org/benchmarks/): 18 benchmark pages
+  covering what each benchmark actually measures, its known limitations, and
+  current published results with the evaluator and as-of date named. Results
+  come from structured official sources and refresh automatically; benchmarks
+  whose published figures are stable carry a dated protocol note instead.
+- [MCP Server Registry](https://theworldofai.org/mcp/): 1,758 Model Context
+  Protocol servers sourced from the official registry at
+  registry.modelcontextprotocol.io, one page per server.
 - [AI Research Library](https://theworldofai.org/research/): 134 peer-reviewed
-  and preprint AI papers curated through the Consensus academic index, sorted
-  into ten topics (reasoning, healthcare, applications, architectures,
-  capabilities and limits, evaluation, governance, security, bias and
-  fairness, the EU AI Act). Each entry carries authors, venue, year, citation
-  count, and a plain-English note on why the paper matters. A dedicated page
-  per paper at /research/paper/{uid}/ adds the abstract with Consensus
-  attribution and three tailored explanations, one for a beginner, one for a
-  practitioner, and one for a business reader.
-- [Sources and References](https://theworldofai.org/sources/): 123 primary
-  sources across six sections (EU and Council of Europe, US federal, US state
-  and city, other jurisdictions, standards bodies and SROs, peer-reviewed
-  research). The bibliography behind every fact on the site.
+  and preprint AI papers sorted into ten topics (reasoning, healthcare,
+  applications, architectures, capabilities and limits, evaluation, governance,
+  security, bias and fairness, the EU AI Act). Each entry carries authors,
+  venue, year, citation count, and a plain-English note on why the paper
+  matters. Every rendered citation links to the original paper or publisher.
+- [arXiv Research Watch](https://theworldofai.org/research/watch/): recent
+  cs.AI, cs.CL, and cs.LG preprints from a rolling 30-day window, labelled as
+  not yet peer reviewed.
+- [AI News](https://theworldofai.org/ai-news/): the daily briefing of how the
+  field is being covered, plus
+  [AI Vendor News](https://theworldofai.org/ai-news/vendor/), announcements
+  from the organisations building and governing AI in their own words, drawn
+  from their own feeds rather than press aggregation. Each vendor post has its
+  own page carrying the vendor's published description and a link to the
+  original.
+- [AI Prompts](https://theworldofai.org/ai-prompts/): prompting techniques and
+  domain prompt guides.
+- [Sources and References](https://theworldofai.org/sources/): the primary
+  sources behind every fact on the site, across EU and Council of Europe, US
+  federal, US state and city, other jurisdictions, standards bodies and SROs,
+  and peer-reviewed research.
 - [AI Calculators](https://theworldofai.org/calculators/): token cost, GPU
   VRAM, ROI, training cost, energy and carbon, and context window estimators.
 - [This Week in AI](https://theworldofai.org/this-week-in-ai/): a weekly
@@ -52,10 +77,11 @@ Citing these pages with attribution is welcome and encouraged.
 - https://theworldofai.org/api/lawsuits.json (all tracked cases)
 - https://theworldofai.org/api/tools.json (tool catalog, categories, profiles)
 - https://theworldofai.org/api/companies.json (company index)
+- https://theworldofai.org/api/people.json (people index)
 - https://theworldofai.org/api/research.json (research library hub with all
   ten topics, most-cited papers, and per-paper metadata)
-- https://theworldofai.org/api/sources.json (all 123 primary sources, sorted
-  and sectioned as on the /sources/ page)
+- https://theworldofai.org/api/sources.json (primary sources, sorted and
+  sectioned as on the /sources/ page)
 - https://theworldofai.org/api/compliance.json (compliance framework index)
 - https://theworldofai.org/api/mcp.json (MCP server registry)
 - https://theworldofai.org/api/weeks.json (weekly digest index)
@@ -71,14 +97,18 @@ Citing these pages with attribution is welcome and encouraged.
 
 ## Update cadence
 All data refreshes once daily via an automated pipeline running at 11:00 UTC;
-the "generated" field in each API file is the verification date. The research
-library refreshes from the Consensus academic index; abstracts and the three
-explanations are populated by a scheduled task and top up over time.
+the "generated" or "last verified" date on each page and in each API file is
+the verification date. Benchmark results refresh from structured official
+sources on the same daily run and fail closed to the last verified snapshot
+rather than publishing an unverified number. The arXiv watch and vendor news
+sections use a rolling 30-day window.
 
 ## Editorial policy
 Every fact on this site traces to a primary source cataloged on the
 [Sources and References](https://theworldofai.org/sources/) page. Where a
-claim cannot be sourced, it is not published. Corrections are welcomed at
+claim cannot be sourced, it is not published. Vendor announcements are
+labelled as the vendor's own claims, not verified facts. Preprints are
+labelled as not peer reviewed. Corrections are welcomed at
 info@srjconsultingservices.com.
 
 ## Citation format
