@@ -79,6 +79,13 @@
 /prompts    /ai-prompts/        301
 /prompts/*  /ai-prompts/:splat  301
 
+# Tim O'Reilly published under two entity identifiers for a week, because an
+# earlier naming rule dropped the apostrophe where the entity normalizer turns
+# it into a hyphen. The duplicate row is deleted and the pipeline now reaps
+# rows it did not write, but the dead URL was live long enough to be indexed,
+# so it points at the surviving page rather than 404ing.
+/ai-ecosystem/ecosystem-entities-market-and-operations/0b4e5c38/  /ai-ecosystem/ecosystem-entities-market-and-operations/24d80f66/  301
+
 # The AI People Directory is published inside the ecosystem map, at the entity
 # node for it, not at a top-level /people/ path. /people/ is the obvious guess
 # and was submitted to Search Console, so it 301s to the real page rather than
