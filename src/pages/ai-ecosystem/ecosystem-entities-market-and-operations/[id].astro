@@ -43,18 +43,27 @@ export function getStaticPaths() {
     }
   }
 
+  if (existsSync('content/jobs/index.json')) {
+    const jidx = JSON.parse(readFileSync('content/jobs/index.json', 'utf8'));
+    if (jidx.uid) paths.push({ params: { id: jidx.uid }, props: { jhub: jidx } });
+  }
+
   return paths;
 }
-const { hub, person, hubUid, chub, company, generated, chubUid } = Astro.props;
+const { hub, person, hubUid, chub, company, generated, chubUid, jhub } = Astro.props;
 
-const desc = hub
+const desc = jhub
+  ? `${jhub.total} open AI and computer-security jobs, refreshed daily from USAJobs, company career boards, and free job feeds, with market data on AI hiring share. Every listing links to the original posting.`
+  : hub
   ? `Profiles of ${hub.total} people shaping artificial intelligence: researchers, founders, executives, and policymakers, each with a timeline, achievements, and sources.`
   : chub
   ? `${chub.total} companies building AI, with what each one ships, whether it is a defendant in a tracked lawsuit, and whether it publishes to the Model Context Protocol registry.`
   : company
   ? `${company.name}: ${company.products.length} AI product${company.products.length === 1 ? '' : 's'} we track${company.cases?.length ? `, ${company.cases.length} tracked lawsuit${company.cases.length === 1 ? '' : 's'}` : ''}${company.mcp?.length ? `, ${company.mcp.length} MCP server${company.mcp.length === 1 ? '' : 's'}` : ''}.`
   : `${person.name}${person.moniker ? `, ${person.moniker}` : ''}. ${person.hook || ''}`.slice(0, 300);
-const title = hub
+const title = jhub
+  ? 'AI Jobs and Market Dynamics — The World of AI'
+  : hub
   ? 'AI People Directory — The World of AI'
   : chub
   ? 'AI Company Directory — The World of AI'
@@ -75,8 +84,31 @@ if (chub) {
 }
 const letters = Object.keys(grouped).sort((a, b) => (a === '#' ? 1 : b === '#' ? -1 : a.localeCompare(b)));
 
+// Jobs hub: group listings by category for the three sections, newest first
+// (they arrive pre-sorted from SQL). Market blocks are optional: a missing
+// feed renders nothing rather than an empty panel.
+const jobCats = jhub
+  ? [
+      ['ai-security', 'AI × Security', jhub.jobs.filter((j) => j.category === 'ai-security')],
+      ['ai', 'Artificial Intelligence', jhub.jobs.filter((j) => j.category === 'ai')],
+      ['security', 'Computer Security', jhub.jobs.filter((j) => j.category === 'security')],
+    ].filter(([, , list]) => list.length > 0)
+  : [];
+const hiringLab = jhub?.market?.hiring_lab_ai_share ?? null;
+const hlUS = hiringLab?.latest?.find((c) => c.country === 'US') ?? null;
+const infosec = jhub?.market?.infosec_stats ?? null;
+
 const jsonld = JSON.stringify(
-  hub || chub
+  jhub
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: 'AI Jobs and Market Dynamics',
+        description: desc,
+        url: `https://theworldofai.org${BASE}/${jhub.uid}/`,
+        dateModified: jhub.generated,
+      }
+    : hub || chub
     ? {
         '@context': 'https://schema.org',
         '@type': 'CollectionPage',
@@ -113,6 +145,75 @@ const jsonld = JSON.stringify(
     <a href={`${BASE}/`}>{CATEGORY_NAME}</a>
     {person && <> · <a href={`${BASE}/${hubUid}/`}>AI People</a></>}
     {company && <> · <a href={`${BASE}/${chubUid}/`}>AI Companies</a></>}</p>
+
+  {jhub && (
+    <>
+      <h1>AI Jobs and Market Dynamics</h1>
+      <p class="answer"><b>{jhub.total} open positions</b> in artificial intelligence and computer
+        security, refreshed daily: {jhub.counts.ai} AI roles, {jhub.counts.security} security
+        roles, and {jhub.counts.ai_security} at the intersection. Listings come from the official
+        USAJobs federal feed, the public career boards of tracked AI and security companies, and
+        free job feeds whose terms permit republication. Every listing links to the original
+        posting; nothing is hosted here.</p>
+      <p class="meta-line">Last verified: {jhub.generated} · Sources credited below</p>
+
+      {(hlUS || infosec) && (
+        <>
+          <h2>Market dynamics</h2>
+          <div class="mkt">
+            {hlUS && (
+              <div class="mkt-panel">
+                <p class="mkt-big">{Number(hlUS.share).toFixed(2)}%</p>
+                <p class="mkt-label">of US job postings mention AI ({hlUS.date})</p>
+                {hiringLab.us_trend?.length > 1 && (
+                  <p class="mkt-note">Twelve months ago:
+                    {' '}{Number(hiringLab.us_trend[Math.max(0, hiringLab.us_trend.length - 13)].share).toFixed(2)}%.
+                    Source: <a href="https://github.com/hiring-lab/ai-tracker" rel="noopener">Indeed
+                    Hiring Lab AI Tracker</a>, seven-day trailing average.</p>
+                )}
+              </div>
+            )}
+            {infosec && (
+              <div class="mkt-panel">
+                <p class="mkt-big">{infosec.total_active_jobs?.toLocaleString?.() ?? infosec.total_active_jobs}</p>
+                <p class="mkt-label">active cybersecurity openings tracked · {infosec.remote_share_pct}% remote</p>
+                <p class="mkt-note">{infosec.new_this_week} new this week. Source:
+                  {' '}<a href="https://www.infosecjobboard.com/" rel="noopener">InfoSec Job Board</a>,
+                  aggregate hiring data, used with attribution.</p>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {jobCats.map(([slug, label, list]) => (
+        <section class="letter-block">
+          <h2 id={`cat-${slug}`}>{label} <span class="jn">{list.length}</span></h2>
+          <ul class="co-list">
+            {list.map((j) => (
+              <li>
+                <a href={j.url} rel="noopener nofollow" target="_blank">{j.title}</a>
+                <p>{j.company}{j.location && <> · {j.location}</>}{j.remote && !String(j.location || '').toLowerCase().includes('remote') && <> · Remote</>}{j.salary && <> · {j.salary}</>}{j.posted && <> · Posted {j.posted}</>} · <span class="jsrc">{j.source}</span></p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+
+      <h2>Where these listings come from</h2>
+      <p>Only sources whose terms permit free republication are used, and each is credited. The
+        listing text belongs to the employer; this page is an index that points at the original
+        posting.</p>
+      <ul class="cites">
+        {jhub.sources.map((s) => (
+          <li>{s.url ? <a href={s.url} rel="noopener">{s.name}</a> : <b>{s.name}</b>} — {s.note}</li>
+        ))}
+      </ul>
+
+      <div class="cite-box">Cite this page: <code>"AI Jobs and Market Dynamics." The World of AI,
+        theworldofai.org{BASE}/{jhub.uid}/. Verified {jhub.generated}.</code></div>
+    </>
+  )}
 
   {chub && (
     <>
@@ -352,4 +453,11 @@ const jsonld = JSON.stringify(
   table th { text-align: left; vertical-align: top; }
   .cites { font-size: .92rem; }
   .cites li { margin-bottom: .35em; }
+  .mkt { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin: .8em 0 1.4em; }
+  .mkt-panel { border: 1px solid #e6e4de; border-radius: 10px; padding: 16px 18px; background: #fafaf6; }
+  .mkt-big { font-size: 2rem; font-weight: 700; color: var(--navy, #201868); margin: 0; }
+  .mkt-label { font-size: .9rem; color: #3d3d46; margin: .15em 0 .4em; }
+  .mkt-note { font-size: .82rem; color: #6b6b78; margin: 0; }
+  .jn { font-size: .85rem; color: var(--orange, #F07800); font-weight: 700; vertical-align: middle; }
+  .jsrc { font-size: .8rem; color: #6b6b78; text-transform: uppercase; letter-spacing: .05em; }
 </style>
