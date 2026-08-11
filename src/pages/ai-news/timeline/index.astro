@@ -1,0 +1,171 @@
+---
+/**
+ * AI Historical Timeline at /ai-news/timeline/.
+ *
+ * Reads content/timeline/index.json, which the pipeline builds from
+ * twoai_timeline. Entries arrive already grouped into eras and ordered by
+ * year, so this file lays them out and does not re-sort them: the ordering
+ * decision lives with the data.
+ *
+ * Two kinds of entry render differently on purpose. Curated entries are the
+ * historical spine, each carrying its primary source and the date a person
+ * last reviewed it. Entries with origin auto-lawsuit are live case records
+ * that the pipeline refreshes daily, and they are labelled as tracked so a
+ * reader knows the status line is current rather than something written once
+ * and left. Blurring the two would be the whole failure this page is meant to
+ * avoid.
+ */
+import Base from '../../../layouts/Base.astro';
+import { readFileSync, existsSync } from 'node:fs';
+
+const tl = existsSync('content/timeline/index.json')
+  ? JSON.parse(readFileSync('content/timeline/index.json', 'utf8'))
+  : { eras: [], total: 0, curated: 0, auto: 0, generated: '', first_year: 1943 };
+
+const eras = tl.eras || [];
+const anchor = (s) => 'era-' + String(s).replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase();
+
+const desc =
+  `${tl.total} milestones in artificial intelligence from ${tl.first_year} to the present: ` +
+  `Turing, the perceptron, expert systems, backpropagation, deep learning, AlexNet, transformers, ` +
+  `and the litigation and regulation that followed. Each entry cites its primary source.`;
+
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Article',
+      headline: 'AI Historical Timeline',
+      description: desc,
+      url: 'https://theworldofai.org/ai-news/timeline/',
+      dateModified: tl.generated,
+      publisher: { '@type': 'Organization', name: 'The World of AI' },
+    },
+    {
+      '@type': 'ItemList',
+      name: 'Milestones in artificial intelligence',
+      numberOfItems: tl.total,
+      itemListElement: eras.flatMap((b) => b.entries || []).map((e, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        name: `${e.year}: ${e.title}`,
+      })),
+    },
+  ],
+});
+---
+<Base title="AI Historical Timeline: From 1943 to the Present" description={desc} current="/ai-news/" jsonld={jsonld}>
+  <p class="meta-line"><a href="/ai-news/">AI News</a></p>
+  <h1>AI Historical Timeline</h1>
+
+  <div class="answer-box">
+    <p class="answer-label">The short answer</p>
+    <p>
+      <b>{tl.total}</b> milestones from <b>{tl.first_year}</b> to the present, grouped into
+      {' '}{eras.length} eras: the first mathematical neuron, Turing&rsquo;s question, the workshop
+      that named the field, the perceptron and the winter that followed it, backpropagation, the
+      statistical turn, AlexNet, the transformer, and the assistant era with the litigation and
+      regulation it produced. Every entry links to its primary source.
+    </p>
+  </div>
+
+  {tl.generated && (
+    <p class="meta-line">
+      Last built: {tl.generated}. {tl.curated} entries are curated and carry the date each was last
+      reviewed; {tl.auto} are live case records refreshed daily from the court dockets.
+    </p>
+  )}
+
+  {eras.length > 0 && (
+    <nav class="eras" aria-label="Jump to era">
+      {eras.map((b) => <a href={`#${anchor(b.era)}`}>{b.era}</a>)}
+    </nav>
+  )}
+
+  {eras.map((b) => (
+    <section class="era-block" id={anchor(b.era)}>
+      <h2>{b.era}</h2>
+      <ol class="tl">
+        {(b.entries || []).map((e) => (
+          <li class={e.origin === 'auto-lawsuit' ? 'is-case' : ''}>
+            <p class="when">
+              {e.date || e.year}
+              {e.origin === 'auto-lawsuit' && <span class="tag">Tracked case</span>}
+            </p>
+            <h3>{e.title}</h3>
+            <p class="detail">{e.detail}</p>
+            <p class="src">
+              {e.source_url
+                ? <>Source: <a href={e.source_url} rel="noopener" target="_blank">{e.source_name || 'primary source'}</a></>
+                : e.source_name ? <>Source: {e.source_name}</> : null}
+              {e.case_slug && <> &middot; <a href={`/ai-lawsuits/${e.case_slug}/`}>Full case page</a></>}
+              {e.reviewed_on && e.origin !== 'auto-lawsuit' && <> &middot; reviewed {e.reviewed_on}</>}
+            </p>
+          </li>
+        ))}
+      </ol>
+    </section>
+  ))}
+
+  <h2>How this page is kept current</h2>
+  <p>
+    A timeline is the page type most likely to rot, so the two halves are maintained differently
+    because they go wrong differently. The historical entries are written and sourced by hand and
+    each shows the date it was last reviewed, since what changes about 1956 is our understanding
+    rather than the facts. The tracked cases are pulled from the lawsuit tracker every day, so a
+    ruling reaches this page the same day it reaches the docket.
+  </p>
+  <p>
+    What this page deliberately does not do is promote items from the news feed automatically. A
+    press release is not a milestone, and no rule applied to prose can reliably tell the
+    difference, so the judgment that something belongs here is made deliberately and only the
+    facts underneath it are automated.
+  </p>
+
+  <div class="cite-box">
+    <p><b>Cite this page</b></p>
+    <code>"AI Historical Timeline." The World of AI, https://theworldofai.org/ai-news/timeline/. Verified {tl.generated}.</code>
+  </div>
+
+  <p class="api-line">
+    See also <a href="/ai-lawsuits/">the AI lawsuit tracker</a>,
+    <a href="/ai-compliance/"> compliance frameworks</a>, and
+    <a href="/research/"> the research library</a>.
+  </p>
+</Base>
+
+<style>
+  .answer-box { background: #FFF6EC; border: 1px solid #F0D6B0; border-radius: 6px;
+    padding: 22px 26px; margin: 18px 0 24px; max-width: 780px; }
+  .answer-box p { font-size: 16.5px; line-height: 1.75; color: #2C2C2A; margin: 0; }
+  .answer-label { font-size: 11px !important; font-weight: 700; letter-spacing: .16em;
+    text-transform: uppercase; color: #F07800; margin: 0 0 8px !important; }
+
+  .eras { display: flex; flex-wrap: wrap; gap: 8px; margin: 1.2em 0 1.8em;
+    padding: .8em .9em; background: var(--cream); border-radius: 6px; }
+  .eras a { font-size: .85rem; font-weight: 600; text-decoration: none; padding: 3px 9px;
+    border-radius: 4px; }
+  .eras a:hover { background: var(--orange); color: #fff; }
+
+  .era-block h2 { font-size: 1.35rem; margin: 1.6em 0 .5em; padding-bottom: .2em;
+    border-bottom: 2px solid var(--orange); }
+
+  .tl { list-style: none; margin: 0; padding: 0 0 0 1.4em; border-left: 2px solid #ececf2; }
+  .tl li { position: relative; padding: .3em 0 1.5em; }
+  .tl li::before { content: ''; position: absolute; left: calc(-1.4em - 6px); top: .75em;
+    width: 10px; height: 10px; border-radius: 50%; background: #201868; }
+  .tl li.is-case::before { background: #F07800; }
+  .tl h3 { margin: .1em 0 .3em; font-size: 1.08rem; }
+  .when { margin: 0; font-size: .82rem; letter-spacing: .05em; text-transform: uppercase;
+    color: #7A8A9E; font-weight: 600; }
+  .tag { margin-left: .6em; background: #F07800; color: #fff; border-radius: 999px;
+    padding: 1px 8px; font-size: .68rem; letter-spacing: .06em; }
+  .detail { margin: 0 0 .4em; max-width: 76ch; color: #2C2C2A; }
+  .src { margin: 0; font-size: .84rem; color: #7A8A9E; }
+  .src a { color: #201868; font-weight: 600; }
+
+  .cite-box { margin-top: 1.6em; padding: .9em 1em; background: #f7f7fb;
+    border-left: 3px solid #201868; font-size: .9rem; }
+  .cite-box code { display: block; margin-top: .3em; word-break: break-word; }
+  .api-line { margin-top: .8em; font-size: .87rem; color: #6b6b78; }
+</style>
