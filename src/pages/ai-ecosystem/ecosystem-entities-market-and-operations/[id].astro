@@ -103,6 +103,15 @@ const jobGroups = jhub?.groups ?? [];
 const hiringLab = jhub?.market?.hiring_lab_ai_share ?? null;
 const hlUS = hiringLab?.latest?.find((c) => c.country === 'US') ?? null;
 const infosec = jhub?.market?.infosec_stats ?? null;
+const pay = jhub?.salary ?? null;
+const skillData = jhub?.skills ?? null;
+const money0 = (n: number) => `$${Math.round(n).toLocaleString()}`;
+// Order levels by seniority rather than by pay, so the shape of the curve is
+// the thing a reader sees — including where it does not rise.
+const LEVELS = ['Intern', 'Junior', 'Mid-level', 'Senior', 'Staff', 'Lead', 'Principal', 'Manager', 'Director', 'Vice President', 'Executive'];
+const payLevels = (pay?.by_level ?? [])
+  .slice()
+  .sort((a: any, b: any) => LEVELS.indexOf(a.group) - LEVELS.indexOf(b.group));
 
 const jsonld = JSON.stringify(
   jhub
@@ -232,6 +241,101 @@ const jsonld = JSON.stringify(
             </ul>
           </section>
         ))
+      )}
+
+      {pay && pay.disclosed > 0 && (
+        <>
+          <h2 id="salary">Salary data</h2>
+          <p>
+            <b>{pay.disclosed.toLocaleString()} of {pay.listings.toLocaleString()} listings</b>
+            {' '}({Math.round((pay.disclosed / pay.listings) * 100)}%) state a pay range. Across
+            those, the median is <b>{money0(pay.median)}</b>. The other
+            {' '}{Math.round(100 - (pay.disclosed / pay.listings) * 100)}% publish no figure, so
+            read every number here as the disclosed half of the market rather than the whole of
+            it. Annual ranges only — hourly and other periods are left out rather than
+            annualised, because a guess at hours per year is a number nobody stated.
+          </p>
+
+          {payLevels.length > 0 && (
+            <>
+              <h3>By level</h3>
+              <table class="pay">
+                <thead><tr><th>Level</th><th class="num">Listings</th><th class="num">With pay</th><th class="num">25th</th><th class="num">Median</th><th class="num">75th</th></tr></thead>
+                <tbody>
+                  {payLevels.map((r: any) => (
+                    <tr>
+                      <td>{r.group}</td>
+                      <td class="num">{r.count.toLocaleString()}</td>
+                      <td class="num">{r.disclosed.toLocaleString()}</td>
+                      <td class="num">{r.p25 ? money0(r.p25) : '—'}</td>
+                      <td class="num"><b>{r.median ? money0(r.median) : '—'}</b></td>
+                      <td class="num">{r.p75 ? money0(r.p75) : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+
+          {(pay.by_discipline ?? []).length > 0 && (
+            <>
+              <h3>By discipline</h3>
+              <p>Disciplines with at least five disclosed ranges. Anything thinner is left out
+                rather than shown as a median of two.</p>
+              <table class="pay">
+                <thead><tr><th>Discipline</th><th class="num">Listings</th><th class="num">With pay</th><th class="num">25th</th><th class="num">Median</th><th class="num">75th</th></tr></thead>
+                <tbody>
+                  {pay.by_discipline.map((r: any) => (
+                    <tr>
+                      <td>{r.group}</td>
+                      <td class="num">{r.count.toLocaleString()}</td>
+                      <td class="num">{r.disclosed.toLocaleString()}</td>
+                      <td class="num">{r.p25 ? money0(r.p25) : '—'}</td>
+                      <td class="num"><b>{r.median ? money0(r.median) : '—'}</b></td>
+                      <td class="num">{r.p75 ? money0(r.p75) : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+        </>
+      )}
+
+      {skillData && (skillData.skills ?? []).length > 0 && (
+        <>
+          <h2 id="skills">Skills in demand</h2>
+          <p>
+            What employers are actually asking for, counted across the
+            {' '}<b>{skillData.postings_read.toLocaleString()} postings</b> whose text we can read,
+            against a fixed vocabulary. Share is of those postings, not of every listing: feeds
+            that publish no description would otherwise look like employers who want nothing.
+            {infosec?.top_skills && <> For cybersecurity specifically, the
+            {' '}<a href="https://www.infosecjobboard.com/" rel="noopener">InfoSec Job Board</a>
+            {' '}publishes its own skill counts, shown below.</>}
+          </p>
+          <ol class="skills">
+            {skillData.skills.slice(0, 30).map((s: any) => (
+              <li>
+                <span class="sk">{s.skill}</span>
+                <span class="bar" style={`width:${Math.max(2, Math.round(s.share))}%`}></span>
+                <span class="pct">{s.share.toFixed(1)}% · {s.count.toLocaleString()}</span>
+              </li>
+            ))}
+          </ol>
+          {infosec?.top_skills && (
+            <>
+              <h3>Cybersecurity skills, from the InfoSec Job Board</h3>
+              <p class="mkt-note">Their counts across their own tracked postings, used with
+                attribution to <a href="https://www.infosecjobboard.com/" rel="noopener">infosecjobboard.com</a>.</p>
+              <ul class="chips">
+                {infosec.top_skills.slice(0, 20).map((s: any) => (
+                  <li>{s.label} <span class="n">{s.count}</span></li>
+                ))}
+              </ul>
+            </>
+          )}
+        </>
       )}
 
       <h2>Where these listings come from</h2>
@@ -517,4 +621,17 @@ const jsonld = JSON.stringify(
   .jsrc { font-size: .8rem; color: #6b6b78; text-transform: uppercase; letter-spacing: .05em; }
   .disc-index { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 4px 18px; margin: 1em 0 2em; }
   .disc-index li { font-size: .93rem; }
+  .pay { width: 100%; border-collapse: collapse; font-size: .93rem; margin: .6em 0 1.8em; }
+  .pay th { text-align: left; border-bottom: 2px solid #201868; padding: .4em .6em .4em 0; color: #201868; }
+  .pay td { border-bottom: 1px solid #e8e6e0; padding: .5em .6em .5em 0; }
+  .pay .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .skills { list-style: none; padding: 0; margin: 1em 0 1.6em; }
+  .skills li { display: grid; grid-template-columns: 210px 1fr 140px; align-items: center; gap: 10px; padding: .3em 0; font-size: .92rem; }
+  .skills .sk { font-weight: 600; color: #201868; }
+  .skills .bar { background: #F07800; height: 10px; border-radius: 5px; min-width: 4px; }
+  .skills .pct { color: #6b6b78; font-variant-numeric: tabular-nums; text-align: right; }
+  .chips { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+  .chips li { background: #f2f2f7; border-radius: 999px; padding: 3px 12px; font-size: .88rem; }
+  .chips .n { color: #F07800; font-weight: 700; }
+  @media (max-width: 640px) { .skills li { grid-template-columns: 1fr; gap: 2px; } .skills .pct { text-align: left; } }
 </style>
