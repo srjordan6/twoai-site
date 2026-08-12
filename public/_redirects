@@ -92,3 +92,52 @@
 # 404ing or being duplicated as a second directory.
 /people/  /ai-ecosystem/ecosystem-entities-market-and-operations/c53153c4/  301
 /people   /ai-ecosystem/ecosystem-entities-market-and-operations/c53153c4/  301
+
+# Tool category pages were published for a day at /ai-tools/cat-{slug}/ and
+# now live at /ai-tools/category/{slug}/. The path changed, which the URL
+# permanence rule does not allow, so every one of the 23 old paths gets an
+# explicit rule. Explicit, not a splat: Cloudflare ignored the splat form on
+# nested leaf paths when the /ai-governance/ set was written, and there is no
+# reason to think it behaves differently here.
+/ai-tools/cat-ai-governance-and-risk-management-platforms/  /ai-tools/category/ai-governance-and-risk-management-platforms/  301
+/ai-tools/cat-automation-and-agents/  /ai-tools/category/automation-and-agents/  301
+/ai-tools/cat-chat-and-general-llms/  /ai-tools/category/chat-and-general-llms/  301
+/ai-tools/cat-chinese-foundation-models/  /ai-tools/category/chinese-foundation-models/  301
+/ai-tools/cat-cloud-ai-services-and-model-apis/  /ai-tools/category/cloud-ai-services-and-model-apis/  301
+/ai-tools/cat-coding-and-developer-tools/  /ai-tools/category/coding-and-developer-tools/  301
+/ai-tools/cat-data-and-analytics-ai/  /ai-tools/category/data-and-analytics-ai/  301
+/ai-tools/cat-education-and-research-ai/  /ai-tools/category/education-and-research-ai/  301
+/ai-tools/cat-emerging-frontier-ai/  /ai-tools/category/emerging-frontier-ai/  301
+/ai-tools/cat-enterprise-ai-platforms-and-agent-orchestration/  /ai-tools/category/enterprise-ai-platforms-and-agent-orchestration/  301
+/ai-tools/cat-erp-and-business-application-ai/  /ai-tools/category/erp-and-business-application-ai/  301
+/ai-tools/cat-finance-and-legal-ai/  /ai-tools/category/finance-and-legal-ai/  301
+/ai-tools/cat-healthcare-and-life-sciences-ai/  /ai-tools/category/healthcare-and-life-sciences-ai/  301
+/ai-tools/cat-hr-and-talent-ai/  /ai-tools/category/hr-and-talent-ai/  301
+/ai-tools/cat-image-and-graphic-design/  /ai-tools/category/image-and-graphic-design/  301
+/ai-tools/cat-notes-knowledge-and-meetings/  /ai-tools/category/notes-knowledge-and-meetings/  301
+/ai-tools/cat-open-source-and-self-hosted-models/  /ai-tools/category/open-source-and-self-hosted-models/  301
+/ai-tools/cat-search-research-translation-and-other/  /ai-tools/category/search-research-translation-and-other/  301
+/ai-tools/cat-security-and-identity-ai/  /ai-tools/category/security-and-identity-ai/  301
+/ai-tools/cat-slides-and-presentations/  /ai-tools/category/slides-and-presentations/  301
+/ai-tools/cat-video-generation-and-editing/  /ai-tools/category/video-generation-and-editing/  301
+/ai-tools/cat-voice-and-audio/  /ai-tools/category/voice-and-audio/  301
+/ai-tools/cat-writing-and-editing/  /ai-tools/category/writing-and-editing/  301
+
+# /ai-compliance/what-changed/ was a page for one day and is not built any
+# more. The framework index covers what it covered.
+/ai-compliance/what-changed/  /ai-compliance/  301
+
+# Eight daily-news story permalinks were in the sitemap on 2026-08-11 and went
+# with news.json when it stopped being published to twoai-content. The daily
+# news section is on hold until the intel feed carries real publisher URLs, so
+# these point at the news index rather than being restored into a section that
+# is not running. If daily news ships later, these slugs are still free to be
+# rebuilt at their original paths and these rules come out.
+/ai-news/ai-reshapes-software-engineering-as-autonomous-coding-tools/  /ai-news/  301
+/ai-news/appdid-technologies-pvt-ltd-recognized-as-a-top-mobile-app-d/  /ai-news/  301
+/ai-news/delhi-hc-orders-removal-of-tabu-s-150-urls-over-ai-generated/  /ai-news/  301
+/ai-news/equidefi-prometheus-ai-spv-llc-to-offer-artificial-intellige/  /ai-news/  301
+/ai-news/from-molecule-to-market-life-sciences-ai-enters-governed-pro/  /ai-news/  301
+/ai-news/news-analysis-why-u-s-ai-models-keep/  /ai-news/  301
+/ai-news/rgipt-welcomes-new-batch-at-orientation-programme-2026/  /ai-news/  301
+/ai-news/royal-commission-to-examine-artificial-intelligence/  /ai-news/  301

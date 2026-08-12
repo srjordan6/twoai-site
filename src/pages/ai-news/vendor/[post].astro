@@ -8,6 +8,12 @@
  * it verifiably can (who posted it, when we surfaced it) and does not invent
  * a summary. Slugs are name + 6 chars of the URL hash, permanent once
  * published per the standing URL rule.
+ *
+ * Paths come from `archive`, which is every post the pipeline has ever seen,
+ * not from the hub's `vendors` blocks. Those are capped at 25 per vendor for
+ * display, and building paths from them meant a permalink died the moment a
+ * busier vendor pushed it off its own list. `vendors` is a fallback for the
+ * first build after this change, before the pipeline has written an archive.
  */
 import Base from '../../../layouts/Base.astro';
 
@@ -15,9 +21,17 @@ export function getStaticPaths() {
   const m = import.meta.glob('../../../../content/news/vendor.json', { eager: true });
   const data: any = Object.values(m)[0]?.default ?? null;
   const out: any[] = [];
+  const seen = new Set<string>();
+  for (const a of data?.archive ?? []) {
+    if (!a.slug || seen.has(a.slug)) continue;
+    seen.add(a.slug);
+    out.push({ params: { post: a.slug }, props: { it: a, vendor: a.vendor } });
+  }
   for (const v of data?.vendors ?? []) {
     for (const it of v.items ?? []) {
-      if (it.slug) out.push({ params: { post: it.slug }, props: { it, vendor: v.vendor } });
+      if (!it.slug || seen.has(it.slug)) continue;
+      seen.add(it.slug);
+      out.push({ params: { post: it.slug }, props: { it, vendor: v.vendor } });
     }
   }
   return out;
