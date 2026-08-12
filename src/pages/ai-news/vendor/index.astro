@@ -6,31 +6,64 @@
  * carries the vendor's published description (the reason to click) and the
  * outbound link to the original post.
  *
- * Data is news/vendor.json, built from the intel watch's curated vendor
- * feeds: only sources that are the organisation itself (OpenAI, Google
- * DeepMind, Hugging Face, Mistral, Stability, the European Commission, the
- * UK AI Security Institute, CIFAR, AI Singapore), never press aggregation.
- * Press coverage of the field lives in the Daily News briefing; this page is
- * what the builders said themselves. Items carry the date the watch surfaced
- * them, which for a newly added feed can trail the vendor's own publication
- * date, and the page says so rather than implying otherwise.
+ * Data is news/vendor.json. The page is ordered by DATE, not grouped by
+ * vendor: grouping meant this morning's post sat below a month-old one
+ * because its vendor sorted higher, which reads as a directory of sources
+ * rather than a news page. `latest` is the date-ordered slice; `vendors`
+ * still drives the source index in the rail.
+ *
+ * Posts carry entity_uid where the publisher has a profile on this site, so
+ * each item links to /companies/{uid}/. The company directory and this page
+ * were two lists of the same organisations with nothing joining them.
+ *
+ * Only first-party sources: the organisation's own feed, never press
+ * aggregation. Press coverage of the field lives in the Daily News briefing;
+ * this page is what the builders said themselves. Coverage is stated on the
+ * page, because 27 of the 62 companies publish a discoverable feed and a
+ * reader should see that gap rather than read silence as no news.
  */
 import Base from '../../../layouts/Base.astro';
 
 const mods = import.meta.glob('../../../../content/news/vendor.json', { eager: true });
 const vn: any = Object.values(mods)[0]?.default ?? null;
 const vendors: any[] = (vn?.vendors ?? []).map((v: any) => ({ ...v, items: v.items ?? [] }));
+const latest: any[] = vn?.latest ?? [];
+const coverage = vn?.coverage ?? null;
 
-const totalShown = vendors.reduce((n, v) => n + v.items.length, 0);
-const totalTracked = vendors.reduce((n, v) => n + (v.total ?? v.items.length), 0);
+// Group the date-ordered list by day so the page reads as a timeline.
+const byDate: { date: string; items: any[] }[] = [];
+for (const it of latest) {
+  const d = it.date || 'Undated';
+  const last = byDate[byDate.length - 1];
+  if (last && last.date === d) last.items.push(it);
+  else byDate.push({ date: d, items: [it] });
+}
+const fmtDate = (d: string) =>
+  d === 'Undated'
+    ? 'Undated'
+    : new Date(d + 'T00:00:00Z').toLocaleDateString('en-US', {
+        year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC',
+      });
+const entityHref = (it: any) =>
+  it.entity_uid && it.entity_kind === 'company' ? `/companies/${it.entity_uid}/` : null;
+const linkedVendors = new Set(latest.filter((i) => entityHref(i)).map((i) => i.vendor));
+
+const totalShown = latest.length;
+const totalTracked = vn?.archive?.length ?? latest.length;
 const generated = vn?.generated ? new Date(vn.generated) : null;
 const stamp = generated ? `${generated.toUTCString().slice(0, 22)} UTC` : null;
 const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
+// The source index is every vendor that has ever published here, not just
+// those inside the intel window.
+const sourceCounts = new Map<string, number>();
+for (const it of vn?.archive ?? []) sourceCounts.set(it.vendor, (sourceCounts.get(it.vendor) ?? 0) + 1);
+const sources = [...sourceCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
 const title = `AI Vendor News: Announcements from the Companies Building AI`;
 const description =
-  `Announcements from AI companies, labs, and institutes in their own words: OpenAI, Google ` +
-  `DeepMind, Hugging Face, Mistral, Stability, and more. Every link goes to the original post.`;
+  `Announcements from AI companies, labs, and institutes in their own words, newest first, ` +
+  `cross-referenced to their company profiles. Every link goes to the original post.`;
 
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
@@ -40,14 +73,16 @@ const jsonld = JSON.stringify({
       name: 'AI Vendor News',
       url: 'https://theworldofai.org/ai-news/vendor/',
       description,
+      dateModified: vn?.generated,
     },
     {
       '@type': 'ItemList',
-      name: 'AI vendors tracked',
-      itemListElement: vendors.map((v, i) => ({
+      name: 'Latest vendor announcements',
+      itemListElement: latest.slice(0, 50).map((it: any, i: number) => ({
         '@type': 'ListItem',
         position: i + 1,
-        name: v.vendor,
+        name: it.title,
+        url: `https://theworldofai.org/ai-news/vendor/${it.slug}/`,
       })),
     },
   ],
@@ -67,42 +102,52 @@ const jsonld = JSON.stringify({
   <div class="answer-box">
     <p class="answer-label">What this page is</p>
     <p>
-      Announcements from the organisations building and governing AI, in their own words, drawn
-      from their own feeds rather than press coverage: {vendors.length} sources,
-      {' '}{totalShown} recent posts shown of {totalTracked} tracked over the past
-      {' '}{vn?.window_days ?? 30} days. Each post has its own page here with the vendor&rsquo;s
-      published description and the link to the original. For
-      how the field is being covered by the press, read the
-      <a href="/ai-news/daily/"> Daily News briefing</a>.
+      Announcements from the organisations building AI, in their own words, drawn from their own
+      feeds rather than press coverage, newest first: {totalShown} recent posts
+      from {sources.length} sources, {totalTracked} archived in total. Where the publisher has a
+      profile on this site, its name links to it. For how the field is being covered by the
+      press, read the <a href="/ai-news/daily/">Daily News briefing</a>.
     </p>
+    {coverage && (
+      <p class="cov">
+        Coverage: {coverage.feeds} of the {coverage.companies} organisations in the
+        {' '}<a href="/companies/">AI Company Directory</a> publish a first-party feed we can
+        follow. The rest publish no discoverable feed, so their absence here means we cannot
+        see their announcements, not that they made none.
+      </p>
+    )}
   </div>
 
-  {vendors.length === 0 && (
+  {latest.length === 0 && (
     <p class="empty">Vendor announcements publish with the pipeline&rsquo;s next run.</p>
   )}
 
   <div class="cols">
     <div class="main">
-      {vendors.map((v) => (
-        <section class="vend" id={slugify(v.vendor)}>
-          <h2>{v.vendor} <span class="count">{v.total ?? v.items.length}</span></h2>
+      {byDate.map((day) => (
+        <section class="day">
+          <h2 class="daylabel">{fmtDate(day.date)}</h2>
           <div class="rule"></div>
           <ul class="items">
-            {v.items.map((it: any) => (
+            {day.items.map((it: any) => (
               <li>
                 {it.slug
                   ? <a href={`/ai-news/vendor/${it.slug}/`}>{it.title}</a>
                   : <a href={it.url} rel="noopener nofollow" target="_blank">{it.title}</a>}
-                <span class="meta">Surfaced {it.date}</span>
+                <span class="meta">
+                  {entityHref(it)
+                    ? <a class="vlink" href={entityHref(it)}>{it.vendor}</a>
+                    : <span class="vplain">{it.vendor}</span>}
+                </span>
               </li>
             ))}
           </ul>
         </section>
       ))}
-      {vendors.length > 0 && (
+      {latest.length > 0 && (
         <p class="note">
-          Dates are when the intel watch surfaced each post, which for a newly added feed can
-          trail the vendor&rsquo;s own publication date. Being listed is not an endorsement, and
+          Dates are the vendor&rsquo;s own publication date where the feed supplies one, and
+          otherwise the date the watch surfaced the post. Being listed is not an endorsement, and
           announcements are the vendor&rsquo;s claims, not verified facts.
         </p>
       )}
@@ -110,9 +155,10 @@ const jsonld = JSON.stringify({
 
     <aside class="side">
       <div class="panel sticky">
-        <p class="box-label">Sources on this page</p>
+        <p class="box-label">Sources</p>
         <ul class="toc">
-          {vendors.map((v) => <li><a href={`#${slugify(v.vendor)}`}>{v.vendor} ({v.items.length})</a></li>)}
+          {sources.slice(0, 30).map(([v, n]) => <li><span>{v}</span> <span class="n">{n}</span></li>)}
+          <li><a href="/companies/">AI Company Directory &rarr;</a></li>
           <li><a href="/ai-news/daily/">Daily News briefing &rarr;</a></li>
         </ul>
       </div>
@@ -120,10 +166,10 @@ const jsonld = JSON.stringify({
         <p class="box-label">The numbers</p>
         <table class="dash">
           <tbody>
-            <tr><th scope="row">Sources tracked</th><td>{vendors.length}</td></tr>
+            <tr><th scope="row">Sources</th><td>{sources.length}</td></tr>
             <tr><th scope="row">Posts shown</th><td>{totalShown}</td></tr>
-            <tr><th scope="row">Posts in window</th><td>{totalTracked}</td></tr>
-            <tr><th scope="row">Window</th><td>{vn?.window_days ?? 30} days</td></tr>
+            <tr><th scope="row">Posts archived</th><td>{totalTracked}</td></tr>
+            {coverage && <tr><th scope="row">Feeds followed</th><td>{coverage.feeds} of {coverage.companies}</td></tr>}
           </tbody>
         </table>
       </div>
@@ -148,6 +194,12 @@ const jsonld = JSON.stringify({
   .vend { margin: 0 0 40px; scroll-margin-top: 80px; }
   .vend h2 { font-size: 24px; color: #201868; margin: 0 0 2px; }
   .vend .count { font-size: 13px; color: #fff; background: #F07800; border-radius: 999px; padding: 2px 9px; vertical-align: middle; margin-left: 6px; }
+  .day { margin: 0 0 30px; }
+  .daylabel { font-size: 17px; color: #201868; margin: 0 0 2px; letter-spacing: .01em; }
+  .cov { font-size: .92rem; color: #45454f; margin: .6em 0 0; }
+  .vlink { font-weight: 600; }
+  .vplain { color: #6b6b78; }
+  .toc .n { color: #6b6b78; font-variant-numeric: tabular-nums; }
   .rule { width: 56px; height: 3px; background: #F07800; margin: 0 0 14px; }
 
   .items { list-style: none; margin: 0; padding: 0; max-width: 780px; }
