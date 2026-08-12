@@ -1,0 +1,153 @@
+---
+/**
+ * The AI Skills Graph at /skills/.
+ *
+ * Reads content/skills/index.json, published by the pipeline from
+ * twoai_onet_occupations. Two views of the same data: the occupations, and
+ * the skills inverted so each one lists every occupation that needs it.
+ *
+ * The inversion is the point. Eighteen occupation profiles are a directory;
+ * a skill that four of them share, shown with what each pays and how many are
+ * hiring right now, is a graph you can navigate. The openings figure is joined
+ * from our own job listings, which is the part no free careers site has.
+ *
+ * O*NET's terms require the attribution block on any page showing their data,
+ * so OnetAttribution renders here with the data rather than behind a flag. The
+ * graph is also deliberately absent from /api/: redistribution as a dataset is
+ * not permitted, and a bulk endpoint is redistribution.
+ *
+ * Emits nothing until the pipeline has published, so this ships safely ahead
+ * of the first O*NET run.
+ */
+import Base from '../../layouts/Base.astro';
+import OnetAttribution from '../../components/OnetAttribution.astro';
+import { readFileSync, existsSync } from 'node:fs';
+
+const hub = existsSync('content/skills/index.json')
+  ? JSON.parse(readFileSync('content/skills/index.json', 'utf8'))
+  : null;
+
+const occupations: any[] = hub?.occupations ?? [];
+const skills: any[] = hub?.skills ?? [];
+const shared = skills.filter((s) => (s.occupations?.length ?? 0) > 1);
+const withWage = occupations.filter((o) => o.wage_median > 0);
+const totalOpenings = occupations.reduce((n, o) => n + (o.openings || 0), 0);
+const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
+
+const desc = hub
+  ? `${occupations.length} AI and cybersecurity occupations mapped to the skills they require, ` +
+    `with median pay and current openings. Built on O*NET data from the U.S. Department of Labor.`
+  : 'The AI Skills Graph publishes with the next pipeline run.';
+
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'AI Skills Graph',
+  description: desc,
+  url: 'https://theworldofai.org/skills/',
+  dateModified: hub?.generated,
+});
+---
+<Base title="AI Skills Graph — what AI and security roles require — The World of AI" description={desc} current="/skills/" jsonld={jsonld}>
+  <p class="meta-line">
+    <a href="/ai-ecosystem/research-knowledge-and-learning/">Research, Knowledge and Learning</a> · Education and the Skills Graph
+  </p>
+
+  <h1>AI Skills Graph</h1>
+
+  {hub ? (
+    <>
+      <p class="answer">
+        <b>{occupations.length} AI and cybersecurity occupations</b>, mapped to the
+        {' '}<b>{skills.length} skills</b> they require and weighted by how important each
+        one is to each role. {shared.length} of those skills are shared across more than one
+        occupation, which is what makes moving between them possible.
+        {withWage.length > 0 && <> Median pay is shown where the Department of Labor publishes it</>}
+        {totalOpenings > 0 && <>, alongside {totalOpenings.toLocaleString()} current openings drawn
+        from <a href="/ai-ecosystem/ecosystem-entities-market-and-operations/995676ef/">our own job listings</a></>}.
+      </p>
+      <p class="meta-line">Last verified: {hub.generated}</p>
+
+      <h2>Occupations</h2>
+      <table class="occ">
+        <thead>
+          <tr>
+            <th>Occupation</th>
+            <th class="num">Median pay</th>
+            <th class="num">Range</th>
+            <th class="num">Skills</th>
+            <th class="num">Open now</th>
+          </tr>
+        </thead>
+        <tbody>
+          {occupations.map((o) => (
+            <tr>
+              <td>
+                <a href={`/skills/${o.soc}/`}>{o.title}</a>
+                {o.bright_outlook && <span class="tag">Bright outlook</span>}
+              </td>
+              <td class="num">{o.wage_median ? money(o.wage_median) : '—'}</td>
+              <td class="num">{o.wage_p10 && o.wage_p90 ? `${money(o.wage_p10)}–${money(o.wage_p90)}` : '—'}</td>
+              <td class="num">{o.skills?.length ?? 0}</td>
+              <td class="num">{o.openings ? o.openings.toLocaleString() : '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {shared.length > 0 && (
+        <>
+          <h2>Skills that connect these roles</h2>
+          <p>
+            Ordered by how many of these occupations need them. A skill near the top of this list
+            is the one that moves you between the most roles.
+          </p>
+          <ul class="skl">
+            {shared.slice(0, 40).map((s) => (
+              <li>
+                <span class="sname">{s.name}</span>
+                <span class="scount">{s.occupations.length} occupations</span>
+                {s.description && <p class="sdesc">{s.description}</p>}
+                <p class="socc">
+                  {s.occupations
+                    .slice()
+                    .sort((a: any, b: any) => (b.score || 0) - (a.score || 0))
+                    .slice(0, 6)
+                    .map((o: any, i: number) => (
+                      <>{i > 0 && ' · '}<a href={`/skills/${o.soc}/`}>{o.title}</a>{o.score ? <span class="sc"> {Math.round(o.score)}</span> : null}</>
+                    ))}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      <div class="cite-box">
+        Cite this page: <code>"AI Skills Graph." The World of AI, theworldofai.org/skills/. Verified {hub.generated}.</code>
+      </div>
+
+      <OnetAttribution />
+    </>
+  ) : (
+    <p>The AI Skills Graph publishes with the pipeline&rsquo;s next run.</p>
+  )}
+</Base>
+
+<style>
+  .answer { font-size: 1.05rem; line-height: 1.55; }
+  .occ { width: 100%; border-collapse: collapse; font-size: .94rem; margin: 1em 0 2em; }
+  .occ th { text-align: left; border-bottom: 2px solid #201868; padding: .45em .6em .45em 0; color: #201868; }
+  .occ td { border-bottom: 1px solid #e8e6e0; padding: .55em .6em .55em 0; }
+  .occ .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .tag { font-size: .72rem; background: #F07800; color: #fff; border-radius: 999px; padding: 1px 8px; margin-left: 8px; vertical-align: middle; }
+  .skl { list-style: none; padding: 0; }
+  .skl li { padding: .9em 0; border-bottom: 1px solid #e8e6e0; }
+  .sname { font-weight: 700; color: #201868; }
+  .scount { color: #F07800; font-size: .85rem; margin-left: 8px; font-weight: 600; }
+  .sdesc { margin: .25em 0; color: #45454f; font-size: .92rem; }
+  .socc { margin: .3em 0 0; font-size: .9rem; }
+  .sc { color: #6b6b78; font-variant-numeric: tabular-nums; }
+  .cite-box { margin-top: 2em; padding: .9em 1em; background: #f7f7fb; border-left: 3px solid #201868; font-size: .9rem; }
+  .cite-box code { display: block; margin-top: .35em; }
+</style>

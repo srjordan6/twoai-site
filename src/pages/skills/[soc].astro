@@ -1,0 +1,146 @@
+---
+/**
+ * One page per occupation at /skills/{soc}/, from the per-occupation files the
+ * pipeline writes as skills/occupation-{soc}.json.
+ *
+ * Skills and knowledge come with an importance score, so they are shown in
+ * that order rather than alphabetically: the first thing a reader wants is
+ * what matters most in the job, not what starts with A. Tasks are what the
+ * work actually consists of, which is the honest answer to "what would I be
+ * doing", and related occupations are the graph edges out.
+ *
+ * The openings figure is joined from our own listings; it is absent rather
+ * than zero when the title match was not confident enough to trust.
+ *
+ * O*NET attribution renders on every one of these pages, because every one of
+ * them shows O*NET data.
+ */
+import Base from '../../layouts/Base.astro';
+import OnetAttribution from '../../components/OnetAttribution.astro';
+
+export function getStaticPaths() {
+  const mods = import.meta.glob('../../../content/skills/occupation-*.json', { eager: true });
+  return Object.values(mods)
+    .map((m: any) => m.default)
+    .filter((d: any) => d?.occupation?.soc)
+    .map((d: any) => ({
+      params: { soc: d.occupation.soc },
+      props: { o: d.occupation, generated: d.generated },
+    }));
+}
+
+const { o, generated } = Astro.props;
+const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
+const byScore = (a: any, b: any) => (b.score || 0) - (a.score || 0);
+const skills = (o.skills ?? []).slice().sort(byScore);
+const knowledge = (o.knowledge ?? []).slice().sort(byScore);
+const tasks = o.tasks ?? [];
+const related = o.related ?? [];
+
+const desc =
+  `${o.title}: the skills and knowledge the role requires, what the work involves, ` +
+  `${o.wage_median ? `median pay ${money(o.wage_median)}, ` : ''}and where it leads.`;
+
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'Occupation',
+  name: o.title,
+  description: o.description || desc,
+  occupationalCategory: o.soc,
+  url: `https://theworldofai.org/skills/${o.soc}/`,
+  ...(o.wage_median
+    ? {
+        estimatedSalary: {
+          '@type': 'MonetaryAmountDistribution',
+          name: 'base',
+          currency: 'USD',
+          unitText: 'YEAR',
+          median: o.wage_median,
+          ...(o.wage_p10 ? { percentile10: o.wage_p10 } : {}),
+          ...(o.wage_p90 ? { percentile90: o.wage_p90 } : {}),
+        },
+      }
+    : {}),
+  skills: skills.slice(0, 12).map((s: any) => s.name).join(', '),
+});
+---
+<Base title={`${o.title} — skills, pay, and openings — The World of AI`} description={desc} current="/skills/" jsonld={jsonld}>
+  <p class="meta-line"><a href="/skills/">AI Skills Graph</a> · {o.soc}</p>
+
+  <h1>{o.title}</h1>
+
+  <p class="answer">
+    {o.description}
+    {o.wage_median ? <> Median pay is <b>{money(o.wage_median)}</b>{o.wage_p10 && o.wage_p90 ? <>, with most earning between {money(o.wage_p10)} and {money(o.wage_p90)}</> : null}.</> : null}
+    {o.openings ? <> We are currently tracking <b>{o.openings.toLocaleString()}</b> open positions matching this role in <a href="/ai-ecosystem/ecosystem-entities-market-and-operations/995676ef/">AI Jobs and Market Dynamics</a>.</> : null}
+  </p>
+  <p class="meta-line">Last verified: {o.reviewed_on || generated}{o.bright_outlook ? ' · Bright outlook occupation' : ''}</p>
+
+  {skills.length > 0 && (
+    <>
+      <h2>Skills, by importance</h2>
+      <ul class="el">
+        {skills.slice(0, 20).map((s: any) => (
+          <li>
+            <span class="n">{s.name}</span>{s.score ? <span class="sc">{Math.round(s.score)}</span> : null}
+            {s.description && <p class="d">{s.description}</p>}
+          </li>
+        ))}
+      </ul>
+    </>
+  )}
+
+  {knowledge.length > 0 && (
+    <>
+      <h2>Knowledge areas</h2>
+      <ul class="el">
+        {knowledge.slice(0, 15).map((k: any) => (
+          <li>
+            <span class="n">{k.name}</span>{k.score ? <span class="sc">{Math.round(k.score)}</span> : null}
+            {k.description && <p class="d">{k.description}</p>}
+          </li>
+        ))}
+      </ul>
+    </>
+  )}
+
+  {tasks.length > 0 && (
+    <>
+      <h2>What the work involves</h2>
+      <ul class="tasks">
+        {tasks.slice(0, 15).map((t: any) => <li>{t.name}</li>)}
+      </ul>
+    </>
+  )}
+
+  {related.length > 0 && (
+    <>
+      <h2>Where it leads</h2>
+      <p>Occupations that share enough with this one to be a realistic move.</p>
+      <ul class="rel">
+        {related.map((r: any) => <li><a href={`/skills/${r.code}/`}>{r.title}</a> <span class="sc2">{r.code}</span></li>)}
+      </ul>
+    </>
+  )}
+
+  <div class="cite-box">
+    Cite this page: <code>"{o.title}." The World of AI, theworldofai.org/skills/{o.soc}/. Verified {o.reviewed_on || generated}.</code>
+  </div>
+
+  <OnetAttribution />
+</Base>
+
+<style>
+  .answer { font-size: 1.05rem; line-height: 1.55; }
+  .el { list-style: none; padding: 0; }
+  .el li { padding: .6em 0; border-bottom: 1px solid #e8e6e0; }
+  .el .n { font-weight: 600; color: #201868; }
+  .el .sc { float: right; color: #F07800; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .el .d { margin: .2em 0 0; color: #45454f; font-size: .92rem; }
+  .tasks li { margin-bottom: .45em; line-height: 1.45; }
+  .rel { list-style: none; padding: 0; }
+  .rel li { padding: .4em 0; border-bottom: 1px solid #e8e6e0; }
+  .sc2 { color: #6b6b78; font-size: .85rem; }
+  .cite-box { margin-top: 2em; padding: .9em 1em; background: #f7f7fb; border-left: 3px solid #201868; font-size: .9rem; }
+  .cite-box code { display: block; margin-top: .35em; }
+</style>
