@@ -1,0 +1,49 @@
+---
+/**
+ * The O*NET attribution block, in the exact form USDOL/ETA requires.
+ *
+ * Their terms are specific: the O*NET-in-it mark, linked to
+ * services.onetcenter.org, plus the sentence naming the U.S. Department of
+ * Labor, Employment and Training Administration and the trademark notice.
+ * Wording and link target are not ours to improve on, so this component exists
+ * to keep one exact copy rather than a paraphrase per page.
+ *
+ * Use it on every page that renders O*NET data — the skills graph, occupation
+ * pages, and anywhere skills or wage structure comes from O*NET — and on
+ * /sources/ where the feed is listed. Not on pages that merely link to one of
+ * those, because attribution belongs where the data is shown.
+ *
+ * The image is served from onetcenter.org rather than self-hosted: it is their
+ * mark, and pulling a local copy would leave us serving a stale version of
+ * somebody else's trademark. It is the one deliberate exception to the
+ * self-hosted-assets rule, so it carries width, height, and loading="lazy" to
+ * keep it off the critical path.
+ */
+---
+<p class="onet">
+  <a
+    href="https://services.onetcenter.org/"
+    title="This site incorporates information from O*NET Web Services. Click to learn more."
+    rel="noopener"
+  >
+    <img
+      src="https://www.onetcenter.org/image/link/onet-in-it.svg"
+      width="130"
+      height="60"
+      loading="lazy"
+      alt="O*NET in-it"
+    />
+  </a>
+</p>
+<p class="onet-note">
+  This site incorporates information from
+  <a href="https://services.onetcenter.org/" rel="noopener">O*NET Web Services</a>
+  by the U.S. Department of Labor, Employment and Training Administration
+  (USDOL/ETA). O*NET&reg; is a trademark of USDOL/ETA.
+</p>
+
+<style>
+  .onet { text-align: center; margin: 1.6em 0 .4em; }
+  .onet img { border: none; width: 130px; height: 60px; }
+  .onet-note { font-size: .87rem; color: #6b6b78; line-height: 1.5; max-width: 720px; }
+</style>

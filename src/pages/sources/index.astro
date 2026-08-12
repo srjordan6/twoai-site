@@ -13,6 +13,7 @@
  * summary of a source list and not one; then our own published titles.
  */
 import Base from '../../layouts/Base.astro';
+import OnetAttribution from '../../components/OnetAttribution.astro';
 import { readFileSync, existsSync } from 'node:fs';
 
 const hub = existsSync('content/sources/index.json')
@@ -41,6 +42,7 @@ const byCat = Object.entries(CATS)
   .map(([key, label]) => ({ key, label, items: dataSources.filter((d: any) => d.category === key) }))
   .filter((c) => c.items.length > 0);
 const liveTotal = dataSources.reduce((n: number, d: any) => n + (d.records || 0), 0);
+const usesOnet = dataSources.some((d: any) => d.key === 'onet');
 
 const desc =
   `Every source behind The World of AI: ${total} cited primary instruments and papers, ` +
@@ -195,6 +197,8 @@ const jsonld = JSON.stringify({
   <div class="cite-box">
     Cite this page: <code>"Sources &amp; References." The World of AI, theworldofai.org/sources/.{hub.generated ? ` Verified ${hub.generated}.` : ''}</code>
   </div>
+
+  {usesOnet && <OnetAttribution />}
 
   <p class="api-line">
     Machine readable: <a href="/api/sources.json">/api/sources.json</a>
