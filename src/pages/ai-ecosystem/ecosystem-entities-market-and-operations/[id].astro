@@ -60,6 +60,8 @@ const desc = jhub
   ? `${chub.total} companies building AI, with what each one ships, whether it is a defendant in a tracked lawsuit, and whether it publishes to the Model Context Protocol registry.`
   : company
   ? `${company.name}: ${company.products.length} AI product${company.products.length === 1 ? '' : 's'} we track${company.cases?.length ? `, ${company.cases.length} tracked lawsuit${company.cases.length === 1 ? '' : 's'}` : ''}${company.mcp?.length ? `, ${company.mcp.length} MCP server${company.mcp.length === 1 ? '' : 's'}` : ''}.`
+  : person?.tracked_only
+  ? `${person.name}, ${person.title} at ${person.org}. Tracked in the AI People Directory; a full profile has not been written yet.`
   : `${person.name}${person.moniker ? `, ${person.moniker}` : ''}. ${person.hook || ''}`.slice(0, 300);
 const title = jhub
   ? 'AI Jobs and Market Dynamics — The World of AI'
@@ -388,6 +390,25 @@ const jsonld = JSON.stringify(
   {person && (
     <>
       <h1>{person.name}</h1>
+      {person.tracked_only ? (
+        <>
+          <p class="lede">{person.title}{person.org && <>, {person.org}</>}</p>
+          <p class="answer">
+            {person.name} is tracked in the AI People Directory as {person.title} at
+            {' '}{person.org}. <b>A full profile has not been written yet.</b> This page
+            carries only what we have verified — the name, the role, and the organisation —
+            rather than filling the gap with material we cannot source.
+          </p>
+          <p class="meta-line">Last verified: {person.generated}</p>
+          <p>
+            Profiles in this directory carry a timeline, achievements, and a source for every
+            claim. When this one is written it will appear at this same address; the URL does
+            not change. See the <a href={`${BASE}/${hubUid}/`}>full directory</a> for people
+            who are already profiled.
+          </p>
+        </>
+      ) : (
+        <>
       {person.moniker && <p class="lede">{person.moniker}</p>}
       {person.hook && <p class="answer">{person.hook}</p>}
       <p class="meta-line">
@@ -452,6 +473,8 @@ const jsonld = JSON.stringify(
         <p class="meta-line">This profile has no published sources attached yet. Treat the detail
           above as unverified until it does, and tell us if any of it is wrong:
           <a href="/contact/">contact</a>.</p>
+      )}
+        </>
       )}
 
       <div class="cite-box">Cite this profile: <code>"{person.name}." AI People Directory,
