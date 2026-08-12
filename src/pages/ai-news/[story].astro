@@ -17,10 +17,31 @@ import { categoryOf, coverageByDay, readingMinutes, titleCase, type Story } from
 export async function getStaticPaths() {
   const mods = import.meta.glob('../../../content/news/news.json', { eager: true });
   const news: any = Object.values(mods)[0]?.default ?? null;
-  return (news?.stories ?? []).map((s: any) => ({
-    params: { story: s.Slug },
-    props: { s, date: news.date, generated: news.generated },
-  }));
+  const arch = import.meta.glob('../../../content/news/archive.json', { eager: true });
+  const archive: any = Object.values(arch)[0]?.default ?? null;
+
+  // Today's clustering first, so a story still in the news renders with the
+  // live outlet counts; the archive then supplies every slug ever published.
+  // news.json is fetched fresh from srj-content on every build and only ever
+  // holds today, so without the archive a permalink lived exactly one day.
+  const out: any[] = [];
+  const seen = new Set<string>();
+  for (const s of news?.stories ?? []) {
+    if (!s.Slug || seen.has(s.Slug)) continue;
+    seen.add(s.Slug);
+    out.push({ params: { story: s.Slug }, props: { s, date: news.date, generated: news.generated } });
+  }
+  for (const s of archive?.stories ?? []) {
+    if (!s.Slug || seen.has(s.Slug)) continue;
+    seen.add(s.Slug);
+    out.push({
+      params: { story: s.Slug },
+      // An archived story dates itself from the day it ran, not from the day
+      // the archive was last written.
+      props: { s, date: s.ArchivedDate ?? archive.date, generated: s.ArchivedGenerated ?? archive.generated },
+    });
+  }
+  return out;
 }
 
 const { s, date, generated } = Astro.props;

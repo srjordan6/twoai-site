@@ -141,3 +141,12 @@
 /ai-news/news-analysis-why-u-s-ai-models-keep/  /ai-news/  301
 /ai-news/rgipt-welcomes-new-batch-at-orientation-programme-2026/  /ai-news/  301
 /ai-news/royal-commission-to-examine-artificial-intelligence/  /ai-news/  301
+
+# Two more went the same way on 2026-08-12, before the archive existed. From
+# the run that publishes news/archive.json onward no further story permalink
+# should appear here: twoai_news_stories keeps every story the briefing has
+# ever carried, and the route builds its paths from that rather than from a
+# news.json that only ever holds today. If a new one does show up in
+# url_registry, the archive stage did not run.
+/ai-news/indian-edtech-company-edubex-expands-global-footprint-with-a/  /ai-news/  301
+/ai-news/two-cityuhk-scholars-elected-to-the-european-academy-of-engi/  /ai-news/  301

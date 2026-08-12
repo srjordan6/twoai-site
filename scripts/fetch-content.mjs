@@ -97,8 +97,14 @@ try {
 // sites render the same edition, so this script fetches it straight from the
 // publishing repo rather than duplicating the artifact into twoai-content.
 // The deploy_site hook fires after publish_news in the daily run, so every
-// build carries that morning's briefing. A twoai-owned publish path through
-// twoai_pages is queued; until then this is the single source of truth.
+// build carries that morning's briefing.
+//
+// It holds TODAY only, which is why it cannot be the source of truth for the
+// story permalinks: a slug built from it lived exactly one day and then 404'd,
+// two more of them every morning. news/archive.json, published from
+// twoai_news_stories by the twoai_build stage, carries every story ever seen
+// and travels with the rest of the content in the R2 bundle. This file stays
+// the source for the briefing; the archive is the source for the permalinks.
 function fetchNews() {
   mkdirSync('content/news', { recursive: true });
   execSync('curl -fsL --max-time 60 https://raw.githubusercontent.com/srjordan6/srj-content/main/news/news.json -o content/news/news.json', { stdio: 'inherit' });
