@@ -94,6 +94,10 @@ const jobCats = jhub
       ['security', 'Computer Security', jhub.jobs.filter((j) => j.category === 'security')],
     ].filter(([, , list]) => list.length > 0)
   : [];
+// Disciplines, alphabetical, from the pipeline. `groups` is the current shape;
+// the three-bucket split above stays as a fallback for the first build after
+// this change, before a run has published the grouped file.
+const jobGroups = jhub?.groups ?? [];
 const hiringLab = jhub?.market?.hiring_lab_ai_share ?? null;
 const hlUS = hiringLab?.latest?.find((c) => c.country === 'US') ?? null;
 const infosec = jhub?.market?.infosec_stats ?? null;
@@ -186,19 +190,47 @@ const jsonld = JSON.stringify(
         </>
       )}
 
-      {jobCats.map(([slug, label, list]) => (
-        <section class="letter-block">
-          <h2 id={`cat-${slug}`}>{label} <span class="jn">{list.length}</span></h2>
-          <ul class="co-list">
-            {list.map((j) => (
-              <li>
-                <a href={j.url} rel="noopener nofollow" target="_blank">{j.title}</a>
-                <p>{j.company}{j.location && <> · {j.location}</>}{j.remote && !String(j.location || '').toLowerCase().includes('remote') && <> · Remote</>}{j.salary && <> · {j.salary}</>}{j.posted && <> · Posted {j.posted}</>} · <span class="jsrc">{j.source}</span></p>
-              </li>
+      {jobGroups.length > 0 ? (
+        <>
+          <h2>Roles by discipline</h2>
+          <p>
+            {jobGroups.length} disciplines, alphabetical, with roles alphabetical inside each.
+            Every title links to the original posting.
+          </p>
+          <ul class="disc-index">
+            {jobGroups.map((g: any) => (
+              <li><a href={`#${g.slug}`}>{g.name}</a> <span class="jn">{g.count}</span></li>
             ))}
           </ul>
-        </section>
-      ))}
+          {jobGroups.map((g: any) => (
+            <section class="letter-block">
+              <h3 id={g.slug}>{g.name} <span class="jn">{g.count}</span></h3>
+              <ul class="co-list">
+                {g.jobs.map((j: any) => (
+                  <li>
+                    <a href={j.url} rel="noopener nofollow" target="_blank">{j.title}</a>
+                    <p>{j.company}{j.location && <> · {j.location}</>}{j.remote && !String(j.location || '').toLowerCase().includes('remote') && <> · Remote</>}{j.salary && <> · {j.salary}</>}{j.posted && <> · Posted {j.posted}</>} · <span class="jsrc">{j.source}</span></p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </>
+      ) : (
+        jobCats.map(([slug, label, list]) => (
+          <section class="letter-block">
+            <h2 id={`cat-${slug}`}>{label} <span class="jn">{list.length}</span></h2>
+            <ul class="co-list">
+              {list.map((j) => (
+                <li>
+                  <a href={j.url} rel="noopener nofollow" target="_blank">{j.title}</a>
+                  <p>{j.company}{j.location && <> · {j.location}</>}{j.remote && !String(j.location || '').toLowerCase().includes('remote') && <> · Remote</>}{j.salary && <> · {j.salary}</>}{j.posted && <> · Posted {j.posted}</>} · <span class="jsrc">{j.source}</span></p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))
+      )}
 
       <h2>Where these listings come from</h2>
       <p>Only sources whose terms permit free republication are used, and each is credited. The
@@ -460,4 +492,6 @@ const jsonld = JSON.stringify(
   .mkt-note { font-size: .82rem; color: #6b6b78; margin: 0; }
   .jn { font-size: .85rem; color: var(--orange, #F07800); font-weight: 700; vertical-align: middle; }
   .jsrc { font-size: .8rem; color: #6b6b78; text-transform: uppercase; letter-spacing: .05em; }
+  .disc-index { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 4px 18px; margin: 1em 0 2em; }
+  .disc-index li { font-size: .93rem; }
 </style>
