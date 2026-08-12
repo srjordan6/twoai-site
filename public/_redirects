@@ -133,8 +133,13 @@
 # these point at the news index rather than being restored into a section that
 # is not running. If daily news ships later, these slugs are still free to be
 # rebuilt at their original paths and these rules come out.
-/ai-news/ai-reshapes-software-engineering-as-autonomous-coding-tools/  /ai-news/  301
-/ai-news/appdid-technologies-pvt-ltd-recognized-as-a-top-mobile-app-d/  /ai-news/  301
+#
+# Two of them came back exactly that way on 2026-08-12, when the archive
+# published and caught them while they were still in the day's briefing:
+# ai-reshapes-software-engineering and appdid-technologies now have real pages
+# again, so their rules are gone. A rule here shadows a built page — a
+# redirected path 301s even when the page exists — so a slug entering the
+# archive must leave this list in the same change.
 /ai-news/delhi-hc-orders-removal-of-tabu-s-150-urls-over-ai-generated/  /ai-news/  301
 /ai-news/equidefi-prometheus-ai-spv-llc-to-offer-artificial-intellige/  /ai-news/  301
 /ai-news/from-molecule-to-market-life-sciences-ai-enters-governed-pro/  /ai-news/  301
@@ -150,3 +155,11 @@
 # url_registry, the archive stage did not run.
 /ai-news/indian-edtech-company-edubex-expands-global-footprint-with-a/  /ai-news/  301
 /ai-news/two-cityuhk-scholars-elected-to-the-european-academy-of-engi/  /ai-news/  301
+
+# Two final pre-archive casualties, from 2026-08-12: these were in the sitemap
+# on the 11th and had already rotated out of news.json by the time the archive
+# stage first ran that evening, so the archive never saw them. Nothing after
+# this date should need a rule here — the archive now captures each day's
+# stories on the same run that publishes them.
+/ai-news/mit-blru-ibm-skillsbuild-launch-ai-lab-to-accelerate-researc/  /ai-news/  301
+/ai-news/sault-city-council-supports-data-centre-framework-rejects-mo/  /ai-news/  301
