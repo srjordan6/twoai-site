@@ -178,7 +178,7 @@ const jsonld = JSON.stringify(
 );
 ---
 <Base title={title}
-  description={desc} current={`${BASE}/`} jsonld={jsonld}>
+  description={desc} current={`${BASE}/`} jsonld={jsonld} noindex={!!person?.tracked_only}>
 
   <p class="meta-line"><a href="/">AI Ecosystem</a> ·
     <a href={`${BASE}/`}>{CATEGORY_NAME}</a>

@@ -33,7 +33,7 @@ const jsonld = JSON.stringify({
   ...(s.vendor ? { author: { '@type': 'Organization', name: s.vendor } } : {}),
 });
 ---
-<Base title={`${label} — MCP server — The World of AI`} description={desc} current="/mcp/" jsonld={jsonld}>
+<Base title={`${label} — MCP server — The World of AI`} description={desc} current="/mcp/" jsonld={jsonld} noindex={true}>
   <p class="meta-line"><a href="/">AI Ecosystem</a> ·
     <a href="/ai-ecosystem/technology-and-core-infrastructure/">Technology and Core Infrastructure</a> ·
     <a href="/mcp/">MCP Servers</a></p>
