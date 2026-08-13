@@ -131,7 +131,7 @@ const jsonld = JSON.stringify({
           <ul class="items">
             {day.items.map((it: any) => (
               <li>
-                {it.slug
+                {it.slug && it.has_page !== false
                   ? <a href={`/ai-news/vendor/${it.slug}/`}>{it.title}</a>
                   : <a href={it.url} rel="noopener nofollow" target="_blank">{it.title}</a>}
                 <span class="meta">

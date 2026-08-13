@@ -24,12 +24,22 @@ export function getStaticPaths() {
   const seen = new Set<string>();
   for (const a of data?.archive ?? []) {
     if (!a.slug || seen.has(a.slug)) continue;
+    // has_page is the pipeline's judgement that there is enough here to fill a
+    // page. Undefined means an older file from before the flag existed, and
+    // those posts already have live URLs, so they keep them.
+    if (a.has_page === false) continue;
     seen.add(a.slug);
     out.push({ params: { post: a.slug }, props: { it: a, vendor: a.vendor } });
   }
+  // The vendors blocks are a fallback for the first build after the archive
+  // landed. They must not resurrect a slug the archive has judged too thin for
+  // a page, or the threshold does nothing.
+  const suppressed = new Set(
+    (data?.archive ?? []).filter((a: any) => a.has_page === false).map((a: any) => a.slug)
+  );
   for (const v of data?.vendors ?? []) {
     for (const it of v.items ?? []) {
-      if (!it.slug || seen.has(it.slug)) continue;
+      if (!it.slug || seen.has(it.slug) || suppressed.has(it.slug)) continue;
       seen.add(it.slug);
       out.push({ params: { post: it.slug }, props: { it, vendor: v.vendor } });
     }
