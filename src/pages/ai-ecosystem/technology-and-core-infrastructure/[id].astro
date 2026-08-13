@@ -1,0 +1,217 @@
+---
+/**
+ * Technology and Core Infrastructure: model-catalog sections, addressed by
+ * identifier, same addressing rule as the entities category. One route serves
+ * every section built from content/models/*.json.
+ *
+ * Two page shapes. Hugging Face sections (open-weight catalogs per modality)
+ * lead with downloads, licences, and recency. OpenRouter sections (API
+ * models and pricing) lead with computed price and context statistics. Both
+ * link every model to its original home, never to a copy, and both carry the
+ * source, the refresh cadence, and a cite box.
+ */
+import Base from '../../../layouts/Base.astro';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+
+const CATEGORY = 'technology-and-core-infrastructure';
+const CATEGORY_NAME = 'Technology and Core Infrastructure';
+const BASE = `/ai-ecosystem/${CATEGORY}`;
+
+export function getStaticPaths() {
+  if (!existsSync('content/models')) return [];
+  const paths = [];
+  for (const f of readdirSync('content/models')) {
+    if (!f.endsWith('.json')) continue;
+    const d = JSON.parse(readFileSync(`content/models/${f}`, 'utf8'));
+    if (!d.uid) continue;
+    paths.push({ params: { id: d.uid }, props: { sec: d } });
+  }
+  return paths;
+}
+const { sec } = Astro.props;
+
+const isPricing = sec.tax === 'api-pricing';
+const isAPI = sec.source === 'openrouter' && !isPricing;
+const hf = sec.source === 'huggingface';
+
+const fmt = (n) => Number(n).toLocaleString();
+const money = (v) => (v === null || v === undefined ? '—' : `$${v}`);
+const ctx = (n) => (n >= 1000 ? `${Math.round(n / 1000)}k` : `${n}`);
+
+const desc = isPricing
+  ? `Per-token API pricing for ${sec.total} AI models across ${sec.stats.provider_count} providers, in dollars per million tokens, refreshed daily. Median input price ${money(sec.stats.median_prompt_pm)}/M.`
+  : isAPI
+  ? `${sec.total} ${sec.name.toLowerCase()} available over commercial APIs, with context window, per-token pricing, and release date, refreshed daily. ${sec.blurb}`
+  : `The ${sec.total} most-downloaded open ${sec.name.toLowerCase()} on the Hugging Face Hub, with licence, downloads, and release date, refreshed daily. ${sec.blurb}`;
+
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: `${sec.name} — The World of AI`,
+  description: desc.slice(0, 300),
+  url: `https://theworldofai.org${BASE}/${sec.uid}/`,
+  dateModified: sec.generated,
+  isPartOf: { '@type': 'CollectionPage', name: CATEGORY_NAME, url: `https://theworldofai.org${BASE}/` },
+});
+
+// Licence counts render as a readable clause, not a chart.
+const licLine = (sec.licences || [])
+  .map((l) => `${l.licence} (${l.count})`)
+  .join(', ');
+---
+<Base title={`${sec.name} — The World of AI`} description={desc.slice(0, 300)}
+  current={`${BASE}/`} jsonld={jsonld}>
+
+  <p class="meta-line"><a href="/">AI Ecosystem</a> ·
+    <a href={`${BASE}/`}>{CATEGORY_NAME}</a></p>
+
+  <h1>{sec.name}</h1>
+
+  {hf && (
+    <>
+      <p class="answer">The <b>{sec.total} most-downloaded open {sec.name.toLowerCase()}</b> on the
+        Hugging Face Hub, together downloaded <b>{fmt(sec.downloads_total)}</b> times.
+        {licLine && <> The most common licences here: {licLine}.</>}
+        {sec.newest && <> Newest entry in this set: {sec.newest}.</>} {sec.blurb}</p>
+      <p class="meta-line">Last verified: {sec.generated} · Source: the
+        {' '}<a href="https://huggingface.co/models" rel="noopener">Hugging Face Hub</a> public API,
+        sorted by all-time downloads, refreshed daily. Every model links to its own Hub page.</p>
+
+      <table class="pay">
+        <thead><tr><th>Model</th><th>Licence</th><th class="num">Downloads</th><th class="num">Likes</th><th>Task</th><th>Released</th></tr></thead>
+        <tbody>
+          {sec.models.map((m) => (
+            <tr>
+              <td><a href={m.url} rel="noopener">{m.id}</a></td>
+              <td>{m.licence || '—'}</td>
+              <td class="num">{fmt(m.downloads)}</td>
+              <td class="num">{fmt(m.likes)}</td>
+              <td>{m.task}</td>
+              <td>{m.created || '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p class="meta-line">Downloads are the Hub's all-time counter and favour older models;
+        the Released column is what shows you the newer entries climbing. A missing licence
+        means the repository does not declare one, which itself matters if you plan to ship it.</p>
+    </>
+  )}
+
+  {isAPI && (
+    <>
+      <p class="answer"><b>{sec.total} {sec.name.toLowerCase()}</b> are available over commercial
+        APIs right now, from <b>{sec.stats.provider_count} providers</b>. Median price:
+        {' '}<b>{money(sec.stats.median_prompt_pm)}</b> per million input tokens and
+        {' '}<b>{money(sec.stats.median_completion_pm)}</b> per million output tokens. The largest
+        context window in this set is <b>{ctx(sec.stats.context_max)} tokens</b>;
+        {' '}{sec.stats.open_weight_count} of these models also publish open weights. {sec.blurb}</p>
+      <p class="meta-line">Last verified: {sec.generated} · Source: the
+        {' '}<a href="https://openrouter.ai/models" rel="noopener">OpenRouter</a> public model API,
+        refreshed daily. Newest releases first. Prices are per one million tokens.</p>
+
+      <table class="pay">
+        <thead><tr><th>Model</th><th>Provider</th><th class="num">Context</th><th class="num">$/M in</th><th class="num">$/M out</th><th>Released</th></tr></thead>
+        <tbody>
+          {sec.models.map((m) => (
+            <tr>
+              <td><a href={m.url} rel="noopener">{m.name}</a>{m.open_weights && <span class="n">open</span>}</td>
+              <td>{m.provider}</td>
+              <td class="num">{ctx(m.context)}</td>
+              <td class="num">{money(m.prompt_pm)}</td>
+              <td class="num">{money(m.completion_pm)}</td>
+              <td>{m.released}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p class="meta-line">A price of $0.00 means the provider currently lists the model as free
+        to call, usually rate-limited. "Open" marks models whose weights are also published for
+        self-hosting, which is the practical difference between renting a model and owning your
+        deployment of it.</p>
+    </>
+  )}
+
+  {isPricing && (
+    <>
+      <p class="answer">Per-token prices for <b>{sec.total} AI models</b> across
+        {' '}<b>{sec.stats.provider_count} providers</b>, in dollars per million tokens. The median
+        model costs <b>{money(sec.stats.median_prompt_pm)}/M input</b> and
+        {' '}<b>{money(sec.stats.median_completion_pm)}/M output</b>.
+        {sec.free_count > 0 && <> <b>{sec.free_count}</b> models are currently listed free to
+        call, usually rate-limited.</>}
+        {sec.cheapest && <> Cheapest paid model right now:
+        {' '}<a href={sec.cheapest.url} rel="noopener">{sec.cheapest.name}</a> at
+        {' '}{money(sec.cheapest.prompt_pm)}/M in.</>}
+        {sec.cheapest_128k && <> Cheapest paid with a context of 128k or more:
+        {' '}<a href={sec.cheapest_128k.url} rel="noopener">{sec.cheapest_128k.name}</a> at
+        {' '}{money(sec.cheapest_128k.prompt_pm)}/M in.</>}</p>
+      <p class="meta-line">Last verified: {sec.generated} · Source: the
+        {' '}<a href="https://openrouter.ai/models" rel="noopener">OpenRouter</a> public model API,
+        refreshed daily. Grouped by provider, cheapest input price first within each. Output
+        tokens usually cost more than input; budget on the output number for generation-heavy work.</p>
+
+      {sec.providers.map((p) => (
+        <section class="letter-block">
+          <h2 id={p.provider}>{p.provider} <span class="n">{p.models.length}</span></h2>
+          <table class="pay">
+            <thead><tr><th>Model</th><th class="num">Context</th><th class="num">$/M in</th><th class="num">$/M out</th><th>Released</th></tr></thead>
+            <tbody>
+              {p.models.map((m) => (
+                <tr>
+                  <td><a href={m.url} rel="noopener">{m.name}</a></td>
+                  <td class="num">{ctx(m.context)}</td>
+                  <td class="num">{money(m.prompt_pm)}</td>
+                  <td class="num">{money(m.completion_pm)}</td>
+                  <td>{m.released}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      ))}
+    </>
+  )}
+
+  {sec.api_models?.length > 0 && (
+    <>
+      <h2>Available over commercial APIs</h2>
+      <p>The models above publish open weights on the Hugging Face Hub. These
+        {' '}<b>{sec.api_models.length}</b> are served over commercial APIs, with per-token
+        pricing{sec.api_stats && <>: median {money(sec.api_stats.median_prompt_pm)}/M input and
+        {' '}{money(sec.api_stats.median_completion_pm)}/M output across
+        {' '}{sec.api_stats.provider_count} providers</>}. Newest first.</p>
+      <table class="pay">
+        <thead><tr><th>Model</th><th>Provider</th><th class="num">Context</th><th class="num">$/M in</th><th class="num">$/M out</th><th>Released</th></tr></thead>
+        <tbody>
+          {sec.api_models.map((m) => (
+            <tr>
+              <td><a href={m.url} rel="noopener">{m.name}</a></td>
+              <td>{m.provider}</td>
+              <td class="num">{ctx(m.context)}</td>
+              <td class="num">{money(m.prompt_pm)}</td>
+              <td class="num">{money(m.completion_pm)}</td>
+              <td>{m.released}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  )}
+
+  <div class="cite-box">Cite this page: <code>"{sec.name}." The World of AI,
+    theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
+</Base>
+
+<style>
+  .pay { width: 100%; border-collapse: collapse; margin: 1em 0 1.6em; font-size: .92rem; }
+  .pay th, .pay td { text-align: left; padding: .45em .6em; border-bottom: 1px solid #e7e7ee; }
+  .pay th.num, .pay td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pay a { text-decoration: none; }
+  .n { display: inline-block; margin-left: .5em; font-size: .72rem; color: var(--gray);
+       border: 1px solid #e0e0ea; border-radius: 9px; padding: 0 .5em; vertical-align: middle; }
+  .letter-block h2 { margin-top: 1.6em; }
+  .cite-box { margin: 2em 0 1em; padding: .9em 1.1em; background: #f6f6fa; border-radius: 8px;
+              font-size: .85rem; }
+  .answer b { color: var(--navy, #201868); }
+</style>
