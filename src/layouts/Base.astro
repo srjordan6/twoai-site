@@ -49,8 +49,52 @@ const canonical = canonicalOverride || new URL(Astro.url.pathname, Astro.site).h
       EEA and UK consent is handled by Google's own certified message, enabled
       under Privacy and messaging in the AdSense console, which is what makes
       this tag lawful there without a separate CMP on our side. */}
+  {/* Consent Mode v2 defaults, set BEFORE gtag.js loads so the first hit
+      already carries the right signal. Storage is denied by default in the
+      EEA, UK, and Switzerland, where consent is required, and granted
+      elsewhere. Google's certified message (the same one AdSense uses) calls
+      gtag('consent','update',...) when a visitor answers, so GA4 and ads
+      upgrade from pings to full measurement only on consent in those regions.
+      wait_for_update holds the first events briefly so a returning visitor's
+      stored choice is applied before anything fires. */}
+  <script is:inline>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('consent', 'default', {
+      ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied',
+      analytics_storage: 'denied', wait_for_update: 500,
+      region: ['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU',
+        'IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE',
+        'IS','LI','NO','GB','CH']
+    });
+    gtag('consent', 'default', {
+      ad_storage: 'granted', ad_user_data: 'granted', ad_personalization: 'granted',
+      analytics_storage: 'granted'
+    });
+    gtag('js', new Date());
+    gtag('config', 'G-G8HDWR6Z88');
+  </script>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-G8HDWR6Z88"></script>
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4489551395134574"
     crossorigin="anonymous"></script>
+  {/* Microsoft Clarity, project y1u43mf09w. Session recording, not page
+      counting: enable the Consent Mode integration in the Clarity project
+      settings so Clarity reads the same consent signal set above and holds
+      recording in the consent regions until it is granted. */}
+  <script is:inline>
+    (function(c,l,a,r,i,t,y){
+      c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+      t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+      y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "y1u43mf09w");
+  </script>
+  {/* StatCounter, project 13342610, invisible counter. */}
+  <script is:inline>
+    var sc_project=13342610;
+    var sc_invisible=1;
+    var sc_security="1a5584ba";
+  </script>
+  <script src="https://www.statcounter.com/counter/counter.js" async></script>
   {jsonld && <script type="application/ld+json" set:html={jsonld} />}
 </head>
 <body>
@@ -89,6 +133,12 @@ const canonical = canonicalOverride || new URL(Astro.url.pathname, Astro.site).h
   <Footer>
     <Logo slot="logo" variant="stacked-navy" />
   </Footer>
+  <noscript><div class="statcounter"><a title="Web Analytics"
+    href="https://statcounter.com/" target="_blank"><img
+    class="statcounter"
+    src="https://c.statcounter.com/13342610/0/1a5584ba/1/"
+    alt="Web Analytics"
+    referrerpolicy="no-referrer-when-downgrade"></a></div></noscript>
 
   <script is:inline>
   (function () {

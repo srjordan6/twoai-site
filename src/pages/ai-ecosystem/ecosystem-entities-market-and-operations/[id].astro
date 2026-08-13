@@ -29,6 +29,12 @@ export function getStaticPaths() {
       if (!f.endsWith('.json') || f === 'index.json') continue;
       const p = JSON.parse(readFileSync(`content/people/${f}`, 'utf8'));
       if (!p.uid) continue;
+      // cat-*.json are the category section hubs (Researchers, Investors, ...),
+      // not people; they render as member listings below the same route.
+      if (f.startsWith('cat-')) {
+        paths.push({ params: { id: p.uid }, props: { pcat: p, hubUid: idx.uid } });
+        continue;
+      }
       paths.push({ params: { id: p.uid }, props: { person: p, hubUid: idx.uid } });
     }
   }
@@ -50,9 +56,11 @@ export function getStaticPaths() {
 
   return paths;
 }
-const { hub, person, hubUid, chub, company, generated, chubUid, jhub } = Astro.props;
+const { hub, person, hubUid, chub, company, generated, chubUid, jhub, pcat } = Astro.props;
 
-const desc = jhub
+const desc = pcat
+  ? `${pcat.name} in the AI People Directory: ${pcat.total} profiled ${pcat.total === 1 ? 'person' : 'people'}, each with a timeline, achievements, and sources. ${pcat.blurb || ''}`.trim().slice(0, 300)
+  : jhub
   ? `${jhub.total} open AI and computer-security jobs, refreshed daily from USAJobs, company career boards, and free job feeds, with market data on AI hiring share. Every listing links to the original posting.`
   : hub
   ? `Profiles of ${hub.total} people shaping artificial intelligence: researchers, founders, executives, and policymakers, each with a timeline, achievements, and sources.`
@@ -63,7 +71,9 @@ const desc = jhub
   : person?.tracked_only
   ? `${person.name}, ${person.title} at ${person.org}. Tracked in the AI People Directory; a full profile has not been written yet.`
   : `${person.name}${person.moniker ? `, ${person.moniker}` : ''}. ${person.hook || ''}`.slice(0, 300);
-const title = jhub
+const title = pcat
+  ? `${pcat.name} — AI People Directory`
+  : jhub
   ? 'AI Jobs and Market Dynamics — The World of AI'
   : hub
   ? 'AI People Directory — The World of AI'
@@ -114,7 +124,21 @@ const payLevels = (pay?.by_level ?? [])
   .sort((a: any, b: any) => LEVELS.indexOf(a.group) - LEVELS.indexOf(b.group));
 
 const jsonld = JSON.stringify(
-  jhub
+  pcat
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: `${pcat.name} — AI People Directory`,
+        description: desc,
+        url: `https://theworldofai.org${BASE}/${pcat.uid}/`,
+        dateModified: pcat.generated,
+        isPartOf: {
+          '@type': 'CollectionPage',
+          name: 'AI People Directory',
+          url: `https://theworldofai.org${BASE}/${hubUid}/`,
+        },
+      }
+    : jhub
     ? {
         '@context': 'https://schema.org',
         '@type': 'CollectionPage',
@@ -159,6 +183,7 @@ const jsonld = JSON.stringify(
   <p class="meta-line"><a href="/">AI Ecosystem</a> ·
     <a href={`${BASE}/`}>{CATEGORY_NAME}</a>
     {person && <> · <a href={`${BASE}/${hubUid}/`}>AI People</a></>}
+    {pcat && <> · <a href={`${BASE}/${hubUid}/`}>AI People</a></>}
     {company && <> · <a href={`${BASE}/${chubUid}/`}>AI Companies</a></>}</p>
 
   {jhub && (
@@ -491,6 +516,32 @@ const jsonld = JSON.stringify(
     </>
   )}
 
+  {pcat && (
+    <>
+      <h1>{pcat.name}</h1>
+      <p class="answer"><b>{pcat.total} {pcat.total === 1 ? 'person' : 'people'}</b> in the
+        AI People Directory {pcat.total === 1 ? 'is' : 'are'} categorised as
+        {' '}{pcat.name.toLowerCase()}. {pcat.blurb} Each profile carries a timeline,
+        achievements, and sources. A person can appear in more than one category.</p>
+      {pcat.generated && <p class="meta-line">Last verified: {pcat.generated}</p>}
+      <ul class="grid">
+        {pcat.members.map((p) => (
+          <li class="card">
+            <a href={`${BASE}/${p.uid}/`}>{p.name}</a>
+            {p.moniker && <p class="mon">{p.moniker}</p>}
+            {p.hook && <p>{p.hook}</p>}
+          </li>
+        ))}
+      </ul>
+      <p>Only profiled people carry a category. People tracked in the directory without a
+        written profile are not listed here, because an unverified categorisation is a claim
+        this site will not make. See the <a href={`${BASE}/${hubUid}/`}>full directory</a> for
+        everyone we track.</p>
+      <div class="cite-box">Cite this page: <code>"{pcat.name}." AI People Directory,
+        The World of AI, theworldofai.org{BASE}/{pcat.uid}/. Retrieved {pcat.generated}.</code></div>
+    </>
+  )}
+
   {person && (
     <>
       <h1>{person.name}</h1>
@@ -525,6 +576,16 @@ const jsonld = JSON.stringify(
 
       {person.fields?.length > 0 && (
         <p class="meta-line"><b>Fields:</b> {person.fields.join(' · ')}</p>
+      )}
+
+      {person.cats?.length > 0 && (
+        <p class="meta-line"><b>Categories:</b>{' '}
+          {person.cats.map((c, i) => (
+            <>{i > 0 && ' · '}{c.uid
+              ? <a href={`${BASE}/${c.uid}/`}>{c.name}</a>
+              : c.name}</>
+          ))}
+        </p>
       )}
 
       {person.quick_facts && (
