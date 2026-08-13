@@ -45,6 +45,16 @@ export function getStaticPaths() {
     for (const f of readdirSync('content/companies')) {
       if (!f.endsWith('.json') || f === 'index.json') continue;
       const d = JSON.parse(readFileSync(`content/companies/${f}`, 'utf8'));
+      // public.json and patents.json are the sourced section hubs, not
+      // company records; they render as their own page shapes below.
+      if (f === 'public.json') {
+        paths.push({ params: { id: d.uid }, props: { csec: d, chubUid: cidx.uid } });
+        continue;
+      }
+      if (f === 'patents.json') {
+        paths.push({ params: { id: d.uid }, props: { cpat: d, chubUid: cidx.uid } });
+        continue;
+      }
       paths.push({ params: { id: d.company.uid }, props: { company: d.company, generated: d.generated, chubUid: cidx.uid } });
     }
   }
@@ -56,9 +66,13 @@ export function getStaticPaths() {
 
   return paths;
 }
-const { hub, person, hubUid, chub, company, generated, chubUid, jhub, pcat } = Astro.props;
+const { hub, person, hubUid, chub, company, generated, chubUid, jhub, pcat, csec, cpat } = Astro.props;
 
-const desc = pcat
+const desc = csec
+  ? `${csec.total} of the ${csec.tracked} companies in the AI Company Directory are SEC registrants, with ticker, exchange, industry, and recent filings from SEC EDGAR, refreshed daily.`
+  : cpat
+  ? `US patent portfolios for ${cpat.total} tracked AI companies, ${cpat.patents_total.toLocaleString()} patents in total, counted from PatentsView assignee records, refreshed daily.`
+  : pcat
   ? `${pcat.name} in the AI People Directory: ${pcat.total} profiled ${pcat.total === 1 ? 'person' : 'people'}, each with a timeline, achievements, and sources. ${pcat.blurb || ''}`.trim().slice(0, 300)
   : jhub
   ? `${jhub.total} open AI and computer-security jobs, refreshed daily from USAJobs, company career boards, and free job feeds, with market data on AI hiring share. Every listing links to the original posting.`
@@ -71,7 +85,11 @@ const desc = pcat
   : person?.tracked_only
   ? `${person.name}, ${person.title} at ${person.org}. Tracked in the AI People Directory; a full profile has not been written yet.`
   : `${person.name}${person.moniker ? `, ${person.moniker}` : ''}. ${person.hook || ''}`.slice(0, 300);
-const title = pcat
+const title = csec
+  ? 'Public AI Companies — The World of AI'
+  : cpat
+  ? 'AI Patents by Company — The World of AI'
+  : pcat
   ? `${pcat.name} — AI People Directory`
   : jhub
   ? 'AI Jobs and Market Dynamics — The World of AI'
@@ -124,7 +142,16 @@ const payLevels = (pay?.by_level ?? [])
   .sort((a: any, b: any) => LEVELS.indexOf(a.group) - LEVELS.indexOf(b.group));
 
 const jsonld = JSON.stringify(
-  pcat
+  csec || cpat
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: (csec || cpat).name,
+        description: desc.slice(0, 300),
+        url: `https://theworldofai.org${BASE}/${(csec || cpat).uid}/`,
+        dateModified: (csec || cpat).generated,
+      }
+    : pcat
     ? {
         '@context': 'https://schema.org',
         '@type': 'CollectionPage',
@@ -184,6 +211,7 @@ const jsonld = JSON.stringify(
     <a href={`${BASE}/`}>{CATEGORY_NAME}</a>
     {person && <> · <a href={`${BASE}/${hubUid}/`}>AI People</a></>}
     {pcat && <> · <a href={`${BASE}/${hubUid}/`}>AI People</a></>}
+    {(csec || cpat) && <> · <a href={`${BASE}/${chubUid}/`}>AI Companies</a></>}
     {company && <> · <a href={`${BASE}/${chubUid}/`}>AI Companies</a></>}</p>
 
   {jhub && (
@@ -464,6 +492,45 @@ const jsonld = JSON.stringify(
         The World of AI, theworldofai.org{BASE}/{company.uid}/.
         {generated ? ` Verified ${generated}.` : ''}</code></div>
 
+      {company.sec && (
+        <>
+          <h2>SEC filings</h2>
+          <p>{company.name} is an SEC registrant{company.sec.registrant &&
+            company.sec.registrant.toLowerCase() !== company.name.toLowerCase() &&
+            <> through <b>{company.sec.registrant}</b></>}, trading as
+            {' '}<b>{company.sec.ticker}</b>{company.sec.exchange && <> on {company.sec.exchange}</>}
+            {company.sec.industry && <>, classified under {company.sec.industry}</>}. CIK
+            {' '}{company.sec.cik}.</p>
+          {Array.isArray(company.sec.filings) && company.sec.filings.length > 0 && (
+            <p class="filings">Recent filings:{' '}
+              {company.sec.filings.map((f, i) => (
+                <>{i > 0 && ' · '}<a href={f.URL || f.url} rel="noopener">{f.Form || f.form} {f.Date || f.date}</a></>
+              ))}</p>
+          )}
+          <p class="meta-line">Source: <a href={`https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${company.sec.cik}`}
+            rel="noopener">SEC EDGAR</a> · verified {company.sec.verified}</p>
+        </>
+      )}
+
+      {company.patents && (
+        <>
+          <h2>Patents</h2>
+          <p><b>{company.patents.count.toLocaleString()}</b> US patents name {company.name} in the
+            assignee. Treat the number as a floor: assignee records fragment the same company
+            across name variants, and this count matches one verified phrase.</p>
+          {company.patents.recent?.length > 0 && (
+            <ul class="patlist">
+              {company.patents.recent.map((r) => (
+                <li><a href={r.url} rel="noopener">US{r.id}</a> — {r.title}
+                  {r.date && <span class="muted"> ({r.date})</span>}</li>
+              ))}
+            </ul>
+          )}
+          <p class="meta-line">Source: <a href="https://patentsview.org/" rel="noopener">PatentsView</a>
+            {' '}(USPTO research data) · verified {company.patents.verified}</p>
+        </>
+      )}
+
       <h2>Elsewhere on this site</h2>
       <p>Every page here that mentions {company.name}, so you can see the same organisation from
         each angle we track it from.</p>
@@ -539,6 +606,70 @@ const jsonld = JSON.stringify(
         everyone we track.</p>
       <div class="cite-box">Cite this page: <code>"{pcat.name}." AI People Directory,
         The World of AI, theworldofai.org{BASE}/{pcat.uid}/. Retrieved {pcat.generated}.</code></div>
+    </>
+  )}
+
+  {csec && (
+    <>
+      <h1>Public AI Companies</h1>
+      <p class="answer"><b>{csec.total} of the {csec.tracked} companies</b> in the AI Company
+        Directory are SEC registrants, either directly or through a listed parent. Each row
+        carries the ticker, exchange, SIC industry classification, and links to the recent
+        filings that actually describe the business: annual and quarterly reports, current
+        reports, and the proxy. {csec.industries?.length > 0 && <>The most common industry
+        classifications here: {csec.industries.slice(0, 4).map((i, n) => `${i.industry} (${i.count})`).join(', ')}.</>}</p>
+      <p class="meta-line">Last verified: {csec.generated} · Source:
+        {' '}<a href="https://www.sec.gov/search-filings" rel="noopener">SEC EDGAR</a>, matched by
+        registrant name; parent-company mappings (Google to Alphabet, AWS to Amazon.com) are
+        individually verified, never fuzzy-matched. Companies not listed here are not SEC
+        registrants, which for a US company generally means privately held.</p>
+      {csec.companies.map((c) => (
+        <div class="dom">
+          <h3><a href={`${BASE}/${c.uid}/`}>{c.name}</a>
+            <span class="n">{c.ticker}{c.exchange && ` · ${c.exchange}`}</span></h3>
+          <p class="meta-line">{c.registrant && c.registrant.toLowerCase() !== c.name.toLowerCase()
+            && <>Registrant: {c.registrant} · </>}{c.industry && <>{c.industry} · </>}CIK {c.cik}</p>
+          {Array.isArray(c.sec) && c.sec.length > 0 && (
+            <p class="filings">{c.sec.map((f, i) => (
+              <>{i > 0 && ' · '}<a href={f.URL || f.url} rel="noopener">{f.Form || f.form} {f.Date || f.date}</a></>
+            ))}</p>
+          )}
+        </div>
+      ))}
+      <div class="cite-box">Cite this page: <code>"Public AI Companies." The World of AI,
+        theworldofai.org{BASE}/{csec.uid}/. Retrieved {csec.generated}.</code></div>
+    </>
+  )}
+
+  {cpat && (
+    <>
+      <h1>AI Patents by Company</h1>
+      <p class="answer"><b>{cpat.patents_total.toLocaleString()} US patents</b> name one of
+        {' '}<b>{cpat.total} tracked AI companies</b> in the assignee. Counts are floors, not a
+        census: patent assignee records fragment the same company across name variants, and each
+        count here matches one verified phrase. The five most recent grants are listed per
+        company so the number has faces.</p>
+      <p class="meta-line">Last verified: {cpat.generated} · Source:
+        {' '}<a href="https://patentsview.org/" rel="noopener">PatentsView</a> (USPTO research
+        data), assignee-organization phrase match, refreshed daily. Patent links open the grant
+        record. Companies whose name is a common English word are excluded rather than
+        overcounted.</p>
+      {cpat.companies.map((c) => (
+        <div class="dom">
+          <h3><a href={`${BASE}/${c.uid}/`}>{c.name}</a>
+            <span class="n">{c.count.toLocaleString()} patents</span></h3>
+          {c.recent?.length > 0 && (
+            <ul class="patlist">
+              {c.recent.map((r) => (
+                <li><a href={r.url} rel="noopener">US{r.id}</a> — {r.title}
+                  {r.date && <span class="muted"> ({r.date})</span>}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ))}
+      <div class="cite-box">Cite this page: <code>"AI Patents by Company." The World of AI,
+        theworldofai.org{BASE}/{cpat.uid}/. Retrieved {cpat.generated}.</code></div>
     </>
   )}
 
