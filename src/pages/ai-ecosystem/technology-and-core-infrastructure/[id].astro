@@ -18,13 +18,15 @@ const CATEGORY_NAME = 'Technology and Core Infrastructure';
 const BASE = `/ai-ecosystem/${CATEGORY}`;
 
 export function getStaticPaths() {
-  if (!existsSync('content/models')) return [];
   const paths = [];
-  for (const f of readdirSync('content/models')) {
-    if (!f.endsWith('.json')) continue;
-    const d = JSON.parse(readFileSync(`content/models/${f}`, 'utf8'));
-    if (!d.uid) continue;
-    paths.push({ params: { id: d.uid }, props: { sec: d } });
+  for (const dir of ['models', 'repos', 'status']) {
+    if (!existsSync(`content/${dir}`)) continue;
+    for (const f of readdirSync(`content/${dir}`)) {
+      if (!f.endsWith('.json')) continue;
+      const d = JSON.parse(readFileSync(`content/${dir}/${f}`, 'utf8'));
+      if (!d.uid) continue;
+      paths.push({ params: { id: d.uid }, props: { sec: d } });
+    }
   }
   return paths;
 }
@@ -33,12 +35,18 @@ const { sec } = Astro.props;
 const isPricing = sec.tax === 'api-pricing';
 const isAPI = sec.source === 'openrouter' && !isPricing;
 const hf = sec.source === 'huggingface';
+const isRepo = sec.source === 'github';
+const isStatus = sec.tax === 'api-status-uptime';
 
 const fmt = (n) => Number(n).toLocaleString();
 const money = (v) => (v === null || v === undefined ? '—' : `$${v}`);
 const ctx = (n) => (n >= 1000 ? `${Math.round(n / 1000)}k` : `${n}`);
 
-const desc = isPricing
+const desc = isRepo
+  ? `The ${sec.total} ${sec.name.toLowerCase()} that matter, tracked from their own repositories: stars, licence, language, and last activity, refreshed daily. ${sec.blurb}`
+  : isStatus
+  ? `Live status for ${sec.total} AI API providers from their own status pages, with current incidents and a 30-day incident count per provider, refreshed daily.`
+  : isPricing
   ? `Per-token API pricing for ${sec.total} AI models across ${sec.stats.provider_count} providers, in dollars per million tokens, refreshed daily. Median input price ${money(sec.stats.median_prompt_pm)}/M.`
   : isAPI
   ? `${sec.total} ${sec.name.toLowerCase()} available over commercial APIs, with context window, per-token pricing, and release date, refreshed daily. ${sec.blurb}`
@@ -66,6 +74,72 @@ const licLine = (sec.licences || [])
     <a href={`${BASE}/`}>{CATEGORY_NAME}</a></p>
 
   <h1>{sec.name}</h1>
+
+  {isRepo && (
+    <>
+      <p class="answer"><b>{sec.total} projects</b>, <b>{fmt(sec.stars_total)}</b> GitHub stars
+        between them. {licLine && <>Licences here: {licLine}.</>} {sec.blurb} The list is
+        curated — these are the canonical repositories, individually verified — and the numbers
+        come from GitHub itself on every refresh.</p>
+      <p class="meta-line">Last verified: {sec.generated} · Source: the
+        {' '}<a href="https://docs.github.com/en/rest" rel="noopener">GitHub REST API</a>,
+        refreshed daily. Stars are a popularity signal, not a quality metric; the licence and
+        last-push columns are the ones that decide whether you can ship it and whether it is
+        still alive.</p>
+
+      <table class="pay">
+        <thead><tr><th>Project</th><th>What it is</th><th>Licence</th><th class="num">Stars</th><th>Language</th><th>Last push</th></tr></thead>
+        <tbody>
+          {sec.repos.map((r) => (
+            <tr>
+              <td><a href={r.url} rel="noopener">{r.name}</a>{r.archived && <span class="n">archived</span>}</td>
+              <td>{r.description || '—'}</td>
+              <td>{r.licence || '—'}</td>
+              <td class="num">{fmt(r.stars)}</td>
+              <td>{r.language || '—'}</td>
+              <td>{r.pushed_at ? String(r.pushed_at).slice(0, 10) : '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p class="meta-line">A repository missing from this list is an editorial gap, not a
+        judgement — <a href="/contact/">tell us</a> and it gets verified and added.</p>
+    </>
+  )}
+
+  {isStatus && (
+    <>
+      <p class="answer"><b>{sec.healthy} of {sec.total} AI API providers</b> report all systems
+        operational right now. Each row below is that provider's own status page, read directly:
+        current state, anything degraded, and how many incidents they have opened in the last 30
+        days — which is the number that tells you what a provider is like to depend on.</p>
+      <p class="meta-line">Last checked: {sec.generated} · Source: each provider's public
+        Statuspage API, refreshed daily. Incident links open the provider's own incident record.
+        Providers without a machine-readable status page cannot be tracked here yet.</p>
+
+      <table class="pay">
+        <thead><tr><th>Provider</th><th>Status</th><th>Degraded</th><th class="num">Incidents, 30d</th><th>Latest incident</th></tr></thead>
+        <tbody>
+          {sec.providers.map((p) => (
+            <tr>
+              <td>{p.entity_uid
+                ? <a href={`/ai-ecosystem/ecosystem-entities-market-and-operations/${p.entity_uid}/`}>{p.provider}</a>
+                : p.provider} <a href={p.page_url} rel="noopener" class="n">status page</a></td>
+              <td class={p.indicator === 'none' ? 'ok' : 'warn'}>{p.description}</td>
+              <td>{p.degraded?.length ? p.degraded.join('; ') : '—'}</td>
+              <td class="num">{p.incidents_30d}</td>
+              <td>{p.recent?.length
+                ? <a href={p.recent[0].url} rel="noopener">{p.recent[0].name}</a>
+                : '—'}{p.recent?.length > 0 && <span class="muted"> ({p.recent[0].created})</span>}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p class="meta-line">Snapshots are taken once a day at build time, so a brief outage
+        between builds will not show here; the 30-day incident count comes from each provider's
+        own incident log and does not depend on our sampling.</p>
+    </>
+  )}
 
   {hf && (
     <>
