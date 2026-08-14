@@ -71,6 +71,13 @@ export function getStaticPaths() {
     }
   }
 
+  if (existsSync('content/observatory')) {
+    for (const f of readdirSync('content/observatory')) {
+      if (!f.endsWith('.json')) continue;
+      const d = JSON.parse(readFileSync(`content/observatory/${f}`, 'utf8'));
+      if (d.uid) paths.push({ params: { id: d.uid }, props: { obs: d } });
+    }
+  }
   if (existsSync('content/jobs/index.json')) {
     const jidx = JSON.parse(readFileSync('content/jobs/index.json', 'utf8'));
     if (jidx.uid) paths.push({ params: { id: jidx.uid }, props: { jhub: jidx } });
@@ -78,10 +85,22 @@ export function getStaticPaths() {
 
   return paths;
 }
-const { hub, person, hubUid, chub, company, generated, chubUid, jhub, pcat, csec, cpat, cpriv, corg, cfund } = Astro.props;
+const { hub, person, hubUid, chub, company, generated, chubUid, jhub, pcat, csec, cpat, cpriv, corg, cfund, obs } = Astro.props;
+
+const obsDescs = obs ? {
+  'obs-release-cadence': `Release cadence of the ${obs.models} open models this site tracks, by month, from each model's own Hub record.`,
+  'obs-github-activity': `${obs.repos} tracked AI repositories: ${obs.pushed_7d} pushed in the last 7 days, ${Number(obs.stars_total).toLocaleString()} stars combined.`,
+  'obs-huggingface': `Download leaders and licence split across the ${obs.models} tracked open models; ${Number(obs.downloads_total).toLocaleString()} downloads combined.`,
+  'obs-api-uptime': `${obs.healthy_now} of ${obs.providers} tracked AI API providers healthy right now, with per-provider uptime share since observation began.`,
+  'obs-funding-activity': `${obs.filings} SEC Form D filings across ${obs.companies} tracked AI companies, by month, from EDGAR.`,
+  'obs-patent-filings': `${obs.companies} tracked AI companies hold granted US patents — a floor of ${Number(obs.patents_total).toLocaleString()} grants from the USPTO Open Data Portal.`,
+  'obs-security-incidents': `${obs.open_now} open incidents right now across ${obs.providers} tracked AI API providers' own status feeds.`,
+}[obs.tax] : null;
 
 const money = (n) => n >= 1e9 ? `$${(n/1e9).toFixed(1)}B` : n >= 1e6 ? `$${(n/1e6).toFixed(1)}M` : `$${Math.round(n/1e3)}k`;
-const desc = cpriv
+const desc = obs
+  ? (obsDescs || '')
+  : cpriv
   ? `${cpriv.total} private AI companies in the directory, ${cpriv.with_formd} with SEC Form D exempt-offering disclosures on record, verified by elimination against SEC EDGAR registrants, refreshed daily.`
   : corg
   ? `${corg.name}: ${corg.total} individually verified organisations, each with a sourced classification note.`
@@ -104,7 +123,9 @@ const desc = cpriv
   : person?.tracked_only
   ? `${person.name}, ${person.title} at ${person.org}. Tracked in the AI People Directory; a full profile has not been written yet.`
   : `${person.name}${person.moniker ? `, ${person.moniker}` : ''}. ${person.hook || ''}`.slice(0, 300);
-const title = cpriv
+const title = obs
+  ? `${obs.name} — AI Observatory — The World of AI`
+  : cpriv
   ? 'Private AI Companies — The World of AI'
   : corg
   ? `${corg.name} — The World of AI`
@@ -168,7 +189,17 @@ const payLevels = (pay?.by_level ?? [])
 
 const secHub = csec || cpat || cpriv || corg || cfund;
 const jsonld = JSON.stringify(
-  secHub
+  obs
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'Dataset',
+        name: `${obs.name} — AI Observatory`,
+        description: (obsDescs || '').slice(0, 300),
+        url: `https://theworldofai.org/ai-ecosystem/ecosystem-entities-market-and-operations/${obs.uid}/`,
+        dateModified: obs.generated,
+        creator: { '@type': 'Organization', name: 'The World of AI' },
+      }
+    : secHub
     ? {
         '@context': 'https://schema.org',
         '@type': 'CollectionPage',
@@ -716,6 +747,111 @@ const jsonld = JSON.stringify(
       ))}
       <div class="cite-box">Cite this page: <code>"AI Patents by Company." The World of AI,
         theworldofai.org{BASE}/{cpat.uid}/. Retrieved {cpat.generated}.</code></div>
+    </>
+  )}
+
+  {obs && (
+    <>
+      <p class="meta-line"><a href="/">AI Ecosystem</a> ·
+        <a href="/ai-ecosystem/ecosystem-entities-market-and-operations/">Ecosystem Entities, Market and Operations</a> · AI Observatory</p>
+      <h1>{obs.name}</h1>
+      <p class="answer">{obsDescs} Every number on this page is computed from data this site
+        already collects daily — the observatory can never disagree with the sections it
+        summarizes.</p>
+      <p class="meta-line">Last verified: {obs.generated} ·
+        {obs.series && obs.series.length <= 3 && <> Daily history began {obs.series[obs.series.length-1].date}; trend lines will appear as the series accumulates. ·</>}
+        {' '}{obs.tax === 'obs-release-cadence' && <>Source: each model's own Hugging Face record. Full catalogue in the model sections.</>}
+        {obs.tax === 'obs-github-activity' && <>Source: GitHub's API for each tracked repository, refreshed daily.</>}
+        {obs.tax === 'obs-huggingface' && <>Source: the Hugging Face Hub, per tracked model, daily.</>}
+        {obs.tax === 'obs-api-uptime' && <>Source: each provider's own status feed, snapshotted every run. Live detail in <a href="/ai-ecosystem/technology-and-core-infrastructure/5b57e70c/">API Status and Uptime</a>.</>}
+        {obs.tax === 'obs-funding-activity' && <>Source: SEC EDGAR Form D filings. Filing detail in <a href="/ai-ecosystem/ecosystem-entities-market-and-operations/42bcd5be/">the funding ledger</a>. Amounts are per-filing disclosures, never summed across amendments.</>}
+        {obs.tax === 'obs-patent-filings' && <>Source: USPTO Open Data Portal, granted patents since 2001 by applicant phrase — floors, not totals. Detail in <a href="/ai-ecosystem/ecosystem-entities-market-and-operations/2cb1cf97/">Company Patents</a>.</>}
+        {obs.tax === 'obs-security-incidents' && <>Scope: service incidents reported on tracked API providers' own status feeds — not a breach or vulnerability database.</>}</p>
+
+      {obs.by_month && obs.by_month.length > 0 && (
+        <div class="dom">
+          <h3>By month</h3>
+          {obs.by_month.map((m) => (
+            <p class="meta-line">{m.month}: <b>{m.n}</b>{obs.tax === 'obs-funding-activity' ? ' filings' : ' releases'}</p>
+          ))}
+        </div>
+      )}
+
+      {obs.newest && (
+        <div class="dom"><h3>Newest arrivals</h3>
+          {obs.newest.map((m) => (
+            <p class="meta-line"><a href={`https://huggingface.co/${m.id}`} rel="noopener">{m.id}</a> · {m.released}</p>
+          ))}
+        </div>
+      )}
+
+      {obs.top && obs.tax === 'obs-github-activity' && (
+        <div class="dom"><h3>Most-starred tracked repositories</h3>
+          {obs.top.map((r) => (
+            <p class="meta-line"><a href={`https://github.com/${r.repo}`} rel="noopener">{r.repo}</a> · {Number(r.stars).toLocaleString()} stars · pushed {r.pushed}</p>
+          ))}
+        </div>
+      )}
+
+      {obs.leaders && (
+        <div class="dom"><h3>Download leaders</h3>
+          {obs.leaders.map((m) => (
+            <p class="meta-line"><a href={`https://huggingface.co/${m.id}`} rel="noopener">{m.id}</a> · {Number(m.downloads).toLocaleString()} downloads</p>
+          ))}
+        </div>
+      )}
+      {obs.licences && (
+        <div class="dom"><h3>Licence split across the catalogue</h3>
+          {obs.licences.map((l) => (
+            <p class="meta-line">{l.licence}: <b>{l.n}</b> models</p>
+          ))}
+        </div>
+      )}
+
+      {obs.table && (
+        <div class="dom"><h3>Per-provider healthy share</h3>
+          {obs.table.map((r) => (
+            <p class="meta-line">{r.provider}: <b>{r.healthy_pct}%</b> of {r.observations} observations since {r.since}</p>
+          ))}
+        </div>
+      )}
+
+      {obs.recent && (
+        <div class="dom"><h3>Latest filings</h3>
+          {obs.recent.map((f) => (
+            <p class="meta-line">{f.name || f.issuer} · filed {f.filed}{f.total_sold && f.total_sold !== '' ? ` · ${f.total_sold} sold to date per filing` : ''}</p>
+          ))}
+        </div>
+      )}
+
+      {obs.top && obs.tax === 'obs-patent-filings' && (
+        <div class="dom"><h3>Largest granted-patent holders among tracked companies</h3>
+          {obs.top.map((r) => (
+            <p class="meta-line">{r.name}: <b>{Number(r.patents_count).toLocaleString()}</b> granted patents (floor)</p>
+          ))}
+        </div>
+      )}
+
+      {obs.by_provider && (
+        <div class="dom"><h3>Providers with incidents observed</h3>
+          {obs.by_provider.length === 0 && <p class="meta-line">No incidents observed at any tracked provider since observation began.</p>}
+          {obs.by_provider.map((r) => (
+            <p class="meta-line">{r.provider}: peak {r.peak_open} open · incidents present in {r.observations_with_incidents} of {r.observations} observations</p>
+          ))}
+        </div>
+      )}
+
+      {obs.series && obs.series.length > 3 && (
+        <div class="dom"><h3>Daily series</h3>
+          {obs.series.map((pt) => (
+            <p class="meta-line">{pt.date}: {Number(pt.value).toLocaleString()}</p>
+          ))}
+        </div>
+      )}
+
+      <div class="cite-box">Cite this page: <code>"{obs.name}." The World of AI Observatory,
+        theworldofai.org/ai-ecosystem/ecosystem-entities-market-and-operations/{obs.uid}/.
+        Retrieved {obs.generated}.</code></div>
     </>
   )}
 
