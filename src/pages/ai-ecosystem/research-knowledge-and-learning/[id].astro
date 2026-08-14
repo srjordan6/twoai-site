@@ -29,6 +29,13 @@ const BASE = `/ai-ecosystem/${CATEGORY}`;
 
 export function getStaticPaths() {
   const paths = [];
+  if (existsSync('content/learn')) {
+    for (const f of readdirSync('content/learn')) {
+      if (!f.endsWith('.json')) continue;
+      const d = JSON.parse(readFileSync(`content/learn/${f}`, 'utf8'));
+      if (d.uid) paths.push({ params: { id: d.uid }, props: { learn: d } });
+    }
+  }
   if (!existsSync('content/research/index.json')) return paths;
 
   const idx = JSON.parse(readFileSync('content/research/index.json', 'utf8'));
@@ -73,15 +80,19 @@ export function getStaticPaths() {
   return paths;
 }
 
-const { hub, topic, section, hubUid } = Astro.props;
+const { hub, topic, section, hubUid, learn } = Astro.props;
 
-const desc = section
+const desc = learn
+  ? `${learn.total} ${learn.name.toLowerCase()}, ${learn.free} free, curated by level and audience with a verified source each${learn.with_code ? `, ${learn.with_code} with companion code` : ''}, re-verified daily.`
+  : section
   ? String(section.answer || '').slice(0, 300)
   : hub
   ? `${hub.total} peer-reviewed and preprint papers on AI capability, safety, governance and application, sorted into ${hub.topics.length} topics, each with the citation record and a plain note on why it matters.`
   : `${topic.count} papers on ${topic.name.toLowerCase()} in AI, ${(topic.citations || 0).toLocaleString()} citations between them. ${topic.blurb || ''}`.slice(0, 300);
 
-const title = section
+const title = learn
+  ? `${learn.name} — The World of AI`
+  : section
   ? `${section.title}: how this site is structured`
   : hub
   ? 'AI Research Library — The World of AI'
@@ -90,7 +101,16 @@ const title = section
 const refreshed = (hub || topic || section || {}).refreshed;
 
 const jsonld = JSON.stringify(
-  section
+  learn
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: `${learn.name} — The World of AI`,
+        description: desc,
+        url: `https://theworldofai.org${BASE}/${learn.uid}/`,
+        dateModified: learn.generated,
+      }
+    : section
     ? {
         '@context': 'https://schema.org',
         '@type': 'TechArticle',
@@ -129,6 +149,31 @@ const jsonld = JSON.stringify(
     <a href={`/ai-ecosystem/${CATEGORY}/`}>Research, Knowledge and Learning</a>
     {topic && <> &middot; <a href={`${BASE}/${hubUid}/`}>AI Research Library</a></>}
   </p>
+
+  {learn && (
+    <>
+      <h1>{learn.name}</h1>
+      <p class="answer"><b>{learn.total} {learn.name.toLowerCase()}</b>, {learn.free} of them
+        free{learn.with_code ? <>, <b>{learn.with_code}</b> with public companion code</> : null} —
+        curated by level and audience, one verified source each. {learn.blurb}</p>
+      <p class="meta-line">Last verified: {learn.generated} · Source links re-verified daily.
+        Membership is editorial: significance, not sponsorship — nothing here is paid placement.
+        Skills these teach map to the <a href="/skills/">AI Skills Graph</a>.</p>
+      {learn.items.map((l) => (
+        <div class="dom">
+          <h3><a href={l.source_url} rel="noopener">{l.name}</a></h3>
+          <p>{l.note}.</p>
+          <p class="meta-line">{l.provider} · Level: {l.level} · For: {l.audience} ·
+            Cost: {l.cost}
+            {l.renewal && <> · Renewal: {l.renewal}</>}
+            {l.code_url && <> · <a href={l.code_url} rel="noopener">Companion code</a></>} ·
+            verified {l.verified}</p>
+        </div>
+      ))}
+      <div class="cite-box">Cite this page: <code>"{learn.name}." The World of AI,
+        theworldofai.org{BASE}/{learn.uid}/. Retrieved {learn.generated}.</code></div>
+    </>
+  )}
 
   {section && (
     <>
