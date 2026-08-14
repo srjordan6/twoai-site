@@ -15,33 +15,89 @@ const BASE = `/ai-ecosystem/${CATEGORY}`;
 
 export function getStaticPaths() {
   const paths = [];
-  if (!existsSync('content/industries')) return paths;
-  for (const f of readdirSync('content/industries')) {
-    if (!f.endsWith('.json')) continue;
-    const d = JSON.parse(readFileSync(`content/industries/${f}`, 'utf8'));
-    if (d.uid) paths.push({ params: { id: d.uid }, props: { sec: d } });
+  if (existsSync('content/industries')) {
+    for (const f of readdirSync('content/industries')) {
+      if (!f.endsWith('.json')) continue;
+      const d = JSON.parse(readFileSync(`content/industries/${f}`, 'utf8'));
+      if (d.uid) paths.push({ params: { id: d.uid }, props: { sec: d } });
+    }
+  }
+  if (existsSync('content/security')) {
+    for (const f of readdirSync('content/security')) {
+      if (!f.endsWith('.json')) continue;
+      const d = JSON.parse(readFileSync(`content/security/${f}`, 'utf8'));
+      if (d.uid) paths.push({ params: { id: d.uid }, props: { secu: d } });
+    }
   }
   return paths;
 }
-const { sec } = Astro.props;
+const { sec, secu } = Astro.props;
 
-const desc = `${sec.summary}`.slice(0, 300);
+const desc = secu ? `${secu.blurb}`.slice(0, 300) : `${sec.summary}`.slice(0, 300);
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',
-  name: `AI in ${sec.name} — The World of AI`,
+  name: secu ? `${secu.name} — AI Security and Risk — The World of AI` : `AI in ${sec.name} — The World of AI`,
   description: desc,
-  url: `https://theworldofai.org${BASE}/${sec.uid}/`,
-  dateModified: sec.generated,
+  url: `https://theworldofai.org${BASE}/${(secu || sec).uid}/`,
+  dateModified: (secu || sec).generated,
   isPartOf: { '@type': 'CollectionPage', name: CATEGORY_NAME, url: `https://theworldofai.org${BASE}/` },
 });
 ---
-<Base title={`AI in ${sec.name} — The World of AI`} description={desc}
+<Base title={secu ? `${secu.name} — AI Security and Risk — The World of AI` : `AI in ${sec.name} — The World of AI`} description={desc}
   current={`${BASE}/`} jsonld={jsonld}>
 
   <p class="meta-line"><a href="/">AI Ecosystem</a> ·
     <a href={`${BASE}/`}>{CATEGORY_NAME}</a></p>
 
+  {secu && (
+    <>
+      <h1>{secu.name}</h1>
+      <p class="answer">{secu.blurb}</p>
+      <p class="meta-line">Last verified: {secu.generated} · Part of
+        {' '}<a href={`${BASE}/`}>AI Security and Risk</a>. Every entry below carries a source
+        that was verified before it was published and is re-verified daily; the spine is
+        standards bodies, government agencies, and the labs' own published security research.</p>
+
+      {secu.items.filter((i) => i.kind === 'domain').length > 0 && (
+        <div class="dom"><h3>The six domains of the defensive stack</h3>
+          {secu.items.filter((i) => i.kind === 'domain').map((i) => (
+            <div class="dom">
+              <h3>{i.name}</h3>
+              <p class="meta-line">{i.note}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {secu.items.filter((i) => i.kind !== 'domain').map((i) => (
+        <div class="dom">
+          <h3>{i.URL || i.source_url ? <a href={i.source_url} rel="noopener">{i.name}</a> : i.name}</h3>
+          <p class="meta-line">{i.note}</p>
+          <p class="meta-line">Source: {i.source_name}</p>
+        </div>
+      ))}
+
+      {secu.tax === 'sec-deepfakes' && secu.stats && (
+        <p class="meta-line">Live context from this site: <b>{secu.stats.deepfake_bills}</b> state
+          bills in the legislation tracker mention deepfakes or synthetic media.</p>
+      )}
+      {(secu.tax === 'sec-agent-security' || secu.tax === 'sec-prompt-injection') && secu.stats && (
+        <p class="meta-line">Live context from this site: <b>{secu.stats.mcp_servers.toLocaleString()}</b> MCP
+          servers tracked from the official registry — the agent toolchain this attack surface runs through.</p>
+      )}
+      {secu.tax === 'sec-shadow-ai' && secu.stats && (
+        <p class="meta-line">Live context from this site: <b>{secu.stats.compliance_docs}</b> governance
+          documents in the compliance library.</p>
+      )}
+
+      <div class="cite-box">Cite this page: <code>"{secu.name}." The World of AI,
+        theworldofai.org{BASE}/{secu.uid}/. Retrieved {secu.generated}.</code></div>
+    </>
+  )}
+
+  {sec && (
+    <>
   <h1>AI in {sec.name}</h1>
 
   <p class="answer">{sec.summary}</p>
@@ -64,4 +120,7 @@ const jsonld = JSON.stringify({
 
   <div class="cite-box">Cite this page: <code>"AI in {sec.name}." The World of AI,
     theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
+    </>
+  )}
+
 </Base>
