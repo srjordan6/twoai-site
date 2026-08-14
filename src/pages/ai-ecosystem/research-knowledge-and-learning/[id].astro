@@ -150,7 +150,26 @@ const jsonld = JSON.stringify(
     {topic && <> &middot; <a href={`${BASE}/${hubUid}/`}>AI Research Library</a></>}
   </p>
 
-  {learn && (
+  {learn && learn.shape === 'media' && (
+    <>
+      <h1>{learn.name}</h1>
+      <p class="answer"><b>{learn.total} curated entries</b> in {learn.name.toLowerCase()} — every
+        one links its own home, and image sources state their licence terms. {learn.blurb}</p>
+      <p class="meta-line">Last verified: {learn.generated} · Links re-verified daily. This
+        repository links out; it does not host or reproduce the media itself.</p>
+      {learn.items.map((m) => (
+        <div class="dom">
+          <h3><a href={m.source_url} rel="noopener">{m.name}</a> <span class="n">{m.kind}</span></h3>
+          <p>{m.note}.</p>
+          <p class="meta-line">{m.creator} · {m.extra} · verified {m.verified}</p>
+        </div>
+      ))}
+      <div class="cite-box">Cite this page: <code>"{learn.name}." The World of AI,
+        theworldofai.org{BASE}/{learn.uid}/. Retrieved {learn.generated}.</code></div>
+    </>
+  )}
+
+  {learn && learn.shape !== 'media' && (
     <>
       <h1>{learn.name}</h1>
       <p class="answer"><b>{learn.total} {learn.name.toLowerCase()}</b>, {learn.free} of them

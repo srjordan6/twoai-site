@@ -1,0 +1,67 @@
+---
+/**
+ * Enterprise Applications, Governance and Tools: identifier-addressed section
+ * pages. First residents: the Industry Use Cases sections, rendered from
+ * curated sourced points per industry. A sector with no verifiable primary
+ * source beyond the Census adoption series carries less content by design -
+ * the page says less rather than inventing case studies.
+ */
+import Base from '../../../layouts/Base.astro';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+
+const CATEGORY = 'enterprise-applications-governance-and-tools';
+const CATEGORY_NAME = 'Enterprise Applications, Governance and Tools';
+const BASE = `/ai-ecosystem/${CATEGORY}`;
+
+export function getStaticPaths() {
+  const paths = [];
+  if (!existsSync('content/industries')) return paths;
+  for (const f of readdirSync('content/industries')) {
+    if (!f.endsWith('.json')) continue;
+    const d = JSON.parse(readFileSync(`content/industries/${f}`, 'utf8'));
+    if (d.uid) paths.push({ params: { id: d.uid }, props: { sec: d } });
+  }
+  return paths;
+}
+const { sec } = Astro.props;
+
+const desc = `${sec.summary}`.slice(0, 300);
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: `AI in ${sec.name} — The World of AI`,
+  description: desc,
+  url: `https://theworldofai.org${BASE}/${sec.uid}/`,
+  dateModified: sec.generated,
+  isPartOf: { '@type': 'CollectionPage', name: CATEGORY_NAME, url: `https://theworldofai.org${BASE}/` },
+});
+---
+<Base title={`AI in ${sec.name} — The World of AI`} description={desc}
+  current={`${BASE}/`} jsonld={jsonld}>
+
+  <p class="meta-line"><a href="/">AI Ecosystem</a> ·
+    <a href={`${BASE}/`}>{CATEGORY_NAME}</a></p>
+
+  <h1>AI in {sec.name}</h1>
+
+  <p class="answer">{sec.summary}</p>
+  <p class="meta-line">Last verified: {sec.generated} · Every point below carries its own
+    source. Where a sector has no verifiable primary source beyond the official adoption
+    survey, this page says less rather than inventing case studies.</p>
+
+  {sec.points.map((f) => (
+    <div class="dom">
+      <h3>{f.name}</h3>
+      <p>{f.desc}</p>
+      <p class="meta-line"><a href={f.source} rel="noopener">Source</a></p>
+    </div>
+  ))}
+
+  <p class="meta-line">Related on this site: <a href="/ai-laws/">AI laws by state</a> ·
+    <a href="/ai-lawsuits/">the AI lawsuit tracker</a> ·
+    <a href="/ai-tools/">the tools directory</a> ·
+    <a href="/skills/">the AI skills graph</a>.</p>
+
+  <div class="cite-box">Cite this page: <code>"AI in {sec.name}." The World of AI,
+    theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
+</Base>
