@@ -59,6 +59,10 @@ export function getStaticPaths() {
         paths.push({ params: { id: d.uid }, props: { cpriv: d, chubUid: cidx.uid } });
         continue;
       }
+      if (f === 'acquisitions.json') {
+        paths.push({ params: { id: d.uid }, props: { cma: d, chubUid: cidx.uid } });
+        continue;
+      }
       if (f === 'funding.json') {
         paths.push({ params: { id: d.uid }, props: { cfund: d, chubUid: cidx.uid } });
         continue;
@@ -85,7 +89,7 @@ export function getStaticPaths() {
 
   return paths;
 }
-const { hub, person, hubUid, chub, company, generated, chubUid, jhub, pcat, csec, cpat, cpriv, corg, cfund, obs } = Astro.props;
+const { hub, person, hubUid, chub, company, generated, chubUid, jhub, pcat, csec, cpat, cpriv, corg, cfund, obs, cma } = Astro.props;
 
 const obsDescs = obs ? {
   'obs-release-cadence': `Release cadence of the ${obs.models} open models this site tracks, by month, from each model's own Hub record.`,
@@ -94,11 +98,14 @@ const obsDescs = obs ? {
   'obs-api-uptime': `${obs.healthy_now} of ${obs.providers} tracked AI API providers healthy right now, with per-provider uptime share since observation began.`,
   'obs-funding-activity': `${obs.filings} SEC Form D filings across ${obs.companies} tracked AI companies, by month, from EDGAR.`,
   'obs-patent-filings': `${obs.companies} tracked AI companies hold granted US patents — a floor of ${Number(obs.patents_total).toLocaleString()} grants from the USPTO Open Data Portal.`,
+  'obs-gpu-availability': `Quarterly capital expenditure from the ${obs.companies?.length ?? 0} companies whose capex is the AI buildout, from their own SEC XBRL facts — the lawful measure of compute, stated plainly where spot availability cannot be measured.`,
   'obs-security-incidents': `${obs.open_now} open incidents right now across ${obs.providers} tracked AI API providers' own status feeds.`,
 }[obs.tax] : null;
 
 const money = (n) => n >= 1e9 ? `$${(n/1e9).toFixed(1)}B` : n >= 1e6 ? `$${(n/1e6).toFixed(1)}M` : `$${Math.round(n/1e3)}k`;
-const desc = obs
+const desc = cma
+  ? `${cma.completed.length + cma.agreements.length} SEC 8-K filings - completed acquisitions (Item 2.01) and material definitive agreements (Item 1.01) - across ${cma.registrants} tracked AI registrants since 2024, each linked to the filing itself.`
+  : obs
   ? (obsDescs || '')
   : cpriv
   ? `${cpriv.total} private AI companies in the directory, ${cpriv.with_formd} with SEC Form D exempt-offering disclosures on record, verified by elimination against SEC EDGAR registrants, refreshed daily.`
@@ -123,7 +130,9 @@ const desc = obs
   : person?.tracked_only
   ? `${person.name}, ${person.title} at ${person.org}. Tracked in the AI People Directory; a full profile has not been written yet.`
   : `${person.name}${person.moniker ? `, ${person.moniker}` : ''}. ${person.hook || ''}`.slice(0, 300);
-const title = obs
+const title = cma
+  ? 'AI Acquisitions and Partnerships: SEC 8-K Filings — The World of AI'
+  : obs
   ? `${obs.name} — AI Observatory — The World of AI`
   : cpriv
   ? 'Private AI Companies — The World of AI'
@@ -189,7 +198,17 @@ const payLevels = (pay?.by_level ?? [])
 
 const secHub = csec || cpat || cpriv || corg || cfund;
 const jsonld = JSON.stringify(
-  obs
+  cma
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'Dataset',
+        name: 'AI Acquisitions and Partnerships: SEC 8-K Filings',
+        description: desc.slice(0, 300),
+        url: `https://theworldofai.org${BASE}/${cma.uid}/`,
+        dateModified: cma.generated,
+        creator: { '@type': 'Organization', name: 'The World of AI' },
+      }
+    : obs
     ? {
         '@context': 'https://schema.org',
         '@type': 'Dataset',
@@ -766,7 +785,32 @@ const jsonld = JSON.stringify(
         {obs.tax === 'obs-api-uptime' && <>Source: each provider's own status feed, snapshotted every run. Live detail in <a href="/ai-ecosystem/technology-and-core-infrastructure/5b57e70c/">API Status and Uptime</a>.</>}
         {obs.tax === 'obs-funding-activity' && <>Source: SEC EDGAR Form D filings. Filing detail in <a href="/ai-ecosystem/ecosystem-entities-market-and-operations/42bcd5be/">the funding ledger</a>. Amounts are per-filing disclosures, never summed across amendments.</>}
         {obs.tax === 'obs-patent-filings' && <>Source: USPTO Open Data Portal, granted patents since 2001 by applicant phrase — floors, not totals. Detail in <a href="/ai-ecosystem/ecosystem-entities-market-and-operations/2cb1cf97/">Company Patents</a>.</>}
-        {obs.tax === 'obs-security-incidents' && <>Scope: service incidents reported on tracked API providers' own status feeds — not a breach or vulnerability database.</>}</p>
+        {obs.tax === 'obs-security-incidents' && <>Scope: service incidents reported on tracked API providers' own status feeds — not a breach or vulnerability database.</>}
+        {obs.shapekind === 'capex' && <>Source: each company's own XBRL facts on data.sec.gov, quarterly durations only, concept resolved per company (NVIDIA retired the standard capex tag in 2020). Spot GPU availability is not published anywhere lawful — provider quota APIs report only one's own account — so this page measures the money instead and says so.</>}</p>
+
+      {obs.shapekind === 'capex' && (
+        <>
+          <p class="answer">Latest reported quarter, combined: <b>${(obs.latest_total/1e9).toFixed(1)}B</b> in
+            capital expenditure across {obs.companies.length} companies. This is cash paid for property,
+            equipment, and productive assets as each company tags it — datacenters, GPUs, and the
+            buildings around them are the overwhelming driver, but the tag does not isolate AI.</p>
+          {obs.companies.map((c) => (
+            <div class="dom">
+              <h3>{c.name} <span class="n">${(c.latest/1e9).toFixed(2)}B · quarter ended {c.end}</span></h3>
+              <p class="meta-line">{c.series.map((s2) => `${s2.end}: $${(s2.val/1e9).toFixed(1)}B`).join(' · ')}</p>
+              <p class="meta-line">XBRL concept: {c.concept}</p>
+            </div>
+          ))}
+          <div class="dom"><h3>Verified compute registries</h3>
+            {obs.refs.map((r) => (
+              <p class="meta-line"><a href={r.url} rel="noopener">{r.name}</a> — {r.note}</p>
+            ))}
+            <p class="meta-line">GPU cloud service health: Lambda's status feed is tracked in
+              {' '}<a href="/ai-ecosystem/technology-and-core-infrastructure/5b57e70c/">API Status and Uptime</a>.
+              CoreWeave publishes no machine-readable status endpoint; it is absent rather than estimated.</p>
+          </div>
+        </>
+      )}
 
       {obs.by_month && obs.by_month.length > 0 && (
         <div class="dom">
@@ -852,6 +896,40 @@ const jsonld = JSON.stringify(
       <div class="cite-box">Cite this page: <code>"{obs.name}." The World of AI Observatory,
         theworldofai.org/ai-ecosystem/ecosystem-entities-market-and-operations/{obs.uid}/.
         Retrieved {obs.generated}.</code></div>
+    </>
+  )}
+
+  {cma && (
+    <>
+      <p class="meta-line"><a href="/">AI Ecosystem</a> ·
+        <a href="/ai-ecosystem/ecosystem-entities-market-and-operations/">Ecosystem Entities, Market and Operations</a> ·
+        <a href={`/ai-ecosystem/ecosystem-entities-market-and-operations/${chubUid}/`}>AI Companies</a></p>
+      <h1>Acquisitions and Partnerships</h1>
+      <p class="answer"><b>{cma.completed.length}</b> completed acquisitions or dispositions (8-K Item 2.01)
+        and <b>{cma.agreements.length}</b> recent material definitive agreements (Item 1.01) across
+        {' '}{cma.registrants} tracked SEC registrants since January 2024, from the EDGAR submissions API.</p>
+      <p class="meta-line">Last verified: {cma.generated} · An 8-K item says an event class occurred —
+        it does not name the deal. Each row links the filing itself rather than summarizing it; read
+        the filing for parties and terms. Deals between two private companies produce no 8-K and are
+        invisible to this method — that gap is stated, not filled with press coverage.</p>
+
+      {cma.completed.length > 0 && (
+        <div class="dom"><h3>Completed acquisitions and dispositions (Item 2.01)</h3>
+          {cma.completed.map((f) => (
+            <p class="meta-line">{f.company} · filed {f.filed} · items {f.items} ·
+              {' '}<a href={f.url} rel="noopener">filing</a></p>
+          ))}
+        </div>
+      )}
+      <div class="dom"><h3>Material definitive agreements (Item 1.01, most recent)</h3>
+        {cma.agreements.map((f) => (
+          <p class="meta-line">{f.company} · filed {f.filed} · items {f.items} ·
+            {' '}<a href={f.url} rel="noopener">filing</a></p>
+        ))}
+      </div>
+      <div class="cite-box">Cite this page: <code>"Acquisitions and Partnerships." The World of AI,
+        theworldofai.org/ai-ecosystem/ecosystem-entities-market-and-operations/{cma.uid}/.
+        Retrieved {cma.generated}.</code></div>
     </>
   )}
 
