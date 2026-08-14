@@ -42,12 +42,21 @@ const isLang = sec.tax === 'programming-languages';
 const isMeta = sec.kind === 'standard' && sec.tax === 'model-metadata';
 const isMCPSec = sec.tax === 'mcp-security';
 const isClients = sec.tax === 'mcp-clients';
+const isHW = sec.shape === 'hardware';
+const isDS = sec.shape === 'datasets';
+const isDSLic = sec.shape === 'ds-licensing';
 
 const fmt = (n) => Number(n).toLocaleString();
 const money = (v) => (v === null || v === undefined ? '—' : `$${v}`);
 const ctx = (n) => (n >= 1000 ? `${Math.round(n / 1000)}k` : `${n}`);
 
-const desc = isClients
+const desc = isHW
+  ? `${sec.total} ${sec.name.toLowerCase()} entries, each curated with a verified vendor or primary source and re-verified daily. ${sec.blurb}`
+  : isDS
+  ? `${sec.total} ${sec.name.toLowerCase()}, curated for significance with downloads, licence, and gating refreshed daily from the Hugging Face Hub. ${sec.blurb}`
+  : isDSLic
+  ? `Licence split, gating, and provenance context for the dataset catalogue on this site, with the live copyright docket linked from the lawsuit tracker.`
+  : isClients
   ? `${sec.total} applications that speak the Model Context Protocol, ${sec.open_source} of them open source, each verified against its own site; the protocol's official client list is the canonical registry.`
   : isMCPSec
   ? `The Model Context Protocol's security model, documented from the specification: OAuth 2.1 authorization, the server trust boundary, tool-metadata injection, confused-deputy failures, and credential handling.`
@@ -89,6 +98,71 @@ const licLine = (sec.licences || [])
     <a href={`${BASE}/`}>{CATEGORY_NAME}</a></p>
 
   <h1>{sec.name}</h1>
+
+  {isHW && (
+    <>
+      <p class="answer"><b>{sec.total} entries</b> in {sec.name.toLowerCase()}, each one curated
+        with a verified vendor or primary source. {sec.blurb}</p>
+      <p class="meta-line">Last verified: {sec.generated} · Source links are re-verified daily;
+        a row whose source stops answering shows its honest last-verified date. Makers with a
+        company page are linked.</p>
+      {sec.items.map((h) => (
+        <div class="dom">
+          <h3>{h.name}</h3>
+          <p>{h.note}.</p>
+          <p class="meta-line">Maker: {h.entity_uid
+            ? <a href={`/ai-ecosystem/ecosystem-entities-market-and-operations/${h.entity_uid}/`}>{h.maker}</a>
+            : h.maker} ·
+            {' '}<a href={h.source_url} rel="noopener">Source</a> · verified {h.verified}</p>
+        </div>
+      ))}
+      <div class="cite-box">Cite this page: <code>"{sec.name}." The World of AI,
+        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
+    </>
+  )}
+
+  {isDS && (
+    <>
+      <p class="answer"><b>{sec.total} {sec.name.toLowerCase()}</b>, curated for significance
+        rather than scraped by download rank — raw popularity sorting surfaces noise, so
+        membership is editorial and stated per entry, while downloads, licence, and gating are
+        live from the Hugging Face Hub.</p>
+      <p class="meta-line">Last verified: {sec.generated} · Stats refresh daily from each
+        dataset's own Hub record. Licence and provenance context lives in
+        {' '}<a href={`${BASE}/c7caaf96/`}>Dataset Licensing and Provenance</a>.</p>
+      {sec.items.map((d) => (
+        <div class="dom">
+          <h3><a href={d.url} rel="noopener">{d.id}</a>
+            {d.gated && <span class="n">gated</span>}</h3>
+          <p>{d.note}.</p>
+          <p class="meta-line">{fmt(d.downloads)} downloads ·
+            licence: {d.licence || 'undeclared'}</p>
+        </div>
+      ))}
+      <div class="cite-box">Cite this page: <code>"{sec.name}." The World of AI,
+        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
+    </>
+  )}
+
+  {isDSLic && (
+    <>
+      <p class="answer"><b>Across the {sec.total} datasets this site catalogues, {sec.gated} are
+        gated</b> and the licence split is: {sec.splits.map((l) => `${l.licence} (${l.count})`).join(', ')}.
+        The licence on a dataset covers the compilation; what it covers underneath is the live
+        legal question of the field.</p>
+      <p class="meta-line">Last verified: {sec.generated} · Licence tags read daily from each
+        dataset's Hub record; context points sourced individually.</p>
+      {sec.points.map((f) => (
+        <div class="dom">
+          <h3>{f.name}</h3>
+          <p>{f.desc}</p>
+          <p class="meta-line"><a href={f.source} rel="noopener">Source</a></p>
+        </div>
+      ))}
+      <div class="cite-box">Cite this page: <code>"Dataset Licensing and Provenance." The World
+        of AI, theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
+    </>
+  )}
 
   {isClients && (
     <>
