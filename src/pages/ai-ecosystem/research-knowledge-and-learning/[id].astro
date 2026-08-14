@@ -150,6 +150,50 @@ const jsonld = JSON.stringify(
     {topic && <> &middot; <a href={`${BASE}/${hubUid}/`}>AI Research Library</a></>}
   </p>
 
+  {learn && learn.shape === 'graph-nodes' && (
+    <>
+      <h1>{learn.name}</h1>
+      <p class="answer"><b>{Number(learn.node_total).toLocaleString()} nodes</b> across
+        {' '}{learn.nodes.length} entity types — every company, model, paper, person, dataset,
+        benchmark, and regulation this atlas tracks carries a stable typed identifier, and this
+        census is computed live from the same tables the site renders from, so it can never
+        drift from the pages it describes.</p>
+      <p class="meta-line">Last verified: {learn.generated} · The graph is materialized today as
+        cross-references on pages (a company page links its lawsuits, filings, patents, and MCP
+        servers; a model links its papers). The edge census lives in
+        {' '}<a href={`${BASE}/b16f34a9/`}>Relationships</a>.</p>
+      {learn.nodes.map((n) => (
+        <div class="dom">
+          <h3><a href={n.home}>{n.type}</a> <span class="n">{Number(n.count).toLocaleString()}</span></h3>
+          <p class="meta-line">Identifier: {n.scheme}</p>
+        </div>
+      ))}
+      <div class="cite-box">Cite this page: <code>"Entity Graph." The World of AI,
+        theworldofai.org{BASE}/{learn.uid}/. Retrieved {learn.generated}.</code></div>
+    </>
+  )}
+
+  {learn && learn.shape === 'graph-edges' && (
+    <>
+      <h1>{learn.name}</h1>
+      <p class="answer"><b>{Number(learn.edge_total).toLocaleString()} relationships</b> across
+        {' '}{learn.edges.length} edge types: who built what, what cites what, who is being sued
+        over what, and who filed what. Each edge type names its method, because a relationship
+        is only as good as the matching rule that produced it.</p>
+      <p class="meta-line">Last verified: {learn.generated} · Counted live at build time from
+        the same data the linked sections render. The node census lives in
+        {' '}<a href={`${BASE}/18284cc1/`}>Entity Graph</a>.</p>
+      {learn.edges.map((e) => (
+        <div class="dom">
+          <h3><a href={e.home}>{e.type}</a> <span class="n">{Number(e.count).toLocaleString()}</span></h3>
+          <p class="meta-line">Method: {e.method}</p>
+        </div>
+      ))}
+      <div class="cite-box">Cite this page: <code>"Relationships." The World of AI,
+        theworldofai.org{BASE}/{learn.uid}/. Retrieved {learn.generated}.</code></div>
+    </>
+  )}
+
   {learn && learn.shape === 'media' && (
     <>
       <h1>{learn.name}</h1>
@@ -169,7 +213,7 @@ const jsonld = JSON.stringify(
     </>
   )}
 
-  {learn && learn.shape !== 'media' && (
+  {learn && learn.shape === 'learning' && (
     <>
       <h1>{learn.name}</h1>
       <p class="answer"><b>{learn.total} {learn.name.toLowerCase()}</b>, {learn.free} of them
