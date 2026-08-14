@@ -1,0 +1,7 @@
+# URL retirements. One path per line, followed by a reason. A URL listed here
+# is one the site has deliberately stopped publishing: the deploy gate
+# (scripts/url-guard.mjs) blocks any build that drops a live URL unless it is
+# redirected in public/_redirects or named here. Prefer a redirect whenever a
+# successor page exists; retirement is for URLs that should genuinely 404.
+#
+# Format: /path/  reason (free text)
