@@ -39,13 +39,19 @@ const isRepo = sec.source === 'github';
 const isStatus = sec.tax === 'api-status-uptime';
 const isDir = sec.tax === 'api-directory';
 const isLang = sec.tax === 'programming-languages';
-const isMeta = sec.kind === 'standard';
+const isMeta = sec.kind === 'standard' && sec.tax === 'model-metadata';
+const isMCPSec = sec.tax === 'mcp-security';
+const isClients = sec.tax === 'mcp-clients';
 
 const fmt = (n) => Number(n).toLocaleString();
 const money = (v) => (v === null || v === undefined ? '—' : `$${v}`);
 const ctx = (n) => (n >= 1000 ? `${Math.round(n / 1000)}k` : `${n}`);
 
-const desc = isMeta
+const desc = isClients
+  ? `${sec.total} applications that speak the Model Context Protocol, ${sec.open_source} of them open source, each verified against its own site; the protocol's official client list is the canonical registry.`
+  : isMCPSec
+  ? `The Model Context Protocol's security model, documented from the specification: OAuth 2.1 authorization, the server trust boundary, tool-metadata injection, confused-deputy failures, and credential handling.`
+  : isMeta
   ? `The record kept for every model on this site: which fields are tracked, where each comes from, and what is deliberately not tracked and why.`
   : isDir
   ? `${sec.total} public AI APIs with base endpoint, documentation, authentication scheme, and official SDKs, ${sec.openai_compatible} of them OpenAI-compatible; every docs link individually verified, refreshed daily.`
@@ -83,6 +89,55 @@ const licLine = (sec.licences || [])
     <a href={`${BASE}/`}>{CATEGORY_NAME}</a></p>
 
   <h1>{sec.name}</h1>
+
+  {isClients && (
+    <>
+      <p class="answer"><b>{sec.total} applications speak MCP</b> — {sec.open_source} of them
+        open source. A client is the side that grants capability: connecting a server hands it
+        tools and context, so which applications speak the protocol defines where the ecosystem
+        actually runs. The <a href="https://modelcontextprotocol.io/clients" rel="noopener">official
+        client list</a> is the canonical registry; this page is the curated core of it.</p>
+      <p class="meta-line">Last verified: {sec.generated} · Each row verified against its own
+        site. Servers live in the <a href="/mcp/">MCP Server tracker</a> (1,800+); SDKs in
+        {' '}<a href={`${BASE}/37a491f4/`}>MCP SDKs and Registries</a>.</p>
+      {sec.clients.map((c) => (
+        <div class="dom">
+          <h3><a href={c.url} rel="noopener">{c.name}</a>
+            {c.open_source && <span class="n">open source</span>}</h3>
+          <p>{c.note}.</p>
+          <p class="meta-line">Publisher: {c.publisher}
+            {c.repo && <> · <a href={`https://github.com/${c.repo}`} rel="noopener">{c.repo}</a></>} ·
+            {' '}verified {c.verified}</p>
+        </div>
+      ))}
+      <div class="cite-box">Cite this page: <code>"MCP Clients." The World of AI,
+        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
+    </>
+  )}
+
+  {isMCPSec && (
+    <>
+      <p class="answer"><b>MCP's security model in five load-bearing facts</b>, each sourced to
+        the specification itself. The short version: authorization is OAuth 2.1, the trust
+        boundary sits at the server, tool metadata is attack surface, and credentials belong to
+        the user — never to the model.</p>
+      <p class="meta-line">Last verified: {sec.generated} · Source: the
+        {' '}<a href="https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization"
+        rel="noopener">MCP authorization specification</a> and its
+        {' '}<a href="https://modelcontextprotocol.io/specification/2025-06-18/basic/security_best_practices"
+        rel="noopener">security best practices</a>. This page describes the protocol's model,
+        not an audit of any implementation.</p>
+      {sec.points.map((f) => (
+        <div class="dom">
+          <h3>{f.name}</h3>
+          <p>{f.desc}</p>
+          <p class="meta-line"><a href={f.source} rel="noopener">Specification source</a></p>
+        </div>
+      ))}
+      <div class="cite-box">Cite this page: <code>"MCP Security and Authentication." The World of
+        AI, theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
+    </>
+  )}
 
   {isMeta && (
     <>
