@@ -19,7 +19,7 @@ const BASE = `/ai-ecosystem/${CATEGORY}`;
 
 export function getStaticPaths() {
   const paths = [];
-  for (const dir of ['models', 'repos', 'status']) {
+  for (const dir of ['models', 'repos', 'status', 'tech']) {
     if (!existsSync(`content/${dir}`)) continue;
     for (const f of readdirSync(`content/${dir}`)) {
       if (!f.endsWith('.json')) continue;
@@ -37,12 +37,18 @@ const isAPI = sec.source === 'openrouter' && !isPricing;
 const hf = sec.source === 'huggingface';
 const isRepo = sec.source === 'github';
 const isStatus = sec.tax === 'api-status-uptime';
+const isDir = sec.tax === 'api-directory';
+const isLang = sec.tax === 'programming-languages';
 
 const fmt = (n) => Number(n).toLocaleString();
 const money = (v) => (v === null || v === undefined ? '—' : `$${v}`);
 const ctx = (n) => (n >= 1000 ? `${Math.round(n / 1000)}k` : `${n}`);
 
-const desc = isRepo
+const desc = isDir
+  ? `${sec.total} public AI APIs with base endpoint, documentation, authentication scheme, and official SDKs, ${sec.openai_compatible} of them OpenAI-compatible; every docs link individually verified, refreshed daily.`
+  : isLang
+  ? `${sec.total} programming languages that carry AI work, from Python's interface layer to the C++ and Rust systems underneath, each profiled with steward, first release, and the tracked repositories written in it.`
+  : isRepo
   ? `The ${sec.total} ${sec.name.toLowerCase()} that matter, tracked from their own repositories: stars, licence, language, and last activity, refreshed daily. ${sec.blurb}`
   : isStatus
   ? `Live status for ${sec.total} AI API providers from their own status pages, with current incidents and a 30-day incident count per provider, refreshed daily.`
@@ -74,6 +80,57 @@ const licLine = (sec.licences || [])
     <a href={`${BASE}/`}>{CATEGORY_NAME}</a></p>
 
   <h1>{sec.name}</h1>
+
+  {isDir && (
+    <>
+      <p class="answer"><b>{sec.total} public AI APIs</b>, each with its base endpoint,
+        documentation, authentication scheme, and official SDKs — <b>{sec.openai_compatible}</b>
+        {' '}of them speak the OpenAI-compatible dialect, which means one SDK covers most of the
+        market. Every documentation link was individually verified before listing.</p>
+      <p class="meta-line">Last verified: {sec.generated} · Curated from each provider's own
+        developer documentation. Pricing lives in <a href={`${BASE}/56f96b2b/`}>API Pricing</a>
+        {' '}and live reliability in <a href={`${BASE}/5b57e70c/`}>API Status and Uptime</a>.
+        A missing API is an editorial gap, not a judgement — <a href="/contact/">tell us</a>.</p>
+      {sec.apis.map((a) => (
+        <div class="dom">
+          <h3>{a.entity_uid
+            ? <a href={`/ai-ecosystem/ecosystem-entities-market-and-operations/${a.entity_uid}/`}>{a.provider}</a>
+            : a.provider}
+            {a.openai_compatible && <span class="n">OpenAI-compatible</span>}</h3>
+          {a.note && <p>{a.note}.</p>}
+          <p class="meta-line">Base: <code>{a.base_url}</code> · Auth: {a.auth} · SDKs: {a.sdks} ·
+            {' '}<a href={a.docs_url} rel="noopener">Documentation</a>
+            {a.has_status && <> · <a href={`${BASE}/5b57e70c/`}>status tracked</a></>}</p>
+        </div>
+      ))}
+      <div class="cite-box">Cite this page: <code>"API Directory." The World of AI,
+        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
+    </>
+  )}
+
+  {isLang && (
+    <>
+      <p class="answer"><b>{sec.total} languages carry AI work.</b> Python is the interface
+        nearly everything presents; C++ and Rust are the performance layer underneath it; Go and
+        TypeScript run the plumbing and the products; Julia and Mojo bet on closing the gap
+        between the two. Each profile below names the steward, the first release, and — where
+        this site tracks repositories written in the language — the projects themselves.</p>
+      <p class="meta-line">Last verified: {sec.generated} · Repository attributions come from the
+        tracked-repo catalogue (GitHub's own language classification), refreshed daily; language
+        profiles are curated with a verified source each.</p>
+      {sec.languages.map((l) => (
+        <div class="dom">
+          <h3>{l.name} <span class="n">{l.first_release}</span></h3>
+          <p>{l.ai_role}</p>
+          <p class="meta-line">Steward: {l.steward} ·
+            {' '}<a href={l.source_url} rel="noopener">Official site</a> · verified {l.verified}
+            {l.repos && l.repos.length > 0 && <> · Tracked repos: {l.repos.join(', ')}</>}</p>
+        </div>
+      ))}
+      <div class="cite-box">Cite this page: <code>"Programming Languages." The World of AI,
+        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
+    </>
+  )}
 
   {isRepo && (
     <>
