@@ -118,21 +118,22 @@ try {
   console.warn('fetch-content: news briefing unavailable, /ai-news/ renders its empty state:', e.message);
 }
 
-// TAXONOMY IS READ LIVE FROM POSTGRES WHEN IT CAN BE.
+// TAXONOMY COMES FROM THE BUNDLE. DELIBERATELY.
 //
-// The site structure lives in twoai_taxonomy and changes far more often than
-// the content does: marking a section live, renaming a domain, adding a
-// category. Those changes used to require a full pipeline run to appear,
-// because only twoai_build turned the table into JSON. That is the wrong loop
-// for a one-row edit.
-//
-// So if DATABASE_URL is present in the build environment, this script queries
-// the taxonomy itself and writes content/ecosystem/ before the build, which
-// means any deploy of the site picks up a structural change immediately with
-// no pipeline involvement at all. Without the variable it silently uses the
-// ecosystem files from the bundle, so the build never depends on the database
-// being reachable.
+// This build used to read twoai_taxonomy live from Postgres when DATABASE_URL
+// was present, so a one-row structural flip appeared on any redeploy. On
+// 2026-08-14 that path was retired on purpose: it kept a database credential
+// inside a third party''s build environment and a public-internet connection
+// to the database on every build, and it made builds non-deterministic (the
+// same commit could produce different sites). The R2 bundle carries the
+// taxonomy exported by the same pipeline run that triggers this deploy, so
+// bundle and structure are always consistent, and the flip-before-run rule
+// plus the ~1-minute `pipeline twoai` fast path cover the convergence loop.
+// The functions below are retired no-ops kept for the record.
 async function taxonomyFromSQL() {
+  // Retired 2026-08-14: bundle is the sole taxonomy source (see note above).
+  return false;
+  /* eslint-disable no-unreachable */
   const url = process.env.DATABASE_URL;
   if (!url) return false;
   let pg;
@@ -222,6 +223,9 @@ try {
 // DATABASE_URL it silently uses whatever the bundle carried, so the build never
 // depends on the database being reachable.
 async function researchFromSQL() {
+  // Retired 2026-08-14 with the taxonomy live-read; the bundle carries research/.
+  return false;
+  /* eslint-disable no-unreachable */
   const url = process.env.DATABASE_URL;
   if (!url) return false;
   let pg;
