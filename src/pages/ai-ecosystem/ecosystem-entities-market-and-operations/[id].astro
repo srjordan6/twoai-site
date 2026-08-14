@@ -515,9 +515,10 @@ const jsonld = JSON.stringify(
       {company.patents && (
         <>
           <h2>Patents</h2>
-          <p><b>{company.patents.count.toLocaleString()}</b> US patents name {company.name} in the
-            assignee. Treat the number as a floor: assignee records fragment the same company
-            across name variants, and this count matches one verified phrase.</p>
+          <p><b>{company.patents.count.toLocaleString()}</b> US patents granted since 2001 name
+            {' '}{company.name} as the applicant. Treat the number as a floor: applicant records
+            fragment the same company across name variants, this count matches one verified
+            phrase, and older grants are outside the source's coverage.</p>
           {company.patents.recent?.length > 0 && (
             <ul class="patlist">
               {company.patents.recent.map((r) => (
@@ -526,8 +527,8 @@ const jsonld = JSON.stringify(
               ))}
             </ul>
           )}
-          <p class="meta-line">Source: <a href="https://patentsview.org/" rel="noopener">PatentsView</a>
-            {' '}(USPTO research data) · verified {company.patents.verified}</p>
+          <p class="meta-line">Source: <a href="https://data.uspto.gov/" rel="noopener">USPTO Open
+            Data Portal</a> · verified {company.patents.verified}</p>
         </>
       )}
 
@@ -644,16 +645,16 @@ const jsonld = JSON.stringify(
   {cpat && (
     <>
       <h1>AI Patents by Company</h1>
-      <p class="answer"><b>{cpat.patents_total.toLocaleString()} US patents</b> name one of
-        {' '}<b>{cpat.total} tracked AI companies</b> in the assignee. Counts are floors, not a
-        census: patent assignee records fragment the same company across name variants, and each
-        count here matches one verified phrase. The five most recent grants are listed per
-        company so the number has faces.</p>
-      <p class="meta-line">Last verified: {cpat.generated} · Source:
-        {' '}<a href="https://patentsview.org/" rel="noopener">PatentsView</a> (USPTO research
-        data), assignee-organization phrase match, refreshed daily. Patent links open the grant
-        record. Companies whose name is a common English word are excluded rather than
-        overcounted.</p>
+      <p class="answer"><b>{cpat.patents_total.toLocaleString()} US patents granted since 2001</b>
+        name one of <b>{cpat.total} tracked AI companies</b> as the applicant. Counts are floors,
+        not a census: applicant records fragment the same company across name variants, each count
+        here matches one verified phrase, and pre-2001 grants are outside the source's coverage.
+        The five most recent grants are listed per company so the number has faces.</p>
+      <p class="meta-line">Last verified: {cpat.generated} · Source: the
+        {' '}<a href="https://data.uspto.gov/" rel="noopener">USPTO Open Data Portal</a> Patent
+        File Wrapper search (the successor to PatentsView), applicant-name phrase match, refreshed
+        daily. Patent links open the grant record. Companies whose name is a common English word
+        are excluded rather than overcounted.</p>
       {cpat.companies.map((c) => (
         <div class="dom">
           <h3><a href={`${BASE}/${c.uid}/`}>{c.name}</a>
