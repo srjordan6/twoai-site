@@ -238,6 +238,20 @@ const jsonld = JSON.stringify(
     </>
   )}
 
+  {learn && learn.srj_books && (
+    <div class="dom">
+      <h3>The SRJ book series</h3>
+      <p class="meta-line">Nine volumes from SRJ Consulting &amp; Services, the publisher of this
+        site — listed separately from the independent shelf above, and labeled as such.</p>
+      {learn.srj_books.map((b) => (
+        <p class="meta-line"><a href={b.url} rel="noopener">{b.title}</a> · {b.pillar} ·
+          {b.status === 'available' ? ` published ${b.published}` : ' forthcoming'}
+          {b.amazon && <> · <a href={b.amazon} rel="noopener sponsored">Amazon</a></>}</p>
+      ))}
+    </div>
+  )}
+
+
   {section && (
     <>
       <h1>{section.title}</h1>
