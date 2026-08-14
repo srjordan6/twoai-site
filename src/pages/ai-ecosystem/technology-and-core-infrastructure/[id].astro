@@ -39,12 +39,15 @@ const isRepo = sec.source === 'github';
 const isStatus = sec.tax === 'api-status-uptime';
 const isDir = sec.tax === 'api-directory';
 const isLang = sec.tax === 'programming-languages';
+const isMeta = sec.kind === 'standard';
 
 const fmt = (n) => Number(n).toLocaleString();
 const money = (v) => (v === null || v === undefined ? '—' : `$${v}`);
 const ctx = (n) => (n >= 1000 ? `${Math.round(n / 1000)}k` : `${n}`);
 
-const desc = isDir
+const desc = isMeta
+  ? `The record kept for every model on this site: which fields are tracked, where each comes from, and what is deliberately not tracked and why.`
+  : isDir
   ? `${sec.total} public AI APIs with base endpoint, documentation, authentication scheme, and official SDKs, ${sec.openai_compatible} of them OpenAI-compatible; every docs link individually verified, refreshed daily.`
   : isLang
   ? `${sec.total} programming languages that carry AI work, from Python's interface layer to the C++ and Rust systems underneath, each profiled with steward, first release, and the tracked repositories written in it.`
@@ -80,6 +83,32 @@ const licLine = (sec.licences || [])
     <a href={`${BASE}/`}>{CATEGORY_NAME}</a></p>
 
   <h1>{sec.name}</h1>
+
+  {isMeta && (
+    <>
+      <p class="answer">Every model row on this site carries the same record, and every field
+        names its source. Just as important is what is <b>not</b> tracked: fields with no free,
+        verifiable primary source are left out rather than guessed.</p>
+      <p class="meta-line">Last verified: {sec.generated} · This standard describes the live
+        pipeline; when a field is added or retired, this page changes with it.</p>
+      <h2>Open-weight models (Hugging Face sections)</h2>
+      {sec.open_fields.map((f) => (
+        <div class="dom"><h3>{f.name}</h3><p>{f.desc}</p>
+          <p class="meta-line">Source: {f.source}</p></div>
+      ))}
+      <h2>API models (pricing and catalogue sections)</h2>
+      {sec.api_fields.map((f) => (
+        <div class="dom"><h3>{f.name}</h3><p>{f.desc}</p>
+          <p class="meta-line">Source: {f.source}</p></div>
+      ))}
+      <h2>Deliberately not tracked</h2>
+      {sec.not_tracked.map((f) => (
+        <div class="dom"><h3>{f.name}</h3><p>{f.why}</p></div>
+      ))}
+      <div class="cite-box">Cite this page: <code>"Model Metadata Standard." The World of AI,
+        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
+    </>
+  )}
 
   {isDir && (
     <>
