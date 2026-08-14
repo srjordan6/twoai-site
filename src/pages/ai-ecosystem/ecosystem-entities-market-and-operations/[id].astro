@@ -55,6 +55,18 @@ export function getStaticPaths() {
         paths.push({ params: { id: d.uid }, props: { cpat: d, chubUid: cidx.uid } });
         continue;
       }
+      if (f === 'private.json') {
+        paths.push({ params: { id: d.uid }, props: { cpriv: d, chubUid: cidx.uid } });
+        continue;
+      }
+      if (f === 'funding.json') {
+        paths.push({ params: { id: d.uid }, props: { cfund: d, chubUid: cidx.uid } });
+        continue;
+      }
+      if (['research-labs.json','university-labs.json','government-labs.json','nonprofits.json'].includes(f)) {
+        paths.push({ params: { id: d.uid }, props: { corg: d, chubUid: cidx.uid } });
+        continue;
+      }
       paths.push({ params: { id: d.company.uid }, props: { company: d.company, generated: d.generated, chubUid: cidx.uid } });
     }
   }
@@ -66,9 +78,16 @@ export function getStaticPaths() {
 
   return paths;
 }
-const { hub, person, hubUid, chub, company, generated, chubUid, jhub, pcat, csec, cpat } = Astro.props;
+const { hub, person, hubUid, chub, company, generated, chubUid, jhub, pcat, csec, cpat, cpriv, corg, cfund } = Astro.props;
 
-const desc = csec
+const money = (n) => n >= 1e9 ? `$${(n/1e9).toFixed(1)}B` : n >= 1e6 ? `$${(n/1e6).toFixed(1)}M` : `$${Math.round(n/1e3)}k`;
+const desc = cpriv
+  ? `${cpriv.total} private AI companies in the directory, ${cpriv.with_formd} with SEC Form D exempt-offering disclosures on record, verified by elimination against SEC EDGAR registrants, refreshed daily.`
+  : corg
+  ? `${corg.name}: ${corg.total} individually verified organisations, each with a sourced classification note.`
+  : cfund
+  ? `${cfund.total} SEC Form D exempt-offering filings across ${cfund.companies} tracked AI companies, filing by filing with amounts and dates, refreshed daily.`
+  : csec
   ? `${csec.total} of the ${csec.tracked} companies in the AI Company Directory are SEC registrants, with ticker, exchange, industry, and recent filings from SEC EDGAR, refreshed daily.`
   : cpat
   ? `US patent portfolios for ${cpat.total} tracked AI companies, ${cpat.patents_total.toLocaleString()} patents in total, counted from PatentsView assignee records, refreshed daily.`
@@ -85,7 +104,13 @@ const desc = csec
   : person?.tracked_only
   ? `${person.name}, ${person.title} at ${person.org}. Tracked in the AI People Directory; a full profile has not been written yet.`
   : `${person.name}${person.moniker ? `, ${person.moniker}` : ''}. ${person.hook || ''}`.slice(0, 300);
-const title = csec
+const title = cpriv
+  ? 'Private AI Companies — The World of AI'
+  : corg
+  ? `${corg.name} — The World of AI`
+  : cfund
+  ? 'AI Funding: SEC Form D Disclosures — The World of AI'
+  : csec
   ? 'Public AI Companies — The World of AI'
   : cpat
   ? 'AI Patents by Company — The World of AI'
@@ -141,15 +166,16 @@ const payLevels = (pay?.by_level ?? [])
   .slice()
   .sort((a: any, b: any) => LEVELS.indexOf(a.group) - LEVELS.indexOf(b.group));
 
+const secHub = csec || cpat || cpriv || corg || cfund;
 const jsonld = JSON.stringify(
-  csec || cpat
+  secHub
     ? {
         '@context': 'https://schema.org',
         '@type': 'CollectionPage',
-        name: (csec || cpat).name,
+        name: secHub.name,
         description: desc.slice(0, 300),
-        url: `https://theworldofai.org${BASE}/${(csec || cpat).uid}/`,
-        dateModified: (csec || cpat).generated,
+        url: `https://theworldofai.org${BASE}/${secHub.uid}/`,
+        dateModified: secHub.generated,
       }
     : pcat
     ? {
@@ -211,7 +237,7 @@ const jsonld = JSON.stringify(
     <a href={`${BASE}/`}>{CATEGORY_NAME}</a>
     {person && <> · <a href={`${BASE}/${hubUid}/`}>AI People</a></>}
     {pcat && <> · <a href={`${BASE}/${hubUid}/`}>AI People</a></>}
-    {(csec || cpat) && <> · <a href={`${BASE}/${chubUid}/`}>AI Companies</a></>}
+    {secHub && <> · <a href={`${BASE}/${chubUid}/`}>AI Companies</a></>}
     {company && <> · <a href={`${BASE}/${chubUid}/`}>AI Companies</a></>}</p>
 
   {jhub && (
@@ -532,6 +558,25 @@ const jsonld = JSON.stringify(
         </>
       )}
 
+      {company.formd && (
+        <>
+          <h2>SEC Form D filings</h2>
+          <p>US securities filings disclose exempt offerings by {company.name}. Each filing
+            reports the amount sold at filing time; amendments restate the same offering, so
+            the rows are listed, never summed. No filing after the latest date shown means no
+            further US disclosure on record, not no further funding.</p>
+          <ul class="patlist">
+            {company.formd.filings.map((f) => (
+              <li><a href={f.url} rel="noopener">Form D{f.amendment && '/A'}</a> filed {f.filed}
+                {' '}as {f.issuer}: {f.sold >= 1e9 ? `$${(f.sold/1e9).toFixed(1)}B` : f.sold >= 1e6 ? `$${(f.sold/1e6).toFixed(1)}M` : `$${Math.round(f.sold/1e3)}k`} sold
+                {f.first_sale && <span class="muted"> (first sale {f.first_sale})</span>}</li>
+            ))}
+          </ul>
+          <p class="meta-line">Source: <a href="https://www.sec.gov/search-filings" rel="noopener">SEC
+            EDGAR</a> full-text search, issuer-name matched · verified {company.formd.verified}</p>
+        </>
+      )}
+
       <h2>Elsewhere on this site</h2>
       <p>Every page here that mentions {company.name}, so you can see the same organisation from
         each angle we track it from.</p>
@@ -671,6 +716,102 @@ const jsonld = JSON.stringify(
       ))}
       <div class="cite-box">Cite this page: <code>"AI Patents by Company." The World of AI,
         theworldofai.org{BASE}/{cpat.uid}/. Retrieved {cpat.generated}.</code></div>
+    </>
+  )}
+
+  {cpriv && (
+    <>
+      <h1>Private AI Companies</h1>
+      <p class="answer"><b>{cpriv.total} of the {cpriv.tracked} companies</b> in the AI Company
+        Directory are privately held — verified by elimination: each was checked against SEC
+        EDGAR's registrant list and is not a listed company, and none is a classified lab,
+        nonprofit, or foundation. <b>{cpriv.with_formd}</b> of them have SEC Form D
+        exempt-offering disclosures on record, shown with their most recent filing.</p>
+      <p class="meta-line">Last verified: {cpriv.generated} · Sources:
+        {' '}<a href="https://www.sec.gov/search-filings" rel="noopener">SEC EDGAR</a> registrant
+        matching and <a href="https://efts.sec.gov/LATEST/search-index?q=%22test%22&forms=D"
+        rel="noopener">EDGAR full-text search</a> for Form D filings, issuer-name matched only —
+        third-party SPV filings that merely carry a company's name are excluded. No Form D on
+        record means no US exempt-offering disclosure, not no funding: many raises use
+        exemptions that require no filing, and non-US companies rarely file.</p>
+      {cpriv.companies.filter((c) => c.formd).length > 0 && (
+        <>
+          <h2>With SEC filings on record</h2>
+          {cpriv.companies.filter((c) => c.formd).map((c) => (
+            <div class="dom">
+              <h3><a href={`${BASE}/${c.uid}/`}>{c.name}</a>
+                <span class="n">{money(c.formd.sold)} disclosed</span></h3>
+              <p class="meta-line">Most recent Form D{c.formd.amendment && ' (amendment)'}: filed
+                {' '}{c.formd.filed} as {c.formd.issuer}, {money(c.formd.sold)} sold of a
+                {' '}{money(c.formd.offering)} offering ·
+                {' '}<a href={c.formd.url} rel="noopener">filing</a>
+                {c.formd.filings > 1 && <> · {c.formd.filings} filings on record</>}</p>
+            </div>
+          ))}
+        </>
+      )}
+      <h2>Tracked private companies</h2>
+      <p class="chip-list">{cpriv.companies.filter((c) => !c.formd).map((c, i) => (
+        <>{i > 0 && ' · '}<a href={`${BASE}/${c.uid}/`}>{c.name}</a></>
+      ))}</p>
+      <div class="cite-box">Cite this page: <code>"Private AI Companies." The World of AI,
+        theworldofai.org{BASE}/{cpriv.uid}/. Retrieved {cpriv.generated}.</code></div>
+    </>
+  )}
+
+  {corg && (
+    <>
+      <h1>{corg.name}</h1>
+      <p class="answer"><b>{corg.total} {corg.total === 1 ? 'organisation' : 'organisations'}</b>,
+        each individually verified against its own published materials — nothing here is
+        classified by inference. {corg.blurb} Corporate research divisions (FAIR, DeepMind,
+        Microsoft Research) live on their parent company's page rather than here.</p>
+      <p class="meta-line">Last verified: {corg.generated} · This list is curated and grows as
+        classifications are verified; a missing organisation is an editorial gap, not a
+        judgement — <a href="/contact/">tell us</a>.</p>
+      {corg.orgs.map((o) => (
+        <div class="dom">
+          <h3><a href={`${BASE}/${o.uid}/`}>{o.name}</a></h3>
+          <p>{o.note.replace(/; source URL verified [0-9-]+$/, '')}.</p>
+          <p class="meta-line"><a href={o.source_url} rel="noopener">Source</a> · verified {o.verified}</p>
+        </div>
+      ))}
+      <div class="cite-box">Cite this page: <code>"{corg.name}." The World of AI,
+        theworldofai.org{BASE}/{corg.uid}/. Retrieved {corg.generated}.</code></div>
+    </>
+  )}
+
+  {cfund && (
+    <>
+      <h1>AI Funding: SEC Form D Disclosures</h1>
+      <p class="answer"><b>{cfund.total} Form D filings</b> across <b>{cfund.companies} tracked AI
+        companies</b>, newest first. A Form D is what a US company files when it raises money in
+        an exempt offering — the closest thing to a primary source for private AI funding that
+        exists free and lawfully. Each row is one filing: the amount reported sold at filing
+        time, the offering size, and the document itself. Amounts are never summed across
+        filings, because amendments restate the same offering.</p>
+      <p class="meta-line">Last verified: {cfund.generated} · Source:
+        {' '}<a href="https://efts.sec.gov/LATEST/search-index?q=%22test%22&forms=D" rel="noopener">SEC
+        EDGAR full-text search</a>, issuer-name matched only. Valuations are not published here:
+        no lawful free source for private-company valuations exists, and Form D does not disclose
+        them. Absence from this list means no US filing on record, not no funding.</p>
+      <table class="pay">
+        <thead><tr><th>Company</th><th>Filed</th><th class="num">Sold</th><th class="num">Offering</th><th>First sale</th><th>Filing</th></tr></thead>
+        <tbody>
+          {cfund.filings.map((f) => (
+            <tr>
+              <td><a href={`${BASE}/${f.uid}/`}>{f.name}</a>{f.amendment && <span class="n">amend</span>}</td>
+              <td>{f.filed}</td>
+              <td class="num">{money(f.sold)}</td>
+              <td class="num">{money(f.offering)}</td>
+              <td>{f.first_sale || '—'}</td>
+              <td><a href={f.url} rel="noopener">Form D</a></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div class="cite-box">Cite this page: <code>"AI Funding: SEC Form D Disclosures." The World
+        of AI, theworldofai.org{BASE}/{cfund.uid}/. Retrieved {cfund.generated}.</code></div>
     </>
   )}
 
