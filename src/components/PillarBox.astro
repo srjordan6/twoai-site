@@ -158,12 +158,19 @@ const headingHref = pillar ? (CAT_HOME[pillar.slug] || `/ai-ecosystem/${pillar.s
      two can never collide. The 1440px floor guarantees the gutter is at least
      ~320px: (1440 - 1080)/2 = 180 each side is too tight, so we only pin when
      there is genuinely room for the card plus breathing space. */
-  @media (min-width: 1500px) {
+  /* Pin into the right gutter ONLY when a full card genuinely fits:
+     at 1760px the gutter is (1760 - 1080)/2 = 340px, enough for the card
+     plus its 28px offset plus edge breathing room. Between 1500 and 1760
+     the old rule made the card overflow the viewport and crowd the content
+     edge, which is exactly the overlap reported. Width is additionally
+     capped to the real gutter so browser zoom can never push it into the
+     column or off the screen. */
+  @media (min-width: 1760px) {
     .pillar-box {
       position: absolute;
       top: 0;
       left: calc(100% + 28px);
-      width: 300px;
+      width: min(300px, calc((100vw - 1080px) / 2 - 72px));
       margin: 0;
     }
     .pillar-box summary { cursor: default; }
@@ -176,7 +183,7 @@ const headingHref = pillar ? (CAT_HOME[pillar.slug] || `/ai-ecosystem/${pillar.s
   // open in the gutter on wide screens. Collapse it by default below the pin
   // breakpoint so it costs one line until tapped. Progressive: with JS off it
   // stays open everywhere and simply sits in-flow, never over content.
-  if (!window.matchMedia('(min-width: 1500px)').matches) {
+  if (!window.matchMedia('(min-width: 1760px)').matches) {
     document.querySelectorAll('details.pillar-box[open]').forEach((d) => d.removeAttribute('open'));
   }
 </script>
