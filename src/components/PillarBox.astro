@@ -95,37 +95,39 @@ const headingHref = pillar ? (CAT_HOME[pillar.slug] || `/ai-ecosystem/${pillar.s
 )}
 
 <style>
+  /* Default (narrow and mid widths): the card is a normal in-flow block at
+     the top of the content, collapsed to its summary so it costs one line.
+     It never floats into the prose, so it can never sit on top of content. */
   .pillar-box {
-    float: right;
-    width: 300px;
-    margin: 0 0 1.2rem 1.6rem;
-  }
-  /* Push the card out of the content column into the right gutter on wide
-     viewports, holding 24px off the viewport edge, like the SRJ sidebar. */
-  @media (min-width: 1260px) {
-    .pillar-box {
-      margin-right: max(calc((1100px - 100vw) / 2 + 24px), -160px);
-    }
-  }
-  .pillar-box {
+    display: block;
+    width: auto;
+    margin: 0 0 1.4rem;
     background: #fdf8f0;
     border: 1px solid #f0e2c8;
     border-radius: 10px;
-    padding: 1rem 1.1rem 1.1rem;
+    padding: .85rem 1.1rem;
     font-family: var(--sans, 'Poppins', sans-serif);
   }
   .pillar-box summary {
     list-style: none;
-    cursor: default;
+    cursor: pointer;
     font-weight: 600;
     letter-spacing: .08em;
     text-transform: uppercase;
     font-size: .78rem;
     color: #201868;
+  }
+  .pillar-box[open] summary {
     border-bottom: 1px solid #eadfc9;
     padding-bottom: .5rem;
   }
   .pillar-box summary::-webkit-details-marker { display: none; }
+  .pillar-box summary::after {
+    content: " +";
+    color: #b98a4a;
+    font-weight: 700;
+  }
+  .pillar-box[open] summary::after { content: " \2013"; }
   .pillar-box summary a { color: #201868; text-decoration: none; }
   .pillar-box summary a:hover { color: #f07800; }
   .pillar-box ol {
@@ -148,21 +150,33 @@ const headingHref = pillar ? (CAT_HOME[pillar.slug] || `/ai-ecosystem/${pillar.s
     content: counter(pb, decimal-leading-zero) ". ";
     color: #7a8a9e;
   }
-  @media (max-width: 900px) {
+
+  /* Wide viewports ONLY: a real gutter exists to the right of the 1080px
+     content column. main.wrap is position:relative (set in Base), so we lift
+     the card out of the flow entirely and pin it into that gutter. It is
+     absolutely positioned, so prose reflows to full width beneath it and the
+     two can never collide. The 1440px floor guarantees the gutter is at least
+     ~320px: (1440 - 1080)/2 = 180 each side is too tight, so we only pin when
+     there is genuinely room for the card plus breathing space. */
+  @media (min-width: 1500px) {
     .pillar-box {
-      float: none;
-      width: auto;
-      margin: 0 0 1.2rem;
+      position: absolute;
+      top: 0;
+      left: calc(100% + 28px);
+      width: 300px;
+      margin: 0;
     }
-    .pillar-box[open] summary { cursor: pointer; }
-    .pillar-box summary { list-style: revert; }
+    .pillar-box summary { cursor: default; }
+    .pillar-box summary::after { content: ""; }
   }
 </style>
 
 <script>
-  // Collapsed by default on small screens, open on desktop. Progressive:
-  // with JS off the card is simply open everywhere.
-  if (window.matchMedia('(max-width: 900px)').matches) {
+  // The card is in-flow and collapsible at narrow and mid widths, and pinned
+  // open in the gutter on wide screens. Collapse it by default below the pin
+  // breakpoint so it costs one line until tapped. Progressive: with JS off it
+  // stays open everywhere and simply sits in-flow, never over content.
+  if (!window.matchMedia('(min-width: 1500px)').matches) {
     document.querySelectorAll('details.pillar-box[open]').forEach((d) => d.removeAttribute('open'));
   }
 </script>

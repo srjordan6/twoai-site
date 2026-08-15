@@ -136,7 +136,34 @@ const jsonld = JSON.stringify({
     </>
   )}
 
-  {secu && (
+  {secu && secu.shape === 'security-hub' && (
+    <>
+      <h1>{secu.name}</h1>
+      <p class="answer">{secu.blurb}</p>
+      <p class="meta-line">Last verified: {secu.generated} · {secu.topic_count} topics, organized
+        under the six domains of a security program. The same risk reads differently to governance,
+        the SOC, the architects, the product team, vendor risk, and privacy, so each topic appears
+        under every domain it genuinely touches.</p>
+      {secu.domains.map((d) => (
+        <section id={d.slug} class="secdom-group">
+          <h2>{d.label}</h2>
+          <p>{d.blurb}</p>
+          <ul class="sections">
+            {d.topics.map((t) => (
+              <li>
+                {t.path ? <a href={t.path}>{t.name}</a> : t.name}
+                {t.blurb && <p>{t.blurb}</p>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+      <div class="cite-box">Cite this page: <code>"{secu.name}." The World of AI,
+        theworldofai.org{BASE}/{secu.uid}/. Retrieved {secu.generated}.</code></div>
+    </>
+  )}
+
+  {secu && secu.shape !== 'security-hub' && (
     <>
       <h1>{secu.name}</h1>
       <p class="answer">{secu.blurb}</p>
@@ -145,9 +172,23 @@ const jsonld = JSON.stringify({
         that was verified before it was published and is re-verified daily; the spine is
         standards bodies, government agencies, and the labs' own published security research.</p>
 
+      {secu.topic && secu.topic.length > 0 && (
+        <section class="topic-depth">
+          {secu.topic.map((t) => {
+            const H = { def: 'What it is', examples: 'What it looks like', detect: 'How to find it', defend: 'How to defend against it' };
+            return (
+              <div class="dom">
+                <h2>{H[t.block] || t.block}</h2>
+                <p>{t.body}</p>
+              </div>
+            );
+          })}
+        </section>
+      )}
+
       {secu.domains && secu.domains.length > 0 && (
         <section class="six-domains">
-          <h2>Across the six security domains</h2>
+          <h2>How this lands across the six security domains</h2>
           <p class="meta-line">How this topic lands in each domain of the security program.
             The same risk reads differently to governance, the SOC, the architects, the product
             team, vendor risk, and privacy — and a program that only covers one lens leaves the
