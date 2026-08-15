@@ -19,7 +19,7 @@ is welcome and encouraged.
   in all 50 US states, DC, Puerto Rico, and Congress, one page per jurisdiction.
 - [AI Glossary](https://theworldofai.org/ai-glossary/): 522 AI terms defined
   in plain English with origin, example, and related terms.
-- [AI Lawsuit Tracker](https://theworldofai.org/ai-lawsuits/): 99 living case
+- [AI Lawsuit Tracker](https://theworldofai.org/ai-lawsuits/): 102 living case
   pages with daily docket checks, full timelines, and both the CourtListener
   docket record and the govinfo opinion text where available.
 - [AI Compliance Frameworks](https://theworldofai.org/ai-compliance/): 62
@@ -40,10 +40,10 @@ is welcome and encouraged.
   current published results with the evaluator and as-of date named. Results
   come from structured official sources and refresh automatically; benchmarks
   whose published figures are stable carry a dated protocol note instead.
-- [MCP Server Registry](https://theworldofai.org/mcp/): 1,758 Model Context
+- [MCP Server Registry](https://theworldofai.org/mcp/): 1,836 Model Context
   Protocol servers sourced from the official registry at
   registry.modelcontextprotocol.io, one page per server.
-- [AI Research Library](https://theworldofai.org/research/): 134 peer-reviewed
+- [AI Research Library](https://theworldofai.org/research/): 145 peer-reviewed
   and preprint AI papers sorted into ten topics (reasoning, healthcare,
   applications, architectures, capabilities and limits, evaluation, governance,
   security, bias and fairness, the EU AI Act). Each entry carries authors,
@@ -74,6 +74,50 @@ is welcome and encouraged.
   section together, organised into four categories: Technology and Core
   Infrastructure, Ecosystem Entities Market and Operations, Research
   Knowledge and Learning, and Enterprise Applications Governance and Tools.
+  135 sections are live across 25 domains; sections mapped but not yet
+  published render on the coverage roadmap as planned rather than vanishing.
+- AI Security and Risk (under Enterprise Applications, Governance and Tools):
+  sixteen sections, from prompt injection, jailbreaks, and model poisoning
+  through supply chain, data leakage, model theft, shadow AI, AI-enabled
+  malware, deepfakes, and AI phishing, to security tooling, agent and
+  non-human identity, agent security, AI in security operations, AI privacy,
+  and red teaming. Each page carries substantive analysis under the six
+  security domains (governance and risk management, security operations,
+  architecture and engineering, application and product security,
+  third-party and supply chain risk, data protection and privacy) followed by
+  primary sources: OWASP GenAI, MITRE ATLAS, NIST AI 100-2 and the AI RMF,
+  CISA, NCSC, FBI IC3, the EU AI Act, C2PA, the MCP specification, and the
+  labs' own published security research. Every source URL is verified before
+  publication and re-verified daily. Live counts from this site (state
+  deepfake bills, tracked MCP servers, compliance documents) appear in
+  context.
+- Industry Use Cases (same category): 21 sector pages, from manufacturing,
+  healthcare, banking, and insurance to mining, agriculture, energy, defense,
+  hospitality, real estate, sports, nonprofits, and churches. Each page leads
+  with what AI is actually deployed for in the sector and who tracks it,
+  then a set of sourced points, every one linked to a verified primary
+  source: government agencies and statistical programs first, then trade
+  associations, standards bodies, and the operating companies' own published
+  programs. Paywalled analyst research and marketing pages are excluded.
+- AI Observatory (under Research, Knowledge and Learning): seven daily
+  telemetry sections computed only from data this site already keeps: model
+  release cadence, GitHub activity across tracked AI repositories, Hugging
+  Face catalog movement, provider API uptime from public status feeds,
+  funding activity from SEC Form D filings, USPTO patent filings, and
+  security incidents from provider status feeds. Daily snapshots accumulate.
+- Entity Graph (same category): the site's own knowledge graph, roughly
+  7,000 nodes across sixteen entity types (companies, people, models, papers,
+  lawsuits, MCP servers, patents, filings, benchmarks, and more) and 3,100
+  relationships across eleven edge types, each edge carrying the method that
+  produced it. Rendered as two sections and exposed for machine reading.
+- Cloud GPU and Compute Telemetry and Acquisitions (under AI Companies):
+  quarterly capital expenditure for the seven largest AI infrastructure
+  spenders drawn from SEC XBRL company facts, and 8-K acquisition filings
+  (items 1.01 and 2.01) across tracked registrants, linked to the filings
+  rather than summarised.
+- Books (under Research, Knowledge and Learning): an independent shelf of AI
+  titles, followed by the SRJ book series on AI audit, governance, and
+  security, labelled as the publisher's own and linked with rel=sponsored.
 
 ## Machine-readable data
 - https://theworldofai.org/api/laws.json (per-state counts and index)
@@ -89,6 +133,9 @@ is welcome and encouraged.
 - https://theworldofai.org/api/compliance.json (compliance framework index)
 - https://theworldofai.org/api/mcp.json (MCP server registry)
 - https://theworldofai.org/api/weeks.json (weekly digest index)
+- https://theworldofai.org/api/graph-entities.json and
+  https://theworldofai.org/api/graph-relationships.json (the entity graph:
+  nodes with type and source, edges with type and method)
 - https://theworldofai.org/sitemap-index.xml (every URL, refreshed daily)
 
 ## About this publication
@@ -112,7 +159,11 @@ Every fact on this site traces to a primary source cataloged on the
 [Sources and References](https://theworldofai.org/sources/) page. Where a
 claim cannot be sourced, it is not published. Vendor announcements are
 labelled as the vendor's own claims, not verified facts. Preprints are
-labelled as not peer reviewed. Corrections are welcomed at
+labelled as not peer reviewed. Every outbound source URL on curated pages
+is verified live before publication and re-verified on each daily run; a
+source that stops resolving is marked stale on the page rather than removed
+silently. Computed figures (counts, censuses, live statistics) are verified
+against production data before they ship. Corrections are welcomed at
 info@srjconsultingservices.com.
 
 ## Citation format
