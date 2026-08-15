@@ -59,6 +59,22 @@ const jsonld = JSON.stringify({
         that was verified before it was published and is re-verified daily; the spine is
         standards bodies, government agencies, and the labs' own published security research.</p>
 
+      {secu.domains && secu.domains.length > 0 && (
+        <section class="six-domains">
+          <h2>Across the six security domains</h2>
+          <p class="meta-line">How this topic lands in each domain of the security program.
+            The same risk reads differently to governance, the SOC, the architects, the product
+            team, vendor risk, and privacy — and a program that only covers one lens leaves the
+            others exposed.</p>
+          {secu.domains.map((d) => (
+            <div class="dom">
+              <h3>{d.label}</h3>
+              <p>{d.body}</p>
+            </div>
+          ))}
+        </section>
+      )}
+
       {secu.items.filter((i) => i.kind === 'domain').length > 0 && (
         <div class="dom"><h3>The six domains of the defensive stack</h3>
           {secu.items.filter((i) => i.kind === 'domain').map((i) => (
@@ -70,6 +86,9 @@ const jsonld = JSON.stringify({
         </div>
       )}
 
+      {secu.items.filter((i) => i.kind !== 'domain').length > 0 && (
+        <h2>Primary sources and further reading</h2>
+      )}
       {secu.items.filter((i) => i.kind !== 'domain').map((i) => (
         <div class="dom">
           <h3>{i.URL || i.source_url ? <a href={i.source_url} rel="noopener">{i.name}</a> : i.name}</h3>
