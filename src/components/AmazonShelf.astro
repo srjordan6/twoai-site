@@ -58,18 +58,12 @@ try {
         or written differently because of it — <a href="/disclosure/">full policy</a>.</p>
       <div class="amz-covers">
         {books.map((b) => (
-          <a href={b.amazon} rel="noopener sponsored" target="_blank" title={b.title}>
-            {b.cover
-              ? <img src={b.cover.src} alt={`${b.title} book cover`} width="320" height={b.cover.h} loading="lazy" decoding="async" />
-              : <span class="amz-title-only">{b.title}</span>}
+          <a class="amz-book" href={b.amazon} rel="noopener sponsored" target="_blank" title={b.title}>
+            {b.cover && <img src={b.cover.src} alt={`${b.title} book cover`} width="320" height={b.cover.h} loading="lazy" decoding="async" />}
+            <span class="amz-caption">{b.title}</span>
           </a>
         ))}
       </div>
-      <ul>
-        {books.map((b) => (
-          <li><a href={b.amazon} rel="noopener sponsored" target="_blank">{b.title}</a></li>
-        ))}
-      </ul>
     </div>
   </aside>
 )}
@@ -90,14 +84,11 @@ try {
   }
   .amz-disclosure { color: #7a8a9e; font-size: .78rem; line-height: 1.5; margin: 0 0 .7rem; }
   .amz-disclosure a { color: #7a8a9e; text-decoration: underline; }
-  .amz-covers { display: flex; flex-wrap: wrap; gap: 1rem; margin: 0 0 .9rem; }
-  .amz-covers a { display: block; line-height: 0; border: 1px solid #e3e6ee; border-radius: 6px; overflow: hidden; }
-  .amz-covers img { width: 128px; height: auto; display: block; }
-  .amz-covers a:hover { border-color: #f07800; }
-  .amz-title-only { display: inline-block; padding: .5rem; font-size: .8rem; line-height: 1.3; }
-  @media (max-width: 640px) { .amz-covers img { width: 96px; } }
-  .amz-shelf ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; }
-  .amz-shelf li { font-size: .85rem; }
-  .amz-shelf li a { color: #201868; text-decoration: none; border-bottom: 1px solid #f07800; }
-  .amz-shelf li a:hover { color: #f07800; }
+  .amz-covers { display: flex; flex-wrap: wrap; gap: 1.1rem; margin: 0; align-items: flex-start; }
+  .amz-book { display: flex; flex-direction: column; width: 132px; text-decoration: none; }
+  .amz-book img { width: 132px; height: auto; display: block; border: 1px solid #e3e6ee; border-radius: 6px; }
+  .amz-book:hover img { border-color: #f07800; }
+  .amz-caption { margin-top: .45rem; font-size: .78rem; line-height: 1.3; color: #201868; text-align: center; border-bottom: 1px solid #f07800; padding-bottom: .2rem; }
+  .amz-book:hover .amz-caption { color: #f07800; }
+  @media (max-width: 640px) { .amz-book, .amz-book img { width: 100px; } }
 </style>
