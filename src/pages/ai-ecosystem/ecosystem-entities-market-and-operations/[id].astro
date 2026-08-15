@@ -71,7 +71,7 @@ export function getStaticPaths() {
         paths.push({ params: { id: d.uid }, props: { corg: d, chubUid: cidx.uid } });
         continue;
       }
-      paths.push({ params: { id: d.company.uid }, props: { company: d.company, generated: d.generated, chubUid: cidx.uid } });
+      paths.push({ params: { id: d.company.uid }, props: { company: d.company, generated: d.generated, chubUid: cidx.uid, website: d.website, profileText: d.profile_text } });
     }
   }
 
@@ -89,7 +89,7 @@ export function getStaticPaths() {
 
   return paths;
 }
-const { hub, person, hubUid, chub, company, generated, chubUid, jhub, pcat, csec, cpat, cpriv, corg, cfund, obs, cma } = Astro.props;
+const { hub, person, hubUid, chub, company, generated, chubUid, jhub, pcat, csec, cpat, cpriv, corg, cfund, obs, cma, website, profileText } = Astro.props;
 
 const obsDescs = obs ? {
   'obs-release-cadence': `Release cadence of the ${obs.models} open models this site tracks, by month, from each model's own Hub record.`,
@@ -521,15 +521,28 @@ const jsonld = JSON.stringify(
   {company && (
     <>
       <h1>{company.name}</h1>
-      <p class="answer">{company.name} publishes <b>{company.products.length}</b> AI
-        product{company.products.length === 1 ? '' : 's'} we track
+      <p class="answer">{company.name}{company.products.length > 0 ? <> publishes <b>{company.products.length}</b> AI
+        product{company.products.length === 1 ? '' : 's'} we track</> : <> is tracked in this site's AI company directory</>}
         {company.cases?.length > 0 && <>, is a defendant in <b>{company.cases.length}</b> lawsuit{company.cases.length === 1 ? '' : 's'} on our tracker</>}
         {company.mcp?.length > 0 && <>, and has published <b>{company.mcp.length}</b> server{company.mcp.length === 1 ? '' : 's'} to the MCP registry</>}.
-        Everything below is drawn from those records rather than from the company's own marketing.</p>
-      {generated && <p class="meta-line">Last verified: {generated} · Entity ID {company.uid}</p>}
+        Everything below is drawn from our records and the company's own site, and the two are labeled apart.</p>
+      {generated && <p class="meta-line">Last verified: {generated} · Entity ID {company.uid}
+        {website && <> · <a href={website} rel="noopener nofollow">Official website</a></>}</p>}
 
-      <h2>Products</h2>
-      <table>
+      {profileText && (
+        <section>
+          <h2>Profile</h2>
+          {profileText.body.split('\n\n').map((para) => <p>{para}</p>)}
+          <p class="meta-line">Written by {profileText.model} on {profileText.generated_on} from this
+            site's harvest of the company's own website and the facts held in this directory, and
+            nothing else. Self-descriptions are reported as such; figures are verified mechanically
+            against the source material before publication, and the text regenerates when the
+            company's site or our records change.</p>
+        </section>
+      )}
+
+      {company.products.length > 0 && <h2>Products</h2>}
+      {company.products.length > 0 && <table>
         <thead><tr><th>Product</th><th>Category</th><th>What it does</th></tr></thead>
         <tbody>
           {company.products.map((p) => (
@@ -542,7 +555,7 @@ const jsonld = JSON.stringify(
             </tr>
           ))}
         </tbody>
-      </table>
+      </table>}
 
       {company.cases?.length > 0 && (
         <>
