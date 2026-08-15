@@ -99,6 +99,15 @@ const headingHref = pillar ? (CAT_HOME[pillar.slug] || `/ai-ecosystem/${pillar.s
     float: right;
     width: 300px;
     margin: 0 0 1.2rem 1.6rem;
+  }
+  /* Push the card out of the content column into the right gutter on wide
+     viewports, holding 24px off the viewport edge, like the SRJ sidebar. */
+  @media (min-width: 1260px) {
+    .pillar-box {
+      margin-right: max(calc((1100px - 100vw) / 2 + 24px), -160px);
+    }
+  }
+  .pillar-box {
     background: #fdf8f0;
     border: 1px solid #f0e2c8;
     border-radius: 10px;
