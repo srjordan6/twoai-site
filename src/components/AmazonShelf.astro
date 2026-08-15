@@ -1,0 +1,72 @@
+---
+/**
+ * AmazonShelf: the sitewide Amazon Associates unit. Renders on every page,
+ * directly above the footer, so every URL on the site carries Associates
+ * content with its disclosure beside the links (the operating agreement
+ * requires the disclosure where the links are, not on a policy page alone).
+ *
+ * Content is not typed here: the book list is read at build time from
+ * content/learn/books.json, which the pipeline renders from press_books in
+ * SQL. The Associates tag is applied by the pipeline; the guard below adds
+ * it only if a link arrives untagged, so the unit is correct either way.
+ * If the content file is missing the component renders nothing and the
+ * build never fails on it.
+ */
+import { readFileSync, existsSync } from 'node:fs';
+
+const TAG = 'theworldofa0b-20';
+let books = [];
+try {
+  if (existsSync('content/learn/books.json')) {
+    const d = JSON.parse(readFileSync('content/learn/books.json', 'utf8'));
+    books = (d.srj_books || [])
+      .filter((b) => b.status === 'available' && b.amazon)
+      .map((b) => {
+        let a = b.amazon;
+        if (a.includes('amazon.com/') && !a.includes('tag=')) {
+          a += (a.includes('?') ? '&' : '?') + 'tag=' + TAG;
+        }
+        return { title: b.title, amazon: a, pillar: b.pillar };
+      });
+  }
+} catch { books = []; }
+---
+
+{books.length > 0 && (
+  <aside class="amz-shelf" aria-label="Books from the publisher, on Amazon">
+    <div class="wrap">
+      <h2>The SRJ book series, on Amazon</h2>
+      <p class="amz-disclosure">Disclosure: these are affiliate links. As an Amazon Associate,
+        SRJ Consulting &amp; Services LLC, the publisher of this site, earns from qualifying
+        purchases. The price you pay is unchanged, and nothing on this site is ranked, rated,
+        or written differently because of it — <a href="/disclosure/">full policy</a>.</p>
+      <ul>
+        {books.map((b) => (
+          <li><a href={b.amazon} rel="noopener sponsored" target="_blank">{b.title}</a></li>
+        ))}
+      </ul>
+    </div>
+  </aside>
+)}
+
+<style>
+  .amz-shelf {
+    background: #f6f7fa;
+    border-top: 1px solid #e3e6ee;
+    padding: 1.4rem 0 1.6rem;
+    font-family: var(--sans, 'Poppins', sans-serif);
+  }
+  .amz-shelf .wrap { max-width: 1100px; margin: 0 auto; padding: 0 1.2rem; }
+  .amz-shelf h2 {
+    font-family: var(--serif, 'Lora', serif);
+    color: #201868;
+    font-size: 1.05rem;
+    margin: 0 0 .35rem;
+  }
+  .amz-disclosure { color: #7a8a9e; font-size: .78rem; line-height: 1.5; margin: 0 0 .7rem; }
+  .amz-disclosure a { color: #7a8a9e; text-decoration: underline; }
+  .amz-shelf ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; }
+  .amz-shelf li { font-size: .85rem; }
+  .amz-shelf li a { color: #201868; text-decoration: none; border-bottom: 1px solid #f07800; }
+  .amz-shelf li a:hover { color: #f07800; }
+</style>
