@@ -243,6 +243,11 @@ const jsonld = JSON.stringify(
       <h3>The SRJ book series</h3>
       <p class="meta-line">Nine volumes from SRJ Consulting &amp; Services, the publisher of this
         site — listed separately from the independent shelf above, and labeled as such.</p>
+      <p class="meta-line"><b>Disclosure:</b> the Amazon links below are affiliate links.
+        As an Amazon Associate, SRJ Consulting &amp; Services LLC earns from qualifying
+        purchases. The price you pay is unchanged, and nothing on this site is ranked,
+        rated, or reported differently because of it. See our
+        {' '}<a href="/disclosure/">funding and disclosure policy</a>.</p>
       {learn.srj_books.map((b) => (
         <p class="meta-line"><a href={b.url} rel="noopener">{b.title}</a> · {b.pillar} ·
           {b.status === 'available' ? ` published ${b.published}` : ' forthcoming'}
