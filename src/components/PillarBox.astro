@@ -1,0 +1,159 @@
+---
+/**
+ * PillarBox: the "in this pillar" card at the top right of every page.
+ * Lists the major sections (domains) of the pillar the current page lives
+ * in, numbered like the SRJ resources card, each linking to the domain's
+ * first live section or to the category page.
+ *
+ * Which pillar a page belongs to is resolved at build time from the same
+ * ecosystem documents the pipeline renders from twoai_taxonomy: any page
+ * under /ai-ecosystem/{category}/ resolves by URL, and every legacy hub
+ * (/ai-laws/, /ai-glossary/, /mcp/, /research/, /ai-news/ ...) resolves by
+ * longest-prefix match over the live section paths in those documents.
+ * Pages that belong to no pillar (home, about, policy pages) get the
+ * four-pillar overview instead, so the card is on every page. Nothing is
+ * typed into the template; if the ecosystem documents are absent the
+ * component renders nothing and the build never fails on it.
+ */
+import { readFileSync, existsSync } from 'node:fs';
+
+const CATS = [
+  'technology-and-core-infrastructure',
+  'ecosystem-entities-market-and-operations',
+  'research-knowledge-and-learning',
+  'enterprise-applications-governance-and-tools',
+  'ai-news',
+];
+const SHORT = {
+  'technology-and-core-infrastructure': 'Technology & Infrastructure',
+  'ecosystem-entities-market-and-operations': 'Market & Entities',
+  'research-knowledge-and-learning': 'Research & Learning',
+  'enterprise-applications-governance-and-tools': 'Enterprise & Governance',
+  'ai-news': 'AI News',
+};
+const CAT_HOME = { 'ai-news': '/ai-news/' };
+
+// Build the pillar map once per build, not once per page.
+const g = globalThis;
+if (!g.__twoaiPillars) {
+  const pillars = {};
+  const prefixMap = []; // [pathPrefix, catSlug]
+  for (const cat of CATS) {
+    const f = `content/ecosystem/${cat}.json`;
+    if (!existsSync(f)) continue;
+    try {
+      const d = JSON.parse(readFileSync(f, 'utf8'));
+      const domains = (d.domains || [])
+        .filter((dm) => dm.status === 'live')
+        .map((dm) => {
+          const firstLive = (dm.sections || []).find((s) => s.status === 'live' && s.path);
+          const href = dm.path || (firstLive ? firstLive.path : `/ai-ecosystem/${cat}/`);
+          for (const s of dm.sections || []) {
+            if (s.status === 'live' && s.path && !s.path.startsWith('/ai-ecosystem/')) {
+              prefixMap.push([s.path, cat]);
+            }
+          }
+          if (dm.path && !dm.path.startsWith('/ai-ecosystem/')) prefixMap.push([dm.path, cat]);
+          return { name: dm.name, href };
+        });
+      pillars[cat] = { name: d.name, slug: cat, domains };
+      if (cat === 'ai-news') prefixMap.push(['/ai-news/', cat]);
+    } catch { /* absent or malformed: card degrades below */ }
+  }
+  prefixMap.sort((a, b) => b[0].length - a[0].length);
+  g.__twoaiPillars = { pillars, prefixMap };
+}
+const { pillars, prefixMap } = g.__twoaiPillars;
+
+const path = Astro.url.pathname;
+let cat = null;
+const m = path.match(/^\/ai-ecosystem\/([a-z-]+)\//);
+if (m && pillars[m[1]]) cat = m[1];
+if (!cat) {
+  for (const [pre, c] of prefixMap) {
+    if (path.startsWith(pre)) { cat = c; break; }
+  }
+}
+const pillar = cat ? pillars[cat] : null;
+const overview = !pillar
+  ? CATS.filter((c) => pillars[c]).map((c) => ({ name: SHORT[c], href: CAT_HOME[c] || `/ai-ecosystem/${c}/` }))
+  : null;
+const items = pillar ? pillar.domains : overview || [];
+const heading = pillar ? SHORT[pillar.slug] : 'The AI Ecosystem';
+const headingHref = pillar ? (CAT_HOME[pillar.slug] || `/ai-ecosystem/${pillar.slug}/`) : '/';
+---
+
+{items.length > 0 && (
+  <details class="pillar-box" open>
+    <summary><a href={headingHref}>{heading}</a></summary>
+    <ol>
+      {items.map((it) => (
+        <li><a href={it.href}>{it.name}</a></li>
+      ))}
+    </ol>
+  </details>
+)}
+
+<style>
+  .pillar-box {
+    float: right;
+    width: 300px;
+    margin: 0 0 1.2rem 1.6rem;
+    background: #fdf8f0;
+    border: 1px solid #f0e2c8;
+    border-radius: 10px;
+    padding: 1rem 1.1rem 1.1rem;
+    font-family: var(--sans, 'Poppins', sans-serif);
+  }
+  .pillar-box summary {
+    list-style: none;
+    cursor: default;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    font-size: .78rem;
+    color: #201868;
+    border-bottom: 1px solid #eadfc9;
+    padding-bottom: .5rem;
+  }
+  .pillar-box summary::-webkit-details-marker { display: none; }
+  .pillar-box summary a { color: #201868; text-decoration: none; }
+  .pillar-box summary a:hover { color: #f07800; }
+  .pillar-box ol {
+    list-style: none;
+    counter-reset: pb;
+    margin: .3rem 0 0;
+    padding: 0;
+  }
+  .pillar-box li {
+    counter-increment: pb;
+    border-bottom: 1px solid #f2e9d8;
+    padding: .5rem 0;
+    font-size: .88rem;
+    line-height: 1.35;
+  }
+  .pillar-box li:last-child { border-bottom: 0; padding-bottom: 0; }
+  .pillar-box li a { color: #2b2b3a; text-decoration: none; }
+  .pillar-box li a:hover { color: #f07800; }
+  .pillar-box li::before {
+    content: counter(pb, decimal-leading-zero) ". ";
+    color: #7a8a9e;
+  }
+  @media (max-width: 900px) {
+    .pillar-box {
+      float: none;
+      width: auto;
+      margin: 0 0 1.2rem;
+    }
+    .pillar-box[open] summary { cursor: pointer; }
+    .pillar-box summary { list-style: revert; }
+  }
+</style>
+
+<script>
+  // Collapsed by default on small screens, open on desktop. Progressive:
+  // with JS off the card is simply open everywhere.
+  if (window.matchMedia('(max-width: 900px)').matches) {
+    document.querySelectorAll('details.pillar-box[open]').forEach((d) => d.removeAttribute('open'));
+  }
+</script>
