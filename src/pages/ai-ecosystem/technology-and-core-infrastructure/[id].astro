@@ -42,6 +42,7 @@ const isLang = sec.tax === 'programming-languages';
 const isMeta = sec.kind === 'standard' && sec.tax === 'model-metadata';
 const isMCPSec = sec.tax === 'mcp-security';
 const isClients = sec.tax === 'mcp-clients';
+const isA2A = sec.shape === 'a2a';
 const isHW = sec.shape === 'hardware';
 const isDS = sec.shape === 'datasets';
 const isDSLic = sec.shape === 'ds-licensing';
@@ -56,6 +57,8 @@ const desc = isHW
   ? `${sec.total} ${sec.name.toLowerCase()}, curated for significance with downloads, licence, and gating refreshed daily from the Hugging Face Hub. ${sec.blurb}`
   : isDSLic
   ? `Licence split, gating, and provenance context for the dataset catalogue on this site, with the live copyright docket linked from the lawsuit tracker.`
+  : isA2A
+  ? `The Agent2Agent protocol explained from its v1.0 specification: origin at Google, governance at the Linux Foundation, Agent Cards, task lifecycle, three protocol bindings, enterprise security schemes, and how it complements MCP.`
   : isClients
   ? `${sec.total} applications that speak the Model Context Protocol, ${sec.open_source} of them open source, each verified against its own site; the protocol's official client list is the canonical registry.`
   : isMCPSec
@@ -185,6 +188,56 @@ const licLine = (sec.licences || [])
         </div>
       ))}
       <div class="cite-box">Cite this page: <code>"MCP Clients." The World of AI,
+        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
+    </>
+  )}
+
+  {isA2A && (
+    <>
+      <p class="answer"><b>A2A is the open protocol for one AI agent to delegate work to another</b>,
+        across vendors and frameworks, without either exposing its internals. Google introduced it in
+        April 2025; the Linux Foundation has governed it since June 2025 under Apache 2.0. Where MCP
+        connects an agent downward to tools and data, A2A connects it sideways to other agents.</p>
+      <p class="meta-line">Last verified: {sec.generated} · Every point below is sourced to the
+        {' '}<a href="https://a2a-protocol.org/latest/specification/" rel="noopener">A2A specification v1.0</a>,
+        the Linux Foundation, or Google's own announcements, verified before publication and re-verified
+        daily. This page describes what the protocol specifies, not an audit of any implementation.</p>
+
+      {sec.repo_stars > 0 && (
+        <p class="meta-line">Live from this site's repo tracker: the
+          {' '}<a href="https://github.com/a2aproject/A2A" rel="noopener">a2aproject/A2A</a> repository
+          has <b>{Number(sec.repo_stars).toLocaleString()}</b> stars, last pushed {String(sec.repo_pushed).slice(0,10)}.
+          The MCP side of the same stack: <b>{Number(sec.mcp_servers).toLocaleString()}</b> servers tracked from the official registry.</p>
+      )}
+
+      {[['governance','Origin and governance'],['mechanics','How the protocol works'],['comparison','A2A and MCP together']].map(([g, label]) => (
+        <section>
+          <h2>{label}</h2>
+          {sec.items.filter((i) => i.group === g).map((i) => (
+            <div class="dom">
+              <h3>{i.name}</h3>
+              <p>{i.body}</p>
+              <p class="meta-line">Source: <a href={i.source_url} rel="noopener">{i.source_name}</a></p>
+            </div>
+          ))}
+        </section>
+      ))}
+
+      <div class="dom">
+        <h3>MCP versus A2A at a glance</h3>
+        <table>
+          <thead><tr><th>Protocol</th><th>Focus</th><th>Primary connection</th><th>Steward</th></tr></thead>
+          <tbody>
+            <tr><td>MCP</td><td>Tool and context access</td><td>Agent → databases, files, enterprise APIs, via servers</td><td>Anthropic (open specification)</td></tr>
+            <tr><td>A2A</td><td>Inter-agent delegation</td><td>Agent → other autonomous agents, via Agent Cards and tasks</td><td>Linux Foundation (Google-originated)</td></tr>
+          </tbody>
+        </table>
+        <p class="meta-line">Related on this site: <a href="/mcp/">the MCP server registry</a> ·
+          the MCP Security and Authentication section · the Multi-agent Systems repos section ·
+          AI Agent Security and Agent and Non-Human Identity under AI Security and Risk.</p>
+      </div>
+
+      <div class="cite-box">Cite this page: <code>"{sec.name}." The World of AI,
         theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
     </>
   )}
