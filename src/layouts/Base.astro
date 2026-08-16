@@ -100,10 +100,11 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
     });
     gtag('js', new Date());
     gtag('config', 'G-G8HDWR6Z88', {
-      // Cross-domain measurement: a visitor who follows a link to the SRJ
-      // site stays one session and one attribution chain, instead of the
-      // referral being lost and the funnel being unmeasurable.
-      linker: { domains: ['theworldofai.org', 'srjconsultingservices.com'], decorate_forms: true },
+      // Cross-domain measurement across all four SRJ properties. A visitor
+      // moving between them stays one session and one attribution chain
+      // instead of each hop starting an unattributed new visit. The list
+      // must be identical on every property or the linking is one-way.
+      linker: { domains: ['theworldofai.org', 'srjconsultingservices.com', 'aiauditforcompanies.com', 'outcomestar.app'], decorate_forms: true },
       pillar: PILLAR,
       section: SECTION
     });
