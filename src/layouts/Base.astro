@@ -28,6 +28,14 @@ const nav = [
 // library migrates from srjconsultingservices.com without the two sites
 // competing with each other in the meantime.
 const canonical = canonicalOverride || new URL(Astro.url.pathname, Astro.site).href;
+
+// GA4 custom dimensions, resolved at build time so every page reports which
+// pillar and section it belongs to. This is what makes the factory-level
+// question answerable ("which pillar earns impressions") instead of only
+// having page paths, which say nothing about how the site is organised.
+const _seg = Astro.url.pathname.split('/').filter(Boolean);
+const gaPillar = _seg[0] === 'ai-ecosystem' && _seg[1] ? _seg[1] : (_seg[0] || 'home');
+const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category') : (_seg[1] ? _seg.slice(0, 2).join('/') : _seg[0] || 'home');
 ---
 <!doctype html>
 <html lang="en">
@@ -75,7 +83,7 @@ const canonical = canonicalOverride || new URL(Astro.url.pathname, Astro.site).h
       }catch(e){window.__twoaiNoAnalytics=false;}
     })();
   </script>
-  <script is:inline>
+  <script is:inline define:vars={{ PILLAR: gaPillar, SECTION: gaSection }}>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     if(window.__twoaiNoAnalytics){window['ga-disable-G-G8HDWR6Z88']=true;}
@@ -91,7 +99,30 @@ const canonical = canonicalOverride || new URL(Astro.url.pathname, Astro.site).h
       analytics_storage: 'granted'
     });
     gtag('js', new Date());
-    gtag('config', 'G-G8HDWR6Z88');
+    gtag('config', 'G-G8HDWR6Z88', {
+      // Cross-domain measurement: a visitor who follows a link to the SRJ
+      // site stays one session and one attribution chain, instead of the
+      // referral being lost and the funnel being unmeasurable.
+      linker: { domains: ['theworldofai.org', 'srjconsultingservices.com'], decorate_forms: true },
+      pillar: PILLAR,
+      section: SECTION
+    });
+
+    // Revenue-relevant clicks, reported as their own events so they can be
+    // marked key events in GA4: Amazon Associates links (the 180-day
+    // qualifying-sales clock) and outbound links to SRJ services.
+    document.addEventListener('click', function (e) {
+      var a = e.target && e.target.closest && e.target.closest('a');
+      if (!a || !a.href) return;
+      if (a.href.indexOf('amazon.') > -1) {
+        gtag('event', 'affiliate_click', {
+          link_url: a.href, book_title: (a.getAttribute('title') || a.textContent || '').trim().slice(0, 100),
+          pillar: PILLAR, section: SECTION
+        });
+      } else if (a.href.indexOf('srjconsultingservices.com') > -1) {
+        gtag('event', 'srj_referral', { link_url: a.href, pillar: PILLAR, section: SECTION });
+      }
+    }, true);
   </script>
   <script is:inline>
     if(!window.__twoaiNoAnalytics){
