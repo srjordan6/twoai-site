@@ -157,7 +157,7 @@ const canonical = canonicalOverride || new URL(Astro.url.pathname, Astro.site).h
 
   <main class="wrap main-wrap">
     <PillarBox />
-    <slot />
+    <div class="main-col"><slot /></div>
   </main>
 
   <AmazonShelf />
@@ -200,7 +200,26 @@ const canonical = canonicalOverride || new URL(Astro.url.pathname, Astro.site).h
       line-height: 1.65; color: var(--ink); background: #fff; }
     body.locked { overflow: hidden; }
     .wrap { max-width: 1080px; margin: 0 auto; padding: 0 22px; }
+    /* Two-column grid at desktop widths: the page content in column one, the
+       pillar card in column two. A grid track cannot overlap its neighbour,
+       so the card is structurally incapable of sitting on top of the prose,
+       which the earlier floated and absolutely-positioned versions both did
+       at some widths. Below 1040px it collapses to a single column and the
+       card renders above the content. */
     .main-wrap { position: relative; }
+    .main-col { min-width: 0; }
+    @media (min-width: 1040px) {
+      .main-wrap {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 268px;
+        column-gap: 34px;
+        align-items: start;
+      }
+      .main-col { grid-column: 1; grid-row: 1; }
+    }
+    @media (min-width: 1400px) {
+      .main-wrap { grid-template-columns: minmax(0, 1fr) 300px; column-gap: 42px; }
+    }
     h1, h2, h3 { font-family: 'Lora', Georgia, serif; color: var(--navy); line-height: 1.22;
       margin: 0 0 .5em; }
     h1 { font-size: clamp(1.7rem, 4vw, 2.5rem); }

@@ -84,106 +84,76 @@ const headingHref = pillar ? (CAT_HOME[pillar.slug] || `/ai-ecosystem/${pillar.s
 ---
 
 {items.length > 0 && (
-  <details class="pillar-box" open>
-    <summary><a href={headingHref}>{heading}</a></summary>
+  <aside class="pillar-box" aria-label={`Sections in ${heading}`}>
+    <p class="pillar-head"><a href={headingHref}>{heading}</a></p>
     <ol>
       {items.map((it) => (
         <li><a href={it.href}>{it.name}</a></li>
       ))}
     </ol>
-  </details>
+  </aside>
 )}
 
 <style>
-  /* Default (narrow and mid widths): the card is a normal in-flow block at
-     the top of the content, collapsed to its summary so it costs one line.
-     It never floats into the prose, so it can never sit on top of content. */
+  /* The card is a grid item in main.main-wrap, placed in the second column,
+     first row. Because it occupies its own column track rather than floating
+     or being positioned into the gutter, it cannot overlap the prose at any
+     width or zoom level: the content column is physically narrower by exactly
+     the width of this card plus the gap.
+
+     Below 1040px the grid collapses to one column and the card sits at the
+     top of the page as a normal block. It is always fully expanded; the
+     earlier collapsed-summary form read as missing on ordinary laptop
+     widths, which is the whole reason it was rebuilt. */
   .pillar-box {
-    display: block;
-    width: auto;
-    margin: 0 0 1.4rem;
-    background: #fdf8f0;
-    border: 1px solid #f0e2c8;
+    border: 1px solid #e3e6ee;
     border-radius: 10px;
-    padding: .85rem 1.1rem;
-    font-family: var(--sans, 'Poppins', sans-serif);
+    background: #fcfbf7;
+    padding: 14px 16px 12px;
+    margin: 0 0 1.4rem;
+    font-family: 'Poppins', system-ui, sans-serif;
   }
-  .pillar-box summary {
-    list-style: none;
-    cursor: pointer;
-    font-weight: 600;
-    letter-spacing: .08em;
+  .pillar-head {
+    margin: 0 0 .6rem;
+    font-size: .72rem;
+    letter-spacing: .09em;
     text-transform: uppercase;
-    font-size: .78rem;
+    font-weight: 700;
     color: #201868;
   }
-  .pillar-box[open] summary {
-    border-bottom: 1px solid #eadfc9;
-    padding-bottom: .5rem;
-  }
-  .pillar-box summary::-webkit-details-marker { display: none; }
-  .pillar-box summary::after {
-    content: " +";
-    color: #b98a4a;
-    font-weight: 700;
-  }
-  .pillar-box[open] summary::after { content: " \2013"; }
-  .pillar-box summary a { color: #201868; text-decoration: none; }
-  .pillar-box summary a:hover { color: #f07800; }
+  .pillar-head a { color: inherit; text-decoration: none; }
+  .pillar-head a:hover { color: #f07800; }
   .pillar-box ol {
-    list-style: none;
     counter-reset: pb;
-    margin: .3rem 0 0;
+    list-style: none;
+    margin: 0;
     padding: 0;
   }
   .pillar-box li {
     counter-increment: pb;
-    border-bottom: 1px solid #f2e9d8;
+    border-top: 1px solid #eceef4;
     padding: .5rem 0;
-    font-size: .88rem;
+    font-size: .86rem;
     line-height: 1.35;
   }
-  .pillar-box li:last-child { border-bottom: 0; padding-bottom: 0; }
-  .pillar-box li a { color: #2b2b3a; text-decoration: none; }
-  .pillar-box li a:hover { color: #f07800; }
+  .pillar-box li:first-child { border-top: 0; padding-top: 0; }
   .pillar-box li::before {
     content: counter(pb, decimal-leading-zero) ". ";
-    color: #7a8a9e;
+    color: #9aa6bb;
+    font-weight: 600;
   }
+  .pillar-box li a { color: #201868; text-decoration: none; }
+  .pillar-box li a:hover { color: #f07800; text-decoration: underline; }
 
-  /* Wide viewports ONLY: a real gutter exists to the right of the 1080px
-     content column. main.wrap is position:relative (set in Base), so we lift
-     the card out of the flow entirely and pin it into that gutter. It is
-     absolutely positioned, so prose reflows to full width beneath it and the
-     two can never collide. The 1440px floor guarantees the gutter is at least
-     ~320px: (1440 - 1080)/2 = 180 each side is too tight, so we only pin when
-     there is genuinely room for the card plus breathing space. */
-  /* Pin into the right gutter ONLY when a full card genuinely fits:
-     at 1760px the gutter is (1760 - 1080)/2 = 340px, enough for the card
-     plus its 28px offset plus edge breathing room. Between 1500 and 1760
-     the old rule made the card overflow the viewport and crowd the content
-     edge, which is exactly the overlap reported. Width is additionally
-     capped to the real gutter so browser zoom can never push it into the
-     column or off the screen. */
-  @media (min-width: 1760px) {
+  @media (min-width: 1040px) {
     .pillar-box {
-      position: absolute;
-      top: 0;
-      left: calc(100% + 28px);
-      width: min(300px, calc((100vw - 1080px) / 2 - 72px));
-      margin: 0;
+      grid-column: 2;
+      grid-row: 1;
+      position: sticky;
+      top: 1.2rem;
+      margin-bottom: 0;
     }
-    .pillar-box summary { cursor: default; }
-    .pillar-box summary::after { content: ""; }
   }
 </style>
 
-<script>
-  // The card is in-flow and collapsible at narrow and mid widths, and pinned
-  // open in the gutter on wide screens. Collapse it by default below the pin
-  // breakpoint so it costs one line until tapped. Progressive: with JS off it
-  // stays open everywhere and simply sits in-flow, never over content.
-  if (!window.matchMedia('(min-width: 1760px)').matches) {
-    document.querySelectorAll('details.pillar-box[open]').forEach((d) => d.removeAttribute('open'));
-  }
-</script>
+
