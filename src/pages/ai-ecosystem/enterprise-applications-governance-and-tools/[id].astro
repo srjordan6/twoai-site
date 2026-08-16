@@ -186,71 +186,35 @@ const jsonld = JSON.stringify({
         </section>
       )}
 
-      {secu.deep && secu.deep.length > 0 && (() => {
-        const g = (k) => secu.deep.filter((d) => d.grp === k);
-        const layers = g('layer'), attacks = g('attack'), scen = g('scenario'),
-              fw = g('framework'), board = g('board'), trust = g('trust');
-        return (
-          <>
-            {layers.length > 0 && (
-              <section>
-                <h2>The chain, link by link</h2>
-                <p>Every component below can be manipulated, poisoned, or compromised, and a
-                  compromise at any link is carried forward by the ones after it.</p>
-                <ol class="chain">
-                  {layers.map((l) => (
-                    <li><b>{l.label}.</b> {l.body}</li>
-                  ))}
-                </ol>
-              </section>
-            )}
-            {attacks.length > 0 && (
-              <section>
-                <h2>The {attacks.length} attack areas</h2>
-                <div class="attack-grid">
-                  {attacks.map((a) => (
-                    <div class="dom">
-                      <h3>{a.label}</h3>
-                      <p>{a.body}</p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-            {scen.map((sc) => (
-              <section>
-                <h2>{sc.label}</h2>
-                <p>{sc.body}</p>
-              </section>
-            ))}
-            {fw.length > 0 && (
-              <section>
-                <h2>A control framework for the AI supply chain</h2>
-                <table>
-                  <thead><tr><th>Control</th><th>What it means in practice</th></tr></thead>
-                  <tbody>
-                    {fw.map((f) => (
-                      <tr><td><b>{f.label}</b></td><td>{f.body}</td></tr>
-                    ))}
-                  </tbody>
-                </table>
-              </section>
-            )}
-            {board.map((b) => (
-              <section>
-                <h2>{b.label}</h2>
-                <p>{b.body}</p>
-              </section>
-            ))}
-            {trust.map((t) => (
-              <section>
-                <h2>{t.label}</h2>
-                <p>{t.body}</p>
-              </section>
-            ))}
-          </>
-        );
-      })()}
+      {secu.deep && secu.deep.length > 0 && secu.deep.map((g) => (
+        <section>
+          <h2>{g.heading}</h2>
+          {g.intro && <p>{g.intro}</p>}
+          {g.layout === 'ordered' && (
+            <ol class="chain">
+              {g.blocks.map((b) => <li><b>{b.label}.</b> {b.body}</li>)}
+            </ol>
+          )}
+          {g.layout === 'grid' && (
+            <div class="attack-grid">
+              {g.blocks.map((b) => (
+                <div class="dom"><h3>{b.label}</h3><p>{b.body}</p></div>
+              ))}
+            </div>
+          )}
+          {g.layout === 'table' && (
+            <table>
+              <thead><tr><th>Control</th><th>What it means in practice</th></tr></thead>
+              <tbody>
+                {g.blocks.map((b) => <tr><td><b>{b.label}</b></td><td>{b.body}</td></tr>)}
+              </tbody>
+            </table>
+          )}
+          {g.layout === 'prose' && g.blocks.map((b) => (
+            <>{g.blocks.length > 1 && <h3>{b.label}</h3>}<p>{b.body}</p></>
+          ))}
+        </section>
+      ))}
 
       {secu.domains && secu.domains.length > 0 && (
         <section class="six-domains">
