@@ -45,10 +45,19 @@ try {
         if (a.includes('amazon.com/') && !a.includes('tag=')) {
           a += (a.includes('?') ? '&' : '?') + 'tag=' + TAG;
         }
-        return { title: b.title, amazon: a, pillar: b.pillar, cover: coverFor(b.title) };
+        return { title: b.title, amazon: a, pillar: b.pillar, published: b.published, cover: coverFor(b.title) };
       });
   }
 } catch { books = []; }
+
+// The announcement line for the first work of fiction. It is derived from the
+// data rather than written into the markup, so it appears only while such a
+// book is actually on the shelf and it follows a retitle. Fiction is marked by
+// the pillar in press_books, which is the same field the books listing prints.
+const fiction = books.find((b) => (b.pillar || '').toLowerCase().includes('fiction'));
+const pubDate = fiction?.published
+  ? new Date(`${fiction.published}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+  : null;
 ---
 
 {books.length > 0 && (
@@ -59,6 +68,11 @@ try {
           not part of that series. The heading names the series without claiming
           every book on the row belongs to it. */}
       <h2>Books by Stephen R. Jordan, including &ldquo;The Operating Discipline for AI Library&trade;&rdquo; series, now available on Amazon</h2>
+      {fiction && (
+        <p class="amz-news">New: SRJ Consulting &amp; Services has published its first work of
+          fiction on AI, <a href={fiction.amazon} rel="noopener sponsored" target="_blank">{fiction.title}</a>,
+          a novel{pubDate ? `, out ${pubDate}` : ''}.</p>
+      )}
       <p class="amz-disclosure">Disclosure: these are affiliate links. As an Amazon Associate,
         SRJ Consulting &amp; Services LLC, the publisher of this site, earns from qualifying
         purchases. The price you pay is unchanged, and nothing on this site is ranked, rated,
@@ -89,6 +103,9 @@ try {
     font-size: 1.05rem;
     margin: 0 0 .35rem;
   }
+  .amz-news { color: #201868; font-size: .86rem; line-height: 1.5; margin: 0 0 .45rem; }
+  .amz-news a { color: #201868; text-decoration: none; border-bottom: 1px solid #f07800; }
+  .amz-news a:hover { color: #f07800; }
   .amz-disclosure { color: #7a8a9e; font-size: .78rem; line-height: 1.5; margin: 0 0 .7rem; }
   .amz-disclosure a { color: #7a8a9e; text-decoration: underline; }
   .amz-covers { display: flex; flex-wrap: wrap; gap: 1.1rem; margin: 0; align-items: flex-start; }
