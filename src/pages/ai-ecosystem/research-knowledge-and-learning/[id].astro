@@ -82,13 +82,14 @@ export function getStaticPaths() {
 
 const { hub, topic, section, hubUid, learn } = Astro.props;
 
-const desc = learn
+const _descRaw = learn
   ? `${learn.total} ${learn.name.toLowerCase()}, ${learn.free} free, curated by level and audience with a verified source each${learn.with_code ? `, ${learn.with_code} with companion code` : ''}, re-verified daily.`
   : section
   ? String(section.answer || '').slice(0, 300)
   : hub
   ? `${hub.total} peer-reviewed and preprint papers on AI capability, safety, governance and application, sorted into ${hub.topics.length} topics, each with the citation record and a plain note on why it matters.`
   : `${topic.count} papers on ${topic.name.toLowerCase()} in AI, ${(topic.citations || 0).toLocaleString()} citations between them. ${topic.blurb || ''}`.slice(0, 300);
+const desc = _descRaw.length <= 158 ? _descRaw : `${_descRaw.slice(0, 157).replace(/\s+\S*$/, '')}…`;
 
 const title = learn
   ? `${learn.name} — The World of AI`

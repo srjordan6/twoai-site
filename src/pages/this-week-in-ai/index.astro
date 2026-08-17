@@ -14,6 +14,30 @@ const idx = existsSync('content/week/index.json')
   ? JSON.parse(readFileSync('content/week/index.json', 'utf8'))
   : { weeks: [], themes: [], total_items: 0, generated: '' };
 const weeks = idx.weeks || [];
+
+// The pipeline's index carries a recent window, but a week page lives
+// forever. Any week file the index no longer mentions still gets a row, or
+// its page is reachable only through the sitemap - an orphan, per the crawl.
+const known = new Set(weeks.map((w) => w.slug));
+const weekMods = import.meta.glob('../../../content/week/*.json', { eager: true });
+for (const [p, mod] of Object.entries(weekMods)) {
+  if (p.endsWith('/index.json')) continue;
+  const w: any = (mod as any).default ?? mod;
+  const slug = w.slug || p.split('/').pop().replace('.json', '');
+  if (known.has(slug)) continue;
+  known.add(slug);
+  weeks.push({
+    slug,
+    label: w.label || slug,
+    start: w.start || '', end: w.end || '',
+    bills: w.bills?.length ?? w.bills ?? 0,
+    federal: w.federal?.length ?? w.federal ?? 0,
+    courts: w.courts?.length ?? w.courts ?? 0,
+    top_theme: w.top_theme || null,
+    total: w.total || 0,
+  });
+}
+weeks.sort((a, b) => (b.slug || '').localeCompare(a.slug || ''));
 const themes = idx.themes || [];
 const latest = weeks[0];
 const total = idx.total_items || 0;
@@ -24,7 +48,7 @@ const lede = weeks.length
   ? `Over the last ${plural(weeks.length, 'week')} we recorded ${plural(total, 'change')} across American AI policy and litigation: state and congressional bills that moved, documents published in the Federal Register, and lawsuits whose dockets saw activity. ${themes.length ? `The subject that came up most was ${themes[0].name.toLowerCase()}.` : ''}`
   : 'The first weekly digest publishes on the next pipeline run.';
 const desc =
-  'A weekly record of what actually moved in AI policy and litigation, grouped by subject and explained: state bills that changed status, federal documents published, and lawsuits with new docket activity.';
+  'A weekly record of what moved in AI policy and litigation: bills that changed status, federal documents published, and lawsuits with new docket activity.';
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',

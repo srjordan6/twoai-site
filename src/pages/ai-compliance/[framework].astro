@@ -19,14 +19,19 @@ export function getStaticPaths() {
   // (ai-compliance/index.astro) working off the same simple path.
   const files = readdirSync('content/compliance').filter((f) => f.endsWith('.json') && f !== 'index.json' && f !== 'what-changed.json');
   const titles = {};
+  const docs = [];
   for (const f of files) {
     const d = JSON.parse(readFileSync(`content/compliance/${f}`, 'utf8'));
+    // Only files with a slug are framework pages. enacted-ai-laws.json lives
+    // in this directory but is a section page rendered under the ecosystem
+    // category by uid; passing its undefined slug as a param fails the whole
+    // build ("Missing parameter: framework"), which is exactly what happened
+    // the day the enactment trigger first published it.
+    if (!d.slug) continue;
     titles[d.slug] = d.title;
+    docs.push(d);
   }
-  return files.map((f) => {
-    const d = JSON.parse(readFileSync(`content/compliance/${f}`, 'utf8'));
-    return { params: { framework: d.slug }, props: { d, titles } };
-  });
+  return docs.map((d) => ({ params: { framework: d.slug }, props: { d, titles } }));
 }
 const { d, titles } = Astro.props;
 const desc = (d.meta_description || d.short || d.subtitle || d.title).slice(0, 300);

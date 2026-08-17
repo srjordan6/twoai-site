@@ -1,0 +1,50 @@
+---
+/**
+ * The vendor announcement archive, paginated. The vendor hub shows the recent
+ * slice and per-vendor blocks capped at 25, so the thousands of older post
+ * pages were reachable only through the sitemap - orphans to a link-following
+ * crawler. These pages are the crawl path: every post with a page, newest
+ * first, 250 to a page.
+ */
+import Base from '../../../../layouts/Base.astro';
+
+export function getStaticPaths() {
+  const m = import.meta.glob('../../../../../content/news/vendor.json', { eager: true });
+  const data: any = Object.values(m)[0]?.default ?? null;
+  const seen = new Set<string>();
+  const posts: any[] = [];
+  for (const a of data?.archive ?? []) {
+    if (!a.slug || seen.has(a.slug) || a.has_page === false) continue;
+    seen.add(a.slug);
+    posts.push(a);
+  }
+  posts.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const PER = 250;
+  const pages = Math.max(1, Math.ceil(posts.length / PER));
+  return Array.from({ length: pages }, (_, i) => ({
+    params: { page: String(i + 1) },
+    props: { posts: posts.slice(i * PER, (i + 1) * PER), page: i + 1, pages, total: posts.length },
+  }));
+}
+
+const { posts, page, pages, total } = Astro.props;
+const title = `Vendor Announcement Archive, page ${page} of ${pages} — The World of AI`;
+const description = `All ${total} vendor announcements tracked on this site, newest first, page ${page} of ${pages}. Each entry links to our page for the post and onward to the original.`;
+---
+<Base title={title} description={description} current="/ai-news/">
+  <p class="meta-line"><a href="/ai-news/">AI News</a> ·
+    <a href="/ai-news/vendor/">AI Vendor News</a> · Archive</p>
+  <h1>Vendor Announcement Archive</h1>
+  <p class="answer"><b>{total} announcements</b> from the companies and labs building AI, newest
+    first. Page {page} of {pages}.</p>
+  <ul class="sections">
+    {posts.map((it) => (
+      <li><a href={`/ai-news/vendor/${it.slug}/`}>{it.title}</a> <span class="n">{it.vendor}{it.date ? ` · ${it.date}` : ''}</span></li>
+    ))}
+  </ul>
+  <p class="meta-line">
+    {page > 1 && <a href={`/ai-news/vendor/archive/${page - 1}/`}>Newer</a>}
+    {page > 1 && page < pages && ' · '}
+    {page < pages && <a href={`/ai-news/vendor/archive/${page + 1}/`}>Older</a>}
+  </p>
+</Base>

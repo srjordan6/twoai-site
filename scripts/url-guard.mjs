@@ -106,7 +106,20 @@ const next = new Set(localPaths());
 const isRedirected = redirectCovered();
 const isRetired = retired();
 
-const dropped = live.filter((p) => !next.has(p) && !isRedirected(p) && !isRetired.has(p));
+// A URL can leave the sitemap without dying: a page that renders noindex
+// (tracked-only people profiles) is de-listed so the sitemap and the robots
+// meta agree, but its file is still in dist and still serves 200. The guard
+// protects URL permanence, not sitemap membership, so a dropped sitemap
+// entry whose page still builds is fine and is logged rather than blocked.
+const stillServed = (p) => existsSync(`dist${p.endsWith('/') ? p : `${p}/`}index.html`);
+
+const delisted = live.filter((p) => !next.has(p) && !isRedirected(p) && !isRetired.has(p) && stillServed(p));
+if (delisted.length) {
+  console.log(`url-guard: ${delisted.length} URL(s) left the sitemap but still build and serve 200 (noindex de-listing):`);
+  for (const p of [...new Set(delisted)].sort().slice(0, 20)) console.log('  ' + p);
+}
+
+const dropped = live.filter((p) => !next.has(p) && !isRedirected(p) && !isRetired.has(p) && !stillServed(p));
 const uniq = [...new Set(dropped)].sort();
 
 if (uniq.length === 0) {

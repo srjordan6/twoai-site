@@ -29,22 +29,32 @@ export function getStaticPaths() {
       if (d.uid) paths.push({ params: { id: d.uid }, props: { secu: d } });
     }
   }
+  // Enacted AI Laws: the taxonomy has carried this section's live_path since
+  // the enactment trigger shipped, and the category page links it, but no
+  // route rendered the JSON, so the link 404ed. This is that route.
+  if (existsSync('content/compliance/enacted-ai-laws.json')) {
+    const d = JSON.parse(readFileSync('content/compliance/enacted-ai-laws.json', 'utf8'));
+    if (d.uid) paths.push({ params: { id: d.uid }, props: { law: d } });
+  }
   return paths;
 }
-const { sec, secu } = Astro.props;
+const { sec, secu, law } = Astro.props;
 
-const desc = secu ? `${secu.blurb}`.slice(0, 300) : `${sec.summary || sec.blurb || ''}`.slice(0, 300);
+const clamp158 = (s) => (s.length <= 158 ? s : `${s.slice(0, 157).replace(/\s+\S*$/, '')}…`);
+const desc = clamp158(law
+  ? `${law.total} AI-related bills that have become law across ${law.states} US states, detected from the legislative record on the day the status changes, each linked to the bill itself.`
+  : secu ? `${secu.blurb}` : `${sec.summary || sec.blurb || ''}`);
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',
-  name: secu ? `${secu.name} — AI Security and Risk — The World of AI` : (sec.shape === 'industry-hub' ? `${sec.name} — The World of AI` : `AI in ${sec.name} — The World of AI`),
+  name: law ? `Enacted AI Laws — The World of AI` : secu ? `${secu.name} — AI Security and Risk — The World of AI` : (sec.shape === 'industry-hub' ? `${sec.name} — The World of AI` : `AI in ${sec.name} — The World of AI`),
   description: desc,
-  url: `https://theworldofai.org${BASE}/${(secu || sec).uid}/`,
-  dateModified: (secu || sec).generated,
+  url: `https://theworldofai.org${BASE}/${(law || secu || sec).uid}/`,
+  dateModified: (law || secu || sec).generated,
   isPartOf: { '@type': 'CollectionPage', name: CATEGORY_NAME, url: `https://theworldofai.org${BASE}/` },
 });
 ---
-<Base title={secu ? `${secu.name} — AI Security and Risk — The World of AI` : `AI in ${sec.name} — The World of AI`} description={desc}
+<Base title={law ? 'Enacted AI Laws: US Bills That Became Law — The World of AI' : secu ? `${secu.name} — AI Security and Risk — The World of AI` : `AI in ${sec.name} — The World of AI`} description={desc}
   current={`${BASE}/`} jsonld={jsonld}>
 
   <p class="meta-line"><a href="/">AI Ecosystem</a> ·
@@ -321,6 +331,53 @@ const jsonld = JSON.stringify({
 
   <div class="cite-box">Cite this page: <code>"AI in {sec.name}." The World of AI,
     theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
+    </>
+  )}
+
+  {law && (
+    <>
+      <h1>Enacted AI Laws</h1>
+      <p class="answer"><b>{law.total} AI-related bills across {law.states} US states have
+        actually become law.</b> {law.blurb} Each row links to the bill record itself; nothing
+        here is summarised from press coverage.</p>
+      <p class="meta-line">Last verified: {law.generated}. Detection runs against the
+        legislative record daily; a bill appears here the day its status changes to passed.</p>
+
+      {law.recent && law.recent.length > 0 && (
+        <section>
+          <h2>Enacted most recently</h2>
+          {law.recent.map((b) => (
+            <div class="dom">
+              <h3><a href={b.url} rel="noopener">{b.state} {b.bill}</a> · {b.status_date}</h3>
+              <p>{b.description || b.title}</p>
+            </div>
+          ))}
+        </section>
+      )}
+
+      <section>
+        <h2>Every enacted AI law on record</h2>
+        <table>
+          <thead><tr><th>State</th><th>Bill</th><th>What it does</th><th>Status date</th></tr></thead>
+          <tbody>
+            {law.laws.map((b) => (
+              <tr>
+                <td>{b.state}</td>
+                <td><a href={b.url} rel="noopener">{b.bill}</a></td>
+                <td>{b.title}</td>
+                <td>{b.status_date}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+
+      <p class="meta-line">Related on this site: <a href="/ai-laws/">AI laws by state</a> ·
+        <a href="/ai-compliance/">the governance library</a> ·
+        <a href="/ai-compliance/state-ai-laws/">state AI laws explained</a>.</p>
+
+      <div class="cite-box">Cite this page: <code>"Enacted AI Laws." The World of AI,
+        theworldofai.org{BASE}/{law.uid}/. Retrieved {law.generated}.</code></div>
     </>
   )}
 

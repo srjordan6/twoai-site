@@ -13,10 +13,14 @@ export function getStaticPaths() {
   if (!existsSync('content/ecosystem')) return [];
   return readdirSync('content/ecosystem')
     .filter((f) => f.endsWith('.json') && f !== 'index.json')
-    .map((f) => {
-      const c = JSON.parse(readFileSync(`content/ecosystem/${f}`, 'utf8'));
-      return { params: { category: c.slug }, props: { c } };
-    });
+    .map((f) => JSON.parse(readFileSync(`content/ecosystem/${f}`, 'utf8')))
+    // Only category files carry domains. concept-taxonomy.json and
+    // knowledge-graph.json live in this directory but are section pages
+    // rendered by uid under Research & Learning; building them here produced
+    // duplicate half-pages with undefined names, which the crawl flagged as
+    // orphans. Those slugs now 301 to their uid pages in public/_redirects.
+    .filter((c) => Array.isArray(c.domains) && c.name)
+    .map((c) => ({ params: { category: c.slug }, props: { c } }));
 }
 const { c } = Astro.props;
 const live = (c.domains || []).filter((d) => d.status === 'live');

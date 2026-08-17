@@ -103,7 +103,10 @@ const obsDescs = obs ? {
 }[obs.tax] : null;
 
 const money = (n) => n >= 1e9 ? `$${(n/1e9).toFixed(1)}B` : n >= 1e6 ? `$${(n/1e6).toFixed(1)}M` : `$${Math.round(n/1e3)}k`;
-const desc = cma
+// Meta descriptions are cut at a word boundary to 158 characters; search
+// engines truncate around 160 and the audit tooling flags anything longer.
+const clampDesc = (s) => s.length <= 158 ? s : `${s.slice(0, 157).replace(/\s+\S*$/, '')}…`;
+const desc = clampDesc(cma
   ? `${cma.completed.length + cma.agreements.length} SEC 8-K filings - completed acquisitions (Item 2.01) and material definitive agreements (Item 1.01) - across ${cma.registrants} tracked AI registrants since 2024, each linked to the filing itself.`
   : obs
   ? (obsDescs || '')
@@ -126,10 +129,10 @@ const desc = cma
   : chub
   ? `${chub.total} companies building AI, with what each one ships, whether it is a defendant in a tracked lawsuit, and whether it publishes to the Model Context Protocol registry.`
   : company
-  ? `${company.name}: ${company.products.length} AI product${company.products.length === 1 ? '' : 's'} we track${company.cases?.length ? `, ${company.cases.length} tracked lawsuit${company.cases.length === 1 ? '' : 's'}` : ''}${company.mcp?.length ? `, ${company.mcp.length} MCP server${company.mcp.length === 1 ? '' : 's'}` : ''}.`
+  ? `${company.name}: ${company.products.length} AI product${company.products.length === 1 ? '' : 's'} we track${company.cases?.length ? `, ${company.cases.length} tracked lawsuit${company.cases.length === 1 ? '' : 's'}` : ''}${company.mcp?.length ? `, ${company.mcp.length} MCP server${company.mcp.length === 1 ? '' : 's'}` : ''}. A profile in the AI Company Directory, with funding, filings, and patents where on record.`
   : person?.tracked_only
   ? `${person.name}, ${person.title} at ${person.org}. Tracked in the AI People Directory; a full profile has not been written yet.`
-  : `${person.name}${person.moniker ? `, ${person.moniker}` : ''}. ${person.hook || ''}`.slice(0, 300);
+  : `${person.name}${person.moniker ? `, ${person.moniker}` : ''}. ${person.hook || ''}`.slice(0, 300));
 const title = cma
   ? 'AI Acquisitions and Partnerships: SEC 8-K Filings — The World of AI'
   : obs

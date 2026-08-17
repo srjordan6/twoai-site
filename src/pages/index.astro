@@ -30,9 +30,8 @@ const totalPages = cats.reduce((n, c) => n + c.pages, 0);
 const generated = idx.generated || laws?.generated || '';
 
 const desc =
-  'The AI Ecosystem: an atlas of artificial intelligence organised into four categories, ' +
-  'covering the technology, the companies and market, the research and reference layer, and ' +
-  'enterprise use and governance. Rebuilt daily from primary sources.';
+  'The AI Ecosystem: an atlas of artificial intelligence covering the technology, the market, ' +
+  'the research layer, and enterprise governance. Rebuilt daily from primary sources.';
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',

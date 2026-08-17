@@ -49,8 +49,14 @@ export function getStaticPaths() {
 
 const { it, vendor } = Astro.props;
 const host = new URL(it.url).hostname.replace(/^www\./, '');
-const title = `${it.title} — ${vendor}`;
-const description = (it.summary || `An announcement from ${vendor}, surfaced ${it.date}, with a link to the original post at ${host}.`).slice(0, 300);
+// Titles are clamped to 65 characters including the vendor suffix; a headline
+// that would push past it is cut at a word boundary with an ellipsis, because
+// search engines truncate long titles anyway and do it worse.
+const suffix = ` — ${vendor}`;
+const headMax = 65 - suffix.length;
+const head = it.title.length <= headMax ? it.title : `${it.title.slice(0, headMax - 1).replace(/\s+\S*$/, '')}…`;
+const title = `${head}${suffix}`;
+const description = (it.summary || `An announcement from ${vendor}, surfaced ${it.date}, with a link to the original post at ${host}.`).slice(0, 158);
 
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
@@ -62,7 +68,7 @@ const jsonld = JSON.stringify({
   description,
 });
 ---
-<Base title={title} description={description} current="/ai-news/" jsonld={jsonld}>
+<Base title={title} description={description} current="/ai-news/" jsonld={jsonld} ogType="article">
   <p class="meta-line"><a href="/ai-news/">AI News</a> · <a href="/ai-news/vendor/">AI Vendor News</a> · {vendor}</p>
   <h1>{it.title}</h1>
   <p class="dateline"><span class="pill">{vendor}</span> Surfaced {it.date} · Announcement · {host}</p>

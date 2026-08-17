@@ -163,3 +163,25 @@
 # stories on the same run that publishes them.
 /ai-news/mit-blru-ibm-skillsbuild-launch-ai-lab-to-accelerate-researc/  /ai-news/  301
 /ai-news/sault-city-council-supports-data-centre-framework-rejects-mo/  /ai-news/  301
+
+# SRJ BOOK AND SERVICE PATHS, 2026-08-17. The governance library arrived from
+# srjconsultingservices.com carrying root-relative links to /books/ and
+# /services/, which are srj sections that never existed on this site; the
+# August 16 crawl found 56 pages linking into them and 43 inlinks on /books/
+# alone. The page content is fixed at the source (site_content in SQL), and
+# these rules catch anything already crawled or bookmarked. Splat rules work
+# here because no catch-all precedes them (the /ai-governance/ history above
+# was an ordering problem, not a splat problem).
+/books/  https://srjconsultingservices.com/books/  301
+/books/*  https://srjconsultingservices.com/books/:splat  301
+/services/  https://srjconsultingservices.com/services/  301
+/services/*  https://srjconsultingservices.com/services/:splat  301
+
+# ACCIDENTAL CATEGORY-ROUTE DUPLICATES, 2026-08-17. concept-taxonomy.json and
+# knowledge-graph.json live in content/ecosystem/ for the uid-addressed pages
+# under Research & Learning, but the category route also swept the directory
+# and rendered them as broken half-pages with undefined names, orphaned and
+# in the sitemap. The route now skips files without domains; these send the
+# accidental URLs to the real pages.
+/ai-ecosystem/concept-taxonomy/  /ai-ecosystem/research-knowledge-and-learning/7f3a1c95/  301
+/ai-ecosystem/knowledge-graph/  /ai-ecosystem/research-knowledge-and-learning/21f4f8f2/  301

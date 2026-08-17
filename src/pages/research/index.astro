@@ -15,7 +15,7 @@ const hub = existsSync('content/research/index.json')
 
 const topics = (hub.topics || []).slice().sort((a, b) => (b.count || 0) - (a.count || 0));
 const cited = hub.most_cited || [];
-const desc = `${hub.total || 0} peer-reviewed and preprint AI papers, organised into ${topics.length} topics from architectures to bias, evaluation, and the EU AI Act. Each carries citation count and a plain-English note on why it matters.`;
+const desc = `${hub.total || 0} peer-reviewed and preprint AI papers organised into ${topics.length} topics, each with the citation record and a plain-English note on why it matters.`;
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',

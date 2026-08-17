@@ -26,9 +26,8 @@ const eras = tl.eras || [];
 const anchor = (s) => 'era-' + String(s).replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase();
 
 const desc =
-  `${tl.total} milestones in artificial intelligence from ${tl.first_year} to the present: ` +
-  `Turing, the perceptron, expert systems, backpropagation, deep learning, AlexNet, transformers, ` +
-  `and the litigation and regulation that followed. Each entry cites its primary source.`;
+  `${tl.total} milestones in artificial intelligence from ${tl.first_year} to the present, ` +
+  `from Turing to transformers and the regulation that followed, each citing its primary source.`;
 
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',

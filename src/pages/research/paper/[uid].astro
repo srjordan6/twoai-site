@@ -39,7 +39,15 @@ const authors = (p.authors || '').trim();
 const authorList = authors ? authors.split(/\s*,\s*|\s+and\s+/).filter(Boolean) : [];
 const authorCount = authorList.length;
 
-const desc = (abstract || p.note || `${p.title} by ${authors || 'unknown authors'}.`).slice(0, 300);
+const desc = (abstract || p.note || `${p.title} by ${authors || 'unknown authors'}.`).slice(0, 158);
+
+// Paper titles routinely run past any sensible title-tag length; clamp the
+// whole tag to 65 characters, cutting the paper title at a word boundary and
+// keeping a short suffix so the tag still says whose page it is.
+const tSuffix = ' — AI Research';
+const tMax = 65 - tSuffix.length;
+const tHead = p.title.length <= tMax ? p.title : `${p.title.slice(0, tMax - 1).replace(/\s+\S*$/, '')}…`;
+const pageTitle = `${tHead}${tSuffix}`;
 
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
@@ -55,7 +63,7 @@ const jsonld = JSON.stringify({
   dateModified: p.generated,
 });
 ---
-<Base title={`${p.title} — AI Research — The World of AI`} description={desc} current="/research/" jsonld={jsonld}>
+<Base title={pageTitle} description={desc} current="/research/" jsonld={jsonld} ogType="article">
   <p class="meta-line">
     <a href="/research/">AI Research Library</a>
     {p.topic_slug && p.topic_name && (

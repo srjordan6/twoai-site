@@ -40,8 +40,8 @@ const stamp = generated ? `${generated.toUTCString().slice(0, 22)} UTC` : null;
 
 const title = `AI News: Daily Briefing and Vendor Announcements`;
 const description =
-  `AI news in two sections: a daily briefing of the top stories ranked by breadth of worldwide ` +
-  `coverage, and announcements from the companies and labs building AI, in their own words.`;
+  `AI news in two sections: a daily briefing of the top stories ranked by breadth of coverage, ` +
+  `and announcements from the labs building AI, in their own words.`;
 
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
@@ -139,6 +139,9 @@ const jsonld = JSON.stringify({
         </ol>
       )}
       <a class="go" href="/ai-news/vendor/">All vendor announcements &rarr;</a>
+      <p class="meta-line">Looking for an older story? The <a href="/ai-news/archive/">story
+        archive</a> and the <a href="/ai-news/vendor/archive/1/">vendor announcement archive</a>
+        list every page ever published here.</p>
     </section>
   </div>
 

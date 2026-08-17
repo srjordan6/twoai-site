@@ -42,7 +42,7 @@ if (c.total === 0) {
     : '';
   lede = `Between ${w.start} and ${w.end}, ${parts.join(', ')}.${focus}`;
 }
-const desc = lede.slice(0, 300);
+const desc = lede.length <= 158 ? lede : `${lede.slice(0, 157).replace(/\s+\S*$/, '')}\u2026`;
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'Article',

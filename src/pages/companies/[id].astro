@@ -49,7 +49,7 @@ const orgLabels = {
 };
 const orgLabel = orgLabels[profile.org_type] || null;
 
-const desc = `${company.name}: ${products.length} AI product${products.length === 1 ? '' : 's'} we track${cases.length ? `, ${cases.length} tracked lawsuit${cases.length === 1 ? '' : 's'}` : ''}${mcp.length ? `, ${mcp.length} MCP server${mcp.length === 1 ? '' : 's'}` : ''}. What ships, what is contested, what is published.`;
+const desc = `${company.name}: ${products.length} AI product${products.length === 1 ? '' : 's'} we track${cases.length ? `, ${cases.length} tracked lawsuit${cases.length === 1 ? '' : 's'}` : ''}${mcp.length ? `, ${mcp.length} MCP server${mcp.length === 1 ? '' : 's'}` : ''}. What ships, what is contested, and what is published, from the AI Company Directory.`;
 
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',

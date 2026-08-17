@@ -51,7 +51,7 @@ const fmt = (n) => Number(n).toLocaleString();
 const money = (v) => (v === null || v === undefined ? '—' : `$${v}`);
 const ctx = (n) => (n >= 1000 ? `${Math.round(n / 1000)}k` : `${n}`);
 
-const desc = isHW
+const _descRaw = isHW
   ? `${sec.total} ${sec.name.toLowerCase()} entries, each curated with a verified vendor or primary source and re-verified daily. ${sec.blurb}`
   : isDS
   ? `${sec.total} ${sec.name.toLowerCase()}, curated for significance with downloads, licence, and gating refreshed daily from the Hugging Face Hub. ${sec.blurb}`
@@ -78,6 +78,7 @@ const desc = isHW
   : isAPI
   ? `${sec.total} ${sec.name.toLowerCase()} available over commercial APIs, with context window, per-token pricing, and release date, refreshed daily. ${sec.blurb}`
   : `The ${sec.total} most-downloaded open ${sec.name.toLowerCase()} on the Hugging Face Hub, with licence, downloads, and release date, refreshed daily. ${sec.blurb}`;
+const desc = _descRaw.length <= 158 ? _descRaw : `${_descRaw.slice(0, 157).replace(/\s+\S*$/, '')}…`;
 
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',

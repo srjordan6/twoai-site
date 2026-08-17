@@ -16,7 +16,7 @@ const idx = existsSync('content/mcp/index.json')
 const servers = idx.servers || [];
 const desc =
   `A browsable directory of ${idx.total} active Model Context Protocol servers from the official ` +
-  `MCP registry: who publishes each one, what it does, whether it is hosted or runs locally, and where to get it.`;
+  `MCP registry: who publishes each one, what it does, and where to get it.`;
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',

@@ -25,7 +25,8 @@ const { t } = Astro.props;
 const papers = t.papers ?? [];
 const totalCites = papers.reduce((s, p) => s + (Number(p.citations) || 0), 0);
 const blurb = t.blurb || `Curated ${papers.length} papers on ${t.name} in artificial intelligence.`;
-const desc = `${papers.length} papers curated on ${t.name} in AI research. ${blurb}`.slice(0, 300);
+const _d = `${papers.length} papers curated on ${t.name} in AI research. ${blurb}`;
+const desc = _d.length <= 158 ? _d : `${_d.slice(0, 157).replace(/\s+\S*$/, '')}\u2026`;
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',

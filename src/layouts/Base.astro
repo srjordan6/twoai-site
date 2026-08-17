@@ -14,8 +14,8 @@ import AmazonShelf from '../components/AmazonShelf.astro';
 import PillarBox from '../components/PillarBox.astro';
 import Topbar from '../components/Topbar.astro';
 
-interface Props { title: string; description: string; current?: string; jsonld?: string; canonicalOverride?: string; noindex?: boolean; }
-const { title, description, current = '', jsonld, canonicalOverride, noindex = false } = Astro.props;
+interface Props { title: string; description: string; current?: string; jsonld?: string; canonicalOverride?: string; noindex?: boolean; ogType?: string; }
+const { title, description, current = '', jsonld, canonicalOverride, noindex = false, ogType = 'website' } = Astro.props;
 const nav = [
   { href: '/ai-ecosystem/technology-and-core-infrastructure/', label: 'Technology & Infrastructure', short: 'Technology' },
   { href: '/ai-ecosystem/ecosystem-entities-market-and-operations/', label: 'Market & Entities', short: 'Market' },
@@ -28,6 +28,24 @@ const nav = [
 // library migrates from srjconsultingservices.com without the two sites
 // competing with each other in the meantime.
 const canonical = canonicalOverride || new URL(Astro.url.pathname, Astro.site).href;
+
+// Final safety net on the two tags every page emits, applied here so no
+// individual template can ship a tag outside the band the audits check.
+// Titles over 70 characters first lose the site-name suffix, then cut at a
+// word boundary; search engines truncate longer titles anyway and do it
+// worse. Descriptions clamp to 158, and anything under 110 gains a true
+// site-wide sentence rather than shipping a stub the SERP pads with
+// whatever it scrapes.
+const wordClamp = (s: string, n: number) => (s.length <= n ? s : `${s.slice(0, n - 1).replace(/\s+\S*$/, '')}…`);
+let pageTitle = title;
+if (pageTitle.length > 70) pageTitle = pageTitle.replace(/\s+[—|-]\s+The World of AI\s*$/, '');
+if (pageTitle.length > 70) pageTitle = wordClamp(pageTitle, 70);
+let metaDesc = wordClamp(description, 158);
+if (metaDesc.length < 110) {
+  const long = `${metaDesc} From The World of AI, an atlas of artificial intelligence rebuilt daily from primary sources.`.trim();
+  const short = `${metaDesc} From The World of AI, rebuilt daily from primary sources.`.trim();
+  metaDesc = long.length <= 158 ? long : short.length <= 158 ? short : wordClamp(short, 158);
+}
 
 // GA4 custom dimensions, resolved at build time so every page reports which
 // pillar and section it belongs to. This is what makes the factory-level
@@ -42,14 +60,15 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{title}</title>
-  <meta name="description" content={description} />
+  <title>{pageTitle}</title>
+  <meta name="description" content={metaDesc} />
   <link rel="canonical" href={canonical} />
   {noindex && <meta name="robots" content="noindex,follow" />}
   <link rel="icon" type="image/svg+xml" href="/brand/mark.svg" />
   <link rel="sitemap" href="/sitemap-index.xml" />
-  <meta property="og:title" content={title} />
-  <meta property="og:description" content={description} />
+  <meta property="og:title" content={pageTitle} />
+  <meta property="og:description" content={metaDesc} />
+  <meta property="og:type" content={ogType} />
   <meta property="og:url" content={canonical} />
   <meta property="og:site_name" content="The World of AI" />
   <meta property="og:image" content="https://theworldofai.org/brand/og.png" />

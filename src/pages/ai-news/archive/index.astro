@@ -1,0 +1,47 @@
+---
+/**
+ * The AI News story archive: one page linking every story permalink this site
+ * has ever published. The daily briefing only shows today and the story pages
+ * live forever, so without this page every past story was reachable only
+ * through the sitemap - an orphan to any crawler that follows links, which is
+ * exactly what the audit flagged. This is the crawl path.
+ */
+import Base from '../../../layouts/Base.astro';
+
+const mods = import.meta.glob('../../../../content/news/news.json', { eager: true });
+const news: any = Object.values(mods)[0]?.default ?? null;
+const arch = import.meta.glob('../../../../content/news/archive.json', { eager: true });
+const archive: any = Object.values(arch)[0]?.default ?? null;
+
+const seen = new Set<string>();
+const items: { slug: string; headline: string; date?: string }[] = [];
+for (const s of news?.stories ?? []) {
+  if (!s.Slug && !s.slug) continue;
+  const slug = s.Slug || s.slug;
+  if (seen.has(slug)) continue;
+  seen.add(slug);
+  items.push({ slug, headline: s.Headline || s.headline, date: news?.date });
+}
+for (const s of archive?.stories ?? []) {
+  // The archive holds two shapes: capitalised keys from the clustering
+  // pipeline and lowercase keys from the enactment trigger. Read both.
+  const slug = s.Slug || s.slug;
+  if (!slug || seen.has(slug)) continue;
+  seen.add(slug);
+  items.push({ slug, headline: s.Headline || s.headline, date: s.ArchivedDate || s.published_on });
+}
+
+const title = `AI News Archive: ${items.length} stories — The World of AI`;
+const description = `Every AI news story published on this site, newest first, ${items.length} in total. Each links to the full story page with its source list and coverage record.`;
+---
+<Base title={title} description={description} current="/ai-news/">
+  <p class="meta-line"><a href="/ai-news/">AI News</a> · Archive</p>
+  <h1>AI News Archive</h1>
+  <p class="answer"><b>{items.length} stories</b>, every one this site has published, newest
+    first. The <a href="/ai-news/">daily briefing</a> holds today; this page holds everything.</p>
+  <ul class="sections">
+    {items.map((it) => (
+      <li><a href={`/ai-news/${it.slug}/`}>{it.headline}</a>{it.date && <span class="n">{it.date}</span>}</li>
+    ))}
+  </ul>
+</Base>

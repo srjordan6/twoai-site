@@ -31,14 +31,30 @@ export async function getStaticPaths() {
     seen.add(s.Slug);
     out.push({ params: { story: s.Slug }, props: { s, date: news.date, generated: news.generated } });
   }
-  for (const s of archive?.stories ?? []) {
+  for (const raw of archive?.stories ?? []) {
+    // The enactment trigger writes archive rows with lowercase keys (slug,
+    // headline, summary, source_url) where the clustering pipeline writes
+    // capitalised ones. The first version of this loop only read s.Slug, so
+    // every enacted-law story was silently skipped and its permalink 404ed.
+    // Normalise both shapes here rather than asking two Go writers to agree.
+    const s = raw.Slug ? raw : {
+      ...raw,
+      Slug: raw.slug,
+      Headline: raw.headline,
+      Summary: raw.summary,
+      SummaryURL: raw.source_url,
+      SummaryDomain: raw.source_name,
+      DomainCount: 1,
+      ArticleCount: 1,
+      Articles: raw.source_url ? [{ Title: raw.headline, URL: raw.source_url }] : [],
+    };
     if (!s.Slug || seen.has(s.Slug)) continue;
     seen.add(s.Slug);
     out.push({
       params: { story: s.Slug },
       // An archived story dates itself from the day it ran, not from the day
       // the archive was last written.
-      props: { s, date: s.ArchivedDate ?? archive.date, generated: s.ArchivedGenerated ?? archive.generated },
+      props: { s, date: s.ArchivedDate ?? s.published_on ?? archive.date, generated: s.ArchivedGenerated ?? archive.generated },
     });
   }
   return out;
@@ -63,10 +79,12 @@ const timeline = coverageByDay(story.Articles);
 const stamp = generated ? `${new Date(generated).toUTCString().slice(0, 22)} UTC` : null;
 const minutes = readingMinutes(story.Headline, ...story.Articles.map((a) => a.Title));
 
-const title = `${story.Headline}`.slice(0, 62);
-const description =
+// 58 + " | AI News" (10) keeps the whole title tag at or under 68 characters.
+const title = story.Headline.length <= 58 ? story.Headline : `${story.Headline.slice(0, 57).replace(/\s+\S*$/, '')}…`;
+const _fullDesc =
   `${story.Headline}. Covered by ${story.DomainCount} outlets across ${story.ArticleCount} ` +
-  `articles: full source list, named entities, and coverage timeline.`.slice(0, 160);
+  `articles: full source list, named entities, and coverage timeline.`;
+const description = _fullDesc.length <= 158 ? _fullDesc : `${_fullDesc.slice(0, 157).replace(/\s+\S*$/, '')}…`;
 
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
@@ -92,7 +110,7 @@ const jsonld = JSON.stringify({
   ],
 });
 ---
-<Base title={`${title} | AI News`} description={description} current="/ai-news/" jsonld={jsonld}>
+<Base title={`${title} | AI News`} description={description} current="/ai-news/" jsonld={jsonld} ogType="article">
   <p class="meta-line"><a href="/ai-news/">AI News</a> · <a href="/ai-news/daily/">Daily News</a></p>
   <h1>{story.Headline}</h1>
   <p class="dateline">

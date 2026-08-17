@@ -62,8 +62,8 @@ const sources = [...sourceCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].l
 
 const title = `AI Vendor News: Announcements from the Companies Building AI`;
 const description =
-  `Announcements from AI companies, labs, and institutes in their own words, newest first, ` +
-  `cross-referenced to their company profiles. Every link goes to the original post.`;
+  `Announcements from AI companies, labs, and institutes in their own words, newest first. ` +
+  `Every link goes to the original post.`;
 
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
@@ -104,9 +104,10 @@ const jsonld = JSON.stringify({
     <p>
       Announcements from the organisations building AI, in their own words, drawn from their own
       feeds rather than press coverage, newest first: {totalShown} recent posts
-      from {sources.length} sources, {totalTracked} archived in total. Where the publisher has a
-      profile on this site, its name links to it. For how the field is being covered by the
-      press, read the <a href="/ai-news/daily/">Daily News briefing</a>.
+      from {sources.length} sources, <a href="/ai-news/vendor/archive/1/">{totalTracked} archived
+      in total</a>. Where the publisher has a profile on this site, its name links to it. For how
+      the field is being covered by the press, read the
+      <a href="/ai-news/daily/">Daily News briefing</a>.
     </p>
     {coverage && (
       <p class="cov">
