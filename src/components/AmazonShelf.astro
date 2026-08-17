@@ -19,9 +19,12 @@ const TAG = 'theworldofa0b-20';
 // assets, like the logo kit - not pipeline content). Matched on title
 // keywords so a press_books retitle degrades to a text link, never a
 // broken image.
+// Order matters: the first keyword that appears in a title wins, so a
+// narrow keyword must sit above any broader one it would collide with.
 const COVERS = [
   ['enablement', '/covers/enablement-audit.jpg', 480],
   ['readiness', '/covers/readiness-assessment.jpg', 512],
+  ['lawyer', '/covers/ai-lawyer.jpg', 512],
   ['risk', '/covers/risk-governance-review.jpg', 512],
   ['efficiency', '/covers/efficiency-optimization.jpg', 512],
   ['security audit', '/covers/it-security-audit.jpg', 500],
@@ -51,7 +54,11 @@ try {
 {books.length > 0 && (
   <aside class="amz-shelf" aria-label="Books from the publisher, on Amazon">
     <div class="wrap">
-      <h2>The Stephen R. Jordan book series &ldquo;The Operating Discipline for AI Library&trade;&rdquo; now available on Amazon</h2>
+      {/* The shelf carries the Operating Discipline for AI Library volumes and,
+          since The AI Lawyer published on 2026-08-17, standalone titles that are
+          not part of that series. The heading names the series without claiming
+          every book on the row belongs to it. */}
+      <h2>Books by Stephen R. Jordan, including &ldquo;The Operating Discipline for AI Library&trade;&rdquo; series, now available on Amazon</h2>
       <p class="amz-disclosure">Disclosure: these are affiliate links. As an Amazon Associate,
         SRJ Consulting &amp; Services LLC, the publisher of this site, earns from qualifying
         purchases. The price you pay is unchanged, and nothing on this site is ranked, rated,

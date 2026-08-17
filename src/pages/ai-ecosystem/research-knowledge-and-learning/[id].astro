@@ -241,16 +241,26 @@ const jsonld = JSON.stringify(
 
   {learn && learn.srj_books && (
     <div class="dom">
-      <h3>The SRJ book series</h3>
-      <p class="meta-line">Nine volumes from SRJ Consulting &amp; Services, the publisher of this
-        site — listed separately from the independent shelf above, and labeled as such.</p>
+      <h3>Books from the publisher of this site</h3>
+      {/* The count was hardcoded at nine and went stale the day a tenth title
+          published. It reads from the data now, and the sentence no longer
+          calls every one of them a volume of the series: The AI Lawyer is a
+          standalone novel, not part of the Operating Discipline library. */}
+      <p class="meta-line">{learn.srj_books.length} titles from SRJ Consulting &amp; Services, the
+        publisher of this site — listed separately from the independent shelf above, and
+        labeled as such.</p>
       <p class="meta-line"><b>Disclosure:</b> the Amazon links below are affiliate links.
         As an Amazon Associate, SRJ Consulting &amp; Services LLC earns from qualifying
         purchases. The price you pay is unchanged, and nothing on this site is ranked,
         rated, or reported differently because of it. See our
         {' '}<a href="/disclosure/">funding and disclosure policy</a>.</p>
+      {/* A title only becomes a link when it has a page to link to. The
+          standalone novel has no page on srjconsultingservices.com, and an
+          <a> with an empty href resolves to the current page - a self-link
+          that reads as a dead end to a reader and as a duplicate to a
+          crawler. Plain text is the honest render. */}
       {learn.srj_books.map((b) => (
-        <p class="meta-line"><a href={b.url} rel="noopener">{b.title}</a> · {b.pillar} ·
+        <p class="meta-line">{b.url ? <a href={b.url} rel="noopener">{b.title}</a> : <b>{b.title}</b>} · {b.pillar} ·
           {b.status === 'available' ? ` published ${b.published}` : ' forthcoming'}
           {b.amazon && <> · <a href={b.amazon} rel="noopener sponsored">Amazon</a></>}</p>
       ))}
