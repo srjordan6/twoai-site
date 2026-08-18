@@ -23,6 +23,37 @@ export function getStaticPaths() {
     .map((c) => ({ params: { category: c.slug }, props: { c } }));
 }
 const { c } = Astro.props;
+
+/**
+ * Curated cross-references between domains that cover the same subject from
+ * different angles.
+ *
+ * The agents domain has ten sections and none of them is governance, because
+ * the agent governance material was written under AI Security and Risk: what an
+ * agent may spend and trigger, the autonomy tiers it earns, retention of what
+ * it remembers. A reader who arrives at agents never sees it, and a reader who
+ * arrives at security is not looking for agents. Nothing needs rewriting, the
+ * two shelves just need to point at each other.
+ *
+ * Keyed by domain name rather than slug because the domain rows carry no stable
+ * key of their own; if a domain is renamed this quietly stops rendering, which
+ * is the failure mode to prefer over linking to the wrong page.
+ */
+const E = '/ai-ecosystem/enterprise-applications-governance-and-tools';
+const CROSS: Record<string, { intro: string; links: { name: string; href: string; note: string }[] }> = {
+  'AI Agents and the MCP Ecosystem': {
+    intro: 'Governance and security for agents is written under AI Security and Risk rather than here, because it is the same discipline applied to a new subject. The sections that matter most for anyone running agents:',
+    links: [
+      { name: 'AI Agent Security', href: `${E}/a2538ec1/`,
+        note: 'Machine-enforced limits on what an agent may spend, touch and trigger, circuit breakers, autonomy tiers, and the agent kill chain.' },
+      { name: 'Agent and Non-Human Identity', href: `${E}/8f3e19cd/`,
+        note: 'Credentials, scopes and lifecycle for identities that are not people.' },
+      { name: 'AI Privacy and Data Protection', href: `${E}/95ccea74/`,
+        note: 'Retention and erasure that reach conversation logs, embeddings and agent memory stores.' },
+    ],
+  },
+};
+
 const live = (c.domains || []).filter((d) => d.status === 'live');
 const rest = (c.domains || []).filter((d) => d.status !== 'live');
 const desc = `${c.name}: ${c.live} of ${c.total} domains live, ${c.pages} pages published. ${c.blurb}`.slice(0, 300);
@@ -73,6 +104,17 @@ const jsonld = JSON.stringify({
               ))}
             </ul>
           )}
+          {CROSS[d.name] && (
+            <div class="cross">
+              <p class="cross-label">Related coverage elsewhere on this site</p>
+              <p class="cross-intro">{CROSS[d.name].intro}</p>
+              <ul>
+                {CROSS[d.name].links.map((l) => (
+                  <li><a href={l.href}>{l.name}</a><span>{l.note}</span></li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       ))}
     </>
@@ -99,6 +141,18 @@ const jsonld = JSON.stringify({
 </Base>
 
 <style>
+  .cross { background: var(--cream, #FFF6EC); border: 1px solid #F0D6B0; border-radius: 6px;
+    padding: 18px 22px; margin: 1.6em 0; max-width: 780px; }
+  .cross-label { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: #F07800; margin: 0 0 .5em; }
+  .cross-intro { margin: 0 0 .8em; color: #3d3d46; }
+  .cross ul { list-style: none; margin: 0; padding: 0; }
+  .cross li { padding: .4em 0; border-bottom: 1px solid #F0D6B0; }
+  .cross li:last-child { border-bottom: 0; }
+  .cross a { color: var(--navy); font-weight: 600; text-decoration: none; }
+  .cross a:hover { color: #F07800; }
+  .cross span { display: block; font-size: .89rem; color: #6b6b78; margin-top: .15em; }
+
   .sections { list-style: none; margin: .6em 0 0; padding: 0 0 0 1em; border-left: 2px solid #ececf2; }
   .sections li { margin-bottom: .55em; }
   .sections li p { margin: .1em 0 0; font-size: .9rem; color: #6b6b78; }
