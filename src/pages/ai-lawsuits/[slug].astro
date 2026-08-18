@@ -5,9 +5,34 @@ import { readFileSync, existsSync } from 'node:fs';
 export function getStaticPaths() {
   if (!existsSync('content/lawsuits/lawsuits.json')) return [];
   const s = JSON.parse(readFileSync('content/lawsuits/lawsuits.json', 'utf8'));
-  return (s.cases ?? []).map((c) => ({ params: { slug: c.slug }, props: { c, generated: s.generated ?? '' } }));
+  const cases = s.cases ?? [];
+  // The primary defendant, normalized to a match key. Most relatedness a reader
+  // wants is "other cases against the same company", which category cannot give
+  // (74 of 103 cases are copyright). Text before the first comma or semicolon,
+  // corporate suffix stripped, so "OpenAI, Inc. et al." and "Anthropic PBC"
+  // collapse to openai and anthropic. Inside getStaticPaths because Astro
+  // extracts that function into its own scope.
+  const defKey = (defendants) => {
+    if (!defendants) return '';
+    return String(defendants)
+      .split(/[;,]/)[0]
+      .replace(/\b(inc|corp|corporation|pbc|llc|ltd|co|plc|lp|et al)\b\.?/gi, '')
+      .replace(/[^a-z0-9 ]/gi, '')
+      .trim()
+      .toLowerCase();
+  };
+  return cases.map((c) => {
+    const key = defKey(c.defendants);
+    // Same defendant is the strongest tie; fill the rest from the same
+    // category so a case with no sibling still offers an onward path. Cap 6.
+    const sameDefendant = key ? cases.filter((o) => o.slug !== c.slug && defKey(o.defendants) === key) : [];
+    const seen = new Set([c.slug, ...sameDefendant.map((o) => o.slug)]);
+    const sameCategory = cases.filter((o) => !seen.has(o.slug) && o.category === c.category);
+    const related = [...sameDefendant, ...sameCategory].slice(0, 6);
+    return { params: { slug: c.slug }, props: { c, generated: s.generated ?? '', related } };
+  });
 }
-const { c, generated } = Astro.props;
+const { c, generated, related } = Astro.props;
 const lead = c.executive_summary || c.summary || `${c.case_name}, in the ${c.court}.`;
 const desc = lead.length > 152 ? lead.slice(0, 149) + '...' : lead;
 const timeline = Array.isArray(c.timeline) ? c.timeline : [];
@@ -67,6 +92,36 @@ const jsonld = JSON.stringify({
     {c.courtlistener_url && c.source_url && ' · '}
     {c.source_url && <a href={c.source_url} rel="noopener">Primary source</a>}
   </p>
+  {related.length > 0 && (
+    <>
+      <h2>Related cases</h2>
+      <ul class="related-cases">
+        {related.map((r) => (
+          <li>
+            <a href={`/ai-lawsuits/${r.slug}/`}>{r.case_name}</a>
+            {(r.status_badge || r.status) && <span class="rc-badge">{r.status_badge || r.status}</span>}
+          </li>
+        ))}
+      </ul>
+    </>
+  )}
+
+  <p class="tracker-back"><a href="/ai-lawsuits/">&larr; All cases in the AI lawsuit tracker</a></p>
+
   <div class="cite-box">Cite this page: <code>"{c.case_name}." The World of AI Lawsuit Tracker,
     theworldofai.org/ai-lawsuits/{c.slug}/.{generated ? ` Verified ${generated}.` : ''}</code></div>
 </Base>
+
+<style>
+  .related-cases { list-style: none; margin: .6em 0 0; padding: 0; }
+  .related-cases li { padding: .5em 0; border-bottom: 1px solid #ececf2; display: flex;
+    align-items: baseline; justify-content: space-between; gap: 1em; }
+  .related-cases li:last-child { border-bottom: 0; }
+  .related-cases a { color: var(--navy); text-decoration: none; font-weight: 600; }
+  .related-cases a:hover { color: var(--orange, #F07800); }
+  .rc-badge { flex: none; font-size: .72rem; font-weight: 600; color: #6b6b78;
+    background: var(--cream, #FFF6EC); border-radius: 10px; padding: 1px 8px; white-space: nowrap; }
+  .tracker-back { margin-top: 1.4em; font-size: .95rem; }
+  .tracker-back a { color: var(--navy); text-decoration: none; font-weight: 600; }
+  .tracker-back a:hover { color: var(--orange, #F07800); }
+</style>
