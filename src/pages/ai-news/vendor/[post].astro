@@ -55,7 +55,14 @@ const host = new URL(it.url).hostname.replace(/^www\./, '');
 const suffix = ` — ${vendor}`;
 const headMax = 65 - suffix.length;
 const head = it.title.length <= headMax ? it.title : `${it.title.slice(0, headMax - 1).replace(/\s+\S*$/, '')}…`;
-const title = `${head}${suffix}`;
+// Vendors title posts as bluntly as "GPT-4" or "Jukebox", which composes to a
+// 14-character title that wastes most of the SERP line and says nothing about
+// what the page is. Where the short form is under 30 characters, say what the
+// page actually is instead. Longer heads keep the compact form and Base
+// clamps them to the pixel budget.
+const shortForm = `${head}${suffix}`;
+const longForm = `${head} — an announcement from ${vendor}`;
+const title = shortForm.length < 30 && longForm.length <= 60 ? longForm : shortForm;
 const description = (it.summary || `An announcement from ${vendor}, surfaced ${it.date}, with a link to the original post at ${host}.`).slice(0, 158);
 
 const jsonld = JSON.stringify({

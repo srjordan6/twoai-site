@@ -40,7 +40,12 @@ const jsonld = JSON.stringify({
   },
 });
 ---
-<Base title={`${c.name} — The AI Ecosystem`} description={desc} current="/ai-ecosystem/" jsonld={jsonld}>
+{/* Most category names are long enough on their own; "AI News" composes to a
+    26-character title that wastes the SERP line, so a short name gets the
+    domain count it is actually a category of. */}
+<Base title={`${c.name} — The AI Ecosystem`.length < 30
+    ? `${c.name}: ${c.total} domains — The AI Ecosystem`
+    : `${c.name} — The AI Ecosystem`} description={desc} current="/ai-ecosystem/" jsonld={jsonld}>
   <p class="meta-line"><a href="/">The AI Ecosystem</a></p>
   <h1>{c.name}</h1>
   <p class="answer">{c.blurb} This category holds <b>{c.total} domains</b>, of which

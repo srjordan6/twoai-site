@@ -82,6 +82,13 @@ export function getStaticPaths() {
 
 const { hub, topic, section, hubUid, learn } = Astro.props;
 
+// True only when the URL points at an actual page, not at a bare hostname.
+// See the books block below for why this distinction matters.
+const hasPage = (u) => {
+  if (!u) return false;
+  try { return new URL(u, 'https://theworldofai.org').pathname.replace(/\/+$/, '') !== ''; }
+  catch { return false; }
+};
 const _descRaw = learn
   ? `${learn.total} ${learn.name.toLowerCase()}, ${learn.free} free, curated by level and audience with a verified source each${learn.with_code ? `, ${learn.with_code} with companion code` : ''}, re-verified daily.`
   : section
@@ -254,13 +261,16 @@ const jsonld = JSON.stringify(
         purchases. The price you pay is unchanged, and nothing on this site is ranked,
         rated, or reported differently because of it. See our
         {' '}<a href="/disclosure/">funding and disclosure policy</a>.</p>
-      {/* A title only becomes a link when it has a page to link to. The
-          standalone novel has no page on srjconsultingservices.com, and an
-          <a> with an empty href resolves to the current page - a self-link
-          that reads as a dead end to a reader and as a duplicate to a
-          crawler. Plain text is the honest render. */}
+      {/* A title only becomes a link when it has a PAGE to link to, which
+          means a real path and not just a hostname. Two ways this goes wrong:
+          an empty url renders <a href=""> and self-links to this page, and a
+          book whose url_path is unset renders the bare
+          https://srjconsultingservices.com, which sends a reader who clicked
+          a book title to a company home page. The novel hit the second case
+          on 2026-08-18. Both now fall back to plain text, and the Amazon link
+          beside it still gets the reader to the book. */}
       {learn.srj_books.map((b) => (
-        <p class="meta-line">{b.url ? <a href={b.url} rel="noopener">{b.title}</a> : <b>{b.title}</b>} · {b.pillar} ·
+        <p class="meta-line">{hasPage(b.url) ? <a href={b.url} rel="noopener">{b.title}</a> : <b>{b.title}</b>} · {b.pillar} ·
           {b.status === 'available' ? ` published ${b.published}` : ' forthcoming'}
           {b.amazon && <> · <a href={b.amazon} rel="noopener sponsored">Amazon</a></>}</p>
       ))}

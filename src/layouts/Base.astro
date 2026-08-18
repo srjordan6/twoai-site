@@ -31,15 +31,57 @@ const canonical = canonicalOverride || new URL(Astro.url.pathname, Astro.site).h
 
 // Final safety net on the two tags every page emits, applied here so no
 // individual template can ship a tag outside the band the audits check.
-// Titles over 70 characters first lose the site-name suffix, then cut at a
-// word boundary; search engines truncate longer titles anyway and do it
-// worse. Descriptions clamp to 158, and anything under 110 gains a true
-// site-wide sentence rather than shipping a stub the SERP pads with
-// whatever it scrapes.
+// Descriptions clamp to 158, and anything under 110 gains a true site-wide
+// sentence rather than shipping a stub the SERP pads with whatever it scrapes.
 const wordClamp = (s: string, n: number) => (s.length <= n ? s : `${s.slice(0, n - 1).replace(/\s+\S*$/, '')}…`);
+
+// TITLE BUDGET. A title has two independent limits and the character count is
+// the weaker one: Google truncates on RENDERED WIDTH, so "Computer and
+// Information Systems Managers" busts the pixel budget at 69 characters while
+// "Ollama: what it does..." is fine at 61. Both are enforced here.
+//
+// TW is a per-character advance-width table for the font the SERP audit
+// measures in, fitted by least squares against 119 measured (title, pixel
+// width) pairs from the 2026-08-18 crawl export. Max error on that sample is
+// 1.6px and mean error 0.41px, so this is the audit's own metric rather than
+// an approximation of it. Characters the sample never contained carry
+// Arial-derived values; anything still unknown falls back to DEFAULT_TW,
+// which is deliberately generous so an unmeasured glyph clamps early rather
+// than shipping over budget.
+const TW={' ':5.5,'!':5.6,'"':7.1,'#':11.1,'$':11.1,'%':17.8,'&':10.95,'\'':6.3,'(':7.09,')':7.09,'*':7.8,'+':11.7,',':3.69,'-':8.24,'.':6.32,'/':8.65,'0':10.43,'1':10.81,'2':11.36,'3':10.45,'4':10.43,'5':10.11,'7':10.46,'8':10.54,'9':9.68,':':6.01,';':5.6,'<':11.7,'=':11.7,'>':11.7,'?':11.3,'@':20.3,'A':13.03,'B':12.27,'C':12.93,'D':12.33,'E':11.18,'F':10.2,'G':13.18,'H':13.96,'I':5.71,'K':12.04,'L':10.25,'M':16.73,'N':13.13,'O':12.95,'P':12.4,'Q':12.85,'R':12.33,'S':11.62,'T':12.01,'U':12.55,'V':12.01,'W':16.68,'X':11.87,'Z':10.71,'[':5.6,']':5.6,'`':6.7,'a':10.83,'b':11.48,'c':10.11,'d':11.24,'e':10.95,'f':6.93,'g':11.34,'h':10.51,'i':5.1,'j':6.25,'k':10.75,'l':5.01,'m':17.92,'n':10.79,'o':11.45,'p':11.19,'q':10.54,'r':6.9,'s':10.3,'t':6.26,'u':10.5,'v':9.69,'w':14.24,'x':9.51,'y':9.46,'z':9.45,'|':7.21,'~':11.7,'—':15.59,'‘':3.9,'’':3.9,'“':7.1,'”':7.1,'…':13.24,'™':18};
+const DEFAULT_TW = 11;
+const titlePx = (s: string) => [...s].reduce((n, c) => n + ((TW as any)[c] ?? DEFAULT_TW), 0);
+const MAX_CH = 60, MAX_PX = 561, MIN_CH = 30;
+const overBudget = (s: string) => s.length > MAX_CH || titlePx(s) > MAX_PX;
+
+// Readable names for the four ecosystem pillars, used to give a too-short
+// title real context instead of padding it with filler. "GPUs" alone wastes
+// most of the SERP line; "GPUs — AI Technology" says which shelf it sits on.
+const PILLAR_LABEL: Record<string, string> = {
+  'technology-and-core-infrastructure': 'AI Technology',
+  'ecosystem-entities-market-and-operations': 'AI Market',
+  'research-knowledge-and-learning': 'AI Research & Learning',
+  'enterprise-applications-governance-and-tools': 'AI Governance',
+};
+
 let pageTitle = title;
-if (pageTitle.length > 70) pageTitle = pageTitle.replace(/\s+[—|-]\s+The World of AI\s*$/, '');
-if (pageTitle.length > 70) pageTitle = wordClamp(pageTitle, 70);
+// Over budget: drop the site-name suffix first, since it is the least
+// informative part, then cut at a word boundary until both limits are met.
+if (overBudget(pageTitle)) pageTitle = pageTitle.replace(/\s+[—|-]\s+The World of AI\s*$/, '');
+while (overBudget(pageTitle) && pageTitle.length > 12) {
+  pageTitle = wordClamp(pageTitle, Math.min(MAX_CH, pageTitle.length - 1));
+}
+// Under budget: add the pillar, but only when the result still fits. Utility
+// pages such as /contact/ carry no pillar and are left short on purpose, a
+// short title being correct for them rather than a defect to pad away.
+if (pageTitle.length < MIN_CH) {
+  const seg = Astro.url.pathname.split('/').filter(Boolean);
+  const label = seg[0] === 'ai-ecosystem' && seg[1] ? PILLAR_LABEL[seg[1]] : undefined;
+  if (label && !pageTitle.includes(label)) {
+    const withPillar = pageTitle.replace(/\s+[—|-]\s+The World of AI\s*$/, ` — ${label} — The World of AI`);
+    if (!overBudget(withPillar)) pageTitle = withPillar;
+  }
+}
 let metaDesc = wordClamp(description, 158);
 if (metaDesc.length < 110) {
   const long = `${metaDesc} From The World of AI, an atlas of artificial intelligence rebuilt daily from primary sources.`.trim();

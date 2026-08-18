@@ -62,6 +62,10 @@ const jsonld = JSON.stringify({
 
   {sec && sec.shape === 'industry-hub' && (
     <>
+      {/* This branch shipped without an h1 while every sibling branch has one,
+          so the hub was the single page on the site with no heading element.
+          It matches the page's own title tag rather than inventing a phrase. */}
+      <h1>AI in {sec.name}</h1>
       <p class="answer"><b>{sec.total_points} sourced points across {sec.sectors.length} industries</b>,
         every one linked to a verified primary source, with the official US adoption statistic
         updating live below. This page reads across all of them: what the numbers say, what they
