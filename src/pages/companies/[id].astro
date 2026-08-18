@@ -14,6 +14,7 @@
  */
 import Base from '../../layouts/Base.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { ownedServers } from '../../lib/mcpAttribution';
 
 export function getStaticPaths() {
   if (!existsSync('content/companies')) return [];
@@ -27,8 +28,14 @@ const { company, generated } = Astro.props;
 const profile = company.profile || {};
 const products = company.products || [];
 const cases = company.cases || [];
-const mcp = company.mcp || [];
+// Attribution is exact, never a substring: see src/lib/mcpAttribution.ts.
+const mcp = ownedServers(company.mcp, company.name);
 const categories = [...new Set(products.map((p) => p.category).filter(Boolean))];
+// Category hub links, built from the same slug rule the category pages use, so
+// the link lands on the page that lists this company's products rather than on
+// the tools hub.
+const catSlug = (n) => String(n).toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const catLinks = categories.map((n) => ({ name: n, slug: catSlug(n) }));
 
 function fmtRevenue(usd) {
   if (typeof usd !== 'number') return null;
@@ -129,19 +136,22 @@ const jsonld = JSON.stringify({
   )}
 
   <h2>Elsewhere on this site</h2>
-  <p>Every page here that mentions {company.name}, so you can see the same organisation from
-    each angle we track it from.</p>
+  <p>The pages that actually name {company.name}, so you can see the same organisation from
+    each angle we track it from. Hubs are listed only where they carry an entry for it.</p>
   <ul>
-    <li><a href="/companies/">AI Company Directory</a> — all companies we track</li>
-    <li><a href="/ai-tools/">AI Tools Directory</a> — the catalog these products come from
-      {categories.length > 0 && <> · categories: {categories.join(', ')}</>}</li>
-    {cases.length > 0 && (
-      <li><a href="/ai-lawsuits/">AI Lawsuit Tracker</a> — {cases.length} case{cases.length === 1 ? '' : 's'} naming {company.name}</li>
-    )}
-    {mcp.length > 0 && (
-      <li><a href="/mcp/">MCP Server Directory</a> — {mcp.length} server{mcp.length === 1 ? '' : 's'} published by {company.name}</li>
-    )}
-    <li><a href="/ai-glossary/">AI Glossary</a> · <a href="/ai-laws/">AI Laws by State</a> · <a href="/ai-compliance/">Governance Frameworks</a></li>
+    <li><a href={`/companies/#c-${company.uid}`}>{company.name} in the AI Company Directory</a></li>
+    {products.filter((p) => p.profile).map((p) => (
+      <li><a href={`/ai-tools/${p.profile}/`}>{p.name}</a> — full tool profile</li>
+    ))}
+    {catLinks.map((c) => (
+      <li><a href={`/ai-tools/category/${c.slug}/`}>{c.name}</a> — the tools category {company.name} appears in</li>
+    ))}
+    {cases.map((c) => (
+      <li><a href={`/ai-lawsuits/${c.slug}/`}>{c.name}</a> — case page naming {company.name}</li>
+    ))}
+    {mcp.map((m) => (
+      <li><a href={`/mcp/${m.slug}/`}>{m.name}</a> — MCP server published by {company.name}</li>
+    ))}
   </ul>
 
   <div class="cite-box">Cite this page: <code>"{company.name}." AI Company Directory,

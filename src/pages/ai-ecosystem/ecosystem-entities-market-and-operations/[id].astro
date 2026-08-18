@@ -14,6 +14,7 @@
  */
 import Base from '../../../layouts/Base.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { ownedServers } from '../../../lib/mcpAttribution';
 
 const CATEGORY = 'ecosystem-entities-market-and-operations';
 const CATEGORY_NAME = 'Ecosystem Entities, Market and Operations';
@@ -90,6 +91,10 @@ export function getStaticPaths() {
   return paths;
 }
 const { hub, person, hubUid, chub, company, generated, chubUid, jhub, pcat, csec, cpat, cpriv, corg, cfund, obs, cma, website, profileText } = Astro.props;
+// MCP servers we are willing to say this company published. Exact namespace
+// match only; see src/lib/mcpAttribution.ts for why a substring test is not
+// safe here.
+const ownedMcp = company ? ownedServers(company.mcp, company.name) : [];
 
 const obsDescs = obs ? {
   'obs-release-cadence': `Release cadence of the ${obs.models} open models this site tracks, by month, from each model's own Hub record.`,
@@ -129,7 +134,7 @@ const desc = clampDesc(cma
   : chub
   ? `${chub.total} companies building AI, with what each one ships, whether it is a defendant in a tracked lawsuit, and whether it publishes to the Model Context Protocol registry.`
   : company
-  ? `${company.name}: ${company.products.length} AI product${company.products.length === 1 ? '' : 's'} we track${company.cases?.length ? `, ${company.cases.length} tracked lawsuit${company.cases.length === 1 ? '' : 's'}` : ''}${company.mcp?.length ? `, ${company.mcp.length} MCP server${company.mcp.length === 1 ? '' : 's'}` : ''}. A profile in the AI Company Directory, with funding, filings, and patents where on record.`
+  ? `${company.name}: ${company.products.length} AI product${company.products.length === 1 ? '' : 's'} we track${company.cases?.length ? `, ${company.cases.length} tracked lawsuit${company.cases.length === 1 ? '' : 's'}` : ''}${ownedMcp.length ? `, ${ownedMcp.length} MCP server${ownedMcp.length === 1 ? '' : 's'}` : ''}. A profile in the AI Company Directory, with funding, filings, and patents where on record.`
   : person?.tracked_only
   ? `${person.name}, ${person.title} at ${person.org}. Tracked in the AI People Directory; a full profile has not been written yet.`
   : `${person.name}${person.moniker ? `, ${person.moniker}` : ''}. ${person.hook || ''}`.slice(0, 300));
@@ -527,7 +532,7 @@ const jsonld = JSON.stringify(
       <p class="answer">{company.name}{company.products.length > 0 ? <> publishes <b>{company.products.length}</b> AI
         product{company.products.length === 1 ? '' : 's'} we track</> : <> is tracked in this site's AI company directory</>}
         {company.cases?.length > 0 && <>, is a defendant in <b>{company.cases.length}</b> lawsuit{company.cases.length === 1 ? '' : 's'} on our tracker</>}
-        {company.mcp?.length > 0 && <>, and has published <b>{company.mcp.length}</b> server{company.mcp.length === 1 ? '' : 's'} to the MCP registry</>}.
+        {ownedMcp.length > 0 && <>, and has published <b>{ownedMcp.length}</b> server{ownedMcp.length === 1 ? '' : 's'} to the MCP registry</>}.
         Everything below is drawn from our records and the company's own site, and the two are labeled apart.</p>
       {generated && <p class="meta-line">Last verified: {generated} · Entity ID {company.uid}
         {website && <> · <a href={website} rel="noopener nofollow">Official website</a></>}</p>}
@@ -571,10 +576,10 @@ const jsonld = JSON.stringify(
         </>
       )}
 
-      {company.mcp?.length > 0 && (
+      {ownedMcp.length > 0 && (
         <>
           <h2>MCP servers</h2>
-          <ul>{company.mcp.map((m) => (
+          <ul>{ownedMcp.map((m) => (
             <li><a href={`/mcp/${m.slug}/`}>{m.name}</a>{m.description && <> — {m.description}</>}</li>
           ))}</ul>
         </>
@@ -655,8 +660,8 @@ const jsonld = JSON.stringify(
         {company.cases?.length > 0 && (
           <li><a href="/ai-lawsuits/">AI Lawsuit Tracker</a> — {company.cases.length} case{company.cases.length === 1 ? '' : 's'} naming {company.name}</li>
         )}
-        {company.mcp?.length > 0 && (
-          <li><a href="/mcp/">MCP Server Directory</a> — {company.mcp.length} server{company.mcp.length === 1 ? '' : 's'} published by {company.name}</li>
+        {ownedMcp.length > 0 && (
+          <li><a href="/mcp/">MCP Server Directory</a> — {ownedMcp.length} server{ownedMcp.length === 1 ? '' : 's'} published by {company.name}</li>
         )}
         <li><a href="/ai-glossary/">AI Glossary</a> · <a href="/ai-laws/">AI Laws by State</a> ·
           <a href="/ai-compliance/">Governance Frameworks</a></li>
