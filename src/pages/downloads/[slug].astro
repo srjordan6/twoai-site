@@ -1,0 +1,160 @@
+---
+/**
+ * One download at /downloads/{slug}/.
+ *
+ * Reads content/downloads/{slug}.json. The body is markdown authored for
+ * adaptation: headings, tables, and bracketed fields the reader replaces. It is
+ * rendered here rather than offered as a file so the document is readable,
+ * indexable, and citable without anyone downloading anything. A copy button
+ * puts the markdown on the clipboard for people who want it in their own tools.
+ *
+ * The markdown subset is deliberately small, because the source is ours: h2,
+ * h3, paragraphs, ordered and unordered lists, tables, bold, and a horizontal
+ * rule. Anything outside that renders as plain text rather than being silently
+ * dropped.
+ */
+import Base from '../../layouts/Base.astro';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+
+export function getStaticPaths() {
+  if (!existsSync('content/downloads')) return [];
+  return readdirSync('content/downloads')
+    .filter((f) => f.endsWith('.json') && f !== 'index.json')
+    .map((f) => JSON.parse(readFileSync(`content/downloads/${f}`, 'utf8')))
+    .filter((d) => d && d.item && d.item.slug)
+    .map((d) => ({ params: { slug: d.item.slug }, props: { item: d.item, section: d.section, generated: d.generated } }));
+}
+const { item, section, generated } = Astro.props;
+
+const inline = (s) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+   .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+   .replace(/`(.+?)`/g, '<code>$1</code>');
+
+/** Minimal block renderer for the authored markdown. */
+function render(md) {
+  const out = [];
+  const lines = md.split('\n');
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (!line.trim()) { i++; continue; }
+    if (line.startsWith('## ')) { out.push(`<h2>${inline(line.slice(3))}</h2>`); i++; continue; }
+    if (line.startsWith('### ')) { out.push(`<h3>${inline(line.slice(4))}</h3>`); i++; continue; }
+    if (line.trim() === '---') { out.push('<hr>'); i++; continue; }
+    if (line.startsWith('|')) {
+      const rows = [];
+      while (i < lines.length && lines[i].startsWith('|')) { rows.push(lines[i]); i++; }
+      const cells = (r) => r.split('|').slice(1, -1).map((c) => c.trim());
+      const head = cells(rows[0]);
+      const body = rows.slice(2).map(cells);
+      out.push(`<div class="tw"><table><thead><tr>${head.map((h) => `<th>${inline(h)}</th>`).join('')}</tr></thead>` +
+        `<tbody>${body.map((r) => `<tr>${r.map((c) => `<td>${inline(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`);
+      continue;
+    }
+    if (/^\d+\.\s/.test(line)) {
+      const items = [];
+      while (i < lines.length && /^\d+\.\s/.test(lines[i])) { items.push(lines[i].replace(/^\d+\.\s/, '')); i++; }
+      out.push(`<ol>${items.map((t) => `<li>${inline(t)}</li>`).join('')}</ol>`);
+      continue;
+    }
+    if (line.startsWith('- ')) {
+      const items = [];
+      while (i < lines.length && lines[i].startsWith('- ')) { items.push(lines[i].slice(2)); i++; }
+      out.push(`<ul>${items.map((t) => `<li>${inline(t)}</li>`).join('')}</ul>`);
+      continue;
+    }
+    const para = [];
+    while (i < lines.length && lines[i].trim() && !/^(\||-\s|\d+\.\s|#{2,3}\s)/.test(lines[i]) && lines[i].trim() !== '---') {
+      para.push(lines[i]); i++;
+    }
+    out.push(`<p>${inline(para.join(' '))}</p>`);
+  }
+  return out.join('\n');
+}
+
+const html = render(item.body_md);
+const description = item.summary.slice(0, 300);
+
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'CreativeWork',
+  name: item.title,
+  headline: item.title,
+  abstract: item.summary,
+  url: `https://theworldofai.org/downloads/${item.slug}/`,
+  dateModified: item.reviewed_on || generated,
+  isAccessibleForFree: true,
+  publisher: { '@type': 'Organization', name: 'SRJ Consulting & Services LLC' },
+});
+---
+<Base title={`${item.title}: a template you can adapt`} description={description} current="/downloads/" jsonld={jsonld}>
+  <p class="meta-line"><a href="/downloads/">Downloads</a> · {section}</p>
+  <h1>{item.title}</h1>
+  <p class="answer">{item.summary}</p>
+  <p class="meta-line">
+    {item.audience && <>For: {item.audience} · </>}
+    Last reviewed: {item.reviewed_on || generated} · Free to use and adapt
+  </p>
+
+  <div class="tools">
+    <button id="copy-md" type="button">Copy as markdown</button>
+    <span class="hint">Paste into your own document, then replace every bracketed field.</span>
+  </div>
+
+  <article class="doc" set:html={html}></article>
+
+  {item.based_on && (
+    <p class="basis">
+      Built on {item.based_on}. The framework it derives from is set out in full in the
+      {' '}<a href={item.based_on_url || 'https://srjconsultingservices.com/books/'} rel="noopener">book library</a>;
+      this template is free to use whether or not you read it.
+    </p>
+  )}
+
+  <div class="cite-box">Cite this page: <code>"{item.title}." Downloads and Asset Repository,
+    The World of AI, theworldofai.org/downloads/{item.slug}/.{item.reviewed_on ? ` Verified ${item.reviewed_on}.` : ''}</code></div>
+
+  <p><a href="/downloads/">All downloads</a></p>
+
+  <script type="application/json" id="md-src" set:html={JSON.stringify(item.body_md)}></script>
+  <script is:inline>
+    (function () {
+      var b = document.getElementById('copy-md'), s = document.getElementById('md-src');
+      if (!b || !s || !navigator.clipboard) { if (b) b.style.display = 'none'; return; }
+      b.addEventListener('click', function () {
+        navigator.clipboard.writeText(JSON.parse(s.textContent)).then(function () {
+          var t = b.textContent; b.textContent = 'Copied';
+          setTimeout(function () { b.textContent = t; }, 1600);
+        });
+      });
+    })();
+  </script>
+</Base>
+
+<style>
+  .answer { font-size: 1.06rem; line-height: 1.7; }
+  .meta-line { color: #7A8A9E; font-size: 14px; margin: 0 0 14px; }
+  .tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 24px; }
+  #copy-md { font-family: 'Poppins', system-ui, sans-serif; font-size: 13.5px; font-weight: 600;
+    color: #fff; background: #201868; border: 0; border-radius: 6px; padding: 9px 16px; cursor: pointer; }
+  #copy-md:hover { background: #F07800; }
+  .hint { font-size: 13px; color: #7A8A9E; }
+  .doc { border-top: 1px solid #ececf2; padding-top: 8px; }
+  .doc :global(h2) { font-size: 1.35rem; margin-top: 1.6em; }
+  .doc :global(h3) { font-size: 1.08rem; margin-top: 1.3em; }
+  .doc :global(p) { line-height: 1.7; }
+  .doc :global(li) { line-height: 1.65; margin-bottom: .35em; }
+  .doc :global(hr) { border: 0; border-top: 1px solid #ececf2; margin: 2em 0; }
+  .doc :global(code) { background: #f4f4f8; padding: 1px 5px; border-radius: 3px; font-size: .92em; }
+  .doc :global(.tw) { overflow-x: auto; margin: 1.1em 0; }
+  .doc :global(table) { border-collapse: collapse; width: 100%; font-size: 14px; }
+  .doc :global(th), .doc :global(td) { text-align: left; vertical-align: top;
+    padding: .5em .7em; border-bottom: 1px solid #ececf2; }
+  .doc :global(th) { background: #f7f7fb; font-weight: 600; color: #201868; white-space: nowrap; }
+  .basis { margin-top: 2em; font-size: 14px; color: #2C2C2A; background: #FFF6EC;
+    border-left: 3px solid #F07800; padding: 12px 16px; }
+  .cite-box { margin-top: 1.6em; padding: .9em 1em; background: #f7f7fb;
+    border-left: 3px solid #201868; font-size: .9rem; }
+  .cite-box code { display: block; margin-top: .3em; font-size: .92em; }
+</style>

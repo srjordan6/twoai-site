@@ -1,0 +1,120 @@
+---
+/**
+ * Downloads and Asset Repository hub at /downloads/.
+ *
+ * Reads content/downloads/index.json, which the pipeline writes from
+ * twoai_downloads joined to the taxonomy rows under the downloads domain.
+ *
+ * Every section is listed, including the ones with nothing in them yet, and
+ * those say so. A section quietly omitted because it is empty reads to a
+ * visitor as a section that does not exist, and to us as a promise we have
+ * forgotten we made.
+ */
+import Base from '../../layouts/Base.astro';
+import { readFileSync, existsSync } from 'node:fs';
+
+const hub = existsSync('content/downloads/index.json')
+  ? JSON.parse(readFileSync('content/downloads/index.json', 'utf8'))
+  : { sections: [], total: 0, generated: '' };
+
+const sections = hub.sections || [];
+const total = hub.total || 0;
+const filled = sections.filter((s) => (s.items || []).length > 0);
+const empty = sections.filter((s) => (s.items || []).length === 0);
+
+const title = 'AI Governance Downloads: Policy Templates, Checklists and Workpapers';
+const description =
+  `${total} working document${total === 1 ? '' : 's'} you can adapt: AI policy templates, ` +
+  `incident response plans, decision accountability registers, checklists and audit workpapers. ` +
+  `Free, no sign-up, no email required.`;
+
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'Downloads and Asset Repository',
+  url: 'https://theworldofai.org/downloads/',
+  description,
+  dateModified: hub.generated,
+  hasPart: filled.flatMap((s) =>
+    (s.items || []).map((i) => ({
+      '@type': 'CreativeWork',
+      name: i.title,
+      url: `https://theworldofai.org/downloads/${i.slug}/`,
+      abstract: i.summary,
+    }))),
+});
+---
+<Base title={title} description={description} current="/downloads/" jsonld={jsonld}>
+  <p class="meta-line"><a href="/ai-ecosystem/enterprise-applications-governance-and-tools/">Enterprise Applications, Governance and Tools</a></p>
+  <h1>Downloads and Asset Repository</h1>
+
+  <p class="answer">
+    {total} working document{total === 1 ? '' : 's'} you can adapt and use: policy templates,
+    checklists, governance documents, audit workpapers, and procurement scorecards. Every one is
+    a document with fields to fill rather than an article about documents. No sign-up, no email,
+    no gate.
+  </p>
+  {hub.generated && <p class="meta-line">Last reviewed: {hub.generated}</p>}
+
+  <p>
+    These are written to be used and edited. Where a template puts a bracketed field in front of
+    you, that is a decision only you can make, and leaving it unfilled is the one way to get this
+    wrong. A policy that describes a control nobody performs is worse than no policy, because it
+    documents a control you have failed.
+  </p>
+
+  {filled.map((s) => (
+    <section class="dl-sec" id={s.slug}>
+      <h2>{s.name}</h2>
+      <p class="sec-blurb">{s.blurb}</p>
+      <div class="rule"></div>
+      {(s.items || []).map((i) => (
+        <article class="dl">
+          <h3><a href={`/downloads/${i.slug}/`}>{i.title}</a></h3>
+          <p class="dl-sum">{i.summary}</p>
+          {i.audience && <p class="dl-aud"><span class="lbl">Who it is for</span>{i.audience}</p>}
+          <a class="more" href={`/downloads/${i.slug}/`}>Read and copy &rarr;</a>
+        </article>
+      ))}
+    </section>
+  ))}
+
+  {empty.length > 0 && (
+    <section class="dl-sec" id="not-yet">
+      <h2>Not written yet</h2>
+      <p class="sec-blurb">
+        These sections are planned and empty. They are listed rather than hidden so you can see
+        what is missing instead of assuming it does not exist.
+      </p>
+      <div class="rule"></div>
+      <ul class="empties">
+        {empty.map((s) => <li id={s.slug}><b>{s.name}</b> — {s.blurb}</li>)}
+      </ul>
+    </section>
+  )}
+
+  <div class="cite-box">Cite this page: <code>"Downloads and Asset Repository."
+    The World of AI, theworldofai.org/downloads/.{hub.generated ? ` Verified ${hub.generated}.` : ''}</code></div>
+</Base>
+
+<style>
+  .answer { font-size: 1.06rem; line-height: 1.7; }
+  .meta-line { color: #7A8A9E; font-size: 14px; margin: 0 0 18px; }
+  .dl-sec { margin: 2.6em 0 0; scroll-margin-top: 80px; }
+  .sec-blurb { font-size: 14px; color: #7A8A9E; margin: 0 0 8px; }
+  .rule { width: 56px; height: 3px; background: #F07800; margin: 0 0 20px; }
+  .dl { border: 1px solid #e8e6e0; border-radius: 8px; padding: 18px 20px; margin: 0 0 14px; background: #fff; }
+  .dl h3 { font-size: 19px; margin: 0 0 6px; }
+  .dl h3 a { color: #201868; text-decoration: none; }
+  .dl h3 a:hover { color: #F07800; }
+  .dl-sum { font-size: 14.5px; line-height: 1.65; margin: 0 0 8px; }
+  .dl-aud { font-size: 13.5px; color: #2C2C2A; margin: 0 0 10px; }
+  .lbl { display: block; font-size: 11px; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: #F07800; margin-bottom: 2px; }
+  .more { font-size: 13.5px; color: #201868; text-decoration: none; font-weight: 600; }
+  .more:hover { color: #F07800; }
+  .empties { padding-left: 20px; }
+  .empties li { margin: 0 0 8px; font-size: 14.5px; color: #2C2C2A; }
+  .cite-box { margin-top: 2em; padding: .9em 1em; background: #f7f7fb; border-left: 3px solid #201868; font-size: .9rem; }
+  .cite-box code { display: block; margin-top: .3em; font-size: .92em; }
+</style>
