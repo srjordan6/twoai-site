@@ -185,3 +185,12 @@
 # accidental URLs to the real pages.
 /ai-ecosystem/concept-taxonomy/  /ai-ecosystem/research-knowledge-and-learning/7f3a1c95/  301
 /ai-ecosystem/knowledge-graph/  /ai-ecosystem/research-knowledge-and-learning/21f4f8f2/  301
+
+# VENDOR POSTS THE PIPELINE DEMOTED, 2026-08-18. Both slugs are still in
+# content/news/vendor.json's archive but carry has_page=false, the pipeline's
+# judgement that there is too little in the post to fill a page, so the route
+# no longer builds them. They are live today, so they get a 301 to the vendor
+# hub rather than a 404. If the pipeline ever restores has_page on either,
+# delete its line here, because a redirect rule shadows the built page.
+/ai-news/vendor/introducing-chatgpt-atlas-the-browser-with-chatgpt-built-in-b9ca7a/  /ai-news/vendor/  301
+/ai-news/vendor/introducing-gpt-5-5-3aa153/  /ai-news/vendor/  301

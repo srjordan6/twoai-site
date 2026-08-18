@@ -81,6 +81,14 @@ if (pageTitle.length < MIN_CH) {
     const withPillar = pageTitle.replace(/\s+[—|-]\s+The World of AI\s*$/, ` — ${label} — The World of AI`);
     if (!overBudget(withPillar)) pageTitle = withPillar;
   }
+  // Pages outside the four pillars have no shelf to name, so a one-word title
+  // like "Contact" or "Disclaimer" stays short. Say what the site is instead,
+  // which is true of every page here and is what a searcher seeing the bare
+  // word would want to know.
+  if (pageTitle.length < MIN_CH) {
+    const withSite = `${pageTitle.replace(/\s+[—|-]\s+The World of AI\s*$/, '')} — The World of AI, an atlas of AI`;
+    if (!overBudget(withSite)) pageTitle = withSite;
+  }
 }
 let metaDesc = wordClamp(description, 158);
 if (metaDesc.length < 110) {
