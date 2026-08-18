@@ -25,6 +25,10 @@
  */
 const year = new Date().getFullYear();
 const EMAIL = 'info@srjconsultingservices.com';
+// The publication's own address. Mail here lands in theworldofai's project
+// mailbox (via the Inkbox gateway), so page questions and corrections reach the
+// atlas directly. info@ stays as the consulting practice's line.
+const PUB_EMAIL = 'theworldofai@inkboxmail.com';
 ---
 
 <footer class="site-foot">
@@ -97,6 +101,10 @@ const EMAIL = 'info@srjconsultingservices.com';
         </div>
         <div class="f-contact">
           <strong>Email</strong>
+          <a href={`mailto:${PUB_EMAIL}`}>{PUB_EMAIL}</a>
+        </div>
+        <div class="f-contact">
+          <strong>Consulting</strong>
           <a href={`mailto:${EMAIL}`}>{EMAIL}</a>
         </div>
         <div class="f-contact">
