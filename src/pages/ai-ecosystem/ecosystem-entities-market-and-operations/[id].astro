@@ -96,6 +96,29 @@ const { hub, person, hubUid, chub, company, generated, chubUid, jhub, pcat, csec
 // safe here.
 const ownedMcp = company ? ownedServers(company.mcp, company.name) : [];
 
+// A person's organisation, linked to its company page when that organisation is
+// one we actually track. Exact normalised equality, never a substring: the same
+// rule the MCP attribution uses, and for the same reason. When the organisation
+// is not a tracked company the name renders as plain text rather than pointing
+// at a page that says nothing about them.
+const companyIndexPath = 'content/companies/index.json';
+const g2 = globalThis;
+if (!g2.__twoaiCompanyByName) {
+  const byName = {};
+  try {
+    if (existsSync(companyIndexPath)) {
+      const idx = JSON.parse(readFileSync(companyIndexPath, 'utf8'));
+      for (const c of (idx.companies || idx.items || [])) {
+        if (c && c.name && c.uid) byName[String(c.name).toLowerCase().replace(/[^a-z0-9]/g, '')] = c.uid;
+      }
+    }
+  } catch { /* absent: the link simply does not render */ }
+  g2.__twoaiCompanyByName = byName;
+}
+const personOrgUid = person?.org
+  ? g2.__twoaiCompanyByName[String(person.org).toLowerCase().replace(/[^a-z0-9]/g, '')] || null
+  : null;
+
 const obsDescs = obs ? {
   'obs-release-cadence': `Release cadence of the ${obs.models} open models this site tracks, by month, from each model's own Hub record.`,
   'obs-github-activity': `${obs.repos} tracked AI repositories: ${obs.pushed_7d} pushed in the last 7 days, ${Number(obs.stars_total).toLocaleString()} stars combined.`,
@@ -1055,7 +1078,7 @@ const jsonld = JSON.stringify(
       <h1>{person.name}</h1>
       {person.tracked_only ? (
         <>
-          <p class="lede">{person.title}{person.org && <>, {person.org}</>}</p>
+          <p class="lede">{person.title}{person.org && <>, {personOrgUid ? <a href={`/companies/${personOrgUid}/`}>{person.org}</a> : person.org}</>}</p>
           <p class="answer">
             {person.name} is tracked in the AI People Directory as {person.title} at
             {' '}{person.org}. <b>A full profile has not been written yet.</b> This page
