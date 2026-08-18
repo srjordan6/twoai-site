@@ -14,9 +14,10 @@
  */
 import Base from '../../../layouts/Base.astro';
 import {
-  groupByCategory, categoryOf, topEntities, summaryParagraph, readingMinutes, titleCase,
+  groupByCategory, categoryOf, entityCounts, summaryParagraph, readingMinutes, titleCase,
   type Story,
 } from '../../../lib/newsTopics';
+import { loadKnownEntities, resolveEntities, reportUnresolved } from '../../../lib/knownEntities';
 
 const mods = import.meta.glob('../../../../content/news/news.json', { eager: true });
 const news: any = Object.values(mods)[0]?.default ?? null;
@@ -34,7 +35,15 @@ const stories: Story[] = raw.map((s: any) => ({
 }));
 
 const grouped = groupByCategory(stories);
-const entities = topEntities(stories, 8);
+// Chips are links to pages this site owns, never raw extractor output. Count
+// every name first, then resolve, then cap: resolving after the cap would
+// almost always yield nothing, because the noise outnumbers the real entities
+// by roughly eighty to one.
+const known = loadKnownEntities();
+const counts = entityCounts(stories);
+const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([name]) => name);
+const entities = resolveEntities(ranked, known, 8);
+reportUnresolved(counts, known);
 const summary = summaryParagraph(stories, 5);
 const top5 = stories.slice(0, 5);
 
@@ -123,7 +132,7 @@ const jsonld = JSON.stringify({
   {entities.length > 0 && (
     <div class="pills" aria-label="Entities named across today's coverage">
       <span class="pill-label">In today&rsquo;s coverage</span>
-      {entities.map((e) => <span class="pill">{e}</span>)}
+      {entities.map((e) => <a class="pill" href={e.href}>{e.label}</a>)}
     </div>
   )}
 
@@ -230,7 +239,9 @@ const jsonld = JSON.stringify({
   .dateline strong { color: #201868; }
   .pills { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 12px 0 26px; }
   .pill-label { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #F07800; margin-right: 4px; }
-  .pill { display: inline-block; background: #201868; color: #fff; font-size: 12px; padding: 4px 12px; border-radius: 999px; }
+  .pill { display: inline-block; background: #201868; color: #fff; font-size: 12px; padding: 4px 12px; border-radius: 999px;
+    text-decoration: none; }
+  .pill:hover { background: #F07800; }
 
   .cols { display: grid; grid-template-columns: minmax(0,1fr) 280px; gap: 40px; align-items: start; }
   @media (max-width: 960px) { .cols { grid-template-columns: 1fr; } }

@@ -148,17 +148,21 @@ export const titleCase = (x: string) =>
  * actually named, ranked by how many separate stories mention them. They are
  * ENTITIES, not editorial topics, and the UI labels them that way.
  */
-export function topEntities(stories: Story[], n = 8): string[] {
+/**
+ * How many stories each extracted name appears in. Returns every name with its
+ * count rather than a ranked top-N, because the caller has to resolve names
+ * against the site's own entities before ranking means anything: the raw list
+ * is roughly eighty parts noise to one part real entity, so slicing first
+ * throws away the signal. See lib/knownEntities.ts.
+ */
+export function entityCounts(stories: Story[]): Map<string, number> {
   const count = new Map<string, number>();
   for (const s of stories) {
     for (const o of new Set([...(s.Orgs ?? []), ...(s.Persons ?? [])])) {
       count.set(o, (count.get(o) ?? 0) + 1);
     }
   }
-  return [...count.entries()]
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, n)
-    .map(([k]) => titleCase(k));
+  return count;
 }
 
 /**

@@ -14,6 +14,7 @@
 import Base from '../../layouts/Base.astro';
 import { categoryOf, coverageByDay, readingMinutes, titleCase, type Story } from '../../lib/newsTopics';
 
+import { loadKnownEntities, resolveEntities } from '../../lib/knownEntities';
 export async function getStaticPaths() {
   const mods = import.meta.glob('../../../content/news/news.json', { eager: true });
   const news: any = Object.values(mods)[0]?.default ?? null;
@@ -75,6 +76,17 @@ const story: Story = {
 };
 
 const cat = categoryOf(story);
+
+// Entity chips and the sidebar list are restricted to organisations and people
+// this site publishes a page for, and render as links to those pages. The raw
+// Orgs and Persons arrays come from GDELT's extractor and are mostly fragments
+// and generic phrases; highlighting them implied a depth of coverage that did
+// not exist, and gave the reader nowhere to go. See lib/knownEntities.ts.
+const knownEntityIndex = loadKnownEntities();
+const knownOrgs = resolveEntities(story.Orgs, knownEntityIndex, 12);
+const knownPersons = resolveEntities(story.Persons, knownEntityIndex, 12);
+const known4 = [...knownOrgs, ...knownPersons].slice(0, 4);
+
 const timeline = coverageByDay(story.Articles);
 const stamp = generated ? `${new Date(generated).toUTCString().slice(0, 22)} UTC` : null;
 const minutes = readingMinutes(story.Headline, ...story.Articles.map((a) => a.Title));
@@ -120,7 +132,7 @@ const jsonld = JSON.stringify({
   </p>
   <div class="pills">
     <a class="pill pill-cat" href={`/ai-news/daily/#${cat.slug}`}>{cat.name}</a>
-    {story.Orgs.slice(0, 4).map((o) => <span class="pill">{titleCase(o)}</span>)}
+    {known4.map((e) => <a class="pill" href={e.href}>{e.label}</a>)}
   </div>
 
   <div class="cols">
@@ -218,11 +230,19 @@ const jsonld = JSON.stringify({
         {story.Domains.length > 0 && <p class="doms">{story.Domains.join(' · ')}</p>}
       </div>
 
-      {(story.Persons.length > 0 || story.Orgs.length > 0) && (
+      {(knownPersons.length > 0 || knownOrgs.length > 0) && (
         <div class="panel">
-          <p class="box-label">Who&rsquo;s in this story</p>
-          {story.Persons.length > 0 && <p class="wl"><span>People</span>{story.Persons.map(titleCase).join(', ')}</p>}
-          {story.Orgs.length > 0 && <p class="wl"><span>Organizations</span>{story.Orgs.map(titleCase).join(', ')}</p>}
+          <p class="box-label">Covered on this site</p>
+          {knownPersons.length > 0 && (
+            <p class="wl"><span>People</span>{knownPersons.map((e, i) => (
+              <>{i > 0 && ', '}<a href={e.href}>{e.label}</a></>
+            ))}</p>
+          )}
+          {knownOrgs.length > 0 && (
+            <p class="wl"><span>Organizations</span>{knownOrgs.map((e, i) => (
+              <>{i > 0 && ', '}<a href={e.href}>{e.label}</a></>
+            ))}</p>
+          )}
         </div>
       )}
     </aside>
@@ -234,7 +254,11 @@ const jsonld = JSON.stringify({
   .dateline { color: #7A8A9E; font-size: 14px; }
   .dateline strong { color: #201868; }
   .pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 26px; }
-  .pill { display: inline-block; background: #201868; color: #fff; font-size: 12px; padding: 4px 12px; border-radius: 999px; }
+  .pill { display: inline-block; background: #201868; color: #fff; font-size: 12px; padding: 4px 12px; border-radius: 999px;
+    text-decoration: none; }
+  .pill:hover { background: #F07800; }
+  .wl a { color: var(--navy, #201868); text-decoration: none; font-weight: 600; }
+  .wl a:hover { color: #F07800; }
   .pill-cat { background: #F07800; text-decoration: none; }
 
   .cols { display: grid; grid-template-columns: minmax(0,1fr) 280px; gap: 40px; align-items: start; }
