@@ -281,5 +281,10 @@ const api = [
   ['content/companies/index.json', 'public/api/companies.json'],
   ['content/research/index.json', 'public/api/research.json'],
   ['content/sources/index.json', 'public/api/sources.json'],
+  // llms.txt advertised these two long before they were mirrored, so both
+  // returned 404 to every crawler that followed the machine-readable index.
+  // The graph data has been in the content bundle under learn/ all along.
+  ['content/learn/graph-entities.json', 'public/api/graph-entities.json'],
+  ['content/learn/graph-relationships.json', 'public/api/graph-relationships.json'],
 ];
 for (const [src, dst] of api) if (existsSync(src)) copyFileSync(src, dst);
