@@ -117,7 +117,8 @@ const licLine = (sec.licences || [])
           <p class="meta-line">Maker: {h.entity_uid
             ? <a href={`/ai-ecosystem/ecosystem-entities-market-and-operations/${h.entity_uid}/`}>{h.maker}</a>
             : h.maker} ·
-            {' '}<a href={h.source_url} rel="noopener">Source</a> · verified {h.verified}</p>
+            {' '}<a href={h.source_url} rel="noopener">Source</a> · verified {h.verified}
+            {h.verify_note && <span class="vnote"> · {h.verify_note}</span>}</p>
         </div>
       ))}
       <div class="cite-box">Cite this page: <code>"{sec.name}." The World of AI,
@@ -336,6 +337,7 @@ const licLine = (sec.licences || [])
           <p>{l.ai_role}</p>
           <p class="meta-line">Steward: {l.steward} ·
             {' '}<a href={l.source_url} rel="noopener">Official site</a> · verified {l.verified}
+            {l.verify_note && <span class="vnote"> · {l.verify_note}</span>}
             {l.repos && l.repos.length > 0 && <> · Tracked repos: {l.repos.join(', ')}</>}</p>
         </div>
       ))}
@@ -557,4 +559,7 @@ const licLine = (sec.licences || [])
   .cite-box { margin: 2em 0 1em; padding: .9em 1.1em; background: #f6f6fa; border-radius: 8px;
               font-size: .85rem; }
   .answer b { color: var(--navy, #201868); }
+  /* A verified date that has stopped moving needs to say why. Italic and grey
+     so it reads as a footnote on the claim rather than a warning about it. */
+  .vnote { font-style: italic; color: #7A8A9E; }
 </style>
