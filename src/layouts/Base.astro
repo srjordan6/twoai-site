@@ -321,6 +321,19 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
     @media (min-width: 1400px) {
       .main-wrap { grid-template-columns: minmax(0, 1fr) 300px; column-gap: 42px; }
     }
+    /* The card's top edge must never sit higher than the top of the page
+       headline. Most pages open with a breadcrumb line before the h1, and
+       because the card is a grid item in row 1 it would otherwise start
+       level with that breadcrumb, i.e. above the headline. Where a page
+       opens that way, drop the card by exactly the breadcrumb's own height:
+       14px text at the body line-height of 1.65 is 23.1px, plus its 18px
+       bottom margin, so 41px puts the card's top on the headline's top.
+       Pages with no breadcrumb need no offset; the card already starts
+       level with the h1. Stated as a :has() rule so it is driven by the
+       markup that is actually there rather than set per template. */
+    @media (min-width: 1040px) {
+      .main-wrap:has(.main-col > .meta-line:first-child) .pillar-box { margin-top: 41px; }
+    }
     h1, h2, h3 { font-family: 'Lora', Georgia, serif; color: var(--navy); line-height: 1.22;
       margin: 0 0 .5em; }
     h1 { font-size: clamp(1.7rem, 4vw, 2.5rem); }
