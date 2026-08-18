@@ -257,7 +257,10 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
   </nav>
 
   <main class="wrap main-wrap">
-    <PillarBox />
+    <div class="rail-col">
+      <PillarBox />
+      <slot name="rail" />
+    </div>
     <div class="main-col"><slot /></div>
   </main>
 
@@ -309,6 +312,31 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
        card renders above the content. */
     .main-wrap { position: relative; }
     .main-col { min-width: 0; }
+    /* Collapsed layout. The rail dissolves so its children become siblings
+       of the content, and order puts the pillar card above the article as
+       before while any page panels the rail carries drop below it. Without
+       this the whole rail stacks on top and pushes the headline a screen
+       and a half down the page on a phone. */
+    @media (max-width: 1039.98px) {
+      .main-wrap { display: flex; flex-direction: column; }
+      .rail-col { display: contents; }
+      .rail-col > .pillar-box { order: 1; }
+      .main-col { order: 2; }
+      .rail-col > *:not(.pillar-box) { order: 3; margin-top: 1.6rem; }
+    }
+    /* The right rail: the pillar card, plus whatever a page puts in the
+       "rail" slot beneath it. One column-two grid item holding both, so a
+       page's own side panels stack under the card in normal flow instead of
+       fighting the grid for a row. Sticky and the rightward slide live here
+       rather than on the card, since they now apply to the whole rail.
+
+       The slide uses the dead margin a 1080px wrap leaves on a wide monitor,
+       capped at the space available less a 40px gutter so it can never reach
+       the viewport edge, and clamping to zero below about 1160px. Transform,
+       not layout: the content column does not move and nothing reflows.
+
+       Below 1040px the grid collapses and the rail renders above the content
+       as a normal block. */
     @media (min-width: 1040px) {
       .main-wrap {
         display: grid;
@@ -317,22 +345,28 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
         align-items: start;
       }
       .main-col { grid-column: 1; grid-row: 1; }
+      .rail-col {
+        grid-column: 2;
+        grid-row: 1;
+        position: sticky;
+        top: 1.2rem;
+        transform: translateX(clamp(0px, calc((100vw - 1080px) / 2 - 40px), 260px));
+      }
     }
     @media (min-width: 1400px) {
       .main-wrap { grid-template-columns: minmax(0, 1fr) 300px; column-gap: 42px; }
     }
-    /* The card's top edge must never sit higher than the top of the page
+    /* The rail's top edge must never sit higher than the top of the page
        headline. Most pages open with a breadcrumb line before the h1, and
-       because the card is a grid item in row 1 it would otherwise start
+       because the rail is a grid item in row 1 it would otherwise start
        level with that breadcrumb, i.e. above the headline. Where a page
-       opens that way, drop the card by exactly the breadcrumb's own height:
+       opens that way, drop the rail by exactly the breadcrumb's own height:
        14px text at the body line-height of 1.65 is 23.1px, plus its 18px
-       bottom margin, so 41px puts the card's top on the headline's top.
-       Pages with no breadcrumb need no offset; the card already starts
-       level with the h1. Stated as a :has() rule so it is driven by the
-       markup that is actually there rather than set per template. */
+       bottom margin, so 41px puts the rail's top on the headline's top.
+       Pages with no breadcrumb need no offset. Stated as a :has() rule so it
+       is driven by the markup that is actually there, not set per template. */
     @media (min-width: 1040px) {
-      .main-wrap:has(.main-col > .meta-line:first-child) .pillar-box { margin-top: 41px; }
+      .main-wrap:has(.main-col > .meta-line:first-child) .rail-col { margin-top: 41px; }
     }
     h1, h2, h3 { font-family: 'Lora', Georgia, serif; color: var(--navy); line-height: 1.22;
       margin: 0 0 .5em; }

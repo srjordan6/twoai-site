@@ -145,26 +145,9 @@ const headingHref = pillar ? (CAT_HOME[pillar.slug] || `/ai-ecosystem/${pillar.s
   .pillar-box li a { color: #201868; text-decoration: none; }
   .pillar-box li a:hover { color: #f07800; text-decoration: underline; }
 
-  @media (min-width: 1040px) {
-    .pillar-box {
-      grid-column: 2;
-      grid-row: 1;
-      position: sticky;
-      top: 1.2rem;
-      margin-bottom: 0;
-      /* On a wide monitor the 1080px wrap leaves several hundred pixels of
-         dead margin on each side. Slide the card out into the right-hand
-         margin so it reads as a sidebar rather than as a second column
-         crowding the prose. Transform, not layout: the grid track stays
-         where it is, so the content column and the two cards inside it do
-         not move and nothing reflows. The clamp caps the travel at the
-         available margin less a 40px gutter, so the card can never reach
-         the viewport edge or overflow, and below roughly 1160px the
-         expression is negative and clamps to zero, leaving the card exactly
-         where it is today. */
-      transform: translateX(clamp(0px, calc((100vw - 1080px) / 2 - 40px), 260px));
-    }
-  }
+  /* Placement, stickiness and the rightward slide belong to .rail-col in
+     Base.astro, which wraps this card and any panels a page adds beneath
+     it. The card itself is now just a block in that rail. */
 </style>
 
 
