@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "skills": {
+    "inkbox-all": {
+      "source": "inkbox.ai",
+      "sourceUrl": "https://inkbox.ai",
+      "sourceType": "well-known",
+      "computedHash": "f6e6965e05be0be8f25492ca96c6451226fca0d736dd0c2bf30c972bf771919c",
+      "wellKnownDigest": "sha256:89ed2f0bf934b0f7bbe33abb2d7d6fe6fbb8dc0b83791b2d388bc9441da428fd"
+    },
+    "inkbox-cli": {
+      "source": "inkbox.ai",
+      "sourceUrl": "https://inkbox.ai",
+      "sourceType": "well-known",
+      "computedHash": "fb2637e4a25cfce2df20096c2d463c00ee2d13ca4d86951f3055032f4f83eb33",
+      "wellKnownDigest": "sha256:283385cab191c978deed1800feace302a6763da862dbc5dc499f4ec275a29bf0"
+    },
+    "inkbox-ts": {
+      "source": "inkbox.ai",
+      "sourceUrl": "https://inkbox.ai",
+      "sourceType": "well-known",
+      "computedHash": "751e5b742435a66f0f63f9e687583f5334ce6f32f5a3c21eee800866ad3a698d",
+      "wellKnownDigest": "sha256:be14dc2a918cdd713295ccbf67d1e441f550ba84a963b9f37090a06312052927"
+    }
+  }
+}
