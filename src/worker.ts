@@ -41,6 +41,12 @@ const EMBED_MODEL = "@cf/baai/bge-m3";
 // in the last hop.
 const ANSWER_MODEL = "anthropic/claude-haiku-4.5";
 const GUARD_MODEL = "@cf/meta/llama-guard-3-8b";
+// Fallback if the partner model is unavailable for any reason: not enabled on
+// the account, quota, an outage, or a changed id. A Cloudflare-hosted model
+// keeps the assistant answering rather than showing a dead box on the home
+// page, and the response records which model answered so a silent downgrade is
+// visible rather than assumed.
+const FALLBACK_MODEL = "@cf/meta/llama-3.1-8b-instruct";
 
 /**
  * Below this cosine score the site genuinely does not cover the question.
@@ -172,35 +178,45 @@ export default {
       .join("\n\n");
 
     let answer = "";
-    try {
-      // Partner models route through AI Gateway, which creates a default
-      // gateway on first authenticated request. Passing it explicitly means the
-      // calls are logged there from the first one rather than from whenever
-      // someone remembers to turn it on.
-      const out: any = await env.AI.run(
-        ANSWER_MODEL,
-        {
-          max_tokens: 700,
-          messages: [
-            { role: "system", content: SYSTEM },
-            {
-              role: "user",
-              content: `Excerpts from theworldofai.org:\n\n${excerpts}\n\nQuestion: ${question}\n\nAnswer using only the excerpts above.`,
-            },
-          ],
-        },
-        { gateway: { id: "default" } }
-      );
-      // Anthropic-shaped responses return content blocks; Workers AI models
-      // return a plain string. Both are accepted rather than assumed.
-      answer = String(
-        out?.response ??
-          (Array.isArray(out?.content) ? out.content.map((c: any) => c?.text ?? "").join("") : "") ??
-          ""
-      ).trim();
-    } catch {
-      return json({ error: "The assistant is unavailable right now." }, 503);
+    let usedModel = ANSWER_MODEL;
+    let lastError = "";
+    for (const model of [ANSWER_MODEL, FALLBACK_MODEL]) {
+      try {
+        const opts: any = model.startsWith("@cf/") ? undefined : { gateway: { id: "default" } };
+        const out: any = await env.AI.run(
+          model,
+          {
+            max_tokens: 700,
+            messages: [
+              { role: "system", content: SYSTEM },
+              {
+                role: "user",
+                content: `Excerpts from theworldofai.org:\n\n${excerpts}\n\nQuestion: ${question}\n\nAnswer using only the excerpts above.`,
+              },
+            ],
+          },
+          opts
+        );
+        answer = String(
+          out?.response ??
+            (Array.isArray(out?.content) ? out.content.map((c: any) => c?.text ?? "").join("") : "")
+        ).trim();
+        if (answer) {
+          usedModel = model;
+          break;
+        }
+        lastError = `${model}: empty response`;
+      } catch (e: any) {
+        // The error text is returned to the caller on failure. It names the
+        // model and the fault, which is the difference between "unavailable"
+        // and a diagnosable problem; there is nothing secret in it.
+        lastError = `${model}: ${e?.message ?? String(e)}`;
+      }
     }
+    if (!answer) {
+      return json({ error: "The assistant is unavailable right now.", detail: lastError }, 503);
+    }
+
     if (!answer) return json({ error: "The assistant is unavailable right now." }, 503);
 
     ctx.waitUntil(log(true));
@@ -212,6 +228,6 @@ export default {
       .filter((h) => (seen.has(h.url) ? false : (seen.add(h.url), true)))
       .map((h) => ({ title: h.title, url: h.url, score: h.score }));
 
-    return json({ answered: true, answer, sources });
+    return json({ answered: true, answer, sources, model: usedModel });
   },
 };
