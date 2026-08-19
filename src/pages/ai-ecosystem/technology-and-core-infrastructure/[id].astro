@@ -46,6 +46,15 @@ const isA2A = sec.shape === 'a2a';
 const isHW = sec.shape === 'hardware';
 const isDS = sec.shape === 'datasets';
 const isDSLic = sec.shape === 'ds-licensing';
+// Vibe Coding: a short authored explainer plus a routing table into the
+// sections that already cover each part of the job. See twoai_vibe_coding.go.
+const isVibe = sec.shape === 'vibe-coding';
+const mdLite = (t: string) => t
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+  .split(/\n\n+/).map((p) => (/^\d+\.\s/m.test(p)
+    ? `<ol>${p.split(/\n/).map((l) => `<li>${l.replace(/^\d+\.\s/, '')}</li>`).join('')}</ol>`
+    : `<p>${p.replace(/\n/g, ' ')}</p>`)).join('');
 
 const fmt = (n) => Number(n).toLocaleString();
 const money = (v) => (v === null || v === undefined ? '—' : `$${v}`);
@@ -97,6 +106,40 @@ const licLine = (sec.licences || [])
 ---
 <Base title={`${sec.name} — The World of AI`} description={desc.slice(0, 300)}
   current={`${BASE}/`} jsonld={jsonld}>
+  {isVibe && (
+    <>
+      {sec.blocks.map((b: any) => (
+        <section class="vc-block">
+          <h2>{b.heading}</h2>
+          <div set:html={mdLite(b.body_md)}></div>
+        </section>
+      ))}
+
+      <section class="vc-routes">
+        <h2>Where to go next on this site</h2>
+        <p class="vc-lede">
+          Vibe coding touches most of what this site already tracks. Rather than restate any of it
+          here, this is the map: what you are trying to do, and the section that covers it. Every
+          destination below is a live page, resolved from the site taxonomy when this page was
+          built, so a link here cannot outlive the section it points at.
+        </p>
+        <div class="rule"></div>
+        <table class="vc-table">
+          <thead><tr><th>If you need to</th><th>Go here</th></tr></thead>
+          <tbody>
+            {sec.routes.map((r: any) => (
+              <tr>
+                <td class="vc-need">{r.need}</td>
+                <td><a href={r.href}>{r.name}</a><span class="vc-why">{r.why}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+    </>
+  )}
+
+
 
   <p class="meta-line"><a href="/">AI Ecosystem</a> ·
     <a href={`${BASE}/`}>{CATEGORY_NAME}</a></p>
@@ -121,7 +164,7 @@ const licLine = (sec.licences || [])
             {h.verify_note && <span class="vnote"> · {h.verify_note}</span>}</p>
         </div>
       ))}
-      <div class="cite-box">Cite this page: <code>"{sec.name}." The World of AI,
+  <div class="cite-box">Cite this page: <code>"{sec.name}." The World of AI,
         theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
     </>
   )}
@@ -562,4 +605,17 @@ const licLine = (sec.licences || [])
   /* A verified date that has stopped moving needs to say why. Italic and grey
      so it reads as a footnote on the claim rather than a warning about it. */
   .vnote { font-style: italic; color: #7A8A9E; }
+  .vc-block { margin: 2em 0 0; max-width: 760px; }
+  .vc-block :global(p) { line-height: 1.75; }
+  .vc-block :global(li) { line-height: 1.7; margin-bottom: .4em; }
+  .vc-routes { margin: 2.6em 0 0; }
+  .vc-lede { font-size: 14.5px; color: #2C2C2A; max-width: 760px; line-height: 1.7; }
+  .vc-table { border-collapse: collapse; width: 100%; font-size: 14.5px; margin-top: 4px; }
+  .vc-table th, .vc-table td { text-align: left; vertical-align: top; padding: .6em .8em;
+    border-bottom: 1px solid #ececf2; }
+  .vc-table th { background: #f7f7fb; color: #201868; }
+  .vc-need { width: 38%; font-weight: 600; color: #201868; }
+  .vc-table a { color: #201868; text-decoration: none; font-weight: 600; }
+  .vc-table a:hover { color: #F07800; }
+  .vc-why { display: block; color: #7A8A9E; font-size: 13px; margin-top: 3px; font-weight: 400; }
 </style>
