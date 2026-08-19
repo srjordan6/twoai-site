@@ -33,7 +33,13 @@ interface Env {
 }
 
 const EMBED_MODEL = "@cf/baai/bge-m3";
-const ANSWER_MODEL = "@cf/anthropic/claude-haiku-4.5";
+// THIRD-PARTY MODELS DROP THE @cf/ PREFIX. Workers AI uses "@cf/{author}/{model}"
+// for models Cloudflare hosts and plain "{author}/{model}" for partner models
+// routed through AI Gateway. I wrote "@cf/anthropic/claude-haiku-4.5", which is
+// not a model id, and every request returned 503 with no detail beyond the
+// generic failure - retrieval had already succeeded, so the fault was entirely
+// in the last hop.
+const ANSWER_MODEL = "anthropic/claude-haiku-4.5";
 const GUARD_MODEL = "@cf/meta/llama-guard-3-8b";
 
 /**
@@ -167,17 +173,31 @@ export default {
 
     let answer = "";
     try {
-      const out: any = await env.AI.run(ANSWER_MODEL, {
-        max_tokens: 700,
-        messages: [
-          { role: "system", content: SYSTEM },
-          {
-            role: "user",
-            content: `Excerpts from theworldofai.org:\n\n${excerpts}\n\nQuestion: ${question}\n\nAnswer using only the excerpts above.`,
-          },
-        ],
-      });
-      answer = String(out?.response ?? out?.content?.[0]?.text ?? "").trim();
+      // Partner models route through AI Gateway, which creates a default
+      // gateway on first authenticated request. Passing it explicitly means the
+      // calls are logged there from the first one rather than from whenever
+      // someone remembers to turn it on.
+      const out: any = await env.AI.run(
+        ANSWER_MODEL,
+        {
+          max_tokens: 700,
+          messages: [
+            { role: "system", content: SYSTEM },
+            {
+              role: "user",
+              content: `Excerpts from theworldofai.org:\n\n${excerpts}\n\nQuestion: ${question}\n\nAnswer using only the excerpts above.`,
+            },
+          ],
+        },
+        { gateway: { id: "default" } }
+      );
+      // Anthropic-shaped responses return content blocks; Workers AI models
+      // return a plain string. Both are accepted rather than assumed.
+      answer = String(
+        out?.response ??
+          (Array.isArray(out?.content) ? out.content.map((c: any) => c?.text ?? "").join("") : "") ??
+          ""
+      ).trim();
     } catch {
       return json({ error: "The assistant is unavailable right now." }, 503);
     }
