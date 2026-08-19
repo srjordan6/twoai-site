@@ -238,6 +238,19 @@ const jsonld = JSON.stringify(
         url: `https://theworldofai.org${BASE}/${cma.uid}/`,
         dateModified: cma.generated,
         creator: { '@type': 'Organization', name: 'The World of AI' },
+        // Search Console flagged nine Dataset pages missing `license`.
+        //
+        // POINTED AT OUR OWN TERMS, NOT AT A CREATIVE COMMONS URL, and the
+        // difference matters. My first pass here declared CC BY 4.0, which
+        // would have contradicted the Terms of Use the site already publishes:
+        // section 5 permits reuse WITH attribution but forbids reselling the
+        // raw data as a standalone product, and section 8 states that no
+        // licence is granted except as set out there. CC BY permits exactly
+        // that resale. Emitting it would have granted rights in machine-readable
+        // markup that the human-readable terms withhold - the markup version of
+        // saying two different things to two different audiences.
+        license: 'https://theworldofai.org/terms/',
+        isAccessibleForFree: true,
       }
     : obs
     ? {
@@ -248,6 +261,8 @@ const jsonld = JSON.stringify(
         url: `https://theworldofai.org/ai-ecosystem/ecosystem-entities-market-and-operations/${obs.uid}/`,
         dateModified: obs.generated,
         creator: { '@type': 'Organization', name: 'The World of AI' },
+        license: 'https://theworldofai.org/terms/',
+        isAccessibleForFree: true,
       }
     : secHub
     ? {
