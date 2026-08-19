@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import KeepReading from '../../components/KeepReading.astro';
-import { matchTerms, companyFor, vendorPostsNaming } from '../../lib/related';
+import { matchTerms, companyFor, vendorPostsNaming, companiesNamedIn } from '../../lib/related';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
 export function getStaticPaths() {
@@ -18,6 +18,9 @@ const desc = (t.tagline || t.value || t.name).slice(0, 155);
 const krTerms = matchTerms(`${t.name} ${t.tagline ?? ''} ${t.value ?? ''} ${t.category ?? ''}`);
 const krCompany = companyFor(t.vendor || t.name);
 const krPosts = vendorPostsNaming(t.vendor || t.name, 4);
+// Alternatives and integrations named in the profile are companies too; the
+// vendor alone left 23 tool pages naming OpenAI with no route to it.
+const krNamed = companiesNamedIn(JSON.stringify(t ?? {}), { limit: 4, exclude: t.vendor || t.name });
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
@@ -109,6 +112,8 @@ const jsonld = JSON.stringify({
       links: krTerms.map((t) => ({ href: `/ai-glossary/${t.slug}/`, label: t.term, note: t.category })) },
     { label: 'Announcements from this vendor',
       links: krPosts.map((a: any) => ({ href: `/ai-news/vendor/${a.slug}/`, label: a.title, note: a.date })) },
+    { label: 'Other companies named here',
+      links: krNamed.map((x) => ({ href: `/companies/${x.uid}/`, label: `${x.name} profile` })) },
     { label: 'Across the site', links: [
       ...(krCompany ? [{ href: `/companies/${krCompany.uid}/`, label: `${krCompany.name} company profile`, note: 'products, lawsuits, filings' }] : []),
       { href: '/ai-tools/', label: 'The AI tools directory', note: 'everything we track, by category' },

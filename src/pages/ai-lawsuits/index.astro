@@ -22,7 +22,15 @@ const desc = `Live tracker for ${s.count} major AI lawsuits: copyright, privacy,
             <td><a href={`/ai-lawsuits/${c.slug}/`}>{c.case_name}</a></td>
             <td>{c.category}</td>
             <td><span class="badge">{c.status_badge || c.status}</span></td>
-            <td>{c.latest_development_date && <b>{c.latest_development_date}: </b>}{c.latest_development}</td>
+            {/* An empty cell reads as a broken page. Fourteen tracked cases have
+                been filed but carry no docket entry our watch has picked up yet,
+                and saying so is both true and more useful than white space.
+                Note the wording: no development RECORDED BY THIS TRACKER, not
+                no development. The docket may have moved without CourtListener
+                surfacing it to us, and the page should not claim otherwise. */}
+            <td>{c.latest_development
+              ? <>{c.latest_development_date && <b>{c.latest_development_date}: </b>}{c.latest_development}</>
+              : <span class="pending">Filed. No docket development recorded by this tracker yet; checked daily.</span>}</td>
           </tr>
         ))}
       </tbody>
@@ -31,3 +39,7 @@ const desc = `Live tracker for ${s.count} major AI lawsuits: copyright, privacy,
     <p>The first data synchronization is running; case pages appear within the day.</p>
   )}
 </Base>
+
+<style>
+  .pending { color: #7A8A9E; font-style: italic; }
+</style>

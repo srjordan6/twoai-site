@@ -9,6 +9,8 @@
  * reference that states the limits is the one worth citing.
  */
 import Base from '../../layouts/Base.astro';
+import KeepReading from '../../components/KeepReading.astro';
+import { matchTerms, companiesNamedIn } from '../../lib/related';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
 export function getStaticPaths() {
@@ -32,6 +34,7 @@ export function getStaticPaths() {
     });
 }
 const { b } = Astro.props;
+const krCompanies = companiesNamedIn(JSON.stringify(Astro.props ?? {}), { limit: 5 });
 const sectionNames = {
   'bench-model': 'Model Benchmarks',
   'bench-hardware': 'Hardware Benchmarks',
@@ -121,6 +124,15 @@ const jsonld = JSON.stringify({
   {b.last_reviewed && (
     <p class="meta-line">Last verified {b.last_reviewed} · Reviewed on a {b.review_interval_days || 90}-day cycle · Corrections republish automatically on the next daily build.</p>
   )}
+  <KeepReading blocks={[
+    { label: 'Companies on this leaderboard',
+      links: krCompanies.map((x) => ({ href: `/companies/${x.uid}/`, label: `${x.name} profile`, note: 'what they ship and what is contested' })) },
+    { label: 'Across the site', links: [
+      { href: '/benchmarks/', label: 'All benchmarks', note: 'how the field measures itself' },
+      { href: '/companies/', label: 'The AI company directory', note: '261 vendors we track' },
+      { href: '/ai-glossary/', label: 'The AI glossary', note: '500+ terms in plain English' },
+    ] },
+  ]} />
 </Base>
 
 <style>
