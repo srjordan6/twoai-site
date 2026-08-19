@@ -228,6 +228,19 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
   {jsonld && <script type="application/ld+json" set:html={jsonld} />}
 </head>
 <body>
+  <!-- The topbar and the masthead are ONE sticky unit, not two.
+
+       Both used to be position:sticky with top:0 independently, so on scroll
+       the masthead pinned to y=0 underneath the topbar, which sits above it at
+       z-index 1100 and is 48px tall. The top 48px of the 84px masthead was
+       covered: the logo lost its globe and the nav labels lost their first
+       line, on every page, as soon as you scrolled a pixel.
+
+       Giving the masthead top:48px would fix it at one breakpoint and break it
+       at the next, because the topbar's height changes with its own media
+       queries. Wrapping both in a single sticky element means they move
+       together whatever either one measures. -->
+  <div class="site-sticky">
   <Topbar />
   <header class="site-head">
     <div class="wrap bar">
@@ -247,6 +260,7 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
       </button>
     </div>
   </header>
+  </div>
   <div class="scrim" id="scrim"></div>
   <nav class="mobile-panel" id="mobile-panel" aria-label="Mobile navigation" aria-hidden="true">
     <ul>
@@ -376,8 +390,16 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
     a:hover { text-decoration: underline; }
     main { min-height: 55vh; padding: 34px 22px 64px; }
 
-    .site-head { border-bottom: 3px solid var(--orange); background: #fff; position: sticky;
-      top: 0; z-index: 100; }
+    /* Sticky lives on the wrapper now, so the masthead is a plain block inside
+       it and cannot pin itself underneath the topbar. */
+    .site-sticky { position: sticky; top: 0; z-index: 1100; }
+    .site-head { border-bottom: 3px solid var(--orange); background: #fff; }
+    /* The topbar keeps position:sticky in its own component for the case where
+       it is used outside this wrapper. Inside it, sticky-within-sticky would
+       pin it against a parent that is exactly its own height, which is a no-op
+       at best and a rounding-error jitter at worst. Specificity beats the
+       component's scoped rule. */
+    body .site-sticky .topbar { position: static; }
     .bar { display: flex; align-items: center; justify-content: space-between; gap: 24px;
       padding-top: 14px; padding-bottom: 14px; }
     .logo svg { display: block; }
