@@ -109,6 +109,16 @@ const jsonld = JSON.stringify({
     )}
   </div>
 
+  {it.reader_note && (
+    <div class="reader-note">
+      <p class="rn-label">What this could mean for readers of The World of AI</p>
+      {it.reader_note.split('\n\n').filter(Boolean).map((p: string) => <p>{p.trim()}</p>)}
+      <p class="rn-foot">This section is this site&rsquo;s own reading, written by us and clearly
+        separated from the vendor&rsquo;s words above. It is analysis rather than sourced fact,
+        and it is the part of this page to argue with.</p>
+    </div>
+  )}
+
   <p class="cta-wrap">
     <a class="cta" href={it.url} rel="noopener" target="_blank">Read the original at {host} &rarr;</a>
   </p>
@@ -143,6 +153,12 @@ const jsonld = JSON.stringify({
   .answer-box { background: #FFF6EC; border: 1px solid #F0D6B0; border-radius: 6px; padding: 22px 26px; margin: 18px 0 24px; max-width: 760px; }
   .answer-box p { font-size: 16.5px; line-height: 1.75; color: #2C2C2A; margin: 0; }
   .answer-label { font-size: 11px !important; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #F07800; margin: 0 0 8px !important; }
+
+  .reader-note { border-left: 3px solid #201868; padding: 4px 0 4px 20px; margin: 22px 0; max-width: 760px; }
+  .rn-label { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: #201868; margin: 0 0 10px; }
+  .reader-note p { font-size: 16px; line-height: 1.7; color: #2C2C2A; margin: 0 0 12px; }
+  .rn-foot { font-size: 13px !important; color: #7A8A9E; font-style: italic; margin-bottom: 0 !important; }
 
   .cta-wrap { margin: 22px 0; }
   .cta { display: inline-block; background: #201868; color: #fff; font-weight: 600; font-size: 15px; padding: 12px 22px; border-radius: 6px; text-decoration: none; }
