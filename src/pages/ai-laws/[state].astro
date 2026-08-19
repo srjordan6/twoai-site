@@ -1,5 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
+import KeepReading from '../../components/KeepReading.astro';
+import { matchTerms } from '../../lib/related';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
 export function getStaticPaths() {
@@ -13,6 +15,7 @@ export function getStaticPaths() {
 }
 const { d } = Astro.props;
 const recent = d.bills.slice(0, 8).map((b) => b.number).join(', ');
+const krTerms = matchTerms(d.bills.slice(0, 25).map((b: any) => b.title || '').join(' '));
 const desc = `${d.name} artificial intelligence legislation: ${d.count} AI bill${d.count === 1 ? '' : 's'} tracked with official links, updated daily from LegiScan.`;
 const faq = [
   {
@@ -75,4 +78,14 @@ const jsonld = JSON.stringify({
 
   <div class="cite-box">Cite this page: <code>"{d.name} AI Laws." The World of AI,
     theworldofai.org/ai-laws/{d.slug}/. Verified {d.generated}.</code></div>
+  <KeepReading blocks={[
+    { label: 'Terms in these bills, defined',
+      links: krTerms.map((t) => ({ href: `/ai-glossary/${t.slug}/`, label: t.term, note: t.category })) },
+    { label: 'Across the site', links: [
+      { href: '/ai-laws/', label: 'AI laws in every state', note: 'all 53 jurisdictions we track' },
+      { href: '/ai-compliance/federal-ai-legislation/', label: 'Federal AI legislation', note: 'what Congress has moved' },
+      { href: '/ai-compliance/global-ai-laws/', label: 'Global AI laws', note: 'the EU AI Act and beyond' },
+      { href: '/ai-lawsuits/', label: 'The AI lawsuit tracker', note: 'where the law is being tested' },
+    ] },
+  ]} />
 </Base>

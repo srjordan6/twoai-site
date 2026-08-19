@@ -1,0 +1,58 @@
+---
+/**
+ * "Keep reading here" — the onward-links block shared by every page type.
+ *
+ * WHY EVERY PAGE NEEDS ONE. Measured across the built site, most page types
+ * ended with nowhere to go: news stories carried 6 in-body internal links,
+ * tools 7, companies 7, state laws 8, MCP servers 9 — and several of those
+ * were the breadcrumb and the cite box rather than anything a reader would
+ * want next. A reader arriving from search read one page and left, never
+ * learning the rest of the atlas existed.
+ *
+ * WHAT IT DOES NOT DO. It never displaces the page's own primary action. On a
+ * vendor post the outbound link to the source still sits above this; on a case
+ * page the docket link still does. Sending people to primary sources is why
+ * this site can be trusted, and burying that to farm pageviews would trade the
+ * thing that makes the traffic worth having.
+ *
+ * Blocks with no items render nothing rather than an empty heading, so a page
+ * with little genuinely related content stays honest instead of padded.
+ */
+interface Link { href: string; label: string; note?: string }
+interface Block { label: string; links: Link[] }
+interface Props { blocks: Block[]; heading?: string }
+
+const { blocks, heading = 'Keep reading here' } = Astro.props as Props;
+const shown = (blocks || []).filter((b) => b && b.links && b.links.length > 0);
+---
+{shown.length > 0 && (
+  <section class="keep-reading">
+    <h2>{heading}</h2>
+    {shown.map((b) => (
+      <div class="kr-block">
+        <p class="kr-label">{b.label}</p>
+        <ul>
+          {b.links.map((l) => (
+            <li>
+              <a href={l.href}>{l.label}</a>
+              {l.note && <span class="kr-note">{l.note}</span>}
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </section>
+)}
+
+<style>
+  .keep-reading { margin-top: 34px; border-top: 1px solid #ececf2; padding-top: 22px; max-width: 760px; }
+  .keep-reading h2 { font-size: 1.15rem; margin: 0 0 18px; }
+  .kr-block { margin: 0 0 22px; }
+  .kr-label { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
+    color: #F07800; margin: 0 0 8px; }
+  .keep-reading ul { list-style: none; margin: 0; padding: 0; }
+  .keep-reading li { padding: 7px 0; border-bottom: 1px solid #f4f4f8; font-size: 14.5px; line-height: 1.6; }
+  .keep-reading a { color: #201868; text-decoration: none; font-weight: 600; }
+  .keep-reading a:hover { color: #F07800; }
+  .kr-note { color: #7A8A9E; font-size: 12.5px; margin-left: 10px; font-weight: 400; }
+</style>

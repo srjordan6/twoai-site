@@ -7,6 +7,8 @@
  * plainly that we have not tested it.
  */
 import Base from '../../layouts/Base.astro';
+import KeepReading from '../../components/KeepReading.astro';
+import { matchTerms, companyFor } from '../../lib/related';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
 export function getStaticPaths() {
@@ -20,6 +22,8 @@ export function getStaticPaths() {
 }
 const { s, generated } = Astro.props;
 const label = s.title || s.name;
+const krTerms = matchTerms(`${s.title ?? ''} ${s.name} ${s.description ?? ''}`);
+const krCompany = companyFor(s.vendor || '');
 const desc = `${label}: an MCP server published by ${s.vendor || 'its author'} to the official Model Context Protocol registry. ${s.description}`.slice(0, 300);
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
@@ -74,6 +78,16 @@ const jsonld = JSON.stringify({
     theworldofai.org/mcp/{s.slug}/.{generated ? ` Verified ${generated}.` : ''}</code></div>
 
   <p><a href="/mcp/">All MCP servers</a></p>
+  <KeepReading blocks={[
+    { label: 'Terms this server works with, defined',
+      links: krTerms.map((t) => ({ href: `/ai-glossary/${t.slug}/`, label: t.term, note: t.category })) },
+    { label: 'Across the site', links: [
+      ...(krCompany ? [{ href: `/companies/${krCompany.uid}/`, label: `${krCompany.name} company profile`, note: 'products, lawsuits, filings' }] : []),
+      { href: '/mcp/', label: 'The MCP server directory', note: 'every server in the official registry' },
+      { href: '/ai-glossary/model-context-protocol/', label: 'Model Context Protocol, defined', note: 'what MCP actually is' },
+      { href: '/ai-glossary/', label: 'The AI glossary', note: '500+ terms in plain English' },
+    ] },
+  ]} />
 </Base>
 
 <style>

@@ -12,6 +12,8 @@
  * and is otherwise absent rather than guessed.
  */
 import Base from '../../layouts/Base.astro';
+import KeepReading from '../../components/KeepReading.astro';
+import { matchTerms, companyFor } from '../../lib/related';
 import { categoryOf, coverageByDay, readingMinutes, titleCase, type Story } from '../../lib/newsTopics';
 
 import { loadKnownEntities, resolveEntities } from '../../lib/knownEntities';
@@ -76,6 +78,10 @@ const story: Story = {
 };
 
 const cat = categoryOf(story);
+// Onward links: terms this story actually names, and the company pages for any
+// organisation in it that we track. See src/lib/related.ts for why the matching
+// is whole-word and exact-name rather than substring.
+const krTerms = matchTerms(`${story.Title ?? ''} ${story.Summary ?? story.Description ?? ''}`);
 
 // Entity chips and the sidebar list are restricted to organisations and people
 // this site publishes a page for, and render as links to those pages. The raw
@@ -247,6 +253,22 @@ const jsonld = JSON.stringify({
       )}
     </aside>
   </div>
+  <KeepReading blocks={[
+    { label: 'Terms in this story, defined',
+      links: krTerms.map((t) => ({ href: `/ai-glossary/${t.slug}/`, label: t.term, note: t.category })) },
+    { label: 'Organisations we track in this story',
+      // knownOrgs are already resolved against our own entities by
+      // resolveEntities, carrying {label, href}. Reusing that is more accurate
+      // than re-matching the name here, and it is the same list the story chips
+      // are built from, so the two cannot disagree.
+      links: (knownOrgs ?? []).slice(0, 6).map((o: any) => ({ href: o.href, label: o.label })) },
+    { label: 'Across the site', links: [
+      { href: '/ai-news/daily/', label: 'Today\u2019s briefing', note: 'the whole day in one page' },
+      { href: '/ai-news/vendor/', label: 'Vendor announcements', note: 'straight from the source' },
+      { href: '/ai-glossary/', label: 'The AI glossary', note: '500+ terms in plain English' },
+      { href: '/ai-lawsuits/', label: 'The AI lawsuit tracker', note: 'live case status from the dockets' },
+    ] },
+  ]} />
 </Base>
 
 <style>
