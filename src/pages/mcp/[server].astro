@@ -25,6 +25,17 @@ const label = s.title || s.name;
 const krTerms = matchTerms(`${s.title ?? ''} ${s.name} ${s.description ?? ''}`);
 const krCompany = companyFor(s.vendor || '');
 const desc = `${label}: an MCP server published by ${s.vendor || 'its author'} to the official Model Context Protocol registry. ${s.description}`.slice(0, 300);
+/* INDEXABLE IS COMPUTED IN THE PIPELINE, not decided here. A page earns a place
+   in the index by carrying enough to stand alone: what the server does, a real
+   way to connect to it, and a source to verify against. The 1,900 MCP pages
+   were blanket-noindexed on 2026-08-13 because they were a name and a sentence,
+   which was the right call for a page with nothing on it and the wrong call
+   forever. Now the ones with substance are indexable and the rest stay out.
+
+   The honest fix for a thin page is to make it useful or keep it out of the
+   index, never to pad it. */
+const indexable = s.indexable === true;
+
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
@@ -37,7 +48,7 @@ const jsonld = JSON.stringify({
   ...(s.vendor ? { author: { '@type': 'Organization', name: s.vendor } } : {}),
 });
 ---
-<Base title={`${label} — MCP server — The World of AI`} description={desc} current="/mcp/" jsonld={jsonld} noindex={true}>
+<Base title={`${label} — MCP server — The World of AI`} description={desc} current="/mcp/" jsonld={jsonld} noindex={!indexable}>
   <p class="meta-line"><a href="/">AI Ecosystem</a> ·
     <a href="/ai-ecosystem/technology-and-core-infrastructure/">Technology and Core Infrastructure</a> ·
     <a href="/mcp/">MCP Servers</a></p>
@@ -50,6 +61,61 @@ const jsonld = JSON.stringify({
     {s.transport && <>Runs as a {s.transport} · </>}
     {generated && <>Last verified: {generated}</>}
   </p>
+
+  {(s.remote_url || s.package_id) && (
+    <>
+      <h2>How to connect to it</h2>
+      <p>
+        {s.remote_url
+          ? <>This server is hosted by its publisher, so nothing is installed locally. It speaks
+              {' '}<b>{s.remote_type || 'HTTP'}</b> at the endpoint below, and an MCP client is pointed
+              at that URL. Whatever the endpoint can reach, the agent can reach.</>
+          : <>This server runs on your own machine or container. It is published to
+              {' '}<b>{s.package_registry || 'a package registry'}</b> as
+              {' '}<code>{s.package_id}</code>{s.package_version && <> at version {s.package_version}</>},
+              and communicates over <b>{s.remote_type || 'stdio'}</b>. Code you install runs with
+              your permissions, not the model's.</>}
+      </p>
+      <div class="tw">
+        <table>
+          <tbody>
+            {s.remote_url && <tr><th>Endpoint</th><td><code>{s.remote_url}</code></td></tr>}
+            {s.remote_type && <tr><th>Transport</th><td><code>{s.remote_type}</code></td></tr>}
+            {s.package_id && <tr><th>Package</th><td><code>{s.package_id}</code></td></tr>}
+            {s.package_registry && <tr><th>Registry</th><td>{s.package_registry}</td></tr>}
+            {s.package_version && <tr><th>Version</th><td><code>{s.package_version}</code></td></tr>}
+          </tbody>
+        </table>
+      </div>
+      <h2>Before you connect it</h2>
+      <p>
+        An MCP server is a set of capabilities an agent can invoke on your behalf, so the questions
+        worth asking are about authority rather than features.
+        {s.remote_url
+          ? <> This one is remote, so your data leaves your environment to reach it: check what the
+              publisher retains, what credentials the endpoint asks for, and whether those
+              credentials can be scoped down.</>
+          : <> This one runs locally, so the questions are supply chain: who publishes the package,
+              what it pulls in, and what it can touch on the machine that runs it.</>}
+        {' '}The general treatment is in
+        {' '}<a href="/ai-ecosystem/enterprise-applications-governance-and-tools/">AI Security and Risk</a>,
+        and the protocol-specific one under MCP security.
+      </p>
+    </>
+  )}
+
+  {s.siblings && s.siblings.length > 0 && (
+    <>
+      <h2>Others from the same publisher</h2>
+      <p class="sub">Servers published under <code>{s.namespace}</code>, which the registry treats as
+        one publisher.</p>
+      <ul class="sibs">
+        {s.siblings.map((t: string, i: number) => (
+          <li><a href={`/mcp/${s.sibling_slugs[i]}/`}>{t}</a></li>
+        ))}
+      </ul>
+    </>
+  )}
 
   <h2>Registry record</h2>
   <table>
@@ -93,4 +159,10 @@ const jsonld = JSON.stringify({
 <style>
   table th { width: 30%; text-align: left; vertical-align: top; }
   code { word-break: break-all; }
+  .sub { font-size: 14px; color: #7A8A9E; margin: 0 0 10px; }
+  .sibs { list-style: none; margin: 0; padding: 0; }
+  .sibs li { padding: 6px 0; border-bottom: 1px solid #f4f4f8; font-size: 14.5px; }
+  .sibs a { color: #201868; text-decoration: none; font-weight: 600; }
+  .sibs a:hover { color: #F07800; }
+  .tw { overflow-x: auto; }
 </style>
