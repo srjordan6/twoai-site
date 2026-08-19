@@ -1,16 +1,43 @@
-// Static-assets-only Worker for theworldofai.org.
+// Worker for theworldofai.org.
 //
-// This file's presence is load-bearing: without it, `npx wrangler deploy`
-// auto-configures the project, runs `astro add cloudflare`, and converts the
-// build to SSR ("hybrid"), which breaks the node:fs reads our pages use at
-// build time. With it, wrangler deploys ./dist as static assets and touches
-// nothing. There is deliberately no "main": this site has no worker code.
+// HISTORY WORTH KEEPING. This file used to be assets-only with no "main", and
+// the comment said its presence was load-bearing: without it, `wrangler deploy`
+// auto-configured the project, ran `astro add cloudflare`, and converted the
+// build to SSR, which breaks the node:fs reads the pages use at build time.
+//
+// That risk was auto-configuration, not the existence of a worker script. With
+// "main" set EXPLICITLY here, wrangler deploys ./dist as static assets and runs
+// src/worker.ts in front of them; it changes nothing about how Astro builds.
+// The site is still a static build. The Worker exists for exactly one route.
+//
+// ASSETS.fetch handles every path except /api/ask, so a bug in the assistant
+// cannot take the site down: the worst case is one endpoint returning 503 while
+// 5,884 pages carry on serving.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "twoai-site",
+  "main": "src/worker.ts",
   "compatibility_date": "2026-08-01",
+  "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
     "not_found_handling": "404-page"
-  }
+  },
+  "ai": {
+    "binding": "AI"
+  },
+  "vectorize": [
+    {
+      "binding": "VECTORIZE",
+      "index_name": "twoai-pages"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "ASSISTANT_DB",
+      "database_name": "twoai-assistant",
+      "database_id": "db78dab4-42ea-4704-9cd0-3adeacebefe4"
+    }
+  ]
 }
