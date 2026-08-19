@@ -63,6 +63,75 @@ const jsonld = JSON.stringify({
     {generated && <p class="meta-line">Last data refresh: {generated}</p>}
   </section>
 
+  <!-- The ask box is front and centre on Stephen's instruction, above the map.
+       It answers ONLY from this site's pages and says so in the sub-line rather
+       than hiding it: the limitation is the reason to trust the answer, and a
+       visitor who expects a general chatbot and gets a refusal has been misled
+       by us, not failed by the tool.
+
+       Progressive enhancement: without JavaScript the box is inert and the
+       ecosystem map directly below is unaffected. Nothing on this page depends
+       on the assistant being up. -->
+  <section class="ask" id="ask">
+    <h2 class="ask-h">Ask this site a question</h2>
+    <div class="ask-row">
+      <input id="ask-q" type="text" autocomplete="off"
+        placeholder="What are the AI laws in Texas?"
+        aria-label="Ask a question about AI, answered from this site" maxlength="500" />
+      <button id="ask-go" type="button">Ask</button>
+    </div>
+    <p class="ask-note">Answered only from the pages on this site, with links to every source used.
+      When we have not covered something, it says so rather than guessing.</p>
+    <div id="ask-out" class="ask-out" hidden></div>
+  </section>
+
+  <script is:inline>
+    (function () {
+      var q = document.getElementById('ask-q');
+      var go = document.getElementById('ask-go');
+      var out = document.getElementById('ask-out');
+      if (!q || !go || !out) return;
+      var busy = false;
+      function esc(s) {
+        return String(s).replace(/[&<>"]/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+        });
+      }
+      function ask() {
+        var text = q.value.trim();
+        if (!text || busy) return;
+        busy = true;
+        go.disabled = true;
+        go.textContent = 'Reading';
+        out.hidden = false;
+        out.innerHTML = '<p class="ask-wait">Searching this site\u2026</p>';
+        fetch('/api/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: text })
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          if (d.error) { out.innerHTML = '<p class="ask-wait">' + esc(d.error) + '</p>'; return; }
+          var html = '<div class="ask-answer">' +
+            esc(d.answer).replace(/\n\n+/g, '</p><p>').replace(/^/, '<p>') + '</p></div>';
+          if (d.sources && d.sources.length) {
+            html += '<p class="ask-src-label">Sources on this site</p><ul class="ask-src">';
+            for (var i = 0; i < d.sources.length; i++) {
+              html += '<li><a href="' + esc(d.sources[i].url) + '">' + esc(d.sources[i].title) + '</a></li>';
+            }
+            html += '</ul>';
+          }
+          out.innerHTML = html;
+        }).catch(function () {
+          out.innerHTML = '<p class="ask-wait">The assistant is unavailable right now.</p>';
+        }).then(function () {
+          busy = false; go.disabled = false; go.textContent = 'Ask';
+        });
+      }
+      go.addEventListener('click', ask);
+      q.addEventListener('keydown', function (e) { if (e.key === 'Enter') ask(); });
+    })();
+  </script>
+
   {cats.map((c) => (
     <div class="cat">
       <h2><a href={`/ai-ecosystem/${c.slug}/`}>{c.name}</a></h2>
@@ -100,4 +169,25 @@ const jsonld = JSON.stringify({
   .cat { padding: 1.2em 0; border-bottom: 1px solid #ececf2; }
   .cat h2 { margin: 0 0 .3em; font-size: 1.18rem; }
   .cat p { margin: 0 0 .35em; }
+  .ask { max-width: 860px; margin: 0 auto 2.6em; padding: 26px 26px 22px; text-align: center;
+    background: #fcfbf7; border: 1px solid #e3e6ee; border-radius: 12px; }
+  .ask-h { font-size: 1.25rem; margin: 0 0 14px; }
+  .ask-row { display: flex; gap: 10px; max-width: 640px; margin: 0 auto; }
+  #ask-q { flex: 1; font-family: 'Poppins', system-ui, sans-serif; font-size: 15px;
+    padding: 12px 14px; border: 1px solid #cfd4e4; border-radius: 8px; color: #201868; background: #fff; }
+  #ask-q:focus { outline: 2px solid #F07800; outline-offset: 1px; border-color: #F07800; }
+  #ask-go { font-family: 'Poppins', system-ui, sans-serif; font-size: 15px; font-weight: 600;
+    color: #fff; background: #201868; border: 0; border-radius: 8px; padding: 12px 24px; cursor: pointer; }
+  #ask-go:hover { background: #F07800; }
+  #ask-go:disabled { background: #7A8A9E; cursor: default; }
+  .ask-note { font-size: 13px; color: #7A8A9E; margin: 12px auto 0; max-width: 600px; line-height: 1.6; }
+  .ask-out { margin: 20px auto 0; max-width: 640px; text-align: left; }
+  .ask-wait { font-size: 14px; color: #7A8A9E; font-style: italic; }
+  .ask-answer p { font-size: 15px; line-height: 1.7; margin: 0 0 .8em; }
+  .ask-src-label { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: #F07800; margin: 14px 0 6px; }
+  .ask-src { list-style: none; margin: 0; padding: 0; }
+  .ask-src li { padding: 5px 0; border-bottom: 1px solid #f0f0f5; font-size: 14.5px; }
+  .ask-src a { color: #201868; text-decoration: none; font-weight: 600; }
+  .ask-src a:hover { color: #F07800; }
 </style>
