@@ -16,6 +16,7 @@
  * first build after this change, before the pipeline has written an archive.
  */
 import Base from '../../../layouts/Base.astro';
+import { readFileSync, existsSync } from 'node:fs';
 
 export function getStaticPaths() {
   const m = import.meta.glob('../../../../content/news/vendor.json', { eager: true });
@@ -48,6 +49,84 @@ export function getStaticPaths() {
 }
 
 const { it, vendor } = Astro.props;
+
+/* WHY THIS PAGE GREW A "KEEP READING" SECTION.
+ *
+ * It used to be a summary and a button that sends the reader away. That is
+ * honest but it is also a dead end: the reader arrives from search, reads two
+ * sentences of the vendor's own words, leaves for the vendor's site, and never
+ * sees that we track the vendor, define the terms, or hold 100+ related posts.
+ *
+ * The outbound link stays exactly where it is. Nothing here hides it or makes
+ * the reader hunt for it; sending people to the primary source is the point of
+ * the page. What is added sits BELOW it, so a reader who wants the source gets
+ * it in one click and a reader who wants more has somewhere to go.
+ *
+ * MATCHING RULE, and this needs stating because the same mistake was made
+ * elsewhere on this site today. Glossary terms are matched against our own
+ * headline and the vendor's summary on WHOLE WORDS only, case-insensitive,
+ * minimum four characters. A substring test would put "Agent" inside
+ * "agentic", "RAG" inside "storage", and "Box" inside "toolbox", which is
+ * exactly how 101 false MCP attributions happened. Text matching inside our
+ * own prose is a much weaker claim than attributing a product to a company, so
+ * the bar is lower here, but the word boundary is not optional.
+ */
+const load = (path: string) => {
+  try {
+    return existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : null;
+  } catch {
+    return null;
+  }
+};
+
+const g: any = globalThis as any;
+if (!g.__twoaiVendorRelated) {
+  const vend = load('content/news/vendor.json');
+  const gloss = load('content/glossary/glossary.json');
+  const comps = load('content/companies/index.json');
+  const byName: Record<string, any> = {};
+  for (const c of comps?.companies ?? []) {
+    if (c?.name) byName[String(c.name).toLowerCase().replace(/[^a-z0-9]/g, '')] = c;
+  }
+  g.__twoaiVendorRelated = {
+    archive: vend?.archive ?? [],
+    // Only terms long enough to match safely, longest first so "Agent Swarm"
+    // wins over "Agent" when both appear.
+    terms: (gloss?.terms ?? [])
+      .filter((t: any) => t?.term && t?.slug && t.term.length >= 4)
+      .sort((a: any, b: any) => b.term.length - a.term.length),
+    byName,
+  };
+}
+const rel = g.__twoaiVendorRelated;
+
+/* More from the same vendor: newest first, this post excluded, and only posts
+ * that actually have a page of their own. A link to a slug the build suppressed
+ * as too thin would be a 404 we shipped deliberately. */
+const moreFromVendor = rel.archive
+  .filter((a: any) => a.vendor === vendor && a.slug && a.slug !== it.slug && a.has_page !== false)
+  .slice(0, 5);
+
+const haystack = `${it.title} ${it.summary ?? ''}`.toLowerCase();
+const relatedTerms: any[] = [];
+const usedSpans: string[] = [];
+for (const t of rel.terms) {
+  if (relatedTerms.length >= 4) break;
+  const word = t.term.toLowerCase().replace(/\s*\(.*?\)\s*/g, '').trim();
+  if (word.length < 4) continue;
+  // Whole-word match, punctuation-safe at both ends.
+  const re = new RegExp(`(^|[^a-z0-9])${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z0-9]|$)`, 'i');
+  if (!re.test(haystack)) continue;
+  // Skip a term already covered by a longer one we matched, so "Agent Swarm"
+  // does not drag "Agent" in beside it.
+  if (usedSpans.some((u) => u.includes(word))) continue;
+  usedSpans.push(word);
+  relatedTerms.push(t);
+}
+
+/* The vendor's own company profile, when the vendor is one we track. Exact
+ * normalised equality, the same rule as the MCP attribution fix. */
+const vendorCompany = rel.byName[String(vendor).toLowerCase().replace(/[^a-z0-9]/g, '')] ?? null;
 const host = new URL(it.url).hostname.replace(/^www\./, '');
 // Titles are clamped to 65 characters including the vendor suffix; a headline
 // that would push past it is cut at a word boundary with an ellipsis, because
@@ -106,10 +185,44 @@ const jsonld = JSON.stringify({
     vendor&rsquo;s own publication date.
   </p>
 
-  <p class="backlinks">
-    <a href="/ai-news/vendor/">&larr; All vendor announcements</a> ·
-    <a href="/ai-news/daily/">Today&rsquo;s Daily News briefing</a>
-  </p>
+  <section class="keep-reading">
+    <h2>Keep reading here</h2>
+
+    {relatedTerms.length > 0 && (
+      <div class="kr-block">
+        <p class="kr-label">Terms in this announcement, defined</p>
+        <ul class="kr-terms">
+          {relatedTerms.map((t: any) => (
+            <li><a href={`/ai-glossary/${t.slug}/`}>{t.term}</a><span class="kr-cat">{t.category}</span></li>
+          ))}
+        </ul>
+      </div>
+    )}
+
+    {moreFromVendor.length > 0 && (
+      <div class="kr-block">
+        <p class="kr-label">More from {vendor}</p>
+        <ul class="kr-posts">
+          {moreFromVendor.map((a: any) => (
+            <li><a href={`/ai-news/vendor/${a.slug}/`}>{a.title}</a><span class="kr-date">{a.date}</span></li>
+          ))}
+        </ul>
+      </div>
+    )}
+
+    <div class="kr-block">
+      <p class="kr-label">Across the site</p>
+      <ul class="kr-links">
+        {vendorCompany && (
+          <li><a href={`/companies/${vendorCompany.uid}/`}>{vendor} company profile</a> — what
+            {' '}{vendor} ships, what is contested, and what is on the public record</li>
+        )}
+        <li><a href="/ai-news/vendor/">All vendor announcements</a> — every post our watch has surfaced</li>
+        <li><a href="/ai-news/daily/">Today&rsquo;s briefing</a> — what the whole field published today</li>
+        <li><a href="/ai-glossary/">The AI glossary</a> — 500+ terms in plain English, each with an example</li>
+      </ul>
+    </div>
+  </section>
 </Base>
 
 <style>
@@ -125,7 +238,17 @@ const jsonld = JSON.stringify({
   .cta:hover { background: #F07800; }
 
   .note { font-size: 13.5px; color: #7A8A9E; font-style: italic; max-width: 68ch; }
-  .backlinks { margin-top: 26px; font-size: 14px; }
-  .backlinks a { color: #201868; text-decoration: none; font-weight: 600; }
-  .backlinks a:hover { color: #F07800; }
+  /* Sits below the outbound link, never above it: a reader who came for the
+     source still gets it in one click. */
+  .keep-reading { margin-top: 34px; border-top: 1px solid #ececf2; padding-top: 22px; max-width: 760px; }
+  .keep-reading h2 { font-size: 1.15rem; margin: 0 0 18px; }
+  .kr-block { margin: 0 0 22px; }
+  .kr-label { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
+    color: #F07800; margin: 0 0 8px; }
+  .kr-terms, .kr-posts, .kr-links { list-style: none; margin: 0; padding: 0; }
+  .kr-terms li, .kr-posts li, .kr-links li { padding: 7px 0; border-bottom: 1px solid #f4f4f8;
+    font-size: 14.5px; line-height: 1.6; }
+  .kr-terms a, .kr-posts a, .kr-links a { color: #201868; text-decoration: none; font-weight: 600; }
+  .kr-terms a:hover, .kr-posts a:hover, .kr-links a:hover { color: #F07800; }
+  .kr-cat, .kr-date { color: #7A8A9E; font-size: 12.5px; margin-left: 10px; font-weight: 400; }
 </style>
