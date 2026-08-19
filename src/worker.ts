@@ -50,10 +50,18 @@ const FALLBACK_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 
 /**
  * Below this cosine score the site genuinely does not cover the question.
- * Taken from the retrieval probe rather than guessed: real hits scored 0.63 to
- * 0.71, and the weakest chunk still worth showing sat near 0.52.
+ *
+ * RAISED FROM 0.45 TO 0.52 after live testing. At 0.45 the question "hello"
+ * scored 0.55 against a vendor post that happens to be titled "Hello World",
+ * and the assistant duly explained what Hello World is. That is not a wrong
+ * retrieval, it is a wrong THRESHOLD: a coincidental lexical match is not
+ * coverage, and answering it makes the assistant look credulous on exactly the
+ * kind of input a first-time visitor types.
+ *
+ * Real hits sit at 0.63 to 0.73. "What is the capital of France" correctly
+ * refuses. 0.52 keeps the genuine answers and drops the coincidences.
  */
-const SCORE_FLOOR = 0.45;
+const SCORE_FLOOR = 0.52;
 const TOP_K = 12;      // over-fetch, then cap per page
 const PER_PAGE = 2;    // at most two chunks from any one page
 const MAX_SOURCES = 6;
