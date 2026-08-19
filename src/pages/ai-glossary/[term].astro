@@ -1,5 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
+import KeepReading from '../../components/KeepReading.astro';
+import { companiesNamedIn } from '../../lib/related';
 
 // Labels for the audience lenses. Kept here rather than in the data so that
 // renaming a label is a template change, not a migration across every term.
@@ -31,6 +33,8 @@ export function getStaticPaths() {
   }));
 }
 const { t, generated, related } = Astro.props;
+// Definitions and examples name real companies; those were dead text.
+const krCompanies = companiesNamedIn(`${t.definition ?? ''} ${t.example ?? ''} ${t.origin ?? ''}`, { limit: 4 });
 const desc = t.definition.length > 152 ? t.definition.slice(0, 149) + '...' : t.definition;
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
@@ -80,4 +84,13 @@ const jsonld = JSON.stringify({
   )}
   <div class="cite-box">Cite this definition: <code>"{t.term}." The World of AI Glossary,
     theworldofai.org/ai-glossary/{t.slug}/.{generated ? ` Verified ${generated}.` : ''}</code></div>
+  <KeepReading blocks={[
+    { label: 'Companies named in this entry',
+      links: krCompanies.map((x) => ({ href: `/companies/${x.uid}/`, label: `${x.name} profile`, note: 'what they ship and what is contested' })) },
+    { label: 'Across the site', links: [
+      { href: '/ai-glossary/', label: 'The full AI glossary', note: '500+ terms, each with an example' },
+      { href: '/ai-news/daily/', label: 'Today\u2019s briefing', note: 'the term in the wild' },
+      { href: '/companies/', label: 'The AI company directory', note: '261 vendors we track' },
+    ] },
+  ]} />
 </Base>

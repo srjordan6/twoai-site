@@ -1,5 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
+import KeepReading from '../../components/KeepReading.astro';
+import { matchTerms, companiesNamedIn } from '../../lib/related';
 import { readFileSync, existsSync } from 'node:fs';
 
 export function getStaticPaths() {
@@ -33,6 +35,11 @@ export function getStaticPaths() {
   });
 }
 const { c, generated, related } = Astro.props;
+// The parties, claims and docket text name companies we hold profiles on. A
+// reader who lands here from a search for one of them had no route to it.
+const krText = `${c.case_name ?? ''} ${c.plaintiffs ?? ''} ${c.defendants ?? ''} ${c.significance ?? ''} ${c.summary ?? ''}`;
+const krCompanies = companiesNamedIn(krText);
+const krTerms = matchTerms(`${c.case_name ?? ''} ${c.category ?? ''} ${c.significance ?? ''} ${c.summary ?? ''}`);
 const lead = c.executive_summary || c.summary || `${c.case_name}, in the ${c.court}.`;
 const desc = lead.length > 152 ? lead.slice(0, 149) + '...' : lead;
 const timeline = Array.isArray(c.timeline) ? c.timeline : [];
@@ -110,6 +117,17 @@ const jsonld = JSON.stringify({
 
   <div class="cite-box">Cite this page: <code>"{c.case_name}." The World of AI Lawsuit Tracker,
     theworldofai.org/ai-lawsuits/{c.slug}/.{generated ? ` Verified ${generated}.` : ''}</code></div>
+  <KeepReading blocks={[
+    { label: 'Companies named in this case',
+      links: krCompanies.map((x) => ({ href: `/companies/${x.uid}/`, label: `${x.name} profile`, note: 'products, filings, other cases' })) },
+    { label: 'Terms in this case, defined',
+      links: krTerms.map((t) => ({ href: `/ai-glossary/${t.slug}/`, label: t.term, note: t.category })) },
+    { label: 'Across the site', links: [
+      { href: '/ai-lawsuits/', label: 'The full AI lawsuit tracker', note: 'every case, live from the dockets' },
+      { href: '/ai-laws/', label: 'AI laws by state', note: 'what legislators are doing about it' },
+      { href: '/ai-news/daily/', label: 'Today\u2019s briefing', note: 'what the field published today' },
+    ] },
+  ]} />
 </Base>
 
 <style>

@@ -10,6 +10,8 @@
  * computed from the items below it, so the two can never disagree.
  */
 import Base from '../../layouts/Base.astro';
+import KeepReading from '../../components/KeepReading.astro';
+import { companiesNamedIn } from '../../lib/related';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
 export function getStaticPaths() {
@@ -22,6 +24,7 @@ export function getStaticPaths() {
     });
 }
 const { w } = Astro.props;
+const krCompanies = companiesNamedIn(JSON.stringify(w ?? {}), { limit: 6 });
 const c = w.counts || { bills: 0, federal: 0, courts: 0, total: 0 };
 const a = w.analysis || { themes: [], jurisdictions: [], agencies: [], jurisdiction_count: 0 };
 const themes = a.themes || [];
@@ -154,6 +157,16 @@ const jsonld = JSON.stringify({
     {w.generated ? ` Verified ${w.generated}.` : ''}</code></div>
 
   <p><a href="/this-week-in-ai/">All weeks</a></p>
+  <KeepReading blocks={[
+    { label: 'Companies in this week\u2019s digest',
+      links: krCompanies.map((x) => ({ href: `/companies/${x.uid}/`, label: `${x.name} profile` })) },
+    { label: 'Across the site', links: [
+      { href: '/this-week-in-ai/', label: 'Every weekly digest', note: 'the archive' },
+      { href: '/ai-news/daily/', label: 'Today\u2019s briefing', note: 'more recent than this page' },
+      { href: '/ai-news/vendor/', label: 'Vendor announcements', note: 'straight from the source' },
+      { href: '/ai-lawsuits/', label: 'The AI lawsuit tracker', note: 'live case status' },
+    ] },
+  ]} />
 </Base>
 
 <style>

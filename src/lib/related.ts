@@ -113,3 +113,52 @@ export function vendorPostsNaming(name: string, limit = 5): any[] {
     .filter((a: any) => a?.slug && a.has_page !== false && flatten(a.vendor || '') === flat)
     .slice(0, limit);
 }
+
+/**
+ * Companies genuinely named in a piece of text, linked to their profiles.
+ *
+ * WHY THIS EXISTS. Searching the site for "OpenAI" returns over a thousand
+ * pages, and 175 of them named OpenAI in the body without linking to its
+ * profile: lawsuit pages, glossary entries, weekly digests, benchmark pages.
+ * A reader who arrives on any of those has no way to reach what we actually
+ * hold on the company they came to read about.
+ *
+ * THE RULE, and it is stricter than the glossary matcher on purpose. A
+ * glossary mis-match costs an unhelpful link; naming the wrong company is a
+ * claim about identity. So:
+ *   - whole words only, never substrings
+ *   - four characters minimum, which alone rules out "Box" matching "toolbox"
+ *   - CASE SENSITIVE, so "Meta" the company matches but "meta tag" does not,
+ *     "Scale" matches but "scale up" does not, and "Character" matches but
+ *     "character limit" does not. Company names appear capitalised in prose;
+ *     the ordinary English words they collide with do not.
+ *   - the page's own subject is excluded, so a company page does not link to
+ *     itself and a vendor post does not repeat the vendor it already shows
+ *
+ * Capped low deliberately. Five links a reader might follow beat forty they
+ * will scroll past, and a wall of company names reads as an index rather than
+ * a recommendation.
+ */
+export function companiesNamedIn(text: unknown, opts: { limit?: number; exclude?: string } = {}): CompanyRef[] {
+  const hay = typeof text === 'string' ? text : text == null ? '' : String(text);
+  if (hay.length < 20) return [];
+  const limit = opts.limit ?? 5;
+  const skip = flatten(opts.exclude ?? '');
+  const out: CompanyRef[] = [];
+  const seen = new Set<string>();
+  // Longest name first, so "Stability AI" is preferred over a bare "Stability".
+  const all = Object.values(cache().companiesByName)
+    .filter((c) => c.name && c.name.length >= 4 && c.has_page !== false)
+    .sort((a, b) => b.name.length - a.name.length);
+  for (const c of all) {
+    if (out.length >= limit) break;
+    const key = flatten(c.name);
+    if (!key || key === skip || seen.has(key)) continue;
+    const esc = c.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // No `i` flag: the case sensitivity is the guard.
+    if (!new RegExp(`(^|[^A-Za-z0-9])${esc}([^A-Za-z0-9]|$)`).test(hay)) continue;
+    seen.add(key);
+    out.push(c);
+  }
+  return out;
+}
