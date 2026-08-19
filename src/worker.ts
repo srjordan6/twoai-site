@@ -46,7 +46,7 @@ const GUARD_MODEL = "@cf/meta/llama-guard-3-8b";
 // keeps the assistant answering rather than showing a dead box on the home
 // page, and the response records which model answered so a silent downgrade is
 // visible rather than assumed.
-const FALLBACK_MODEL = "@cf/meta/llama-3.1-8b-instruct";
+const FALLBACK_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 
 /**
  * Below this cosine score the site genuinely does not cover the question.
