@@ -26,7 +26,7 @@ import { createHash } from 'node:crypto';
 
 const REPO = 'https://github.com/srjordan6/twoai-content';
 const R2 = 'https://pub-b8347c6e4e8c40febe3c83d8860826e2.r2.dev';
-const dirs = ['laws', 'glossary', 'lawsuits', 'static', 'tools', 'week', 'ecosystem', 'compliance', 'mcp', 'people', 'companies', 'research', 'sources', 'benchmarks', 'prompts', 'news', 'timeline', 'jobs', 'skills', 'models', 'repos', 'status', 'tech', 'learn', 'industries', 'observatory', 'security', 'downloads'];
+const dirs = ['laws', 'glossary', 'lawsuits', 'static', 'tools', 'week', 'ecosystem', 'compliance', 'mcp', 'people', 'companies', 'research', 'sources', 'benchmarks', 'prompts', 'news', 'timeline', 'jobs', 'skills', 'models', 'repos', 'status', 'tech', 'learn', 'industries', 'observatory', 'security', 'downloads', 'meta'];
 // 'downloads' was missing here while the pipeline was already writing
 // downloads/*.json and the /downloads/ routes were live, so the hub counted
 // zero documents and every template returned 404. A directory absent from this

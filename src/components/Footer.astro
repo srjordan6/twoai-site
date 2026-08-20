@@ -36,6 +36,26 @@ const EMAIL = 'info@srjconsultingservices.com';
 // mailbox (via the Inkbox gateway), so page questions and corrections reach the
 // atlas directly. info@ stays as the consulting practice's line.
 const PUB_EMAIL = 'theworldofai@inkboxmail.com';
+
+// Most-visited pages, from content/meta/popular-pages.json (the twoai_ga_top
+// pipeline stage reading the GA4 Data API, refreshed daily over a trailing
+// 7-day window; the home page and utility paths are excluded at the stage).
+// Guarded: while the file does not exist yet, or GA has no qualifying
+// traffic, the footer keeps the hand-picked category links below as the
+// fallback, so this column never renders empty. Titles fall back to a
+// humanised last path segment when the registry had none.
+import { readFileSync } from 'node:fs';
+let popular: { path: string; title: string }[] = [];
+try {
+  const pop = JSON.parse(readFileSync('content/meta/popular-pages.json', 'utf8'));
+  popular = (pop.pages ?? []).slice(0, 5).map((p: any) => ({
+    path: p.path,
+    title:
+      p.title?.replace(/ [—|-] The World of AI.*$/, '') ||
+      p.path.replace(/\/$/, '').split('/').pop().replace(/-/g, ' ')
+        .replace(/\b\w/g, (c: string) => c.toUpperCase()),
+  }));
+} catch { /* file absent until the GA stage first runs; fallback renders */ }
 ---
 
 <footer class="site-foot">
@@ -73,12 +93,25 @@ const PUB_EMAIL = 'theworldofai@inkboxmail.com';
           <li class="sub"><a href="/ai-ecosystem/enterprise-applications-governance-and-tools/">04. Enterprise &amp; Governance</a></li>
           <li class="sub"><a href="/ai-news/">05. AI News</a></li>
         </ul>
-        <h3 class="spaced"><a href="/ai-tools/">Popular tool categories</a></h3>
-        <ul>
-          <li class="sub"><a href="/ai-tools/category/chat-and-general-llms/">Chat and general LLMs</a></li>
-          <li class="sub"><a href="/ai-tools/category/coding-and-developer-tools/">Coding and developer tools</a></li>
-          <li class="sub"><a href="/ai-tools/category/ai-governance-and-risk-management-platforms/">AI governance platforms</a></li>
-        </ul>
+        {popular.length > 0 ? (
+          <>
+            <h3 class="spaced">Most visited this week</h3>
+            <ul>
+              {popular.map((p) => (
+                <li class="sub"><a href={p.path}>{p.title}</a></li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <>
+            <h3 class="spaced"><a href="/ai-tools/">Popular tool categories</a></h3>
+            <ul>
+              <li class="sub"><a href="/ai-tools/category/chat-and-general-llms/">Chat and general LLMs</a></li>
+              <li class="sub"><a href="/ai-tools/category/coding-and-developer-tools/">Coding and developer tools</a></li>
+              <li class="sub"><a href="/ai-tools/category/ai-governance-and-risk-management-platforms/">AI governance platforms</a></li>
+            </ul>
+          </>
+        )}
       </nav>
 
       {/* Column 3: the machine-readable side, which is the citation strategy */}
