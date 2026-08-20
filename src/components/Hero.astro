@@ -199,6 +199,7 @@ const total = bills + terms + cases + servers;
     }
 
     var rot = 0, tX = 0, tY = 0, cX = 0, cY = 0, t0 = 0, entered = 0;
+    var rippleT = 0;
 
     function frame(ts) {
       if (!t0) t0 = ts;
@@ -213,6 +214,10 @@ const total = bills + terms + cases + servers;
       cX += (tX - cX) * 0.06;
       cY += (tY - cY) * 0.06;
       if (!reduce) rot += 0.0016;
+      if (rippleT > 0) {
+        rippleT += 0.016;
+        if (rippleT > 1.6) rippleT = 0;
+      }
 
       var cx = W / 2, cy = H * 0.48;
       var sinR = Math.sin(rot), cosR = Math.cos(rot);
@@ -259,6 +264,16 @@ const total = bills + terms + cases + servers;
         var depth = (pt.z + 1) / 2;
         var r = (0.9 + depth * 1.7) * (0.6 + ease * 0.4);
         var a = (0.22 + depth * 0.6) * ease;
+        // A ring of brightness travelling out from the centre of the sphere,
+        // once, over about a second and a half.
+        if (rippleT > 0) {
+          var band = Math.abs((1 - (pt.z + 1) / 2) - (rippleT / 1.6));
+          if (band < 0.16) {
+            var lift = (1 - band / 0.16) * (1 - rippleT / 1.6);
+            a = Math.min(1, a + lift * 0.85);
+            r *= 1 + lift * 1.1;
+          }
+        }
         if (pt.live) {
           // The pulse is slow and out of phase per node: a field breathing,
           // not a string of blinking lights.
@@ -300,6 +315,16 @@ const total = bills + terms + cases + servers;
     } else {
       start();
     }
+
+    /* THE ASK BOX IS PART OF THE HERO, not a widget beside it. A question
+       typed below sends a wave outward through the field: the site is being
+       asked something and the data responds. One shared value, read by the
+       renderer, set by the form - no second animation loop, no library, and it
+       degrades to nothing if the box is absent. */
+    window.__twoaiRipple = function () {
+      if (reduce) return;
+      rippleT = 0.0001;
+    };
 
     if (reduce) { start(); setTimeout(stop, 1400); }
   })();

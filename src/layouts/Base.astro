@@ -14,8 +14,12 @@ import AmazonShelf from '../components/AmazonShelf.astro';
 import PillarBox from '../components/PillarBox.astro';
 import Topbar from '../components/Topbar.astro';
 
-interface Props { title: string; description: string; current?: string; jsonld?: string; canonicalOverride?: string; noindex?: boolean; ogType?: string; }
-const { title, description, current = '', jsonld, canonicalOverride, noindex = false, ogType = 'website' } = Astro.props;
+interface Props { title: string; description: string; current?: string; jsonld?: string; canonicalOverride?: string; noindex?: boolean; ogType?: string; rail?: boolean; }
+/* rail=false drops the section-index card and lets the content run full width.
+   The home page opts out: it IS the ecosystem map, so a card listing the same
+   five categories beside it is the page repeating itself in miniature, and it
+   pushed the hero, the ask box and everything below off centre. */
+const { title, description, current = '', jsonld, canonicalOverride, noindex = false, ogType = 'website', rail = true } = Astro.props;
 const nav = [
   { href: '/ai-ecosystem/technology-and-core-infrastructure/', label: 'Technology & Infrastructure', short: 'Technology' },
   { href: '/ai-ecosystem/ecosystem-entities-market-and-operations/', label: 'Market & Entities', short: 'Market' },
@@ -269,6 +273,40 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
   </header>
   </div>
   <div class="scrim" id="scrim"></div>
+  <script is:inline>
+    (function () {
+      if (!('IntersectionObserver' in window)) return;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      var els = document.querySelectorAll('main h2, main section, main .kr-block, main article');
+      if (!els.length || els.length > 400) return; // long index pages stay static
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (!e.isIntersecting) return;
+          e.target.classList.add('reveal-in');
+          io.unobserve(e.target);       // once, never again
+        });
+      }, { rootMargin: '0px 0px -8% 0px', threshold: 0.02 });
+      /* FAILSAFE. Arming an element sets opacity to 0, so if the observer never
+         fires - a browser quirk, a script error above this one, a page restored
+         from bfcache mid-scroll - the content stays invisible forever. That is a
+         content-blocking bug wearing a design costume, and it is worth more than
+         the animation it protects. After three seconds everything is revealed
+         regardless of whether it was ever observed. */
+      setTimeout(function () {
+        document.querySelectorAll('.reveal-armed').forEach(function (el) {
+          el.classList.add('reveal-in');
+        });
+      }, 3000);
+
+      els.forEach(function (el, i) {
+        // Anything already on screen at load is left alone: animating what the
+        // reader is already looking at is motion for its own sake.
+        if (el.getBoundingClientRect().top < window.innerHeight * 0.9) return;
+        el.classList.add('reveal-armed');
+        io.observe(el);
+      });
+    })();
+  </script>
   <nav class="mobile-panel" id="mobile-panel" aria-label="Mobile navigation" aria-hidden="true">
     <ul>
       {nav.map((n) => (
@@ -286,11 +324,13 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
        Rendering outside the grid is the fix that needs no arithmetic. -->
   <slot name="bleed" />
 
-  <main class="wrap main-wrap">
-    <div class="rail-col">
-      <PillarBox />
-      <slot name="rail" />
-    </div>
+  <main class={`wrap main-wrap${rail ? "" : " no-rail"}`}>
+    {rail && (
+      <div class="rail-col">
+        <PillarBox />
+        <slot name="rail" />
+      </div>
+    )}
     <div class="main-col"><slot /></div>
   </main>
 
@@ -375,6 +415,10 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
         align-items: start;
       }
       .main-col { grid-column: 1; grid-row: 1; }
+      /* No rail: one column, centred, with a comfortable measure rather than a
+         1,080px line length nobody can read. */
+      .main-wrap.no-rail { grid-template-columns: minmax(0, 1fr); }
+      .main-wrap.no-rail .main-col { max-width: 880px; margin: 0 auto; }
       .rail-col {
         grid-column: 2;
         grid-row: 1;
@@ -482,6 +526,25 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
     .stat b { display: block; font-family: 'Lora', serif; font-size: 34px; color: var(--navy);
       line-height: 1.1; }
     .stat span { color: var(--gray); font-size: 14px; }
-  </style>
+  
+    /* SCROLL CHOREOGRAPHY, sitewide.
+       Sections rise a short distance and fade as they enter. Two rules keep it
+       from becoming the thing you notice: it happens ONCE per element, and the
+       distance is 14px rather than the 60px that makes a page feel like it is
+       assembling itself while you read.
+
+       Content is visible by default and the class is added by script, so a
+       reader without JavaScript, a crawler, or anyone with reduced motion sees
+       a normal page rather than a blank one. That ordering is the whole safety
+       of the pattern: an animation that hides content until JS runs is a
+       content-blocking bug wearing a design costume. */
+    @media (prefers-reduced-motion: no-preference) {
+      .reveal-armed { opacity: 0; transform: translateY(14px); }
+      .reveal-in {
+        opacity: 1; transform: none;
+        transition: opacity .5s cubic-bezier(.22,.61,.36,1), transform .5s cubic-bezier(.22,.61,.36,1);
+      }
+    }
+</style>
 </body>
 </html>

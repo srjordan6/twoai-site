@@ -51,7 +51,7 @@ const jsonld = JSON.stringify({
   })),
 });
 ---
-<Base title="The World of AI — the AI Ecosystem, mapped and tracked daily" description={desc} jsonld={jsonld}>
+<Base rail={false} title="The World of AI — the AI Ecosystem, mapped and tracked daily" description={desc} jsonld={jsonld}>
   <Hero slot="bleed" bills={billTotal} terms={termTotal} cases={caseTotal}
     servers={mcpTotal} generated={generated} />
 
@@ -98,6 +98,8 @@ const jsonld = JSON.stringify({
         go.textContent = 'Reading';
         out.hidden = false;
         out.innerHTML = '<p class="ask-wait">Searching this site\u2026</p>';
+        // The question travels through the hero. See Hero.astro.
+        if (window.__twoaiRipple) window.__twoaiRipple();
         fetch('/api/ask', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
