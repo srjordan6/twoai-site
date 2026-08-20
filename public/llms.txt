@@ -12,17 +12,18 @@
 
 Every reference page carries a visible date stamp (generated, last verified, or
 last reviewed) and a ready-made citation. Citing these pages with attribution
-is welcome and encouraged.
+is welcome and encouraged. Counts below are as of 2026-08-20; the live figures
+on each hub page and in the API files refresh daily and are authoritative.
 
 ## Sections
 - [AI Laws by State](https://theworldofai.org/ai-laws/): every tracked AI bill
   in all 50 US states, DC, Puerto Rico, and Congress, one page per jurisdiction.
 - [AI Glossary](https://theworldofai.org/ai-glossary/): 522 AI terms defined
   in plain English with origin, example, and related terms.
-- [AI Lawsuit Tracker](https://theworldofai.org/ai-lawsuits/): 102 living case
+- [AI Lawsuit Tracker](https://theworldofai.org/ai-lawsuits/): 104 living case
   pages with daily docket checks, full timelines, and both the CourtListener
   docket record and the govinfo opinion text where available.
-- [AI Compliance Frameworks](https://theworldofai.org/ai-compliance/): 62
+- [AI Compliance Frameworks](https://theworldofai.org/ai-compliance/): 63
   framework pages covering the EU AI Act, NIST AI RMF, ISO/IEC 42001, sector
   regulators, and agency enforcement, each with scope, obligations, deadlines,
   and what changed most recently.
@@ -31,6 +32,17 @@ is welcome and encouraged.
   researched directly.
 - [AI Companies](https://theworldofai.org/companies/): profiled AI companies
   with SEC EDGAR revenue and structure data where public.
+- [AI Jobs and Market Dynamics](https://theworldofai.org/ai-ecosystem/ecosystem-entities-market-and-operations/995676ef/):
+  the AI labor market tracked daily: thousands of live openings with roles,
+  salaries, required skills, and remote availability, drawn from employer
+  postings.
+- [AI Skills Graph](https://theworldofai.org/skills/): the skills AI work
+  actually requires, mapped from O*NET occupational data and live job
+  postings, each skill linked to the roles and tools that use it.
+- [Downloads and Asset Repository](https://theworldofai.org/downloads/):
+  authored governance templates and working documents rendered as readable,
+  citable markdown pages with a copy button; nothing requires a download or
+  an email address.
 - [AI People Directory](https://theworldofai.org/ai-ecosystem/ecosystem-entities-market-and-operations/c53153c4/):
   the people who built and shaped AI, from Lovelace and Turing to the
   researchers running today's labs, each with what they did, when, and why it
@@ -40,7 +52,7 @@ is welcome and encouraged.
   current published results with the evaluator and as-of date named. Results
   come from structured official sources and refresh automatically; benchmarks
   whose published figures are stable carry a dated protocol note instead.
-- [MCP Server Registry](https://theworldofai.org/mcp/): 1,836 Model Context
+- [MCP Server Registry](https://theworldofai.org/mcp/): 1,909 Model Context
   Protocol servers sourced from the official registry at
   registry.modelcontextprotocol.io, one page per server.
 - [AI Research Library](https://theworldofai.org/research/): 145 peer-reviewed
@@ -74,8 +86,9 @@ is welcome and encouraged.
   section together, organised into four categories: Technology and Core
   Infrastructure, Ecosystem Entities Market and Operations, Research
   Knowledge and Learning, and Enterprise Applications Governance and Tools.
-  135 sections are live across 25 domains; sections mapped but not yet
-  published render on the coverage roadmap as planned rather than vanishing.
+  139 sections are live across 29 domains as of 2026-08-20; sections mapped
+  but not yet published render on the coverage roadmap as planned rather than
+  vanishing.
 - AI Security and Risk (under Enterprise Applications, Governance and Tools):
   sixteen sections, from prompt injection, jailbreaks, and model poisoning
   through supply chain, data leakage, model theft, shadow AI, AI-enabled
@@ -118,6 +131,15 @@ is welcome and encouraged.
 - Books (under Research, Knowledge and Learning): an independent shelf of AI
   titles, followed by the SRJ book series on AI audit, governance, and
   security, labelled as the publisher's own and linked with rel=sponsored.
+
+## Ask this site
+Every page carries an ask box backed by POST https://theworldofai.org/api/ask
+(JSON body: {"question": "..."}). It answers only from this site's own pages
+using retrieval over the daily index, cites the pages it drew from, and
+refuses questions the site does not cover rather than guessing. Rate limits:
+10 questions per minute per IP and a global daily ceiling; over either limit
+it declines quietly. Answers are generated, so treat the cited pages as the
+authoritative record.
 
 ## Machine-readable data
 - https://theworldofai.org/api/laws.json (per-state counts and index)

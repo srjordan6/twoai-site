@@ -1,0 +1,9 @@
+# Security contact for theworldofai.org (RFC 9116).
+# This is a static reference site published by SRJ Consulting & Services LLC.
+# In-scope: this domain, its /api/ endpoints, and content integrity issues.
+Contact: mailto:info@srjconsultingservices.com
+Contact: https://theworldofai.org/contact/
+Expires: 2027-08-20T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://theworldofai.org/.well-known/security.txt
+Policy: https://theworldofai.org/contact/
