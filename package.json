@@ -9,7 +9,7 @@
     "dev": "astro dev"
   },
   "dependencies": {
-    "@astrojs/sitemap": "3.1.6",
+    "@astrojs/sitemap": "3.7.3",
     "@fontsource/lora": "^5.1.0",
     "@fontsource/poppins": "^5.1.0",
     "astro": "^4.16.18",
