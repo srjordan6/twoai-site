@@ -208,7 +208,15 @@ export default {
     const modelErrors: string[] = [];
     for (const model of [ANSWER_MODEL, FALLBACK_MODEL]) {
       try {
-        const opts: any = model.startsWith("@cf/") ? undefined : { gateway: { id: "default" } };
+        // NO GATEWAY OPTION. Partner models run through env.AI.run directly
+        // and bill via Workers AI unified billing; that is how Cloudflare's own
+        // model page calls anthropic/claude-haiku-4.5. The previous version
+        // passed gateway {id: "default"}, no gateway by that name exists in
+        // this account, and every call failed with 7003 "User Input Error" -
+        // cannot route to object - so the assistant served its entire life on
+        // the fallback model. Captured live on 2026-08-20 via the temporary
+        // model_errors field once the D1-only logging proved unreadable from
+        // the session doing the diagnosis.
         const out: any = await env.AI.run(
           model,
           {
@@ -220,8 +228,7 @@ export default {
                 content: `Excerpts from theworldofai.org:\n\n${excerpts}\n\nQuestion: ${question}\n\nAnswer using only the excerpts above.`,
               },
             ],
-          },
-          opts
+          }
         );
         answer = String(
           out?.response ??
