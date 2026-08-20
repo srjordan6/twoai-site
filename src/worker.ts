@@ -30,16 +30,33 @@ interface Env {
   VECTORIZE: any;
   ASSISTANT_DB: D1Database;
   ASSETS: { fetch: (req: Request) => Promise<Response> };
+  // Worker secret. When present, the primary answer model is Claude Haiku
+  // called DIRECTLY at api.anthropic.com, bypassing Workers AI partner routing
+  // entirely. Set with `wrangler secret put ANTHROPIC_API_KEY` or in the
+  // dashboard; the same key already lives on the srj-pipeline Render cron.
+  ANTHROPIC_API_KEY?: string;
 }
 
 const EMBED_MODEL = "@cf/baai/bge-m3";
-// THIRD-PARTY MODELS DROP THE @cf/ PREFIX. Workers AI uses "@cf/{author}/{model}"
-// for models Cloudflare hosts and plain "{author}/{model}" for partner models
-// routed through AI Gateway. I wrote "@cf/anthropic/claude-haiku-4.5", which is
-// not a model id, and every request returned 503 with no detail beyond the
-// generic failure - retrieval had already succeeded, so the fault was entirely
-// in the last hop.
-const ANSWER_MODEL = "anthropic/claude-haiku-4.5";
+// HISTORY OF THE PRIMARY-MODEL FAILURES, in order, because each fix revealed
+// the next fault and the sequence is worth not repeating:
+//  1. "@cf/anthropic/claude-haiku-4.5" is not a model id (partner models drop
+//     the @cf/ prefix). Generic 503.
+//  2. A gateway option named a gateway that does not exist. Removed; not the
+//     root fault.
+//  3. {role: "system"} in the messages array. Partner models take `system` as
+//     a top-level string. 7003 User Input Error.
+//  4. THE ACTUAL ROOT CAUSE, captured live 2026-08-19: "2021: Invalid User
+//     Credentials". Workers AI partner models bill through unified billing or
+//     an AI Gateway holding your own Anthropic key. This account has neither,
+//     so every partner call has failed since the endpoint shipped and llama
+//     served every answer.
+// The fix is to stop depending on partner routing at all: with the
+// ANTHROPIC_API_KEY secret set, the Worker calls api.anthropic.com directly.
+// The partner id stays only as a middle attempt when no key is configured, so
+// enabling unified billing later would also work without a code change.
+const ANTHROPIC_MODEL = "claude-haiku-4-5"; // direct-API model id
+const PARTNER_MODEL = "anthropic/claude-haiku-4.5"; // Workers AI partner id
 const GUARD_MODEL = "@cf/meta/llama-guard-3-8b";
 // Fallback if the partner model is unavailable for any reason: not enabled on
 // the account, quota, an outage, or a changed id. A Cloudflare-hosted model
@@ -155,6 +172,12 @@ export default {
     }
 
     const best = hits.length ? hits[0].score : 0;
+    // Declared BEFORE log() so the refusal path can call log(false) safely.
+    // Previously these sat below the refusal branch, and binding modelErrors
+    // inside log threw a temporal-dead-zone ReferenceError on every refused
+    // question, silently killing exactly the logging the refusal exists for.
+    let usedModel = "";
+    const modelErrors: string[] = [];
     const log = async (answered: boolean) => {
       // The columns are added here rather than in a migration because the
       // Worker is the only writer and a logging schema drift must never break
@@ -202,58 +225,81 @@ export default {
       .map((h, i) => `[${i + 1}] ${h.title} (${h.url})\n${h.body}`)
       .join("\n\n");
 
+    const userContent = `Excerpts from theworldofai.org:\n\n${excerpts}\n\nQuestion: ${question}\n\nAnswer using only the excerpts above.`;
+
+    // Direct call to the Anthropic API. No Workers AI, no gateway, no partner
+    // billing: just the key. Errors carry the HTTP status and the first slice
+    // of the body, which is what turns "unavailable" into a diagnosable fault.
+    const askAnthropicDirect = async (): Promise<string> => {
+      const r = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-api-key": env.ANTHROPIC_API_KEY!,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: ANTHROPIC_MODEL,
+          max_tokens: 700,
+          system: SYSTEM,
+          messages: [{ role: "user", content: userContent }],
+        }),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}: ${(await r.text()).slice(0, 300)}`);
+      const out: any = await r.json();
+      return String(
+        Array.isArray(out?.content) ? out.content.map((c: any) => c?.text ?? "").join("") : ""
+      ).trim();
+    };
+
+    const askWorkersAI = async (model: string): Promise<string> => {
+      // Partner models take `system` top-level; @cf/ models take it in the
+      // messages array. Both shapes verified against the model docs.
+      const userTurn = { role: "user", content: userContent };
+      const params: any = model.startsWith("@cf/")
+        ? { max_tokens: 700, messages: [{ role: "system", content: SYSTEM }, userTurn] }
+        : { max_tokens: 700, system: SYSTEM, messages: [userTurn] };
+      const out: any = await env.AI.run(model, params);
+      return String(
+        out?.response ??
+          (Array.isArray(out?.content) ? out.content.map((c: any) => c?.text ?? "").join("") : "")
+      ).trim();
+    };
+
+    // Attempt order: direct Anthropic when the secret exists, the partner
+    // route only when it does not (so unified billing enabled later just
+    // works), llama always last so the box on the home page never dies.
+    const attempts: Array<[string, () => Promise<string>]> = [];
+    if (env.ANTHROPIC_API_KEY) {
+      attempts.push([`anthropic-direct/${ANTHROPIC_MODEL}`, askAnthropicDirect]);
+    } else {
+      attempts.push([PARTNER_MODEL, () => askWorkersAI(PARTNER_MODEL)]);
+    }
+    attempts.push([FALLBACK_MODEL, () => askWorkersAI(FALLBACK_MODEL)]);
+
     let answer = "";
-    let usedModel = ANSWER_MODEL;
     let lastError = "";
-    const modelErrors: string[] = [];
-    for (const model of [ANSWER_MODEL, FALLBACK_MODEL]) {
+    for (const [name, call] of attempts) {
       try {
-        // THE PARTNER MODEL SPEAKS ANTHROPIC MESSAGES, NOT CHAT COMPLETIONS.
-        // Its schema (developers.cloudflare.com/ai/models/anthropic/claude-haiku-4.5,
-        // read on 2026-08-20) takes `system` as a TOP-LEVEL string; the messages
-        // array is user/assistant only, and a {role: "system"} entry is rejected
-        // as 7003 "User Input Error". That one schema difference is why every
-        // request ever served fell through to the fallback. The @cf/ models are
-        // chat-completions shaped and keep the system turn in the array. A
-        // gateway option that named a nonexistent gateway was removed in the
-        // previous commit; it was not the fault, and the docs call the partner
-        // model with no gateway option at all.
-        const userTurn = {
-          role: "user",
-          content: `Excerpts from theworldofai.org:\n\n${excerpts}\n\nQuestion: ${question}\n\nAnswer using only the excerpts above.`,
-        };
-        const params: any = model.startsWith("@cf/")
-          ? { max_tokens: 700, messages: [{ role: "system", content: SYSTEM }, userTurn] }
-          : { max_tokens: 700, system: SYSTEM, messages: [userTurn] };
-        const out: any = await env.AI.run(model, params);
-        answer = String(
-          out?.response ??
-            (Array.isArray(out?.content) ? out.content.map((c: any) => c?.text ?? "").join("") : "")
-        ).trim();
+        answer = await call();
         if (answer) {
-          usedModel = model;
+          usedModel = name;
           break;
         }
-        lastError = `${model}: empty response`;
+        lastError = `${name}: empty response`;
+        modelErrors.push(lastError);
       } catch (e: any) {
-        // The error text is returned to the caller on failure. It names the
-        // model and the fault, which is the difference between "unavailable"
-        // and a diagnosable problem; there is nothing secret in it.
-        lastError = `${model}: ${e?.message ?? String(e)}`;
-        // A FALLBACK THAT NOBODY SEES IS A QUALITY REGRESSION THAT HIDES
-        // ITSELF. Every answer so far has come from the fallback because the
-        // primary model fails, and the only way to know was to read the model
-        // field on a raw response. The failure is now recorded per request, so
-        // "which model is actually answering, and why" is a query rather than
-        // an investigation.
+        lastError = `${name}: ${e?.message ?? String(e)}`;
+        // A fallback nobody sees is a quality regression that hides itself.
+        // Every failure is recorded per request in D1, so "which model is
+        // actually answering, and why" is a query rather than an
+        // investigation.
         modelErrors.push(lastError);
       }
     }
     if (!answer) {
       return json({ error: "The assistant is unavailable right now.", detail: lastError }, 503);
     }
-
-    if (!answer) return json({ error: "The assistant is unavailable right now." }, 503);
 
     ctx.waitUntil(log(true));
 
@@ -264,14 +310,10 @@ export default {
       .filter((h) => (seen.has(h.url) ? false : (seen.add(h.url), true)))
       .map((h) => ({ title: h.title, url: h.url, score: h.score }));
 
-    // TEMPORARY DIAGNOSTIC, remove once the primary model answers again: the
-    // exact reason the primary fails lives in D1, which cannot be read from
-    // this session, so the failure text rides the response for one probe. The
-    // detail field on total failure already established that nothing in these
-    // messages is secret.
-    return json({
-      answered: true, answer, sources, model: usedModel,
-      model_errors: modelErrors.length ? modelErrors : undefined,
-    });
+    // Diagnostic ride-along removed 2026-08-19: it did its job (captured
+    // "2021: Invalid User Credentials" live). Failures stay queryable in
+    // answer_log.model_errors; the public response names only the model that
+    // answered.
+    return json({ answered: true, answer, sources, model: usedModel });
   },
 };
