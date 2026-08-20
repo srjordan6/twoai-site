@@ -24,6 +24,13 @@
  * URLs on a preview deploy send every footer click off the deploy.
  */
 const year = new Date().getFullYear();
+// Build date, rendered in the bottom bar of EVERY page. The per-page "Last
+// verified" stamps say when the data behind a page was produced; this one says
+// when the site itself was last rebuilt, and it is the universal safety net
+// that makes the sentence above ("carries the date it was last verified") true
+// on pages with no data stamp of their own: the home page, 404, calculators,
+// /api/, and any future template that forgets. Standing directive 2026-08-10.
+const rebuilt = new Date().toISOString().slice(0, 10);
 const EMAIL = 'info@srjconsultingservices.com';
 // The publication's own address. Mail here lands in theworldofai's project
 // mailbox (via the Inkbox gateway), so page questions and corrections reach the
@@ -122,7 +129,7 @@ const PUB_EMAIL = 'theworldofai@inkboxmail.com';
     </div>
 
     <div class="f-bottom">
-      <div>&copy; {year} SRJ Consulting &amp; Services LLC. All rights reserved.</div>
+      <div>&copy; {year} SRJ Consulting &amp; Services LLC. All rights reserved. · Site rebuilt {rebuilt}</div>
       <div class="f-legal">
         <a href="/privacy/">Privacy</a>
         <a href="/terms/">Terms</a>

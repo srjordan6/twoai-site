@@ -35,7 +35,7 @@ const title = `AI News Archive: ${items.length} stories — The World of AI`;
 const description = `Every AI news story published on this site, newest first, ${items.length} in total. Each links to the full story page with its source list and coverage record.`;
 ---
 <Base title={title} description={description} current="/ai-news/">
-  <p class="meta-line"><a href="/ai-news/">AI News</a> · Archive</p>
+  <p class="meta-line"><a href="/ai-news/">AI News</a> · Archive{news?.generated && <> · Last verified: {String(news.generated).slice(0, 10)}</>}</p>
   <h1>AI News Archive</h1>
   <p class="answer"><b>{items.length} stories</b>, every one this site has published, newest
     first. The <a href="/ai-news/">daily briefing</a> holds today; this page holds everything.</p>
