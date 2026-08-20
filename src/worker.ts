@@ -83,6 +83,16 @@ const FALLBACK_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
  * refuses. 0.52 keeps the genuine answers and drops the coincidences.
  */
 const SCORE_FLOOR = 0.52;
+// GLOBAL DAILY CEILING on answered (billable) questions. The per-IP limiter
+// stops one caller looping; it does NOT stop a spread of IPs each staying
+// under 10/min from running the Anthropic bill up all day. This is the
+// account-wide backstop: once this many questions have been ANSWERED in a
+// UTC day, the endpoint rests until midnight UTC and returns the same
+// not-covered shape as an unknown question, so the page degrades to "resting"
+// rather than to an error or an unbounded invoice. Refusals and cache hits do
+// not count, because they cost nothing. Pair this with a hard spend cap in
+// the Anthropic console: this guards the common case, that guards the tail.
+const DAILY_ANSWER_CAP = 5000;
 const TOP_K = 12;      // over-fetch, then cap per page
 const PER_PAGE = 2;    // at most two chunks from any one page
 const MAX_SOURCES = 6;
@@ -198,6 +208,39 @@ export default {
     // question, silently killing exactly the logging the refusal exists for.
     let usedModel = "";
     const modelErrors: string[] = [];
+
+    // Day key in UTC. The ceiling is a single counter row per day; reading it
+    // is one indexed lookup and incrementing is one upsert, both cheap next to
+    // a model call. Table and row are created lazily so there is no migration
+    // to keep in sync, matching how answer_log's columns are managed above.
+    const dayKey = new Date().toISOString().slice(0, 10);
+    const answeredToday = async (): Promise<number> => {
+      try {
+        await env.ASSISTANT_DB.exec(
+          "CREATE TABLE IF NOT EXISTS answer_budget (day TEXT PRIMARY KEY, answered INTEGER NOT NULL DEFAULT 0)"
+        );
+        const row: any = await env.ASSISTANT_DB.prepare(
+          "SELECT answered FROM answer_budget WHERE day = ?"
+        ).bind(dayKey).first();
+        return row ? Number(row.answered) || 0 : 0;
+      } catch {
+        // A counter that cannot be read must not shut the endpoint: fail OPEN
+        // on the ceiling (the per-IP limiter and the Anthropic console cap are
+        // the other two layers) rather than dark on a transient D1 error.
+        return 0;
+      }
+    };
+    const bumpAnswered = async () => {
+      try {
+        await env.ASSISTANT_DB.prepare(
+          `INSERT INTO answer_budget (day, answered) VALUES (?, 1)
+             ON CONFLICT(day) DO UPDATE SET answered = answered + 1`
+        ).bind(dayKey).run();
+      } catch {
+        /* Best-effort; the read side already fails open. */
+      }
+    };
+
     const log = async (answered: boolean) => {
       // The columns are added here rather than in a migration because the
       // Worker is the only writer and a logging schema drift must never break
@@ -238,6 +281,21 @@ export default {
         answer:
           "The World of AI does not cover that yet. The question has been recorded, and topics that come up repeatedly get researched and published.",
         sources: [],
+      });
+    }
+
+    // Retrieval succeeded and we are about to spend on a model call. Check the
+    // account-wide daily ceiling FIRST. Over the cap, return the not-covered
+    // shape (200, answered:false) so the page shows its normal quiet state
+    // rather than an error, and record the question so a real spike is visible
+    // in the log the next morning.
+    if ((await answeredToday()) >= DAILY_ANSWER_CAP) {
+      ctx.waitUntil(log(false));
+      return json({
+        answered: false,
+        answer:
+          "The assistant has answered its limit of questions for today and is resting until tomorrow. Your question has been recorded. The pages it would have cited are still here to read and search.",
+        sources: hits.map((h) => ({ title: h.title, url: h.url, score: h.score })),
       });
     }
 
@@ -322,6 +380,7 @@ export default {
     }
 
     ctx.waitUntil(log(true));
+    ctx.waitUntil(bumpAnswered());
 
     // Sources are the pages actually retrieved, deduplicated, in rank order. An
     // answer without them would be an unsourced claim under our own domain.

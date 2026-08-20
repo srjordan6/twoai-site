@@ -3,7 +3,7 @@
   "type": "module",
   "version": "1.0.0",
   "scripts": {
-    "prebuild": "node scripts/fetch-content.mjs",
+    "prebuild": "node scripts/audit-check.mjs && node scripts/fetch-content.mjs",
     "build": "astro build",
     "postbuild": "pagefind --site dist && node scripts/url-guard.mjs",
     "dev": "astro dev"
@@ -17,5 +17,6 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260819.1"
-  }
+  },
+  "comment_supply_chain": "Build integrity: the Cloudflare build command is `npm ci` (NOT `npm install`), so every deploy installs the exact tree in package-lock.json rather than floating ^ ranges to whatever published since the last build. A poisoned patch release cannot enter a build without a lockfile change in a reviewed commit. The prebuild `npm audit --omit=dev --audit-level=high` fails the build on a known high/critical advisory in the shipped dependency tree. Keep the lockfile committed and let Dependabot open the version-bump PRs."
 }

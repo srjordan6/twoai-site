@@ -1,0 +1,20 @@
+# Supply-chain hygiene: Dependabot opens PRs for dependency and Action updates.
+# Every bump is a reviewed commit that regenerates package-lock.json, which is
+# the only way the pinned tree the build installs (`npm ci`) can change. This
+# turns "a dependency updated silently under us" into "a PR a human merges."
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # One PR for the routine patch/minor noise, individual PRs for majors so
+      # a breaking change is never buried in a batch.
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
