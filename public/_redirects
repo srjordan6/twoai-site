@@ -86,15 +86,6 @@
 # so it points at the surviving page rather than 404ing.
 /ai-ecosystem/ecosystem-entities-market-and-operations/0b4e5c38/  /ai-ecosystem/ecosystem-entities-market-and-operations/24d80f66/  301
 
-# Two level-2 domains were published for a week at level-1 category paths.
-# The build only mints /ai-ecosystem/{slug}/ for CATEGORIES; a domain lives
-# inside its parent category page, at the entity node the taxonomy's live_path
-# points to. Both were corrected in twoai_taxonomy on 2026-08-11 and both are
-# still status=live at their real paths, so these two are a path change, not a
-# retirement, and the URL permanence rule applies.
-/ai-ecosystem/concept-taxonomy/  /ai-ecosystem/research-knowledge-and-learning/7f3a1c95/  301
-/ai-ecosystem/knowledge-graph/   /ai-ecosystem/research-knowledge-and-learning/21f4f8f2/  301
-
 # The AI People Directory is published inside the ecosystem map, at the entity
 # node for it, not at a top-level /people/ path. /people/ is the obvious guess
 # and was submitted to Search Console, so it 301s to the real page rather than
