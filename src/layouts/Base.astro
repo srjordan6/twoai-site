@@ -119,6 +119,10 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
   <link rel="canonical" href={canonical} />
   {noindex && <meta name="robots" content="noindex,follow" />}
   <link rel="icon" type="image/svg+xml" href="/brand/mark.svg" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/brand/apple-touch-icon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
+  <meta name="theme-color" content="#201868" />
   <link rel="sitemap" href="/sitemap-index.xml" />
   <meta property="og:title" content={pageTitle} />
   <meta property="og:description" content={metaDesc} />
@@ -205,8 +209,45 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
       document.head.appendChild(g);
     }
   </script>
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4489551395134574"
-    crossorigin="anonymous"></script>
+  <script is:inline>
+    // AdSense, deferred. The tag must be sitewide for verification and serving,
+    // but loading it in <head> lets Google's script run layout and network work
+    // before the page is interactive, which on mobile kept the main thread from
+    // ever going idle (the QA audit saw repeated multi-second stalls and an
+    // uncaught pagead exception). Deferring the loader to the first idle moment
+    // or first interaction keeps verification and ads intact while the page
+    // becomes usable first. Consent is unchanged: EEA/UK is handled by Google's
+    // own certified message, and the no-analytics opt-out still suppresses it.
+    (function () {
+      if (window.__twoaiNoAnalytics) return;
+      var started = false;
+      function loadAds() {
+        if (started) return;
+        started = true;
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4489551395134574';
+        s.crossOrigin = 'anonymous';
+        // A broken ad load must never surface as an unhandled rejection.
+        s.onerror = function () {};
+        document.head.appendChild(s);
+      }
+      var fire = function () { loadAds(); cleanup(); };
+      function cleanup() {
+        ['scroll', 'pointerdown', 'keydown', 'touchstart'].forEach(function (e) {
+          window.removeEventListener(e, fire, { passive: true });
+        });
+      }
+      ['scroll', 'pointerdown', 'keydown', 'touchstart'].forEach(function (e) {
+        window.addEventListener(e, fire, { passive: true, once: true });
+      });
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(loadAds, { timeout: 4000 });
+      } else {
+        setTimeout(loadAds, 2500);
+      }
+    })();
+  </script>
   {/* Microsoft Clarity, project y1u43mf09w. Session recording, not page
       counting: enable the Consent Mode integration in the Clarity project
       settings so Clarity reads the same consent signal set above and holds
@@ -339,10 +380,11 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
     <Logo slot="logo" variant="stacked-navy" />
   </Footer>
   <noscript><div class="statcounter"><a title="Web Analytics"
-    href="https://statcounter.com/" target="_blank"><img
+    href="https://statcounter.com/" target="_blank" rel="noopener noreferrer"><img
     class="statcounter"
     src="https://c.statcounter.com/13342610/0/1a5584ba/1/"
     alt="Web Analytics"
+    width="1" height="1"
     referrerpolicy="no-referrer-when-downgrade"></a></div></noscript>
 
   <script is:inline>
@@ -370,6 +412,22 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
     }
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
+    /* Keyboard focus is visible everywhere, not just on the search toggle. Uses
+       :focus-visible so a mouse click does not draw the ring, only keyboard or
+       programmatic focus does. Orange on navy and on white both clear WCAG
+       contrast. The QA audit found only the search button had a focus style,
+       leaving keyboard users unable to see their position in the nav, the bill
+       tables, or any link. */
+    a:focus-visible,
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible,
+    [tabindex]:focus-visible {
+      outline: 2px solid var(--orange);
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
     body { margin: 0; font-family: 'Poppins', system-ui, sans-serif; font-size: 16px;
       line-height: 1.65; color: var(--ink); background: #fff; }
     body.locked { overflow: hidden; }

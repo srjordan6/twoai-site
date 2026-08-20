@@ -6,8 +6,42 @@ const s = existsSync('content/lawsuits/lawsuits.json')
   ? JSON.parse(readFileSync('content/lawsuits/lawsuits.json', 'utf8'))
   : { cases: [], count: 0, generated: '' };
 const desc = `Live tracker for ${s.count} major AI lawsuits: copyright, privacy, and safety cases against AI companies, with court dockets checked daily.`;
+// Schema for the hub. Case pages already carry Article; the hub had none, so
+// the tracker was the one flagship factory page an answer engine could not read
+// as a structured collection. A @graph with the breadcrumb and an ItemList of
+// the tracked cases makes the hub itself citable and links each case out.
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'The World of AI', item: 'https://theworldofai.org/' },
+        { '@type': 'ListItem', position: 2, name: 'AI Lawsuit Tracker', item: 'https://theworldofai.org/ai-lawsuits/' },
+      ],
+    },
+    {
+      '@type': 'CollectionPage',
+      name: 'AI Lawsuit Tracker',
+      description: desc,
+      url: 'https://theworldofai.org/ai-lawsuits/',
+      ...(s.generated ? { dateModified: s.generated } : {}),
+      isPartOf: { '@type': 'CollectionPage', name: 'The World of AI', url: 'https://theworldofai.org/' },
+      mainEntity: {
+        '@type': 'ItemList',
+        numberOfItems: s.count || (s.cases ? s.cases.length : 0),
+        itemListElement: (s.cases || []).slice(0, 100).map((c, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          name: c.case_name,
+          url: `https://theworldofai.org/ai-lawsuits/${c.slug}/`,
+        })),
+      },
+    },
+  ],
+});
 ---
-<Base title={`AI Lawsuit Tracker: ${s.count} cases followed live — The World of AI`} description={desc} current="/ai-lawsuits/">
+<Base title={`AI Lawsuit Tracker: ${s.count} cases followed live — The World of AI`} description={desc} current="/ai-lawsuits/" jsonld={jsonld}>
   <h1>The AI Lawsuit Tracker</h1>
   <p class="answer">The courts are deciding what AI may legally learn from and say. This tracker
     follows <b>{s.count} major AI lawsuits</b> as living pages, not one-time headlines: dockets

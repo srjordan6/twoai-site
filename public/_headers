@@ -7,8 +7,12 @@
 # scripts are part of the static build (Astro is:inline), so script-src keeps
 # unsafe-inline; there is no server to mint nonces. frame-ancestors and
 # X-Frame-Options are set together and agree: SAMEORIGIN.
+#
+# HSTS carries `preload`: the domain is HTTPS-only across all subdomains, so it
+# is eligible for the browser preload list (submit once at hstspreload.org).
+# preload implies a 1-year max-age and includeSubDomains, both already present.
 /*
-  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
   X-Frame-Options: SAMEORIGIN
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
