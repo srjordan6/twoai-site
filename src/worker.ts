@@ -261,6 +261,14 @@ export default {
       .filter((h) => (seen.has(h.url) ? false : (seen.add(h.url), true)))
       .map((h) => ({ title: h.title, url: h.url, score: h.score }));
 
-    return json({ answered: true, answer, sources, model: usedModel });
+    // TEMPORARY DIAGNOSTIC, remove once the primary model answers again: the
+    // exact reason the primary fails lives in D1, which cannot be read from
+    // this session, so the failure text rides the response for one probe. The
+    // detail field on total failure already established that nothing in these
+    // messages is secret.
+    return json({
+      answered: true, answer, sources, model: usedModel,
+      model_errors: modelErrors.length ? modelErrors : undefined,
+    });
   },
 };
