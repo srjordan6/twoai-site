@@ -29,8 +29,6 @@ const caseTotal = suits?.count ?? 0;
 // the hero cannot claim a number the directory contradicts.
 const mcpIdx = j('content/mcp/index.json');
 const mcpTotal = mcpIdx?.total ?? 0;
-const liveDomains = cats.reduce((n, c) => n + c.live, 0);
-const totalDomains = cats.reduce((n, c) => n + c.total, 0);
 const totalPages = cats.reduce((n, c) => n + c.pages, 0);
 const generated = idx.generated || laws?.generated || '';
 
@@ -145,11 +143,14 @@ const jsonld = JSON.stringify({
     </ul>
   )}
 
-  <h2>What is not here yet</h2>
-  <p>{totalDomains - liveDomains} of the {totalDomains} domains above are named but not yet
-    built, and they are listed rather than hidden on purpose. A reference whose gaps you cannot
-    see is a reference you cannot rely on. Nothing gets published until it traces to a source we
-    can name, so a section that is empty is empty rather than filled with guesses.</p>
+  {/* "What is not here yet" removed on Stephen's instruction 2026-08-20.
+      It was written when domains were genuinely unbuilt and it earned its place
+      then: a reference whose gaps you cannot see is one you cannot rely on. All
+      29 are live now, so the block rendered "0 of the 29 domains above are named
+      but not yet built" - a paragraph explaining an absence that no longer
+      exists, which reads as uncertainty about a site that has none.
+      The principle stands and is still enforced elsewhere: sections with no
+      sourced content stay empty and say so, as the Downloads hub does. */}
 
   <h2>Free data, free citations</h2>
   <p>Everything here is machine-readable: <a href="/api/laws.json">laws.json</a>,
