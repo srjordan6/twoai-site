@@ -156,19 +156,36 @@ export default {
 
     const best = hits.length ? hits[0].score : 0;
     const log = async (answered: boolean) => {
+      // The columns are added here rather than in a migration because the
+      // Worker is the only writer and a logging schema drift must never break
+      // an answer. Both statements are no-ops once applied.
+      try {
+        await env.ASSISTANT_DB.exec("ALTER TABLE answer_log ADD COLUMN model_used TEXT");
+      } catch {}
+      try {
+        await env.ASSISTANT_DB.exec("ALTER TABLE answer_log ADD COLUMN model_errors TEXT");
+      } catch {}
       const verdict = await guard;
       const unsafe = verdict.toLowerCase().startsWith("unsafe");
       await env.ASSISTANT_DB.prepare(
         `INSERT INTO answer_log (question, question_norm, answered, best_score, top_url,
-           guard_verdict, guard_categories) VALUES (?, ?, ?, ?, ?, ?, ?)`
+           guard_verdict, guard_categories, model_used, model_errors)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
         .bind(
           question, norm, answered ? 1 : 0, best,
           hits.length ? hits[0].url : null,
           unsafe ? "unsafe" : verdict === "error" ? "error" : "safe",
-          unsafe ? verdict.split("\n").slice(1).join(" ").trim() : null
+          unsafe ? verdict.split("\n").slice(1).join(" ").trim() : null,
+          answered ? usedModel : null,
+          modelErrors.length ? modelErrors.join(" | ") : null
         )
-        .run();
+        .run()
+        .catch(() => {
+          /* Logging is diagnostics, not the product. A failed insert must never
+             reach the reader, and waitUntil already keeps it off the response
+             path. */
+        });
     };
 
     if (!hits.length || best < SCORE_FLOOR) {
@@ -188,6 +205,7 @@ export default {
     let answer = "";
     let usedModel = ANSWER_MODEL;
     let lastError = "";
+    const modelErrors: string[] = [];
     for (const model of [ANSWER_MODEL, FALLBACK_MODEL]) {
       try {
         const opts: any = model.startsWith("@cf/") ? undefined : { gateway: { id: "default" } };
@@ -219,6 +237,13 @@ export default {
         // model and the fault, which is the difference between "unavailable"
         // and a diagnosable problem; there is nothing secret in it.
         lastError = `${model}: ${e?.message ?? String(e)}`;
+        // A FALLBACK THAT NOBODY SEES IS A QUALITY REGRESSION THAT HIDES
+        // ITSELF. Every answer so far has come from the fallback because the
+        // primary model fails, and the only way to know was to read the model
+        // field on a raw response. The failure is now recorded per request, so
+        // "which model is actually answering, and why" is a query rather than
+        // an investigation.
+        modelErrors.push(lastError);
       }
     }
     if (!answer) {
