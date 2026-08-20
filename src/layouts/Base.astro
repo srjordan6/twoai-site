@@ -123,6 +123,12 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
   <link rel="apple-touch-icon" sizes="180x180" href="/brand/apple-touch-icon.png" />
   <link rel="manifest" href="/site.webmanifest" />
   <meta name="theme-color" content="#201868" />
+  {/* AdSense site-verification signal. The ad loader itself is deferred to
+      idle/first-interaction for performance, so the script tag is not in the
+      static HTML for Google's verification crawler to find. This meta tag and
+      ads.txt are Google's two supported no-script verification methods, and
+      both are static. */}
+  <meta name="google-adsense-account" content="ca-pub-4489551395134574" />
   <link rel="sitemap" href="/sitemap-index.xml" />
   <meta property="og:title" content={pageTitle} />
   <meta property="og:description" content={metaDesc} />
