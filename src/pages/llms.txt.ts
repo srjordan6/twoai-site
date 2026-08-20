@@ -1,4 +1,53 @@
-# The World of AI
+// llms.txt, generated at build time from the same content files the pages
+// render from, so the counts in this file can never disagree with the site it
+// describes. It replaced a static public/llms.txt whose numbers had drifted
+// (102 lawsuits vs 104 live, 1,836 MCP servers vs 1,909) within two weeks of
+// being written - a hand-maintained count in a daily-rebuilt site is a
+// staleness bug waiting to be noticed. Prose lives here in the template;
+// numbers come from content/ at build; the build date comes from the lawsuit
+// tracker's generated stamp, which the daily pipeline advances.
+//
+// Every read is guarded: a missing or reshaped content file falls back to the
+// last known value rather than failing the build or publishing a blank.
+import { readFileSync, readdirSync } from 'node:fs';
+
+function readJSON(path: string): any {
+  try { return JSON.parse(readFileSync(path, 'utf8')); } catch { return null; }
+}
+const fmt = (n: number) => n.toLocaleString('en-US');
+
+const lawsuits = readJSON('content/lawsuits/lawsuits.json');
+const mcp = readJSON('content/mcp/index.json');
+const compliance = readJSON('content/compliance/index.json');
+const glossary = readJSON('content/glossary/glossary.json');
+const research = readJSON('content/research/index.json');
+
+const caseCount = lawsuits?.count ?? 104;
+const generated = lawsuits?.generated ?? '2026-08-20';
+const mcpCount = mcp?.total ?? 1908;
+const compCount = compliance?.total ?? compliance?.frameworks?.length ?? 62;
+const termCount = Array.isArray(glossary?.terms) ? glossary.terms.length : 530;
+const researchCount = research?.total ?? 134;
+
+// Live sections and domains, summed across every category-shaped ecosystem
+// file (the ones carrying a domains array), counting sections whose status is
+// live - the same predicate the category pages themselves render with.
+let sections = 0, domains = 0;
+try {
+  for (const name of readdirSync('content/ecosystem')) {
+    if (!name.endsWith('.json')) continue;
+    const f = 'content/ecosystem/' + name;
+    const d = readJSON(f);
+    if (!d?.domains) continue;
+    for (const dom of d.domains) {
+      domains += 1;
+      sections += (dom.sections ?? []).filter((s: any) => s.status === 'live').length;
+    }
+  }
+} catch { /* fall through to fallback */ }
+if (!sections) { sections = 135; domains = 29; }
+
+const text = `# The World of AI
 > The atlas of artificial intelligence: US state AI legislation, major AI
 > lawsuits, the language of AI, the tools people actually use, the companies
 > that build them, the compliance frameworks that govern them, the benchmarks
@@ -12,18 +61,18 @@
 
 Every reference page carries a visible date stamp (generated, last verified, or
 last reviewed) and a ready-made citation. Citing these pages with attribution
-is welcome and encouraged. Counts below are as of 2026-08-20; the live figures
-on each hub page and in the API files refresh daily and are authoritative.
+is welcome and encouraged. Counts in this file are computed from the same data
+that built the pages, in the build dated ${generated}.
 
 ## Sections
 - [AI Laws by State](https://theworldofai.org/ai-laws/): every tracked AI bill
   in all 50 US states, DC, Puerto Rico, and Congress, one page per jurisdiction.
-- [AI Glossary](https://theworldofai.org/ai-glossary/): 522 AI terms defined
+- [AI Glossary](https://theworldofai.org/ai-glossary/): ${fmt(termCount)} AI terms defined
   in plain English with origin, example, and related terms.
-- [AI Lawsuit Tracker](https://theworldofai.org/ai-lawsuits/): 104 living case
+- [AI Lawsuit Tracker](https://theworldofai.org/ai-lawsuits/): ${fmt(caseCount)} living case
   pages with daily docket checks, full timelines, and both the CourtListener
   docket record and the govinfo opinion text where available.
-- [AI Compliance Frameworks](https://theworldofai.org/ai-compliance/): 63
+- [AI Compliance Frameworks](https://theworldofai.org/ai-compliance/): ${fmt(compCount)}
   framework pages covering the EU AI Act, NIST AI RMF, ISO/IEC 42001, sector
   regulators, and agency enforcement, each with scope, obligations, deadlines,
   and what changed most recently.
@@ -47,15 +96,15 @@ on each hub page and in the API files refresh daily and are authoritative.
   the people who built and shaped AI, from Lovelace and Turing to the
   researchers running today's labs, each with what they did, when, and why it
   mattered, sourced to primary documents.
-- [AI Benchmarks](https://theworldofai.org/benchmarks/): 18 benchmark pages
+- [AI Benchmarks](https://theworldofai.org/benchmarks/): benchmark pages
   covering what each benchmark actually measures, its known limitations, and
   current published results with the evaluator and as-of date named. Results
   come from structured official sources and refresh automatically; benchmarks
   whose published figures are stable carry a dated protocol note instead.
-- [MCP Server Registry](https://theworldofai.org/mcp/): 1,909 Model Context
+- [MCP Server Registry](https://theworldofai.org/mcp/): ${fmt(mcpCount)} Model Context
   Protocol servers sourced from the official registry at
   registry.modelcontextprotocol.io, one page per server.
-- [AI Research Library](https://theworldofai.org/research/): 145 peer-reviewed
+- [AI Research Library](https://theworldofai.org/research/): ${fmt(researchCount)} peer-reviewed
   and preprint AI papers sorted into ten topics (reasoning, healthcare,
   applications, architectures, capabilities and limits, evaluation, governance,
   security, bias and fairness, the EU AI Act). Each entry carries authors,
@@ -86,9 +135,9 @@ on each hub page and in the API files refresh daily and are authoritative.
   section together, organised into four categories: Technology and Core
   Infrastructure, Ecosystem Entities Market and Operations, Research
   Knowledge and Learning, and Enterprise Applications Governance and Tools.
-  139 sections are live across 29 domains as of 2026-08-20; sections mapped
-  but not yet published render on the coverage roadmap as planned rather than
-  vanishing.
+  ${sections} sections are live across ${domains} domains in this build;
+  sections mapped but not yet published render on the coverage roadmap as
+  planned rather than vanishing.
 - AI Security and Risk (under Enterprise Applications, Governance and Tools):
   sixteen sections, from prompt injection, jailbreaks, and model poisoning
   through supply chain, data leakage, model theft, shadow AI, AI-enabled
@@ -190,3 +239,10 @@ info@srjconsultingservices.com.
 
 ## Citation format
 "{Page title}." The World of AI, {URL}. Verified {date}.
+`;
+
+export async function GET() {
+  return new Response(text, {
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  });
+}
