@@ -267,4 +267,14 @@ const PUB_EMAIL = 'theworldofai@inkboxmail.com';
     .f-grid { grid-template-columns: 1fr; }
     .f-bottom { flex-direction: column; align-items: flex-start; }
   }
+  /* MINIMUM TAP TARGET. Measured at 390px, footer and nav links rendered 14 to
+     19px tall against a 24px floor, so roughly 40 targets per page were below
+     the threshold on the device most of this traffic arrives on. The text size
+     is right for a footer; the HIT AREA was not. Padding fixes it without
+     changing a single visible dimension. */
+  .site-foot a { display: inline-block; min-height: 24px; padding-top: 4px; padding-bottom: 4px; }
+  /* The API and machine-readable links sit in dense rows where a 24px box
+     would open gaps in the layout, so the hit area is grown with padding while
+     the visible text keeps its size and rhythm. */
+  .site-foot .api-links a, .site-foot .amz-book { min-height: 26px; padding-top: 5px; padding-bottom: 5px; }
 </style>

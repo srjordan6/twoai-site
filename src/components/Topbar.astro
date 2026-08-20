@@ -234,4 +234,7 @@
   @media (max-width: 1080px) {
     .topbar-translate input { width: 116px; font-size: 12px; }
   }
+  /* The translate control read 91x14: wide enough to hit, too short. Its
+     visible size is unchanged; only the box grows. */
+  .topbar-translate input { min-height: 26px; }
 </style>

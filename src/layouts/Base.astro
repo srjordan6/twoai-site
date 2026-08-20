@@ -484,6 +484,19 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
     .scrim { position: fixed; inset: 0; background: rgba(16,12,52,.55); opacity: 0;
       visibility: hidden; transition: opacity .25s; z-index: 998; }
     .scrim.open { opacity: 1; visibility: visible; }
+    /* The closed panel sits off-screen at translateX(100%). A fixed element
+       still contributes to scrollWidth there, so every mobile page could be
+       dragged 69px sideways: measured 459px of scroll width in a 390px window.
+       Nothing looked broken, the page just felt loose, which is the kind of
+       defect that never gets reported and always gets noticed.
+
+       overflow-x: clip rather than hidden, because hidden would make body a
+       scroll container and break the sticky header above it. clip stops the
+       overflow without creating one. */
+    /* Applied to BOTH html and body. The panel is position:fixed, so it is
+       contained by the viewport rather than by body, and clipping body alone
+       left the document still 459px wide in a 390px window. Verified after. */
+    html, body { overflow-x: clip; }
     .mobile-panel { position: fixed; top: 0; right: 0; height: 100%; width: min(84vw, 340px);
       background: var(--navy); transform: translateX(100%); transition: transform .3s;
       z-index: 999; padding: 70px 0 0; visibility: hidden; }
