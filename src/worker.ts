@@ -310,15 +310,12 @@ export default {
       .filter((h) => (seen.has(h.url) ? false : (seen.add(h.url), true)))
       .map((h) => ({ title: h.title, url: h.url, score: h.score }));
 
-    // Diagnostic ride-along removed 2026-08-19: it did its job (captured
-    // "2021: Invalid User Credentials" live). Failures stay queryable in
-    // answer_log.model_errors; the public response names only the model that
-    // answered.
-    // TEMPORARY DIAGNOSTIC (again): key was added but llama still serves.
-    // key_present distinguishes "secret not visible to the Worker" from "the
-    // direct call fails". Remove after one probe.
-    return json({ answered: true, answer, sources, model: usedModel,
-      key_present: Boolean(env.ANTHROPIC_API_KEY),
-      model_errors: modelErrors.length ? modelErrors : undefined });
+    // Diagnostic ride-alongs removed 2026-08-19 after doing their job twice:
+    // first captured "2021: Invalid User Credentials" (partner routing had no
+    // Anthropic billing path), then key_present exposed that five dashboard
+    // attempts were writing BUILD variables, not runtime secrets. The working
+    // path was `wrangler secret put ANTHROPIC_API_KEY`. Failures stay
+    // queryable in answer_log.model_errors.
+    return json({ answered: true, answer, sources, model: usedModel });
   },
 };
