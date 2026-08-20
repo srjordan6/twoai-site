@@ -30,6 +30,10 @@ interface Env {
   VECTORIZE: any;
   ASSISTANT_DB: D1Database;
   ASSETS: { fetch: (req: Request) => Promise<Response> };
+  // Per-IP rate limiter (wrangler "unsafe" ratelimit binding, open beta).
+  // Optional in the type because the Worker must keep answering if the
+  // binding is ever dropped from config: degrade to unlimited, never to 500.
+  ASK_RATE?: { limit(opts: { key: string }): Promise<{ success: boolean }> };
   // Worker secret. When present, the primary answer model is Claude Haiku
   // called DIRECTLY at api.anthropic.com, bypassing Workers AI partner routing
   // entirely. Set with `wrangler secret put ANTHROPIC_API_KEY` or in the
@@ -123,6 +127,22 @@ export default {
       });
     }
     if (request.method !== "POST") return json({ error: "POST only" }, 405);
+
+    // Rate limit BEFORE reading the body or spending anything. Keyed on the
+    // connecting IP: coarse (an office NAT shares a key) but the right trade
+    // for an endpoint whose per-request cost is a paid model call. When the
+    // binding is absent the check is skipped entirely.
+    if (env.ASK_RATE) {
+      try {
+        const ip = request.headers.get("cf-connecting-ip") || "unknown";
+        const { success } = await env.ASK_RATE.limit({ key: ip });
+        if (!success) {
+          return json({ error: "Too many questions too quickly. Wait a minute and try again." }, 429);
+        }
+      } catch {
+        /* Limiter failure must never block a reader. */
+      }
+    }
 
     let question = "";
     try {

@@ -27,6 +27,22 @@
   "ai": {
     "binding": "AI"
   },
+  // Per-IP rate limit for /api/ask. The endpoint now spends real money on
+  // every request (Claude Haiku via the Anthropic API), so an unthrottled
+  // loop is a direct budget-drain vector. 10 questions a minute is generous
+  // for a person and fatal to a naive script. Open-beta binding; the Worker
+  // guards for its absence so a config regression degrades to unlimited
+  // rather than to 500s.
+  "unsafe": {
+    "bindings": [
+      {
+        "name": "ASK_RATE",
+        "type": "ratelimit",
+        "namespace_id": "1001",
+        "simple": { "limit": 10, "period": 60 }
+      }
+    ]
+  },
   "vectorize": [
     {
       "binding": "VECTORIZE",
