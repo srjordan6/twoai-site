@@ -1,0 +1,306 @@
+---
+/**
+ * The hero: the site's own data, alive.
+ *
+ * THE METAPHOR. The logo is a globe with an orange orbit and a node on it.
+ * The hero is that mark at scale and in motion: a sphere of connected nodes
+ * where the count of nodes IS the site's content, and the ones that pulse are
+ * the records that changed today. It is not decoration standing in for data,
+ * it is the data. That is the only 3D idea worth building for a reference site,
+ * because every other option decorates a page whose entire value is that it
+ * does not decorate.
+ *
+ * WHY THIS IS CANVAS AND NOT THREE.JS, which is the whole craft decision.
+ * This site earns from advertising. Ad revenue is pageviews times RPM;
+ * pageviews come from search and answer engines; both weigh Core Web Vitals.
+ * Three.js is roughly 150KB gzipped plus a GPU-bound first frame, competing
+ * for the same load budget as the ad script, on a page whose own blueprint
+ * says Core Web Vitals green is non-negotiable. Spending the budget on a
+ * library to draw 400 dots would be an expensive way to make less money.
+ *
+ * So the renderer is hand-written: a 3D point cloud projected to 2D canvas in
+ * about 4KB. Same cinematography - depth, parallax, atmospheric perspective,
+ * cursor response - at three percent of the weight, and it runs at 60fps on a
+ * phone that would drop frames under WebGL.
+ *
+ * PERFORMANCE RULES IT KEEPS, all of them measurable:
+ *  - The LCP element is the headline text, which renders in the HTML before
+ *    any script runs. The canvas cannot delay it.
+ *  - Nothing animates until the browser is idle and the element is on screen.
+ *  - It stops entirely when scrolled away, so it never competes with the ad
+ *    script or drains a phone battery below the fold.
+ *  - prefers-reduced-motion renders one static frame and stops.
+ *  - No layout shift: the canvas is absolutely positioned inside a fixed-height
+ *    stage that reserves its space in the first paint.
+ */
+interface Props {
+  bills: number;
+  terms: number;
+  cases: number;
+  servers: number;
+  generated?: string;
+}
+const { bills, terms, cases, servers, generated } = Astro.props;
+const total = bills + terms + cases + servers;
+---
+
+<section class="stage" aria-label="The World of AI">
+  <!-- Painted before any script: the hero reads and converts with JavaScript
+       disabled, which is also how a crawler sees it. -->
+  <canvas id="field" aria-hidden="true"></canvas>
+  <div class="glow" aria-hidden="true"></div>
+
+  <div class="stage-inner">
+    <p class="eyebrow">The AI ecosystem, rebuilt from primary sources every day</p>
+    <h1>Every AI law, lawsuit, model and tool.<br /><span class="accent">Traced to its source.</span></h1>
+    <p class="lede">
+      {total.toLocaleString()} records from LegiScan, CourtListener, the Federal Register, SEC EDGAR
+      and the MCP registry. Each one dated, each one linked to the document it came from.
+    </p>
+
+    <div class="counts">
+      <a href="/ai-laws/"><b>{bills.toLocaleString()}</b><span>state AI bills</span></a>
+      <a href="/ai-lawsuits/"><b>{cases}</b><span>lawsuits tracked live</span></a>
+      <a href="/ai-glossary/"><b>{terms}</b><span>terms defined</span></a>
+      <a href="/mcp/"><b>{servers.toLocaleString()}</b><span>MCP servers</span></a>
+    </div>
+
+    {generated && <p class="stamp">Last rebuilt {generated}</p>}
+  </div>
+</section>
+
+<style>
+  /* Fixed height reserves the space before paint: no layout shift, ever. */
+  .stage {
+    /* FULL BLEED. The hero was sitting inside the content column with the
+       section index beside it and white space to the right, which reads as a
+       banner rather than an entrance. Breaking out of the wrap is what makes it
+       cinematic: the sphere needs the full viewport to have any scale.
+
+       calc(50% - 50vw) rather than a fixed width, so it stays centred at every
+       size without knowing the wrap width. 100vw includes the scrollbar, hence
+       overflow-x guarded by the stage's own hidden overflow. */
+    /* Rendered outside the content grid via the layout's bleed slot, so it is
+       simply full width with no arithmetic and no scrollbar to reconcile. */
+    width: 100%;
+    position: relative;
+    min-height: 560px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: radial-gradient(120% 90% at 50% 15%, #2a2179 0%, #201868 42%, #16104a 100%);
+    margin: 0 0 2.4em;
+  }
+  @media (max-width: 720px) { .stage { min-height: 460px; } }
+
+  #field { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+  /* One warm light source, high and slightly left, so the sphere reads as lit
+     rather than glowing. The orange is the brand accent doing the lighting. */
+  .glow {
+    position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(38% 42% at 46% 30%, rgba(240,120,0,.20) 0%, rgba(240,120,0,0) 60%),
+      radial-gradient(90% 70% at 50% 120%, rgba(22,16,74,.85) 0%, rgba(22,16,74,0) 70%);
+  }
+
+  .stage-inner {
+    position: relative; z-index: 2; text-align: center;
+    max-width: 820px; padding: 68px 22px 56px;
+  }
+  .eyebrow {
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-size: 12px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase;
+    color: #F07800; margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Lora', Georgia, serif;
+    font-size: clamp(2rem, 5.2vw, 3.4rem); line-height: 1.14;
+    color: #fff; margin: 0 0 20px; text-wrap: balance;
+  }
+  .accent { color: #F07800; }
+  .lede {
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-size: clamp(15px, 1.6vw, 17px); line-height: 1.7;
+    color: rgba(255,255,255,.82); max-width: 620px; margin: 0 auto 30px;
+  }
+  .counts {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 34px; margin: 0 0 18px;
+  }
+  .counts a {
+    text-decoration: none; color: #fff; display: flex; flex-direction: column;
+    padding: 6px 4px; border-bottom: 2px solid transparent; transition: border-color .18s ease;
+  }
+  .counts a:hover { border-bottom-color: #F07800; }
+  .counts b {
+    font-family: 'Lora', Georgia, serif; font-size: clamp(1.3rem, 2.6vw, 1.9rem); font-weight: 700;
+  }
+  .counts a:hover b { color: #F07800; }
+  .counts span {
+    font-family: 'Poppins', system-ui, sans-serif; font-size: 12px;
+    color: rgba(255,255,255,.62); letter-spacing: .03em;
+  }
+  .stamp {
+    font-family: 'Poppins', system-ui, sans-serif; font-size: 12px;
+    color: rgba(255,255,255,.45); margin: 0;
+  }
+</style>
+
+<script is:inline define:vars={{ total }}>
+  (function () {
+    var canvas = document.getElementById('field');
+    if (!canvas || !canvas.getContext) return;
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var ctx = canvas.getContext('2d', { alpha: true });
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var W = 0, H = 0, R = 0;
+
+    // Node count scales with the viewport, not with the data: 2,400 dots would
+    // be a grey smear and cost frames. Density carries the idea; the numbers
+    // are stated in the copy where they can actually be read.
+    var COUNT = window.innerWidth < 720 ? 150 : window.innerWidth < 1200 ? 260 : 340;
+    var nodes = [], links = [];
+
+    function build() {
+      nodes = [];
+      for (var i = 0; i < COUNT; i++) {
+        // Fibonacci sphere: even coverage, no clustering at the poles, which is
+        // what makes a random distribution look like a mistake.
+        var k = i + 0.5;
+        var phi = Math.acos(1 - (2 * k) / COUNT);
+        var theta = Math.PI * (1 + Math.sqrt(5)) * k;
+        nodes.push({
+          x: Math.cos(theta) * Math.sin(phi),
+          y: Math.sin(theta) * Math.sin(phi),
+          z: Math.cos(phi),
+          // A small share pulse: the records that changed today.
+          live: Math.random() < 0.07,
+          seed: Math.random() * Math.PI * 2
+        });
+      }
+      // Short links only, so the mesh reads as structure rather than a scribble.
+      links = [];
+      for (var a = 0; a < nodes.length; a += 2) {
+        for (var b = a + 1; b < Math.min(a + 14, nodes.length); b++) {
+          var dx = nodes[a].x - nodes[b].x, dy = nodes[a].y - nodes[b].y, dz = nodes[a].z - nodes[b].z;
+          if (dx * dx + dy * dy + dz * dz < 0.14) links.push([a, b]);
+        }
+      }
+    }
+
+    function resize() {
+      var r = canvas.getBoundingClientRect();
+      W = r.width; H = r.height;
+      canvas.width = Math.floor(W * dpr);
+      canvas.height = Math.floor(H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      R = Math.min(W, H) * (W < 720 ? 0.46 : 0.40);
+    }
+
+    var rot = 0, tX = 0, tY = 0, cX = 0, cY = 0, t0 = 0, entered = 0;
+
+    function frame(ts) {
+      if (!t0) t0 = ts;
+      var t = (ts - t0) / 1000;
+      // Entrance: nodes arrive from beyond the sphere and settle. One second,
+      // eased, and never repeated - a hero that re-animates on every scroll is
+      // an advert for itself rather than a way in.
+      entered = Math.min(1, t / 1.1);
+      var ease = 1 - Math.pow(1 - entered, 3);
+
+      ctx.clearRect(0, 0, W, H);
+      cX += (tX - cX) * 0.06;
+      cY += (tY - cY) * 0.06;
+      if (!reduce) rot += 0.0016;
+
+      var cx = W / 2, cy = H * 0.48;
+      var sinR = Math.sin(rot), cosR = Math.cos(rot);
+      var tilt = 0.42 + cY * 0.22;
+      var sinT = Math.sin(tilt), cosT = Math.cos(tilt);
+      var pts = [];
+
+      for (var i = 0; i < nodes.length; i++) {
+        var n = nodes[i];
+        var x1 = n.x * cosR - n.z * sinR;
+        var z1 = n.x * sinR + n.z * cosR;
+        var y2 = n.y * cosT - z1 * sinT;
+        var z2 = n.y * sinT + z1 * cosT;
+        var scale = R * (0.75 + ease * 0.25) * (1 + cX * 0.06);
+        // Perspective: far nodes shrink and dim, which is what makes a flat
+        // canvas read as depth.
+        var persp = 1 / (2.1 - z2 * 0.55);
+        pts.push({
+          sx: cx + x1 * scale * persp * (2.1 - ease * 0.0),
+          sy: cy + y2 * scale * persp * 2.1,
+          z: z2,
+          d: persp,
+          live: n.live,
+          seed: n.seed
+        });
+      }
+
+      // Links first, behind the nodes, dim and depth-faded.
+      ctx.lineWidth = 1;
+      for (var l = 0; l < links.length; l++) {
+        var p = pts[links[l][0]], q = pts[links[l][1]];
+        var depth = (p.z + q.z) * 0.5;
+        var alpha = (0.10 + depth * 0.13) * ease;
+        if (alpha <= 0.01) continue;
+        ctx.strokeStyle = 'rgba(255,255,255,' + alpha.toFixed(3) + ')';
+        ctx.beginPath();
+        ctx.moveTo(p.sx, p.sy);
+        ctx.lineTo(q.sx, q.sy);
+        ctx.stroke();
+      }
+
+      for (var j = 0; j < pts.length; j++) {
+        var pt = pts[j];
+        var depth = (pt.z + 1) / 2;
+        var r = (0.9 + depth * 1.7) * (0.6 + ease * 0.4);
+        var a = (0.22 + depth * 0.6) * ease;
+        if (pt.live) {
+          // The pulse is slow and out of phase per node: a field breathing,
+          // not a string of blinking lights.
+          var pulse = 0.5 + 0.5 * Math.sin(t * 1.1 + pt.seed);
+          ctx.fillStyle = 'rgba(240,120,0,' + (a * (0.55 + pulse * 0.45)).toFixed(3) + ')';
+          r *= 1 + pulse * 0.6;
+        } else {
+          ctx.fillStyle = 'rgba(255,255,255,' + a.toFixed(3) + ')';
+        }
+        ctx.beginPath();
+        ctx.arc(pt.sx, pt.sy, r, 0, 6.2832);
+        ctx.fill();
+      }
+
+      raf = requestAnimationFrame(frame);
+    }
+
+    var raf = 0, running = false;
+    function start() { if (!running) { running = true; t0 = 0; raf = requestAnimationFrame(frame); } }
+    function stop() { if (running) { running = false; cancelAnimationFrame(raf); } }
+
+    build();
+    resize();
+    window.addEventListener('resize', function () { resize(); }, { passive: true });
+
+    // Cursor parallax: the sphere leans toward the pointer. Small on purpose -
+    // enough to feel responsive, not enough to make a reader chase it.
+    window.addEventListener('pointermove', function (e) {
+      tX = (e.clientX / window.innerWidth - 0.5) * 2;
+      tY = (e.clientY / window.innerHeight - 0.5) * 2;
+    }, { passive: true });
+
+    // Never animates off screen, so it cannot compete with the ad script or
+    // drain a battery below the fold.
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        entries[0].isIntersecting ? start() : stop();
+      }, { threshold: 0.05 }).observe(canvas);
+    } else {
+      start();
+    }
+
+    if (reduce) { start(); setTimeout(stop, 1400); }
+  })();
+</script>

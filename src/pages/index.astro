@@ -12,6 +12,7 @@
  * are at /ai-ecosystem/{category}/.
  */
 import Base from '../layouts/Base.astro';
+import Hero from '../components/Hero.astro';
 import { readFileSync, existsSync } from 'node:fs';
 
 const j = (p) => (existsSync(p) ? JSON.parse(readFileSync(p, 'utf8')) : null);
@@ -24,6 +25,10 @@ const suits = j('content/lawsuits/lawsuits.json');
 const billTotal = laws?.total ?? 0;
 const termTotal = glossary?.count ?? glossary?.terms?.length ?? 0;
 const caseTotal = suits?.count ?? 0;
+// The MCP registry count, read from the same index the directory renders, so
+// the hero cannot claim a number the directory contradicts.
+const mcpIdx = j('content/mcp/index.json');
+const mcpTotal = mcpIdx?.total ?? 0;
 const liveDomains = cats.reduce((n, c) => n + c.live, 0);
 const totalDomains = cats.reduce((n, c) => n + c.total, 0);
 const totalPages = cats.reduce((n, c) => n + c.pages, 0);
@@ -47,21 +52,9 @@ const jsonld = JSON.stringify({
 });
 ---
 <Base title="The World of AI — the AI Ecosystem, mapped and tracked daily" description={desc} jsonld={jsonld}>
-  <section class="home-hero">
-    <h1>The AI Ecosystem.</h1>
-    <p class="lead">AI is being built, funded, legislated, litigated, and renamed faster than
-      anyone can follow by hand. This site follows it by machine and lays the whole field out in
-      four categories. Every page is rebuilt daily from primary sources, LegiScan for
-      legislation, CourtListener for dockets, the Federal Register and govinfo for federal
-      action, and published with the date it was last verified.</p>
-    <div class="stat-row">
-      <div class="stat"><b>{billTotal.toLocaleString()}</b><span>state AI bills tracked</span></div>
-      <div class="stat"><b>{termTotal}</b><span>terms defined</span></div>
-      <div class="stat"><b>{caseTotal}</b><span>lawsuits followed live</span></div>
-      <div class="stat"><b>{liveDomains}/{totalDomains}</b><span>domains live</span></div>
-    </div>
-    {generated && <p class="meta-line">Last data refresh: {generated}</p>}
-  </section>
+  <Hero slot="bleed" bills={billTotal} terms={termTotal} cases={caseTotal}
+    servers={mcpTotal} generated={generated} />
+
 
   <!-- The ask box is front and centre on Stephen's instruction, above the map.
        It answers ONLY from this site's pages and says so in the sub-line rather

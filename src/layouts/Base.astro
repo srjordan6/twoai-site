@@ -240,6 +240,13 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
        at the next, because the topbar's height changes with its own media
        queries. Wrapping both in a single sticky element means they move
        together whatever either one measures. -->
+  <script is:inline>
+    /* Publishes the scrollbar width as --sb so full-bleed sections can reach the
+       window edge without a vw unit fighting a scrollbar the browser has already
+       reserved. One line, runs before paint, no layout read after render. */
+    document.documentElement.style.setProperty('--sb',
+      (window.innerWidth - document.documentElement.clientWidth) + 'px');
+  </script>
   <div class="site-sticky">
   <Topbar />
   <header class="site-head">
@@ -269,6 +276,15 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
       ))}
     </ul>
   </nav>
+
+  <!-- Full-bleed slot, OUTSIDE the content grid.
+       A hero cannot escape a grid column with negative margins: 50% resolves
+       against the column, not the window, so the first attempt left the stage
+       694px wide on a 1440px screen and, when forced with 100vw, added a
+       horizontal scrollbar because 100vw includes the scrollbar the browser has
+       already reserved. Both measured, both wrong.
+       Rendering outside the grid is the fix that needs no arithmetic. -->
+  <slot name="bleed" />
 
   <main class="wrap main-wrap">
     <div class="rail-col">
