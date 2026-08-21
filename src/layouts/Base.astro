@@ -319,6 +319,25 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
     </div>
   </header>
   </div>
+  <script is:inline>
+    /* Publishes the sticky header's measured height as --sticky-h so anything
+       that pins below it (the rail's section card) clears it at every
+       breakpoint. The topbar and masthead heights both change with their own
+       media queries, which is exactly why they were wrapped in one sticky
+       unit; the same reasoning forbids hardcoding their sum here. Without
+       this, the rail pinned at 1.2rem and slid underneath the header the
+       moment the page scrolled, hiding the card's title and first entries. */
+    (function () {
+      var s = document.querySelector('.site-sticky');
+      if (!s) return;
+      var set = function () {
+        document.documentElement.style.setProperty('--sticky-h', s.offsetHeight + 'px');
+      };
+      set();
+      if (window.ResizeObserver) new ResizeObserver(set).observe(s);
+      else window.addEventListener('resize', set);
+    })();
+  </script>
   <div class="scrim" id="scrim"></div>
   <script is:inline>
     (function () {
@@ -487,7 +506,10 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
         grid-column: 2;
         grid-row: 1;
         position: sticky;
-        top: 1.2rem;
+        /* Below the sticky header, whatever it measures at this breakpoint;
+           the fallback matches the header's typical desktop height so the
+           first paint is right even before the inline script runs. */
+        top: calc(var(--sticky-h, 132px) + 1.2rem);
         transform: translateX(clamp(0px, calc((100vw - 1080px) / 2 - 40px), 260px));
       }
     }
