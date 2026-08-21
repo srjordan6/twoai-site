@@ -72,17 +72,34 @@ const jsonld = JSON.stringify({
       )}
     </div>
 
-    <h3>Background (optional)</h3>
-    <p>Free text, any country's institutions and employers. Paste your resume below and
-      Autofill splits it into these sections; edit anything after. Like the rest of the
-      profile, nothing appears publicly until a person has reviewed it.</p>
+    <h3>Your resume (published without your identity)</h3>
+    <p>This is what employers see. It appears on your public page and in the downloadable
+      PDF <b>with your last name, street address, phone, and email removed</b> — first name
+      only, contact through the relay. Add each job and each degree separately. Paste your
+      resume text and Autofill takes a first pass at the fields; check everything after,
+      it is a best effort, not magic.</p>
     <label class="bg-label">Paste your resume text
-      <textarea id="t-paste" rows="4" placeholder="Paste the text of your resume here, then press Autofill."></textarea></label>
+      <textarea id="t-paste" rows="4" placeholder="Paste the full text of your resume here, then press Autofill."></textarea></label>
     <button id="t-autofill-btn" type="button" class="t-secondary">Autofill from pasted text</button>
     <p id="t-paste-msg" class="t-msg" role="status"></p>
-    <label class="bg-label">Work experience <textarea id="p-work_experience" rows="6" maxlength="4000"></textarea></label>
-    <label class="bg-label">Education <textarea id="p-education" rows="4" maxlength="4000"></textarea></label>
-    <label class="bg-label">Publications, patents, talks <textarea id="p-publications" rows="4" maxlength="4000"></textarea></label>
+
+    <label class="bg-label">Professional summary
+      <textarea id="p-summary" rows="4" maxlength="2000" placeholder="A few sentences on what you do and what you're best at."></textarea></label>
+
+    <h4>Work experience</h4>
+    <div id="jobs-list"></div>
+    <button id="job-add" type="button" class="t-secondary">+ Add a job</button>
+
+    <h4>Education</h4>
+    <div id="edu-list"></div>
+    <button id="edu-add" type="button" class="t-secondary">+ Add education</button>
+
+    <label class="bg-label" style="margin-top:1rem">Certifications
+      <textarea id="p-certifications" rows="3" maxlength="2000" placeholder="One per line, e.g. Certified ScrumMaster (CSM), Scrum Alliance — 2021"></textarea></label>
+    <label class="bg-label">Publications, patents, talks
+      <textarea id="p-publications" rows="3" maxlength="4000"></textarea></label>
+    <label class="bg-label">Awards and recognition
+      <textarea id="p-awards" rows="3" maxlength="2000"></textarea></label>
 
     <h3>Contact details (never published)</h3>
     <p>Shown to no one. Used only inside the resume PDF you can generate below, and only
@@ -127,9 +144,10 @@ const jsonld = JSON.stringify({
     </div>
     <p id="t-pw-msg" class="t-msg" role="status"></p>
 
-    <h3>Resume (optional, never published)</h3>
-    <p>PDF up to 5 MB. Visible only to the site operator; used to verify profiles and,
-      with your consent, shared when an employer asks about you.</p>
+    <h3>Original resume file (optional, kept private)</h3>
+    <p>PDF up to 5 MB. This file itself is never shown publicly — it is used to verify
+      your profile. What employers see is the structured resume above, published without
+      your last name or contact details.</p>
     <input type="file" id="t-resume" accept="application/pdf" />
     <p id="t-resume-msg" class="t-msg" role="status"></p>
 
@@ -230,31 +248,194 @@ const jsonld = JSON.stringify({
       }, true);
     }
 
-    // Splits a pasted resume into the three background fields on common
-    // section headings; anything before the first recognized heading goes to
-    // work experience. Heuristic and editable, never sent anywhere by itself.
+    // ---- Repeatable job / education rows -----------------------------------
+    // Rendered with innerHTML at runtime, so all styles for these live in the
+    // is:global block: Astro's scoped selectors never match injected nodes.
+    let jobSeq = 0, eduSeq = 0;
+    function jobRow(j) {
+      j = j || {};
+      const d = document.createElement('div');
+      d.className = 'rb-card'; d.dataset.kind = 'job';
+      d.innerHTML = `
+        <div class="rb-grid">
+          <label>Employer <input class="j-employer" maxlength="120" /></label>
+          <label>Job title <input class="j-title" maxlength="120" /></label>
+          <label>Location <input class="j-location" maxlength="80" placeholder="City, Country" /></label>
+          <label class="rb-dates"><span>Dates</span>
+            <span class="rb-daterow">
+              <input class="j-start" maxlength="30" placeholder="April 2023" />
+              <span class="rb-dash">–</span>
+              <input class="j-end" maxlength="30" placeholder="Present" />
+            </span></label>
+        </div>
+        <label class="rb-desc">What you did <textarea class="j-description" rows="4" maxlength="2000" placeholder="Responsibilities and results. One point per line reads best."></textarea></label>
+        <button type="button" class="rb-remove">Remove this job</button>`;
+      d.querySelector('.j-employer').value = j.employer || '';
+      d.querySelector('.j-title').value = j.title || '';
+      d.querySelector('.j-location').value = j.location || '';
+      d.querySelector('.j-start').value = j.start || '';
+      d.querySelector('.j-end').value = j.end || '';
+      d.querySelector('.j-description').value = j.description || '';
+      d.querySelector('.rb-remove').addEventListener('click', () => d.remove());
+      $('jobs-list').appendChild(d);
+      jobSeq++;
+    }
+    function eduRow(e) {
+      e = e || {};
+      const d = document.createElement('div');
+      d.className = 'rb-card'; d.dataset.kind = 'edu';
+      d.innerHTML = `
+        <div class="rb-grid">
+          <label>Institution <input class="e-institution" maxlength="140" /></label>
+          <label>Degree or credential <input class="e-credential" maxlength="140" placeholder="MSc Computer Science" /></label>
+          <label>Years <input class="e-years" maxlength="30" placeholder="2018" /></label>
+        </div>
+        <button type="button" class="rb-remove">Remove</button>`;
+      d.querySelector('.e-institution').value = e.institution || '';
+      d.querySelector('.e-credential').value = e.credential || '';
+      d.querySelector('.e-years').value = e.years || '';
+      d.querySelector('.rb-remove').addEventListener('click', () => d.remove());
+      $('edu-list').appendChild(d);
+      eduSeq++;
+    }
+    function collectJobs() {
+      return [...document.querySelectorAll('#jobs-list .rb-card')].map((d) => ({
+        employer: d.querySelector('.j-employer').value, title: d.querySelector('.j-title').value,
+        location: d.querySelector('.j-location').value, start: d.querySelector('.j-start').value,
+        end: d.querySelector('.j-end').value, description: d.querySelector('.j-description').value,
+      })).filter((j) => j.employer || j.title || j.description);
+    }
+    function collectEdu() {
+      return [...document.querySelectorAll('#edu-list .rb-card')].map((d) => ({
+        institution: d.querySelector('.e-institution').value,
+        credential: d.querySelector('.e-credential').value,
+        years: d.querySelector('.e-years').value,
+      })).filter((e) => e.institution || e.credential);
+    }
+    $('job-add').addEventListener('click', () => jobRow());
+    $('edu-add').addEventListener('click', () => eduRow());
+
+    // ---- Autofill v2 --------------------------------------------------------
+    // Parses a pasted resume into the structured fields. Handles letterspaced
+    // headings (P R O F E S S I O N A L  E X P E R I E N C E), splits jobs on
+    // date-range lines, pulls employer/title/location, and routes summary,
+    // education, certifications, publications, awards. Best effort by design:
+    // every field stays editable and the message says to check them.
+    const DATE_RANGE = /((?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+)?(19|20)\d{2}\s*(?:–|—|-|to)\s*(?:((?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+)?(19|20)\d{2}|Present|Current|Now)/i;
     function autofillFromPaste() {
       const raw = $('t-paste').value.replace(/\r/g, '');
       if (!raw.trim()) { say('t-paste-msg', 'Paste your resume text first.', false); return; }
-      const H = [
-        { id: 'p-work_experience', re: /^(work|professional)?\s*(experience|employment|history|karriere|expérience|experiencia)\b/i },
-        { id: 'p-education', re: /^(education|academic|studies|ausbildung|formation|educación|qualifications?)\b/i },
-        { id: 'p-publications', re: /^(publications?|papers?|patents?|talks?|presentations?|conferences?)\b/i },
+      // A heading is a short line that, with everything but letters removed,
+      // starts with a known section word. Space-stripped matching is what
+      // survives letterspaced headings (E X E C U T I V E  S U M M A R Y),
+      // whose word boundaries are unrecoverable after collapsing.
+      const SECTIONS = [
+        { key: 'jobs', starts: ['professionalexperience', 'workexperience', 'workhistory', 'careerhistory', 'employmenthistory', 'experience', 'employment', 'berufserfahrung', 'experiencia'] },
+        { key: 'summary', starts: ['executivesummary', 'professionalsummary', 'summary', 'profile', 'objective', 'aboutme', 'about'] },
+        { key: 'education', starts: ['education', 'academic', 'studies', 'ausbildung', 'formation', 'educacion'] },
+        { key: 'certifications', starts: ['certification', 'license', 'professionaldevelopment', 'credential'] },
+        { key: 'publications', starts: ['publication', 'papers', 'patent', 'talks', 'presentation', 'conference', 'frameworkauthorship', 'authorship'] },
+        { key: 'awards', starts: ['award', 'honor', 'recognition', 'achievement'] },
+        { key: 'skip', starts: ['corecompetenc', 'competenc', 'skills', 'skill', 'frameworkstools', 'frameworktools', 'technicalskills', 'languages', 'references', 'platformsystems', 'platform', 'regulatorystandards', 'regulatory'] },
       ];
-      const buckets = { 'p-work_experience': [], 'p-education': [], 'p-publications': [] };
-      let cur = 'p-work_experience';
-      for (const line of raw.split('\n')) {
-        const t = line.trim();
-        const hit = H.find((h) => h.re.test(t) && t.length < 60);
-        if (hit) { cur = hit.id; continue; }
-        buckets[cur].push(line);
+      const buckets = { summary: [], jobs: [], education: [], certifications: [], publications: [], awards: [], skip: [], preamble: [] };
+      let cur = 'preamble';
+      for (const rawLine of raw.split('\n')) {
+        const t = rawLine.trim();
+        let hit = null;
+        if (t && t.length < 80 && !DATE_RANGE.test(t)) {
+          const norm = t.toLowerCase().replace(/[^a-z]/g, '');
+          if (norm && norm.length < 45) {
+            hit = SECTIONS.find((h) => h.starts.some((w) => norm.startsWith(w)));
+          }
+        }
+        if (hit) { cur = hit.key; continue; }
+        buckets[cur].push(t);
       }
-      let filled = 0;
-      for (const [id, lines] of Object.entries(buckets)) {
-        const text = lines.join('\n').trim().slice(0, 4000);
-        if (text) { $(id).value = text; filled++; }
+      let filled = [];
+
+      // Summary: explicit section, else the preamble prose after dropping
+      // contact-looking lines (emails, phones, plain address lines).
+      const sumLines = (buckets.summary.length ? buckets.summary : buckets.preamble)
+        .filter((l) => l && !/@|www\.|linkedin|github|\+?\d[\d\s().-]{7,}/i.test(l));
+      const summary = sumLines.join(' ').replace(/\s{2,}/g, ' ').trim().slice(0, 2000);
+      if (summary && !$('p-summary').value) { $('p-summary').value = summary; filled.push('summary'); }
+
+      // Jobs: new job starts at any line containing a date range.
+      if (buckets.jobs.length) {
+        const blocks = [];
+        let b = null;
+        for (const line of buckets.jobs) {
+          if (!line) continue;
+          if (DATE_RANGE.test(line)) { b = { head: line, lines: [] }; blocks.push(b); }
+          else if (b) b.lines.push(line);
+          else { b = { head: '', lines: [line] }; blocks.push(b); }
+        }
+        const jobs = blocks.slice(0, 15).map((blk) => {
+          const mDate = blk.head.match(DATE_RANGE);
+          const range = mDate ? mDate[0] : '';
+          let start = '', end = '';
+          if (range) {
+            const parts = range.split(/\s*(?:–|—|-|to)\s*/i);
+            start = (parts[0] || '').trim(); end = (parts[1] || '').trim();
+          }
+          let head = blk.head.replace(DATE_RANGE, '').replace(/[,;·|]\s*$/, '').trim();
+          let employer = head, title = '';
+          const ci = head.indexOf(',');
+          if (ci > 0) { employer = head.slice(0, ci).trim(); title = head.slice(ci + 1).trim(); }
+          let location = '';
+          let lines = blk.lines.slice();
+          if (lines.length && /^[A-Za-zÀ-ž .'-]+,\s*[A-Za-zÀ-ž .'-]+$/.test(lines[0]) && lines[0].length < 45) {
+            location = lines[0]; lines = lines.slice(1);
+          }
+          const description = lines.join('\n').replace(/^[-•*]\s*/gm, '').trim().slice(0, 2000);
+          return { employer, title, location, start, end, description };
+        }).filter((j) => j.employer || j.description);
+        if (jobs.length) {
+          $('jobs-list').innerHTML = '';
+          jobs.forEach((j) => jobRow(j));
+          filled.push(jobs.length + ' job' + (jobs.length > 1 ? 's' : ''));
+        }
       }
-      say('t-paste-msg', filled ? `Filled ${filled} section${filled > 1 ? 's' : ''}; edit anything before submitting.` : 'No sections recognized; fill the fields directly.', filled > 0);
+
+      // Education: one entry per line containing a degree keyword or a year.
+      if (buckets.education.length) {
+        const entries = [];
+        for (const line of buckets.education) {
+          if (!line) continue;
+          if (!/(19|20)\d{2}|master|bachelor|associate|doctor|phd|m\.?sc|b\.?sc|mba|diploma|coursework|degree/i.test(line)) {
+            if (entries.length) entries[entries.length - 1].rawExtra = true;
+            continue;
+          }
+          const yr = line.match(/(19|20)\d{2}(?:\s*[–—-]\s*(19|20)\d{2})?/);
+          const years = yr ? yr[0] : '';
+          let rest = line.replace(/,?\s*(19|20)\d{2}(?:\s*[–—-]\s*(19|20)\d{2})?\.?$/, '').trim();
+          let credential = rest, institution = '';
+          const sep = rest.match(/\s(?:—|–|-{2,3})\s/);
+          if (sep) {
+            credential = rest.slice(0, sep.index).trim();
+            institution = rest.slice(sep.index + sep[0].length).trim();
+          } else {
+            const uni = rest.match(/\b(university|college|institute|school|polytechnic|academy|tu\s|iit\s)/i);
+            if (uni && uni.index > 0) { credential = rest.slice(0, uni.index).replace(/[,;—–-]\s*$/, '').trim(); institution = rest.slice(uni.index).trim(); }
+          }
+          entries.push({ institution, credential, years });
+        }
+        if (entries.length) {
+          $('edu-list').innerHTML = '';
+          entries.slice(0, 10).forEach((e) => eduRow(e));
+          filled.push(entries.length + ' education entr' + (entries.length > 1 ? 'ies' : 'y'));
+        }
+      }
+
+      for (const [key, id, cap] of [['certifications', 'p-certifications', 2000], ['publications', 'p-publications', 4000], ['awards', 'p-awards', 2000]]) {
+        const text = buckets[key].filter(Boolean).join('\n').replace(/^[-•*]\s*/gm, '').trim().slice(0, cap);
+        if (text) { $(id).value = text; filled.push(key); }
+      }
+
+      say('t-paste-msg', filled.length
+        ? 'Filled: ' + filled.join(', ') + '. Check every field — Autofill is a first pass, not a final answer.'
+        : 'No sections recognized. Fill the fields directly.', filled.length > 0);
     }
 
     async function openSession() {
@@ -267,9 +448,20 @@ const jsonld = JSON.stringify({
         $('step-form').hidden = false;
         $('t-whoami').textContent = d.email_masked;
         $('t-taiid').textContent = d.tai_id;
-        for (const k of ['first_name', 'headline', 'location', 'availability', 'rate', 'work_experience', 'education', 'publications']) {
-          if (d.profile && d.profile[k]) $('p-' + k).value = d.profile[k];
+        for (const k of ['first_name', 'headline', 'location', 'availability', 'rate', 'summary', 'certifications', 'publications', 'awards']) {
+          if (d.profile && d.profile[k] && $('p-' + k)) $('p-' + k).value = d.profile[k];
         }
+        const pj = (d.profile && d.profile.jobs) || [];
+        const pe = (d.profile && d.profile.education_items) || [];
+        $('jobs-list').innerHTML = ''; $('edu-list').innerHTML = '';
+        pj.forEach((j) => jobRow(j));
+        pe.forEach((e) => eduRow(e));
+        // Legacy free-text profiles predate the structured builder: carry the
+        // text into one card so a resubmit never silently drops it.
+        if (!pj.length && d.profile && d.profile.work_experience) jobRow({ description: d.profile.work_experience });
+        if (!pe.length && d.profile && d.profile.education) eduRow({ credential: '', institution: d.profile.education.slice(0, 140) });
+        if (!$('#jobs-list .rb-card') && !document.querySelector('#jobs-list .rb-card')) jobRow();
+        if (!document.querySelector('#edu-list .rb-card')) eduRow();
         const pii = d.pii || {};
         for (const k of ['full_name', 'phone', 'contact_email', 'country']) {
           if (pii[k]) $('pii-' + k).value = pii[k];
@@ -311,7 +503,9 @@ const jsonld = JSON.stringify({
         };
       }
       const profile = {};
-      for (const k of ['first_name', 'headline', 'location', 'availability', 'rate', 'work_experience', 'education', 'publications']) profile[k] = $('p-' + k).value;
+      for (const k of ['first_name', 'headline', 'location', 'availability', 'rate', 'summary', 'certifications', 'publications', 'awards']) profile[k] = $('p-' + k).value;
+      profile.jobs = collectJobs();
+      profile.education_items = collectEdu();
       const pii = {
         full_name: $('pii-full_name').value, phone: $('pii-phone').value,
         contact_email: $('pii-contact_email').value, country: $('pii-country').value,
@@ -385,6 +579,17 @@ const jsonld = JSON.stringify({
     .talent-card textarea { display: block; width: 100%; margin-top: .25rem; padding: .5rem .6rem;
       border: 1px solid #c7ced6; border-radius: 6px; font: inherit; font-weight: 400; resize: vertical; }
     .bg-label { max-width: 44rem; }
+    .rb-card { border: 1px solid #e3e6ea; border-radius: 8px; padding: .9rem 1rem .6rem; margin: .6rem 0; max-width: 44rem; background: #fafbfc; }
+    .rb-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem .9rem; }
+    .rb-grid label, .rb-desc { display: block; font-weight: 600; font-size: .92em; }
+    .rb-grid input, .rb-desc textarea { display: block; width: 100%; margin-top: .2rem; padding: .45rem .55rem; border: 1px solid #c7ced6; border-radius: 6px; font: inherit; font-weight: 400; }
+    .rb-desc { margin-top: .5rem; }
+    .rb-dates .rb-daterow { display: flex; gap: .4rem; align-items: center; font-weight: 400; }
+    .rb-dash { color: #667085; }
+    .rb-remove { background: none; border: none; color: #b42318; font: inherit; font-size: .85em; cursor: pointer; padding: .4rem 0 0; }
+    .rb-remove:hover { text-decoration: underline; }
+    #job-add, #edu-add { margin-top: .2rem; }
+    @media (max-width: 40rem) { .rb-grid { grid-template-columns: 1fr; } }
     .t-secondary { background: #fff !important; color: #201868 !important; border: 1.5px solid #201868 !important; }
     .q-row { margin: .9rem 0; max-width: 44rem; }
     .q-label { display: block; font-weight: 600; margin-bottom: .25rem; }

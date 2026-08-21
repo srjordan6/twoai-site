@@ -51,7 +51,8 @@ const AV = { open: 'Open to work', freelance: 'Freelance / contract', 'not-looki
     <p>Email <b>theworldofai@inkboxmail.com</b> with <b>{p.tai_id}</b> in the subject line
       and your message is relayed. {name} decides whether to reply; no contact details
       appear on this page.</p>
-    {p.share_pdf && <p><a class="talent-cta" href={`/api/talent/pdf/${p.tai_id}`}>Download {name}'s resume (PDF)</a></p>}
+    <p><a class="talent-cta" href={`/api/talent/pdf/${p.tai_id}`}>Download {name}'s resume (PDF)</a>
+      {!p.share_pdf && <span class="tp-note"> Identity-redacted: first name only, contact through the relay.</span>}</p>
   </div>
 
   {(p.skills || []).length > 0 && (
@@ -66,9 +67,35 @@ const AV = { open: 'Open to work', freelance: 'Freelance / contract', 'not-looki
     </>
   )}
 
-  {p.work_experience && <><h2>Work experience</h2><p class="tp-pre">{p.work_experience}</p></>}
-  {p.education && <><h2>Education</h2><p class="tp-pre">{p.education}</p></>}
+  {p.summary && <><h2>Summary</h2><p>{p.summary}</p></>}
+
+  {((p.jobs || []).length > 0 || p.work_experience) && (
+    <>
+      <h2>Work experience</h2>
+      {(p.jobs || []).map((j) => (
+        <div class="tp-job">
+          <h3>{[j.employer, j.title].filter(Boolean).join(' — ')}</h3>
+          <p class="tp-jobmeta">{[[j.start, j.end].filter(Boolean).join(' – '), j.location].filter(Boolean).join('  ·  ')}</p>
+          {j.description && <p class="tp-pre">{j.description}</p>}
+        </div>
+      ))}
+      {!(p.jobs || []).length && p.work_experience && <p class="tp-pre">{p.work_experience}</p>}
+    </>
+  )}
+
+  {((p.education_items || []).length > 0 || p.education) && (
+    <>
+      <h2>Education</h2>
+      {(p.education_items || []).map((e) => (
+        <p class="tp-edu">{[e.credential, e.institution].filter(Boolean).join(' — ')}{e.years ? `, ${e.years}` : ''}</p>
+      ))}
+      {!(p.education_items || []).length && p.education && <p class="tp-pre">{p.education}</p>}
+    </>
+  )}
+
+  {p.certifications && <><h2>Certifications</h2><p class="tp-pre">{p.certifications}</p></>}
   {p.publications && <><h2>Publications, patents, talks</h2><p class="tp-pre">{p.publications}</p></>}
+  {p.awards && <><h2>Recognition</h2><p class="tp-pre">{p.awards}</p></>}
 
   <p class="meta-line">Listed on <a href="/talent/">The AI Talent Network</a>, free to join.
     Profiles renew every 30 days; this page disappears if its owner stops renewing.</p>
@@ -91,5 +118,10 @@ const AV = { open: 'Open to work', freelance: 'Freelance / contract', 'not-looki
     .tp-skill h3 { margin-bottom: .15rem; }
     .tp-skill p { margin-top: 0; }
     .tp-pre { white-space: pre-wrap; }
+    .tp-note { color: #667085; font-size: .9em; }
+    .tp-job { margin: .8rem 0 1rem; }
+    .tp-job h3 { margin-bottom: .1rem; }
+    .tp-jobmeta { margin: 0 0 .3rem; color: #667085; font-size: .92em; }
+    .tp-edu { margin: .25rem 0; }
   </style>
 </Base>

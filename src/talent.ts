@@ -258,17 +258,39 @@ export async function handleTalent(request: Request, env: TalentEnv): Promise<Re
 
     const p = b.profile || {};
     const availability = str(p.availability, 20);
+    // Structured resume: repeatable jobs and education entries, individual
+    // fields. This IS published (page + PDF) with the person's identity
+    // removed - first name only, no last name, address, phone, or email -
+    // so nothing here may carry contact data by construction; PII has its
+    // own column. Reviewed by a person before any of it renders.
+    const jobs = (Array.isArray(p.jobs) ? p.jobs : []).slice(0, 15).map((j: any) => ({
+      employer: str(j?.employer, 120),
+      title: str(j?.title, 120),
+      location: str(j?.location, 80),
+      start: str(j?.start, 30),
+      end: str(j?.end, 30),
+      description: str(j?.description, 2000),
+    })).filter((j) => j.employer || j.title || j.description);
+    const educationItems = (Array.isArray(p.education_items) ? p.education_items : []).slice(0, 10).map((e: any) => ({
+      institution: str(e?.institution, 140),
+      credential: str(e?.credential, 140),
+      years: str(e?.years, 30),
+    })).filter((e) => e.institution || e.credential);
     const profile = {
       first_name: str(p.first_name, 60),
       headline: str(p.headline, 140),
       location: str(p.location, 80),
       availability: AVAILABILITY.has(availability) ? availability : "",
       rate: str(p.rate, 60),
-      // Free-text background, any country's employers and institutions.
-      // Reviewed by a person like everything else before any of it renders.
+      summary: str(p.summary, 2000),
+      jobs,
+      education_items: educationItems,
+      certifications: str(p.certifications, 2000),
+      publications: str(p.publications, 4000),
+      awards: str(p.awards, 2000),
+      // Legacy free-text fields, kept so pre-builder submissions round-trip.
       work_experience: str(p.work_experience, 4000),
       education: str(p.education, 4000),
-      publications: str(p.publications, 4000),
     };
 
     // PII lives in its own column, never in the published profile: the
@@ -434,13 +456,18 @@ export async function handleTalent(request: Request, env: TalentEnv): Promise<Re
     ).bind(taiId).first<{ status: string; profile: string; answers: string; pii: string; share_pdf: number; confirm_token: string }>();
     if (!row) return new Response("Not found", { status: 404 });
     const isOwner = t && t === row.confirm_token;
-    const isPublic = row.status === "live" && row.share_pdf === 1;
+    const isPublic = row.status === "live";
     if (!isOwner && !isPublic) return new Response("Not found", { status: 404 });
+    // Everyone can download a LIVE profile's resume; what varies is identity.
+    // Redacted copy: first name only, no last name, address, phone, or email,
+    // relay contact instead. Full contact details appear only for the owner
+    // or when the owner ticked the share box.
+    const includePii = isOwner || row.share_pdf === 1;
     let profile: any = {}, answers: any = {}, pii: any = {};
     try { profile = JSON.parse(row.profile); } catch {}
     try { answers = JSON.parse(row.answers); } catch {}
     try { pii = JSON.parse(row.pii || "{}"); } catch {}
-    const pdf = talentResumePdf(taiId, profile, answers, isOwner || isPublic ? pii : {});
+    const pdf = talentResumePdf(taiId, profile, answers, includePii ? pii : {});
     return new Response(pdf, {
       headers: {
         "content-type": "application/pdf",
@@ -513,10 +540,12 @@ export function talentResumePdf(taiId: string, profile: any, answers: any, pii: 
     return out;
   };
 
+  const redacted = !S(pii.full_name) && !S(pii.phone) && !S(pii.contact_email);
   const name = S(pii.full_name) || S(profile.first_name) || taiId;
   const title = S(profile.headline);
-  const contactBits = [S(profile.location), S(pii.phone), S(pii.contact_email), ...(Array.isArray(pii.links) ? pii.links : [])]
-    .filter(Boolean);
+  const contactBits = redacted
+    ? [S(profile.location), `Contact: theworldofai@inkboxmail.com, subject ${taiId}`].filter(Boolean)
+    : [S(profile.location), S(pii.phone), S(pii.contact_email), ...(Array.isArray(pii.links) ? pii.links : [])].filter(Boolean);
 
   const competencies = [...selections("role-type"), ...selections("governance-frameworks")];
   const toolRun = ["models", "frameworks", "vector-dbs", "observability", "evaluation", "guardrails", "deployment"]
@@ -541,6 +570,7 @@ export function talentResumePdf(taiId: string, profile: any, answers: any, pii: 
   push(`AI Talent Network profile ${taiId}  \u00b7  theworldofai.org/talent/`, "R", 8.5, 12);
 
   const summaryBits: string[] = [];
+  if (S(profile.summary)) summaryBits.push(S(profile.summary));
   if (years) summaryBits.push(`${years} years of hands-on AI/ML experience.`);
   if (S(profile.availability) === "open") summaryBits.push("Open to work.");
   if (S(profile.availability) === "freelance") summaryBits.push("Available for freelance and contract work.");
@@ -548,9 +578,35 @@ export function talentResumePdf(taiId: string, profile: any, answers: any, pii: 
   if (summaryBits.length) { heading("Summary"); body(summaryBits.join(" ")); }
 
   if (competencies.length) { heading("Core Competencies"); body(competencies.join(" \u00b7 ")); }
-  if (S(profile.work_experience)) { heading("Professional Experience"); body(S(profile.work_experience)); }
+
+  const jobs: any[] = Array.isArray(profile.jobs) ? profile.jobs : [];
+  if (jobs.length || S(profile.work_experience)) {
+    heading("Professional Experience");
+    for (const j of jobs) {
+      const head = [S(j.employer), S(j.title)].filter(Boolean).join(" \u2014 ");
+      if (head) push(head, "B", 10.5, 14);
+      const meta = [[S(j.start), S(j.end)].filter(Boolean).join(" \u2013 "), S(j.location)].filter(Boolean).join("  \u00b7  ");
+      if (meta) push(meta, "R", 9, 12);
+      if (S(j.description)) body(S(j.description));
+      push("", "R", 10, 5);
+    }
+    if (!jobs.length) body(S(profile.work_experience)); // legacy free text
+  }
+
   if (S(profile.publications)) { heading("Publications"); body(S(profile.publications)); }
-  if (S(profile.education)) { heading("Education"); body(S(profile.education)); }
+
+  const edu: any[] = Array.isArray(profile.education_items) ? profile.education_items : [];
+  if (edu.length || S(profile.education)) {
+    heading("Education");
+    for (const e of edu) {
+      const line = [S(e.credential), S(e.institution)].filter(Boolean).join(" \u2014 ") + (S(e.years) ? `, ${S(e.years)}` : "");
+      if (line.trim()) body(line);
+    }
+    if (!edu.length) body(S(profile.education)); // legacy free text
+  }
+
+  if (S(profile.certifications)) { heading("Certifications"); body(S(profile.certifications)); }
+  if (S(profile.awards)) { heading("Recognition"); body(S(profile.awards)); }
   if (toolRun.length) { heading("Frameworks, Tools & Platforms"); body(toolRun.join(" \u00b7 ")); }
 
   // Paginate: US Letter, 54pt margins, top-down cursor.
