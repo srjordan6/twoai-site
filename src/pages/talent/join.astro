@@ -135,7 +135,10 @@ const jsonld = JSON.stringify({
           body: JSON.stringify({ email, turnstile: ts ? ts.value : '' }),
         });
         const d = await r.json();
-        say('t-signup-msg', d.message || d.error || 'Something went wrong.', r.ok);
+        // The reason code names which link in the mail chain failed; without
+        // it on screen, diagnosing a signup failure needs DevTools.
+        const msg = (d.message || d.error || 'Something went wrong.') + (d.reason ? ' [' + d.reason + ']' : '');
+        say('t-signup-msg', msg, r.ok);
       } catch { say('t-signup-msg', 'Network error. Try again.', false); }
     });
 
