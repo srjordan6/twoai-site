@@ -100,17 +100,35 @@ const jsonld = JSON.stringify({
       <textarea id="p-publications" rows="3" maxlength="4000"></textarea></label>
     <label class="bg-label">Awards and recognition
       <textarea id="p-awards" rows="3" maxlength="2000"></textarea></label>
+    <button id="t-save-btn" type="button">Save progress</button>
+    <p id="t-save-msg" class="t-msg" role="status"></p>
 
-    <h3>Contact details (never published)</h3>
-    <p>Shown to no one. Used only inside the resume PDF you can generate below, and only
-      if you choose to share it. Any country's formats are fine.</p>
+    <h3>Contact details (only in your full-contact resume)</h3>
+    <p>Never shown on your public page. These appear only in the resume download, and the
+      public copy carries them only if you tick the share box below. Any country's
+      formats are fine.</p>
     <div class="p-grid">
-      <label>Full name <input id="pii-full_name" maxlength="120" autocomplete="name" /></label>
-      <label>Phone <span class="hint">with country code</span>
-        <input id="pii-phone" maxlength="40" autocomplete="tel" placeholder="+1 214 555 0100" /></label>
-      <label>Contact email <span class="hint">defaults to your signup address</span>
-        <input id="pii-contact_email" maxlength="254" autocomplete="email" /></label>
+      <label>First name <input id="pii-name_first" maxlength="60" autocomplete="given-name" /></label>
+      <label>Middle name <input id="pii-name_middle" maxlength="60" autocomplete="additional-name" /></label>
+      <label>Last name <input id="pii-name_last" maxlength="60" autocomplete="family-name" /></label>
+      <label>Contact email <span class="hint">your verified signup address</span>
+        <input id="pii-contact_email" maxlength="254" readonly class="locked" title="This is the address you verified at signup. It cannot be changed here." /></label>
+    </div>
+    <label class="q-label" style="margin-top:.4rem">Phone</label>
+    <div class="ph-row">
+      <select id="pii-phone_cc" aria-label="Country calling code"></select>
+      <input id="pii-phone_area" maxlength="10" inputmode="numeric" placeholder="Area / city code" aria-label="Area or city code" />
+      <input id="pii-phone_num" maxlength="20" inputmode="tel" placeholder="Number" aria-label="Phone number" />
+    </div>
+    <label class="q-label" style="margin-top:.6rem">Address</label>
+    <div class="p-grid">
+      <label>Street address <input id="pii-addr_street" maxlength="160" autocomplete="street-address" /></label>
+      <label>City <input id="pii-addr_city" maxlength="80" autocomplete="address-level2" /></label>
+      <label>State / province / region <input id="pii-addr_region" maxlength="80" autocomplete="address-level1" /></label>
+      <label>Postal / ZIP code <input id="pii-addr_postal" maxlength="20" autocomplete="postal-code" /></label>
       <label>Country <input id="pii-country" maxlength="60" autocomplete="country-name" /></label>
+    </div>
+    <div class="p-grid">
       <label>Link <span class="hint">LinkedIn, GitHub, or site</span>
         <input id="pii-link1" maxlength="200" placeholder="https://…" /></label>
       <label>Link <input id="pii-link2" maxlength="200" placeholder="https://…" /></label>
@@ -129,7 +147,8 @@ const jsonld = JSON.stringify({
       anywhere. The page shows your first name only. You can generate your full resume
       as a PDF right now with the button below, and separately choose whether employers
       can download it from your public page.</p>
-    <button id="t-pdf-btn" type="button" class="t-secondary">Download my resume PDF</button>
+    <button id="t-pdf-btn" type="button" class="t-secondary">Download my resume (PDF)</button>
+    <button id="t-docx-btn" type="button" class="t-secondary">Download my resume (Word)</button>
     <label class="q-opt" style="margin-top:.6rem"><input type="checkbox" id="p-share_pdf" />
       <span>Allow employers to download my full resume PDF (with my contact details) from my
       public page. Off means the page stays first-name-only with relay contact.</span></label>
@@ -170,6 +189,71 @@ const jsonld = JSON.stringify({
     function say(id, text, ok) {
       const el = $(id); el.textContent = text; el.style.color = ok ? '#1a7f37' : '#b42318';
     }
+
+    // ITU country calling codes, every assigned code. Values are the +code;
+    // labels carry the place names so the list is searchable by typing.
+    const CALLING_CODES = [
+      ['+1','US / Canada'],['+7','Russia / Kazakhstan'],['+20','Egypt'],['+27','South Africa'],
+      ['+30','Greece'],['+31','Netherlands'],['+32','Belgium'],['+33','France'],['+34','Spain'],
+      ['+36','Hungary'],['+39','Italy'],['+40','Romania'],['+41','Switzerland'],['+43','Austria'],
+      ['+44','United Kingdom'],['+45','Denmark'],['+46','Sweden'],['+47','Norway'],['+48','Poland'],
+      ['+49','Germany'],['+51','Peru'],['+52','Mexico'],['+53','Cuba'],['+54','Argentina'],
+      ['+55','Brazil'],['+56','Chile'],['+57','Colombia'],['+58','Venezuela'],['+60','Malaysia'],
+      ['+61','Australia'],['+62','Indonesia'],['+63','Philippines'],['+64','New Zealand'],
+      ['+65','Singapore'],['+66','Thailand'],['+81','Japan'],['+82','South Korea'],['+84','Vietnam'],
+      ['+86','China'],['+90','Türkiye'],['+91','India'],['+92','Pakistan'],['+93','Afghanistan'],
+      ['+94','Sri Lanka'],['+95','Myanmar'],['+98','Iran'],['+211','South Sudan'],['+212','Morocco'],
+      ['+213','Algeria'],['+216','Tunisia'],['+218','Libya'],['+220','Gambia'],['+221','Senegal'],
+      ['+222','Mauritania'],['+223','Mali'],['+224','Guinea'],['+225','Côte d\u2019Ivoire'],
+      ['+226','Burkina Faso'],['+227','Niger'],['+228','Togo'],['+229','Benin'],['+230','Mauritius'],
+      ['+231','Liberia'],['+232','Sierra Leone'],['+233','Ghana'],['+234','Nigeria'],['+235','Chad'],
+      ['+236','Central African Republic'],['+237','Cameroon'],['+238','Cabo Verde'],
+      ['+239','São Tomé and Príncipe'],['+240','Equatorial Guinea'],['+241','Gabon'],
+      ['+242','Congo'],['+243','DR Congo'],['+244','Angola'],['+245','Guinea-Bissau'],
+      ['+246','Diego Garcia'],['+248','Seychelles'],['+249','Sudan'],['+250','Rwanda'],
+      ['+251','Ethiopia'],['+252','Somalia'],['+253','Djibouti'],['+254','Kenya'],
+      ['+255','Tanzania'],['+256','Uganda'],['+257','Burundi'],['+258','Mozambique'],
+      ['+260','Zambia'],['+261','Madagascar'],['+262','Réunion / Mayotte'],['+263','Zimbabwe'],
+      ['+264','Namibia'],['+265','Malawi'],['+266','Lesotho'],['+267','Botswana'],
+      ['+268','Eswatini'],['+269','Comoros'],['+290','Saint Helena'],['+291','Eritrea'],
+      ['+297','Aruba'],['+298','Faroe Islands'],['+299','Greenland'],['+350','Gibraltar'],
+      ['+351','Portugal'],['+352','Luxembourg'],['+353','Ireland'],['+354','Iceland'],
+      ['+355','Albania'],['+356','Malta'],['+357','Cyprus'],['+358','Finland'],['+359','Bulgaria'],
+      ['+370','Lithuania'],['+371','Latvia'],['+372','Estonia'],['+373','Moldova'],
+      ['+374','Armenia'],['+375','Belarus'],['+376','Andorra'],['+377','Monaco'],
+      ['+378','San Marino'],['+380','Ukraine'],['+381','Serbia'],['+382','Montenegro'],
+      ['+383','Kosovo'],['+385','Croatia'],['+386','Slovenia'],['+387','Bosnia and Herzegovina'],
+      ['+389','North Macedonia'],['+420','Czechia'],['+421','Slovakia'],['+423','Liechtenstein'],
+      ['+500','Falkland Islands'],['+501','Belize'],['+502','Guatemala'],['+503','El Salvador'],
+      ['+504','Honduras'],['+505','Nicaragua'],['+506','Costa Rica'],['+507','Panama'],
+      ['+508','Saint Pierre and Miquelon'],['+509','Haiti'],['+590','Guadeloupe'],
+      ['+591','Bolivia'],['+592','Guyana'],['+593','Ecuador'],['+594','French Guiana'],
+      ['+595','Paraguay'],['+596','Martinique'],['+597','Suriname'],['+598','Uruguay'],
+      ['+599','Curaçao / Caribbean NL'],['+670','Timor-Leste'],['+672','Norfolk Island / Antarctica'],
+      ['+673','Brunei'],['+674','Nauru'],['+675','Papua New Guinea'],['+676','Tonga'],
+      ['+677','Solomon Islands'],['+678','Vanuatu'],['+679','Fiji'],['+680','Palau'],
+      ['+681','Wallis and Futuna'],['+682','Cook Islands'],['+683','Niue'],['+685','Samoa'],
+      ['+686','Kiribati'],['+687','New Caledonia'],['+688','Tuvalu'],['+689','French Polynesia'],
+      ['+690','Tokelau'],['+691','Micronesia'],['+692','Marshall Islands'],['+850','North Korea'],
+      ['+852','Hong Kong'],['+853','Macao'],['+855','Cambodia'],['+856','Laos'],
+      ['+880','Bangladesh'],['+886','Taiwan'],['+960','Maldives'],['+961','Lebanon'],
+      ['+962','Jordan'],['+963','Syria'],['+964','Iraq'],['+965','Kuwait'],['+966','Saudi Arabia'],
+      ['+967','Yemen'],['+968','Oman'],['+970','Palestine'],['+971','United Arab Emirates'],
+      ['+972','Israel'],['+973','Bahrain'],['+974','Qatar'],['+975','Bhutan'],['+976','Mongolia'],
+      ['+977','Nepal'],['+992','Tajikistan'],['+993','Turkmenistan'],['+994','Azerbaijan'],
+      ['+995','Georgia'],['+996','Kyrgyzstan'],['+998','Uzbekistan'],
+    ];
+    (() => {
+      const sel = $('pii-phone_cc');
+      const none = document.createElement('option');
+      none.value = ''; none.textContent = 'Code…';
+      sel.appendChild(none);
+      for (const [code, label] of CALLING_CODES) {
+        const o = document.createElement('option');
+        o.value = code; o.textContent = `${code} ${label}`;
+        sel.appendChild(o);
+      }
+    })();
 
     // Each question is a dropdown: a closed control showing what is chosen,
     // opening to a scrollable checkbox panel with a filter box for the long
@@ -463,14 +547,21 @@ const jsonld = JSON.stringify({
         if (!$('#jobs-list .rb-card') && !document.querySelector('#jobs-list .rb-card')) jobRow();
         if (!document.querySelector('#edu-list .rb-card')) eduRow();
         const pii = d.pii || {};
-        for (const k of ['full_name', 'phone', 'contact_email', 'country']) {
+        for (const k of ['name_first', 'name_middle', 'name_last', 'phone_area', 'phone_num',
+                         'addr_street', 'addr_city', 'addr_region', 'addr_postal', 'country']) {
           if (pii[k]) $('pii-' + k).value = pii[k];
         }
+        if (pii.phone_cc) $('pii-phone_cc').value = pii.phone_cc;
+        // Legacy rows: a single full_name lands in First name for re-splitting.
+        if (!pii.name_first && pii.full_name) $('pii-name_first').value = pii.full_name;
+        if (!pii.phone_num && pii.phone) $('pii-phone_num').value = pii.phone;
         (pii.links || []).forEach((u, i) => { if (i < 3) $('pii-link' + (i + 1)).value = u; });
-        if (!$('pii-contact_email').value && d.email_masked) $('pii-contact_email').placeholder = 'your signup address';
+        // The contact email IS the verified signup address - filled and locked.
+        $('pii-contact_email').value = d.email || '';
         $('p-share_pdf').checked = !!d.share_pdf;
         $('t-pageid').textContent = (d.tai_id || '').toLowerCase();
         $('t-pdf-btn').onclick = () => { location.href = api('pdf/' + d.tai_id) + '?t=' + encodeURIComponent(TOKEN); };
+        $('t-docx-btn').onclick = () => { location.href = api('docx/' + d.tai_id) + '?t=' + encodeURIComponent(TOKEN); };
         if (d.has_password) $('t-pw-msg').textContent = 'A password is set. Leave these blank to keep it, or type a new one to change it.';
         renderQuestions(d.answers);
       } catch { say('t-signup-msg', 'Could not load your profile. Refresh to retry.', false); }
@@ -493,7 +584,7 @@ const jsonld = JSON.stringify({
       } catch { say('t-signup-msg', 'Network error. Try again.', false); }
     });
 
-    $('t-submit-btn').addEventListener('click', async () => {
+    async function saveProfile(msgId, doneMsg) {
       const answers = {};
       for (const q of QUESTIONS) {
         answers[q.key] = {
@@ -507,8 +598,13 @@ const jsonld = JSON.stringify({
       profile.jobs = collectJobs();
       profile.education_items = collectEdu();
       const pii = {
-        full_name: $('pii-full_name').value, phone: $('pii-phone').value,
-        contact_email: $('pii-contact_email').value, country: $('pii-country').value,
+        name_first: $('pii-name_first').value, name_middle: $('pii-name_middle').value,
+        name_last: $('pii-name_last').value,
+        phone_cc: $('pii-phone_cc').value, phone_area: $('pii-phone_area').value,
+        phone_num: $('pii-phone_num').value,
+        addr_street: $('pii-addr_street').value, addr_city: $('pii-addr_city').value,
+        addr_region: $('pii-addr_region').value, addr_postal: $('pii-addr_postal').value,
+        country: $('pii-country').value,
         links: [$('pii-link1').value, $('pii-link2').value, $('pii-link3').value].filter(Boolean),
       };
       const pw1 = $('t-pw1').value, pw2 = $('t-pw2').value;
@@ -516,16 +612,18 @@ const jsonld = JSON.stringify({
         if (pw1 !== pw2) { say('t-pw-msg', 'Passwords do not match.', false); return; }
         if (pw1.length < 10) { say('t-pw-msg', 'Password must be at least 10 characters.', false); return; }
       }
-      say('t-submit-msg', 'Submitting…', true);
+      say(msgId, doneMsg === 'Saved.' ? 'Saving…' : 'Submitting…', true);
       try {
         const r = await fetch(api('submit'), {
           method: 'POST', headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ t: TOKEN, profile, answers, pii, share_pdf: $('p-share_pdf').checked, password: pw1 || '' }),
         });
         const d = await r.json();
-        say('t-submit-msg', d.message || d.error || 'Something went wrong.', r.ok);
-      } catch { say('t-submit-msg', 'Network error. Try again.', false); }
-    });
+        say(msgId, r.ok ? doneMsg : (d.error || 'Something went wrong.'), r.ok);
+      } catch { say(msgId, 'Network error. Try again.', false); }
+    }
+    $('t-submit-btn').addEventListener('click', () => saveProfile('t-submit-msg', 'Submitted. Profiles are reviewed by a person before they go live.'));
+    $('t-save-btn').addEventListener('click', () => saveProfile('t-save-msg', 'Saved.'));
 
     $('t-resume').addEventListener('change', async (e) => {
       const f = e.target.files && e.target.files[0];
@@ -568,13 +666,27 @@ const jsonld = JSON.stringify({
   <style is:global>
     .talent-card { border: 1px solid #e3e6ea; border-radius: 8px; padding: 1.25rem 1.5rem; margin: 1.5rem 0; }
     .talent-card label { display: block; margin: .6rem 0; font-weight: 600; }
-    .talent-card input[type="email"], .talent-card input:not([type]), .talent-card select {
+    .talent-card input[type="email"], .talent-card input[type="password"], .talent-card input[type="text"],
+    .talent-card input:not([type]), .talent-card select {
       display: block; width: 100%; max-width: 28rem; margin-top: .25rem; padding: .5rem .6rem;
       border: 1px solid #c7ced6; border-radius: 6px; font: inherit; font-weight: 400; }
     .talent-card button { margin-top: .75rem; background: #F07800; color: #fff; border: 0;
       border-radius: 6px; padding: .6rem 1.1rem; font: inherit; font-weight: 600; cursor: pointer; }
     .t-msg { min-height: 1.2em; font-weight: 600; }
     .p-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr)); gap: 0 1.4rem; }
+    /* Fields line up across columns regardless of how far a label's hint text
+       wraps: each cell is a column flexbox with its input pinned to the
+       bottom edge. */
+    .p-grid > label { display: flex; flex-direction: column; justify-content: flex-end; }
+    .p-grid > label > input, .p-grid > label > select { margin-top: auto; }
+    .locked { background: #f2f4f7 !important; color: #475467; cursor: not-allowed; }
+    .ph-row { display: flex; gap: .5rem; max-width: 34rem; }
+    .ph-row select { flex: 0 0 11rem; }
+    .ph-row input { flex: 1; display: block; padding: .5rem .6rem; border: 1px solid #c7ced6;
+      border-radius: 6px; font: inherit; font-weight: 400; margin-top: .25rem; }
+    .ph-row select { padding: .5rem .4rem; border: 1px solid #c7ced6; border-radius: 6px;
+      font: inherit; font-weight: 400; margin-top: .25rem; }
+    #t-save-btn { margin-top: .9rem; }
     .hint { font-weight: 400; color: #667085; font-size: .88em; }
     .talent-card textarea { display: block; width: 100%; margin-top: .25rem; padding: .5rem .6rem;
       border: 1px solid #c7ced6; border-radius: 6px; font: inherit; font-weight: 400; resize: vertical; }

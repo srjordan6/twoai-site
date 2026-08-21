@@ -238,7 +238,7 @@ export async function handleTalent(request: Request, env: TalentEnv): Promise<Re
     try { answers = JSON.parse(row.answers); } catch {}
     try { pii = JSON.parse(row.pii || "{}"); } catch {}
     return tJson({
-      tai_id: row.tai_id, email_masked: masked, status: row.status,
+      tai_id: row.tai_id, email_masked: masked, email: row.email, status: row.status,
       profile, answers, pii, share_pdf: row.share_pdf === 1,
       has_photo: !!row.photo_type, has_password: !!row.pw_hash,
       has_resume: !!row.resume_key,
@@ -252,8 +252,8 @@ export async function handleTalent(request: Request, env: TalentEnv): Promise<Re
     const t = str(b.t, 64);
     if (!t) return tJson({ error: "Missing token" }, 400);
     const row = await env.ASSISTANT_DB.prepare(
-      "SELECT tai_id, status FROM talent_state WHERE confirm_token=? LIMIT 1"
-    ).bind(t).first<{ tai_id: string; status: string }>();
+      "SELECT tai_id, status, email FROM talent_state WHERE confirm_token=? LIMIT 1"
+    ).bind(t).first<{ tai_id: string; status: string; email: string }>();
     if (!row) return tJson({ error: "This link is not valid." }, 404);
 
     const p = b.profile || {};
@@ -302,11 +302,31 @@ export async function handleTalent(request: Request, env: TalentEnv): Promise<Re
       ? piiIn.links.filter((u: unknown) => typeof u === "string" && /^https?:\/\//.test(u)).map((u: string) => u.slice(0, 200)).slice(0, 3)
       : [];
     const pii = {
+      // Name split three ways; legal name for the resume, independent of the
+      // public display first name.
+      name_first: str(piiIn.name_first, 60),
+      name_middle: str(piiIn.name_middle, 60),
+      name_last: str(piiIn.name_last, 60),
+      // International phone in three parts: calling code from the dropdown,
+      // then area/city code and number as the person writes them locally.
+      phone_cc: str(piiIn.phone_cc, 6),
+      phone_area: str(piiIn.phone_area, 10),
+      phone_num: str(piiIn.phone_num, 20),
+      // Address, international shape: free-text lines, region covers state,
+      // province, prefecture, or county, postal covers ZIP and equivalents.
+      addr_street: str(piiIn.addr_street, 160),
+      addr_city: str(piiIn.addr_city, 80),
+      addr_region: str(piiIn.addr_region, 80),
+      addr_postal: str(piiIn.addr_postal, 20),
+      country: str(piiIn.country, 60),
+      // The contact email is the VERIFIED signup address, set by the server
+      // and locked in the form - a client cannot write someone else's inbox
+      // onto a profile that this mailbox confirmed.
+      contact_email: row.email,
+      links,
+      // Legacy fields kept readable for rows written before the split.
       full_name: str(piiIn.full_name, 120),
       phone: str(piiIn.phone, 40),
-      contact_email: str(piiIn.contact_email, 254),
-      country: str(piiIn.country, 60),
-      links,
     };
     const sharePdf = b.share_pdf === true ? 1 : 0;
 
@@ -477,6 +497,35 @@ export async function handleTalent(request: Request, env: TalentEnv): Promise<Re
     });
   }
 
+  // ---- GET /api/talent/docx/{TAI-...} ---------------------------------------
+  // Same document, same auth and redaction rules as the PDF, delivered as a
+  // real .docx so the person can edit their resume in Word. Built by the
+  // store-only zip writer below - no dependency, same reasoning as the PDF.
+  if (path.startsWith("/api/talent/docx/") && request.method === "GET") {
+    const taiId = str(decodeURIComponent(path.slice("/api/talent/docx/".length)).toUpperCase(), 12);
+    const t = str(url.searchParams.get("t"), 64);
+    const row = await env.ASSISTANT_DB.prepare(
+      "SELECT status, profile, answers, pii, share_pdf, confirm_token FROM talent_state WHERE tai_id=? LIMIT 1"
+    ).bind(taiId).first<{ status: string; profile: string; answers: string; pii: string; share_pdf: number; confirm_token: string }>();
+    if (!row) return new Response("Not found", { status: 404 });
+    const isOwner = t && t === row.confirm_token;
+    const isPublic = row.status === "live";
+    if (!isOwner && !isPublic) return new Response("Not found", { status: 404 });
+    const includePii = isOwner || row.share_pdf === 1;
+    let profile: any = {}, answers: any = {}, pii: any = {};
+    try { profile = JSON.parse(row.profile); } catch {}
+    try { answers = JSON.parse(row.answers); } catch {}
+    try { pii = JSON.parse(row.pii || "{}"); } catch {}
+    const docx = talentResumeDocx(taiId, profile, answers, includePii ? pii : {});
+    return new Response(docx, {
+      headers: {
+        "content-type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "content-disposition": `attachment; filename="${taiId}-resume.docx"`,
+        "cache-control": "no-store",
+      },
+    });
+  }
+
   return tJson({ error: "Not found" }, 404);
 }
 
@@ -540,12 +589,15 @@ export function talentResumePdf(taiId: string, profile: any, answers: any, pii: 
     return out;
   };
 
-  const redacted = !S(pii.full_name) && !S(pii.phone) && !S(pii.contact_email);
-  const name = S(pii.full_name) || S(profile.first_name) || taiId;
+  const fullName = [S(pii.name_first), S(pii.name_middle), S(pii.name_last)].filter(Boolean).join(" ") || S(pii.full_name);
+  const phone = [S(pii.phone_cc), S(pii.phone_area), S(pii.phone_num)].filter(Boolean).join(" ") || S(pii.phone);
+  const address = [S(pii.addr_street), S(pii.addr_city), S(pii.addr_region), S(pii.addr_postal), S(pii.country)].filter(Boolean).join(", ");
+  const redacted = !fullName && !phone && !S(pii.contact_email);
+  const name = fullName || S(profile.first_name) || taiId;
   const title = S(profile.headline);
   const contactBits = redacted
     ? [S(profile.location), `Contact: theworldofai@inkboxmail.com, subject ${taiId}`].filter(Boolean)
-    : [S(profile.location), S(pii.phone), S(pii.contact_email), ...(Array.isArray(pii.links) ? pii.links : [])].filter(Boolean);
+    : [address || S(profile.location), phone, S(pii.contact_email), ...(Array.isArray(pii.links) ? pii.links : [])].filter(Boolean);
 
   const competencies = [...selections("role-type"), ...selections("governance-frameworks")];
   const toolRun = ["models", "frameworks", "vector-dbs", "observability", "evaluation", "guardrails", "deployment"]
@@ -653,4 +705,146 @@ export function talentResumePdf(taiId: string, profile: any, answers: any, pii: 
   for (const off of offsets) out += `${off.toString().padStart(10, "0")} 00000 n \n`;
   out += `trailer << /Size ${objects.length + 1} /Root ${catalogId} 0 R >>\nstartxref\n${xref}\n%%EOF`;
   return enc.encode(out);
+}
+
+// ---------------------------------------------------------------------------
+// Minimal DOCX writer: a .docx is a zip of XML parts, and a zip written with
+// STORE (no compression) needs only local headers, a CRC-32, and a central
+// directory - about eighty lines, zero dependencies, deterministic in the
+// Workers runtime. The document mirrors the PDF's sections exactly, sourced
+// from the same data, so the two downloads can never disagree.
+// ---------------------------------------------------------------------------
+
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(buf: Uint8Array): number {
+  let c = 0xffffffff;
+  for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+function zipStore(files: { name: string; data: Uint8Array }[]): Uint8Array {
+  const enc = new TextEncoder();
+  const chunks: Uint8Array[] = [];
+  const central: Uint8Array[] = [];
+  let offset = 0;
+  const u16 = (v: number) => new Uint8Array([v & 0xff, (v >> 8) & 0xff]);
+  const u32 = (v: number) => new Uint8Array([v & 0xff, (v >> 8) & 0xff, (v >> 16) & 0xff, (v >> 24) & 0xff]);
+  const cat = (...parts: Uint8Array[]) => {
+    const total = parts.reduce((a, p) => a + p.length, 0);
+    const out = new Uint8Array(total);
+    let o = 0;
+    for (const p of parts) { out.set(p, o); o += p.length; }
+    return out;
+  };
+  for (const f of files) {
+    const nameB = enc.encode(f.name);
+    const crc = crc32(f.data);
+    const local = cat(u32(0x04034b50), u16(20), u16(0), u16(0), u16(0), u16(0),
+      u32(crc), u32(f.data.length), u32(f.data.length), u16(nameB.length), u16(0), nameB, f.data);
+    central.push(cat(u32(0x02014b50), u16(20), u16(20), u16(0), u16(0), u16(0), u16(0),
+      u32(crc), u32(f.data.length), u32(f.data.length), u16(nameB.length), u16(0), u16(0),
+      u16(0), u16(0), u32(0), u32(offset), nameB));
+    chunks.push(local);
+    offset += local.length;
+  }
+  const centralAll = cat(...central);
+  const end = cat(u32(0x06054b50), u16(0), u16(0), u16(files.length), u16(files.length),
+    u32(centralAll.length), u32(offset), u16(0));
+  return cat(...chunks, centralAll, end);
+}
+
+function xmlEsc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;");
+}
+
+export function talentResumeDocx(taiId: string, profile: any, answers: any, pii: any): Uint8Array {
+  const S = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+  const selections = (key: string): string[] => {
+    const a = answers && answers[key];
+    if (!a) return [];
+    const out = Array.isArray(a.selections) ? a.selections.slice() : [];
+    if (S(a.other)) out.push(S(a.other));
+    return out;
+  };
+  const fullName = [S(pii.name_first), S(pii.name_middle), S(pii.name_last)].filter(Boolean).join(" ") || S(pii.full_name);
+  const phone = [S(pii.phone_cc), S(pii.phone_area), S(pii.phone_num)].filter(Boolean).join(" ") || S(pii.phone);
+  const address = [S(pii.addr_street), S(pii.addr_city), S(pii.addr_region), S(pii.addr_postal), S(pii.country)].filter(Boolean).join(", ");
+  const redacted = !fullName && !phone && !S(pii.contact_email);
+  const name = fullName || S(profile.first_name) || taiId;
+  const contactBits = redacted
+    ? [S(profile.location), `Contact: theworldofai@inkboxmail.com, subject ${taiId}`].filter(Boolean)
+    : [address || S(profile.location), phone, S(pii.contact_email), ...(Array.isArray(pii.links) ? pii.links : [])].filter(Boolean);
+  const competencies = [...selections("role-type"), ...selections("governance-frameworks")];
+  const toolRun = ["models", "frameworks", "vector-dbs", "observability", "evaluation", "guardrails", "deployment"].flatMap(selections);
+  const years = selections("experience-years")[0] || "";
+
+  const paras: string[] = [];
+  const para = (text: string, opts: { bold?: boolean; size?: number; caps?: boolean; spaceBefore?: number } = {}) => {
+    const size = (opts.size || 21); // half-points
+    const props = `<w:rPr>${opts.bold ? "<w:b/>" : ""}<w:sz w:val="${size}"/>${opts.caps ? '<w:caps w:val="true"/><w:spacing w:val="30"/>' : ""}</w:rPr>`;
+    const ppr = opts.spaceBefore ? `<w:pPr><w:spacing w:before="${opts.spaceBefore}"/></w:pPr>` : "";
+    for (const line of text.split("\n")) {
+      paras.push(`<w:p>${ppr}<w:r>${props}<w:t xml:space="preserve">${xmlEsc(line)}</w:t></w:r></w:p>`);
+    }
+  };
+  const headingP = (t: string) => para(t, { bold: true, size: 22, caps: true, spaceBefore: 240 });
+
+  para(name, { bold: true, size: 40 });
+  if (S(profile.headline)) para(S(profile.headline), { bold: true, size: 22 });
+  if (contactBits.length) para(contactBits.join("  \u00b7  "), { size: 19 });
+  para(`AI Talent Network profile ${taiId}  \u00b7  theworldofai.org/talent/`, { size: 17 });
+
+  const summaryBits: string[] = [];
+  if (S(profile.summary)) summaryBits.push(S(profile.summary));
+  if (years) summaryBits.push(`${years} years of hands-on AI/ML experience.`);
+  if (S(profile.availability) === "open") summaryBits.push("Open to work.");
+  if (S(profile.availability) === "freelance") summaryBits.push("Available for freelance and contract work.");
+  if (S(profile.rate)) summaryBits.push(`Rate: ${S(profile.rate)}.`);
+  if (summaryBits.length) { headingP("Summary"); para(summaryBits.join(" ")); }
+  if (competencies.length) { headingP("Core Competencies"); para(competencies.join(" \u00b7 ")); }
+
+  const jobs: any[] = Array.isArray(profile.jobs) ? profile.jobs : [];
+  if (jobs.length || S(profile.work_experience)) {
+    headingP("Professional Experience");
+    for (const j of jobs) {
+      const head = [S(j.employer), S(j.title)].filter(Boolean).join(" \u2014 ");
+      if (head) para(head, { bold: true, spaceBefore: 160 });
+      const meta = [[S(j.start), S(j.end)].filter(Boolean).join(" \u2013 "), S(j.location)].filter(Boolean).join("  \u00b7  ");
+      if (meta) para(meta, { size: 18 });
+      if (S(j.description)) para(S(j.description));
+    }
+    if (!jobs.length) para(S(profile.work_experience));
+  }
+  if (S(profile.publications)) { headingP("Publications"); para(S(profile.publications)); }
+  const edu: any[] = Array.isArray(profile.education_items) ? profile.education_items : [];
+  if (edu.length || S(profile.education)) {
+    headingP("Education");
+    for (const e of edu) {
+      const line = [S(e.credential), S(e.institution)].filter(Boolean).join(" \u2014 ") + (S(e.years) ? `, ${S(e.years)}` : "");
+      if (line.trim()) para(line);
+    }
+    if (!edu.length) para(S(profile.education));
+  }
+  if (S(profile.certifications)) { headingP("Certifications"); para(S(profile.certifications)); }
+  if (S(profile.awards)) { headingP("Recognition"); para(S(profile.awards)); }
+  if (toolRun.length) { headingP("Frameworks, Tools & Platforms"); para(toolRun.join(" \u00b7 ")); }
+
+  const enc = new TextEncoder();
+  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${paras.join("")}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1080" w:right="1080" w:bottom="1080" w:left="1080"/></w:sectPr></w:body></w:document>`;
+  return zipStore([
+    { name: "[Content_Types].xml", data: enc.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`) },
+    { name: "_rels/.rels", data: enc.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`) },
+    { name: "word/document.xml", data: enc.encode(documentXml) },
+  ]);
 }
