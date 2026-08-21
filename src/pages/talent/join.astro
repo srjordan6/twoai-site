@@ -45,18 +45,24 @@ const jsonld = JSON.stringify({
       allows multiple choices, N/A, and Other.</p>
 
     <h3>About you</h3>
-    <label>First name (the only name shown publicly) <input id="p-first_name" maxlength="60" /></label>
-    <label>Headline, e.g. "RAG systems engineer, healthcare" <input id="p-headline" maxlength="140" /></label>
-    <label>Location, e.g. "Dallas, TX" or "Remote, US" <input id="p-location" maxlength="80" /></label>
-    <label>Availability
-      <select id="p-availability">
-        <option value="">Prefer not to say</option>
-        <option value="open">Open to work</option>
-        <option value="freelance">Freelance / contract</option>
-        <option value="not-looking">Not looking right now</option>
-      </select>
-    </label>
-    <label>Rate or salary range, e.g. "$120/hr" or "$150k+" <input id="p-rate" maxlength="60" /></label>
+    <div class="p-grid">
+      <label>First name <span class="hint">the only name shown publicly</span>
+        <input id="p-first_name" maxlength="60" autocomplete="given-name" /></label>
+      <label>Headline <span class="hint">one line on what you do</span>
+        <input id="p-headline" maxlength="140" placeholder='"RAG systems engineer, healthcare"' /></label>
+      <label>Location <span class="hint">any country, or remote</span>
+        <input id="p-location" maxlength="80" placeholder='"Dallas, TX", "London, UK", "Remote, worldwide"' /></label>
+      <label>Availability
+        <select id="p-availability">
+          <option value="">Prefer not to say</option>
+          <option value="open">Open to work</option>
+          <option value="freelance">Freelance / contract</option>
+          <option value="not-looking">Not looking right now</option>
+        </select>
+      </label>
+      <label>Rate or salary range <span class="hint">any currency</span>
+        <input id="p-rate" maxlength="60" placeholder='"$120/hr", "€90/hr", "£95k+"' /></label>
+    </div>
 
     <h3>Your AI experience</h3>
     <div id="t-questions">
@@ -65,6 +71,18 @@ const jsonld = JSON.stringify({
           profile section now and add skills when you reopen your link.</p>
       )}
     </div>
+
+    <h3>Background (optional)</h3>
+    <p>Free text, any country's institutions and employers. Paste your resume below and
+      Autofill splits it into these sections; edit anything after. Like the rest of the
+      profile, nothing appears publicly until a person has reviewed it.</p>
+    <label class="bg-label">Paste your resume text
+      <textarea id="t-paste" rows="4" placeholder="Paste the text of your resume here, then press Autofill."></textarea></label>
+    <button id="t-autofill-btn" type="button" class="t-secondary">Autofill from pasted text</button>
+    <p id="t-paste-msg" class="t-msg" role="status"></p>
+    <label class="bg-label">Work experience <textarea id="p-work_experience" rows="6" maxlength="4000"></textarea></label>
+    <label class="bg-label">Education <textarea id="p-education" rows="4" maxlength="4000"></textarea></label>
+    <label class="bg-label">Publications, patents, talks <textarea id="p-publications" rows="4" maxlength="4000"></textarea></label>
 
     <h3>Resume (optional, never published)</h3>
     <p>PDF up to 5 MB. Visible only to the site operator; used to verify profiles and,
@@ -92,20 +110,108 @@ const jsonld = JSON.stringify({
       const el = $(id); el.textContent = text; el.style.color = ok ? '#1a7f37' : '#b42318';
     }
 
+    // Each question is a dropdown: a closed control showing what is chosen,
+    // opening to a scrollable checkbox panel with a filter box for the long
+    // lists (the governance question carries 60+ frameworks). The choices
+    // themselves still come from the pipeline-published options.json, i.e.
+    // from the site's own catalogs in SQL.
+    function summarize(q) {
+      const sel = [...document.querySelectorAll(`input[data-q="${CSS.escape(q.key)}"]:checked`)].map((i) => i.value);
+      const na = !!document.querySelector(`input[data-qna="${CSS.escape(q.key)}"]:checked`);
+      const other = (document.querySelector(`input[data-qother="${CSS.escape(q.key)}"]`) || {}).value || '';
+      const parts = [...sel];
+      if (other.trim()) parts.push('Other');
+      let text = 'Select all that apply…';
+      if (na && parts.length === 0) text = 'N/A';
+      else if (parts.length > 0) {
+        text = parts.slice(0, 3).join(', ');
+        if (parts.length > 3) text += ` +${parts.length - 3} more`;
+        if (na) text += ', N/A';
+      }
+      const sumEl = document.querySelector(`.msel[data-key="${CSS.escape(q.key)}"] .msel-value`);
+      if (sumEl) { sumEl.textContent = text; sumEl.classList.toggle('placeholder', text === 'Select all that apply…'); }
+    }
+
     function renderQuestions(saved) {
       const host = $('t-questions');
       for (const q of QUESTIONS) {
         const prev = (saved && saved[q.key]) || { selections: [], na: false, other: '' };
-        const box = document.createElement('fieldset');
-        box.className = 'q-box';
+        const wrap = document.createElement('div');
+        wrap.className = 'q-row';
+        const esc = (v) => v.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
         const opts = q.options.map((o) =>
-          `<label class="q-opt"><input type="checkbox" data-q="${q.key}" value="${o.replace(/"/g, '&quot;')}"${prev.selections.includes(o) ? ' checked' : ''}/> ${o}</label>`
+          `<label class="q-opt"><input type="checkbox" data-q="${esc(q.key)}" value="${esc(o)}"${prev.selections.includes(o) ? ' checked' : ''}/> <span>${esc(o)}</span></label>`
         ).join('');
-        box.innerHTML = `<legend>${q.label}</legend><div class="q-grid">${opts}</div>
-          <label class="q-opt"><input type="checkbox" data-qna="${q.key}"${prev.na ? ' checked' : ''}/> N/A</label>
-          <label class="q-other">Other: <input data-qother="${q.key}" maxlength="200" value="${(prev.other || '').replace(/"/g, '&quot;')}"/></label>`;
-        host.appendChild(box);
+        const filter = q.options.length > 12
+          ? `<input class="msel-filter" type="search" placeholder="Type to filter…" aria-label="Filter options" />`
+          : '';
+        wrap.innerHTML = `<span class="q-label">${esc(q.label)}</span>
+          <details class="msel" data-key="${esc(q.key)}">
+            <summary><span class="msel-value placeholder">Select all that apply…</span><span class="msel-caret" aria-hidden="true">▾</span></summary>
+            <div class="msel-panel">
+              ${filter}
+              <div class="msel-list">${opts}</div>
+              <div class="msel-foot">
+                <label class="q-opt"><input type="checkbox" data-qna="${esc(q.key)}"${prev.na ? ' checked' : ''}/> <span>N/A</span></label>
+                <label class="q-other">Other: <input data-qother="${esc(q.key)}" maxlength="200" value="${esc(prev.other || '')}"/></label>
+              </div>
+            </div>
+          </details>`;
+        host.appendChild(wrap);
+        summarize(q);
       }
+      host.addEventListener('change', (e) => {
+        const key = e.target.getAttribute('data-q') || e.target.getAttribute('data-qna');
+        if (key) { const q = QUESTIONS.find((x) => x.key === key); if (q) summarize(q); }
+      });
+      host.addEventListener('input', (e) => {
+        if (e.target.classList.contains('msel-filter')) {
+          const needle = e.target.value.toLowerCase();
+          e.target.closest('.msel-panel').querySelectorAll('.q-opt').forEach((l) => {
+            if (l.parentElement.classList.contains('msel-foot')) return;
+            l.hidden = needle !== '' && !l.textContent.toLowerCase().includes(needle);
+          });
+        }
+        const key = e.target.getAttribute('data-qother');
+        if (key) { const q = QUESTIONS.find((x) => x.key === key); if (q) summarize(q); }
+      });
+      // One dropdown open at a time; any outside click closes them all.
+      document.addEventListener('click', (e) => {
+        document.querySelectorAll('.msel[open]').forEach((d) => { if (!d.contains(e.target)) d.removeAttribute('open'); });
+      });
+      host.addEventListener('toggle', (e) => {
+        if (e.target.classList.contains('msel') && e.target.open) {
+          document.querySelectorAll('.msel[open]').forEach((d) => { if (d !== e.target) d.removeAttribute('open'); });
+          const f = e.target.querySelector('.msel-filter'); if (f) f.focus();
+        }
+      }, true);
+    }
+
+    // Splits a pasted resume into the three background fields on common
+    // section headings; anything before the first recognized heading goes to
+    // work experience. Heuristic and editable, never sent anywhere by itself.
+    function autofillFromPaste() {
+      const raw = $('t-paste').value.replace(/\r/g, '');
+      if (!raw.trim()) { say('t-paste-msg', 'Paste your resume text first.', false); return; }
+      const H = [
+        { id: 'p-work_experience', re: /^(work|professional)?\s*(experience|employment|history|karriere|expérience|experiencia)\b/i },
+        { id: 'p-education', re: /^(education|academic|studies|ausbildung|formation|educación|qualifications?)\b/i },
+        { id: 'p-publications', re: /^(publications?|papers?|patents?|talks?|presentations?|conferences?)\b/i },
+      ];
+      const buckets = { 'p-work_experience': [], 'p-education': [], 'p-publications': [] };
+      let cur = 'p-work_experience';
+      for (const line of raw.split('\n')) {
+        const t = line.trim();
+        const hit = H.find((h) => h.re.test(t) && t.length < 60);
+        if (hit) { cur = hit.id; continue; }
+        buckets[cur].push(line);
+      }
+      let filled = 0;
+      for (const [id, lines] of Object.entries(buckets)) {
+        const text = lines.join('\n').trim().slice(0, 4000);
+        if (text) { $(id).value = text; filled++; }
+      }
+      say('t-paste-msg', filled ? `Filled ${filled} section${filled > 1 ? 's' : ''}; edit anything before submitting.` : 'No sections recognized; fill the fields directly.', filled > 0);
     }
 
     async function openSession() {
@@ -118,7 +224,7 @@ const jsonld = JSON.stringify({
         $('step-form').hidden = false;
         $('t-whoami').textContent = d.email_masked;
         $('t-taiid').textContent = d.tai_id;
-        for (const k of ['first_name', 'headline', 'location', 'availability', 'rate']) {
+        for (const k of ['first_name', 'headline', 'location', 'availability', 'rate', 'work_experience', 'education', 'publications']) {
           if (d.profile && d.profile[k]) $('p-' + k).value = d.profile[k];
         }
         renderQuestions(d.answers);
@@ -152,7 +258,7 @@ const jsonld = JSON.stringify({
         };
       }
       const profile = {};
-      for (const k of ['first_name', 'headline', 'location', 'availability', 'rate']) profile[k] = $('p-' + k).value;
+      for (const k of ['first_name', 'headline', 'location', 'availability', 'rate', 'work_experience', 'education', 'publications']) profile[k] = $('p-' + k).value;
       say('t-submit-msg', 'Submitting…', true);
       try {
         const r = await fetch(api('submit'), {
@@ -178,10 +284,17 @@ const jsonld = JSON.stringify({
       } catch { say('t-resume-msg', 'Network error. Try again.', false); }
     });
 
+    $('t-autofill-btn').addEventListener('click', autofillFromPaste);
+
     openSession();
   </script>
 
-  <style>
+  {/* is:global because the skills questions are rendered at runtime via
+      innerHTML: scoped rules demand Astro's cid attribute on every element,
+      runtime-created nodes never carry it, and the entire question UI shipped
+      unstyled - the checkbox spray Stephen saw. The classes are namespaced
+      (.talent-card, .msel, .q-*) so global scope leaks nothing. */}
+  <style is:global>
     .talent-card { border: 1px solid #e3e6ea; border-radius: 8px; padding: 1.25rem 1.5rem; margin: 1.5rem 0; }
     .talent-card label { display: block; margin: .6rem 0; font-weight: 600; }
     .talent-card input[type="email"], .talent-card input:not([type]), .talent-card select {
@@ -190,11 +303,32 @@ const jsonld = JSON.stringify({
     .talent-card button { margin-top: .75rem; background: #F07800; color: #fff; border: 0;
       border-radius: 6px; padding: .6rem 1.1rem; font: inherit; font-weight: 600; cursor: pointer; }
     .t-msg { min-height: 1.2em; font-weight: 600; }
-    .q-box { border: 1px solid #e3e6ea; border-radius: 8px; margin: 1rem 0; padding: .75rem 1rem; }
-    .q-box legend { font-weight: 700; padding: 0 .3rem; }
-    .q-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .1rem .8rem; }
+    .p-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr)); gap: 0 1.4rem; }
+    .hint { font-weight: 400; color: #667085; font-size: .88em; }
+    .talent-card textarea { display: block; width: 100%; margin-top: .25rem; padding: .5rem .6rem;
+      border: 1px solid #c7ced6; border-radius: 6px; font: inherit; font-weight: 400; resize: vertical; }
+    .bg-label { max-width: 44rem; }
+    .t-secondary { background: #fff !important; color: #201868 !important; border: 1.5px solid #201868 !important; }
+    .q-row { margin: .9rem 0; max-width: 44rem; }
+    .q-label { display: block; font-weight: 600; margin-bottom: .25rem; }
+    .msel { position: relative; }
+    .msel summary { list-style: none; display: flex; justify-content: space-between; align-items: center;
+      gap: .6rem; border: 1px solid #c7ced6; border-radius: 6px; padding: .5rem .7rem; cursor: pointer;
+      background: #fff; font-weight: 400; }
+    .msel summary::-webkit-details-marker { display: none; }
+    .msel[open] summary { border-color: #201868; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+    .msel-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .msel-value.placeholder { color: #667085; }
+    .msel-caret { color: #667085; flex: none; }
+    .msel-panel { position: absolute; z-index: 30; left: 0; right: 0; background: #fff;
+      border: 1px solid #201868; border-top: 0; border-radius: 0 0 6px 6px;
+      box-shadow: 0 8px 20px rgba(16, 24, 40, .12); padding: .5rem .7rem; }
+    .msel-filter { display: block; width: 100%; margin: .1rem 0 .4rem; padding: .35rem .5rem;
+      border: 1px solid #c7ced6; border-radius: 6px; font: inherit; }
+    .msel-list { max-height: 15rem; overflow: auto; }
+    .msel-foot { border-top: 1px solid #eceef4; margin-top: .4rem; padding-top: .4rem; }
     .q-opt { display: flex; gap: .45rem; align-items: baseline; font-weight: 400 !important; margin: .15rem 0 !important; }
-    .q-other { font-weight: 400 !important; }
-    .q-other input { display: inline-block !important; width: 16rem !important; }
+    .q-other { font-weight: 400 !important; display: flex; gap: .4rem; align-items: center; }
+    .q-other input { display: inline-block !important; width: 14rem !important; margin-top: 0 !important; }
   </style>
 </Base>

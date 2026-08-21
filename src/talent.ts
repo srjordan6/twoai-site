@@ -238,6 +238,11 @@ export async function handleTalent(request: Request, env: TalentEnv): Promise<Re
       location: str(p.location, 80),
       availability: AVAILABILITY.has(availability) ? availability : "",
       rate: str(p.rate, 60),
+      // Free-text background, any country's employers and institutions.
+      // Reviewed by a person like everything else before any of it renders.
+      work_experience: str(p.work_experience, 4000),
+      education: str(p.education, 4000),
+      publications: str(p.publications, 4000),
     };
 
     const answers: Record<string, { selections: string[]; na: boolean; other: string }> = {};
