@@ -25,6 +25,8 @@
  *  - It never returns an answer without the pages it came from.
  */
 
+import { handleTalent } from "./talent";
+
 interface Env {
   AI: any;
   VECTORIZE: any;
@@ -120,6 +122,12 @@ const json = (body: unknown, status = 200) =>
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+
+    if (url.pathname.startsWith("/api/talent/")) {
+      // The AI Talent Network write path lives in its own module so a bug in
+      // it can never touch the assistant, and vice versa.
+      return handleTalent(request, env as unknown as Parameters<typeof handleTalent>[1]);
+    }
 
     if (url.pathname !== "/api/ask") {
       // Everything else is the static site, untouched.
