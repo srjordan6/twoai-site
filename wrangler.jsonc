@@ -64,5 +64,17 @@
       "database_name": "twoai-assistant",
       "database_id": "db78dab4-42ea-4704-9cd0-3adeacebefe4"
     }
+  ],
+  // Talent Network resumes. PRIVATE by contract: this bucket must never gain
+  // public access or appear in any content/export path. It exists separately
+  // from the content bus precisely so that "in the bucket" can never be
+  // mistaken for "publishable" — the synced_tools incident was that exact
+  // class of failure, and PII is the one place it must be structurally
+  // impossible rather than procedurally avoided.
+  "r2_buckets": [
+    {
+      "binding": "TALENT_R2",
+      "bucket_name": "twoai-talent"
+    }
   ]
 }
