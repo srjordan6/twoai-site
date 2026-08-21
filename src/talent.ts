@@ -82,17 +82,29 @@ async function verifyTurnstile(env: TalentEnv, token: string, ip: string): Promi
   }
 }
 
-async function sendMail(env: TalentEnv, to: string, subject: string, text: string): Promise<boolean> {
-  if (!env.INKBOX_KEY_THEWORLDOFAI) return false;
+// Returns "" on success, otherwise a short reason. The first live test failed
+// with only "Signups are not open yet" because every failure path collapsed to
+// false: secret absent, header rejected, HTTP refusal and network error were
+// indistinguishable, which is the silent-failure shape this codebase keeps
+// paying for. The reason string is safe to surface (no key material, no
+// recipient) and each failure logs the Inkbox response for Workers Logs.
+async function sendMail(env: TalentEnv, to: string, subject: string, text: string): Promise<string> {
+  // A key pasted at a PowerShell prompt can carry a trailing CR; fetch throws
+  // on a header value containing \r and the catch below would eat it.
+  const key = (env.INKBOX_KEY_THEWORLDOFAI || "").trim();
+  if (!key) return "mail_key_missing";
   try {
     const r = await fetch(INKBOX_SEND, {
       method: "POST",
-      headers: { "X-API-Key": env.INKBOX_KEY_THEWORLDOFAI, "content-type": "application/json" },
+      headers: { "X-API-Key": key, "content-type": "application/json" },
       body: JSON.stringify({ recipients: { to: [to] }, subject, body_text: text }),
     });
-    return r.status === 201 || r.status === 200;
-  } catch {
-    return false;
+    if (r.status === 201 || r.status === 200) return "";
+    console.log("talent sendMail refused:", r.status, (await r.text()).slice(0, 300));
+    return "mail_http_" + r.status;
+  } catch (e) {
+    console.log("talent sendMail network:", String(e).slice(0, 200));
+    return "mail_network";
   }
 }
 
@@ -172,10 +184,10 @@ export async function handleTalent(request: Request, env: TalentEnv): Promise<Re
     }
 
     const link = `${SITE}/talent/join/?t=${token}`;
-    const sent = await sendMail(env, email,
+    const mailErr = await sendMail(env, email,
       "Confirm your AI Talent Network profile",
       `You (or someone using this address) asked to join the AI Talent Network on theworldofai.org.\n\nYour profile id is ${taiId}.\n\nConfirm your address and fill in your profile here:\n${link}\n\nThe link keeps working until you finish. If this wasn't you, ignore this email and nothing is published.\n\nQuestions: reply to this email.\n— The World of AI`);
-    if (!sent) return tJson({ error: "Signups are not open yet. Try again later." }, 503);
+    if (mailErr) return tJson({ error: "Signups are not open yet. Try again later.", reason: mailErr }, 503);
 
     return tJson({ ok: true, message: "Check your email for a confirmation link." });
   }
