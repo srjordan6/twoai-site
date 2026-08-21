@@ -84,6 +84,49 @@ const jsonld = JSON.stringify({
     <label class="bg-label">Education <textarea id="p-education" rows="4" maxlength="4000"></textarea></label>
     <label class="bg-label">Publications, patents, talks <textarea id="p-publications" rows="4" maxlength="4000"></textarea></label>
 
+    <h3>Contact details (never published)</h3>
+    <p>Shown to no one. Used only inside the resume PDF you can generate below, and only
+      if you choose to share it. Any country's formats are fine.</p>
+    <div class="p-grid">
+      <label>Full name <input id="pii-full_name" maxlength="120" autocomplete="name" /></label>
+      <label>Phone <span class="hint">with country code</span>
+        <input id="pii-phone" maxlength="40" autocomplete="tel" placeholder="+1 214 555 0100" /></label>
+      <label>Contact email <span class="hint">defaults to your signup address</span>
+        <input id="pii-contact_email" maxlength="254" autocomplete="email" /></label>
+      <label>Country <input id="pii-country" maxlength="60" autocomplete="country-name" /></label>
+      <label>Link <span class="hint">LinkedIn, GitHub, or site</span>
+        <input id="pii-link1" maxlength="200" placeholder="https://…" /></label>
+      <label>Link <input id="pii-link2" maxlength="200" placeholder="https://…" /></label>
+      <label>Link <input id="pii-link3" maxlength="200" placeholder="https://…" /></label>
+    </div>
+
+    <h3>Headshot (optional)</h3>
+    <p>JPEG or PNG up to 2 MB. Shown on your public page once the profile is live;
+      remove it any time by uploading a replacement or asking us.</p>
+    <input type="file" id="t-photo" accept="image/jpeg,image/png" />
+    <p id="t-photo-msg" class="t-msg" role="status"></p>
+
+    <h3>Your public page and resume PDF</h3>
+    <p>Once approved, your profile lives at
+      <b>theworldofai.org/talent/<span id="t-pageid">…</span>/</b> — share that link
+      anywhere. The page shows your first name only. You can generate your full resume
+      as a PDF right now with the button below, and separately choose whether employers
+      can download it from your public page.</p>
+    <button id="t-pdf-btn" type="button" class="t-secondary">Download my resume PDF</button>
+    <label class="q-opt" style="margin-top:.6rem"><input type="checkbox" id="p-share_pdf" />
+      <span>Allow employers to download my full resume PDF (with my contact details) from my
+      public page. Off means the page stays first-name-only with relay contact.</span></label>
+
+    <h3>Account password</h3>
+    <p>Set one to log back in at <b>theworldofai.org/talent/login/</b> and edit your
+      profile any time. Your email link keeps working either way.</p>
+    <div class="p-grid">
+      <label>Password <span class="hint">at least 10 characters</span>
+        <input type="password" id="t-pw1" maxlength="200" autocomplete="new-password" /></label>
+      <label>Repeat password <input type="password" id="t-pw2" maxlength="200" autocomplete="new-password" /></label>
+    </div>
+    <p id="t-pw-msg" class="t-msg" role="status"></p>
+
     <h3>Resume (optional, never published)</h3>
     <p>PDF up to 5 MB. Visible only to the site operator; used to verify profiles and,
       with your consent, shared when an employer asks about you.</p>
@@ -227,6 +270,16 @@ const jsonld = JSON.stringify({
         for (const k of ['first_name', 'headline', 'location', 'availability', 'rate', 'work_experience', 'education', 'publications']) {
           if (d.profile && d.profile[k]) $('p-' + k).value = d.profile[k];
         }
+        const pii = d.pii || {};
+        for (const k of ['full_name', 'phone', 'contact_email', 'country']) {
+          if (pii[k]) $('pii-' + k).value = pii[k];
+        }
+        (pii.links || []).forEach((u, i) => { if (i < 3) $('pii-link' + (i + 1)).value = u; });
+        if (!$('pii-contact_email').value && d.email_masked) $('pii-contact_email').placeholder = 'your signup address';
+        $('p-share_pdf').checked = !!d.share_pdf;
+        $('t-pageid').textContent = (d.tai_id || '').toLowerCase();
+        $('t-pdf-btn').onclick = () => { location.href = api('pdf/' + d.tai_id) + '?t=' + encodeURIComponent(TOKEN); };
+        if (d.has_password) $('t-pw-msg').textContent = 'A password is set. Leave these blank to keep it, or type a new one to change it.';
         renderQuestions(d.answers);
       } catch { say('t-signup-msg', 'Could not load your profile. Refresh to retry.', false); }
     }
@@ -259,11 +312,21 @@ const jsonld = JSON.stringify({
       }
       const profile = {};
       for (const k of ['first_name', 'headline', 'location', 'availability', 'rate', 'work_experience', 'education', 'publications']) profile[k] = $('p-' + k).value;
+      const pii = {
+        full_name: $('pii-full_name').value, phone: $('pii-phone').value,
+        contact_email: $('pii-contact_email').value, country: $('pii-country').value,
+        links: [$('pii-link1').value, $('pii-link2').value, $('pii-link3').value].filter(Boolean),
+      };
+      const pw1 = $('t-pw1').value, pw2 = $('t-pw2').value;
+      if (pw1 || pw2) {
+        if (pw1 !== pw2) { say('t-pw-msg', 'Passwords do not match.', false); return; }
+        if (pw1.length < 10) { say('t-pw-msg', 'Password must be at least 10 characters.', false); return; }
+      }
       say('t-submit-msg', 'Submitting…', true);
       try {
         const r = await fetch(api('submit'), {
           method: 'POST', headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ t: TOKEN, profile, answers }),
+          body: JSON.stringify({ t: TOKEN, profile, answers, pii, share_pdf: $('p-share_pdf').checked, password: pw1 || '' }),
         });
         const d = await r.json();
         say('t-submit-msg', d.message || d.error || 'Something went wrong.', r.ok);
@@ -282,6 +345,20 @@ const jsonld = JSON.stringify({
         const d = await r.json();
         say('t-resume-msg', d.message || d.error || 'Upload failed.', r.ok);
       } catch { say('t-resume-msg', 'Network error. Try again.', false); }
+    });
+
+    $('t-photo').addEventListener('change', async (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      if (f.size > 2 * 1024 * 1024) { say('t-photo-msg', 'Image too large, 2 MB maximum.', false); return; }
+      say('t-photo-msg', 'Uploading…', true);
+      try {
+        const r = await fetch(api('photo?t=' + encodeURIComponent(TOKEN)), {
+          method: 'POST', headers: { 'content-type': f.type }, body: f,
+        });
+        const d = await r.json();
+        say('t-photo-msg', d.message || d.error || 'Upload failed.', r.ok);
+      } catch { say('t-photo-msg', 'Network error. Try again.', false); }
     });
 
     $('t-autofill-btn').addEventListener('click', autofillFromPaste);

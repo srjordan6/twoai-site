@@ -1,0 +1,50 @@
+---
+import Base from '../../layouts/Base.astro';
+
+const desc = 'Log in to your AI Talent Network profile to update your skills, background, headshot, or sharing settings.';
+---
+<Base title="Log in — AI Talent Network — The World of AI" description={desc} current="/talent/" noindex={true}>
+  <h1>Log in to your Talent Network profile</h1>
+  <p class="answer">Use the password you set on your profile. No password, or forgot it? The
+    confirmation link in your original email still opens your profile, and signing up again
+    with the same address sends a fresh link to the same account.</p>
+
+  <div class="talent-card" style="max-width: 30rem">
+    <label>Email address <input type="email" id="l-email" autocomplete="email" maxlength="254" /></label>
+    <label>Password <input type="password" id="l-pw" autocomplete="current-password" maxlength="200" /></label>
+    <button id="l-btn" type="button">Log in</button>
+    <p id="l-msg" class="t-msg" role="status"></p>
+    <p class="meta-line"><a href="/talent/join/">New here? Create a profile instead.</a></p>
+  </div>
+
+  <script>
+    const go = async () => {
+      const msg = document.getElementById('l-msg');
+      msg.textContent = 'Checking…'; msg.style.color = '#1a7f37';
+      try {
+        const r = await fetch('/api/talent/login', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('l-email').value.trim(),
+            password: document.getElementById('l-pw').value,
+          }),
+        });
+        const d = await r.json();
+        if (r.ok && d.t) { location.href = '/talent/join/?t=' + encodeURIComponent(d.t); return; }
+        msg.textContent = d.error || 'Login failed.'; msg.style.color = '#b42318';
+      } catch { msg.textContent = 'Network error. Try again.'; msg.style.color = '#b42318'; }
+    };
+    document.getElementById('l-btn').addEventListener('click', go);
+    document.getElementById('l-pw').addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+  </script>
+
+  <style is:global>
+    .talent-card { border: 1px solid #e3e6ea; border-radius: 8px; padding: 1.25rem 1.5rem; margin: 1.5rem 0; }
+    .talent-card label { display: block; margin: .6rem 0; font-weight: 600; }
+    .talent-card input { display: block; width: 100%; margin-top: .25rem; padding: .5rem .6rem;
+      border: 1px solid #c7ced6; border-radius: 6px; font: inherit; font-weight: 400; }
+    .talent-card button { margin-top: .75rem; background: #F07800; color: #fff; border: 0;
+      border-radius: 6px; padding: .6rem 1.1rem; font: inherit; font-weight: 600; cursor: pointer; }
+    .t-msg { min-height: 1.2em; font-weight: 600; }
+  </style>
+</Base>

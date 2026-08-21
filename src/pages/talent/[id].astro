@@ -1,0 +1,95 @@
+---
+import Base from '../../layouts/Base.astro';
+import { readFileSync, existsSync } from 'node:fs';
+
+// One page per LIVE, approved profile, from the pipeline-published directory.
+// Everything rendered here passed human review; the page shows a first name
+// and profile id only, the photo and PDF are served by the Worker so an
+// expired profile takes them offline with it, and contact is relay-only.
+export async function getStaticPaths() {
+  const f = 'content/talent/profiles.json';
+  if (!existsSync(f)) return [];
+  let dir;
+  try { dir = JSON.parse(readFileSync(f, 'utf8')); } catch { return []; }
+  return (dir.profiles || [])
+    .filter((p) => p && p.tai_id)
+    .map((p) => ({ params: { id: p.tai_id.toLowerCase() }, props: { p, generated: dir.generated || '' } }));
+}
+const { p, generated } = Astro.props;
+const name = p.first_name || 'Anonymous';
+const title = `${name} — ${p.tai_id} — AI Talent Network`;
+const desc = `${name}${p.headline ? ', ' + p.headline : ''}: verified AI skills profile ${p.tai_id} on The World of AI Talent Network.`;
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org', '@type': 'ProfilePage',
+  name: `${name} — ${p.tai_id}`,
+  url: `https://theworldofai.org/talent/${p.tai_id.toLowerCase()}/`,
+  isPartOf: { '@type': 'WebSite', name: 'The World of AI', url: 'https://theworldofai.org/' },
+});
+const AV = { open: 'Open to work', freelance: 'Freelance / contract', 'not-looking': 'Not looking right now' };
+---
+<Base title={title} description={desc} current="/talent/" jsonld={jsonld}>
+  <p class="crumb"><a href="/ai-ecosystem/ecosystem-entities-market-and-operations/">Ecosystem Entities, Market and Operations</a> ›
+    <a href="/talent/">The AI Talent Network</a> › {p.tai_id}</p>
+
+  <div class="tp-head">
+    {p.has_photo && <img class="tp-photo" src={`/api/talent/photo/${p.tai_id}`} alt={`${name}'s headshot`} width="112" height="112" loading="lazy" />}
+    <div>
+      <h1>{name} <span class="tp-id">{p.tai_id}</span></h1>
+      {p.headline && <p class="tp-headline">{p.headline}</p>}
+      <p class="tp-meta">
+        {p.location && <span>{p.location}</span>}
+        {p.availability && AV[p.availability] && <span class="t-badge">{AV[p.availability]}</span>}
+        {p.rate && <span>{p.rate}</span>}
+        {p.years && <span>{p.years} years hands-on</span>}
+      </p>
+    </div>
+  </div>
+  <p class="meta-line">Profile verified by email and reviewed by a person. Last updated: {p.updated || generated}.</p>
+
+  <div class="tp-contact">
+    <h2>Contact {name}</h2>
+    <p>Email <b>theworldofai@inkboxmail.com</b> with <b>{p.tai_id}</b> in the subject line
+      and your message is relayed. {name} decides whether to reply; no contact details
+      appear on this page.</p>
+    {p.share_pdf && <p><a class="talent-cta" href={`/api/talent/pdf/${p.tai_id}`}>Download {name}'s resume (PDF)</a></p>}
+  </div>
+
+  {(p.skills || []).length > 0 && (
+    <>
+      <h2>Verified skills</h2>
+      {(p.skills || []).map((s) => (
+        <div class="tp-skill">
+          <h3>{s.label}</h3>
+          <p>{s.items.join(' · ')}</p>
+        </div>
+      ))}
+    </>
+  )}
+
+  {p.work_experience && <><h2>Work experience</h2><p class="tp-pre">{p.work_experience}</p></>}
+  {p.education && <><h2>Education</h2><p class="tp-pre">{p.education}</p></>}
+  {p.publications && <><h2>Publications, patents, talks</h2><p class="tp-pre">{p.publications}</p></>}
+
+  <p class="meta-line">Listed on <a href="/talent/">The AI Talent Network</a>, free to join.
+    Profiles renew every 30 days; this page disappears if its owner stops renewing.</p>
+
+  <style is:global>
+    .crumb { font-size: .9em; color: #667085; }
+    .crumb a { color: inherit; }
+    .tp-head { display: flex; gap: 1.2rem; align-items: center; margin: .6rem 0 0; }
+    .tp-photo { border-radius: 10px; object-fit: cover; border: 1px solid #e3e6ea; }
+    .tp-id { font-size: .55em; color: #667085; font-family: monospace; vertical-align: middle; }
+    .tp-headline { font-size: 1.1em; margin: .2rem 0; }
+    .tp-meta span { margin-right: .9rem; color: #475467; }
+    .t-badge { display: inline-block; background: #eef6ee; color: #1a7f37; font-size: .85em;
+      font-weight: 700; padding: .1rem .55rem; border-radius: 999px; }
+    .tp-contact { border: 1px solid #e3e6ea; border-left: 4px solid #F07800; border-radius: 8px;
+      padding: .9rem 1.2rem; margin: 1.2rem 0; }
+    .tp-contact h2 { margin-top: 0; }
+    .talent-cta { display: inline-block; background: #F07800; color: #fff; font-weight: 700;
+      padding: .55rem 1.1rem; border-radius: 6px; text-decoration: none; }
+    .tp-skill h3 { margin-bottom: .15rem; }
+    .tp-skill p { margin-top: 0; }
+    .tp-pre { white-space: pre-wrap; }
+  </style>
+</Base>
