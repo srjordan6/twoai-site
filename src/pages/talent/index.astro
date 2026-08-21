@@ -1,0 +1,90 @@
+---
+import Base from '../../layouts/Base.astro';
+import { readFileSync, existsSync } from 'node:fs';
+
+// The public directory is rendered from content/talent/profiles.json once the
+// pipeline publishes approved profiles. Until then the hub explains the
+// section and routes people to the join form; an empty directory is stated,
+// not hidden.
+const dir = existsSync('content/talent/profiles.json')
+  ? JSON.parse(readFileSync('content/talent/profiles.json', 'utf8'))
+  : { profiles: [] };
+
+const desc = 'The AI Talent Network: people who work with AI, listed by verified skills — models, frameworks, vector stores, observability, and governance standards. Free to join, privacy-first.';
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org', '@type': 'CollectionPage',
+  name: 'The AI Talent Network', url: 'https://theworldofai.org/talent/',
+  isPartOf: { '@type': 'WebSite', name: 'The World of AI', url: 'https://theworldofai.org/' },
+});
+const gen = dir.generated || new Date().toISOString().slice(0, 10);
+---
+<Base title="The AI Talent Network: AI skills, verified and listed — The World of AI" description={desc} current="/talent/" jsonld={jsonld}>
+  <p class="crumb"><a href="/ai-ecosystem/">AI Ecosystem</a> ›
+    <a href="/ai-ecosystem/ecosystem-entities-market-and-operations/">Ecosystem Entities, Market and Operations</a> ›
+    The AI Talent Network</p>
+
+  <h1>The AI Talent Network</h1>
+  <p class="answer">A directory of people who work with AI, listed by what they have actually
+    used: the foundation models, application frameworks, vector stores, observability and
+    evaluation tools, guardrails, deployment stacks, and governance frameworks they have real
+    experience with. Every choice on a profile comes from this site's own catalogs, every
+    profile is email-confirmed and reviewed by a person, and privacy is the default: a
+    listing shows a <b>first name and a profile id only</b>.</p>
+  <p class="meta-line">Directory last updated: {gen}.</p>
+
+  <p><a class="talent-cta" href="/talent/join/">Create your free profile →</a></p>
+
+  <h2>How employers reach someone</h2>
+  <p>Profiles carry no contact details, so there is nothing for scrapers to harvest. To reach
+    a listed person, email <b>theworldofai@inkboxmail.com</b> with their profile id (for
+    example <code>TAI-7K3M2F</code>) in the subject line, and your message is relayed. The
+    person decides whether to reply.</p>
+
+  {dir.profiles.length > 0 ? (
+    <>
+      <h2>{dir.profiles.length} people listed</h2>
+      <ul class="talent-list">
+        {dir.profiles.map((p) => (
+          <li>
+            <a href={`/talent/${p.tai_id.toLowerCase()}/`}><b>{p.first_name || 'Anonymous'}</b> — {p.tai_id}</a>
+            {p.headline && <span> · {p.headline}</span>}
+            {p.location && <span class="t-dim"> · {p.location}</span>}
+            {p.availability === 'open' && <span class="t-badge">Open to work</span>}
+            {p.availability === 'freelance' && <span class="t-badge">Freelance</span>}
+          </li>
+        ))}
+      </ul>
+    </>
+  ) : (
+    <>
+      <h2>The directory is opening</h2>
+      <p>The network is new and the first profiles are in review. Join now and yours is
+        among the first employers see.</p>
+    </>
+  )}
+
+  <h2>The rules of the network</h2>
+  <ul>
+    <li><b>Free.</b> Listing costs nothing, for people and for employers browsing.</li>
+    <li><b>Email-confirmed and human-reviewed.</b> Every profile confirms its address before
+      the form opens, and a person approves it before it appears.</li>
+    <li><b>First name only.</b> No surnames, no photos, no contact details on the page.</li>
+    <li><b>Resumes stay private.</b> An uploaded resume is never published anywhere.</li>
+    <li><b>Profiles renew or retire.</b> Every 30 days a listing is reconfirmed by email;
+      unanswered reminders remove it and erase the personal data behind it.</li>
+    <li><b>18 and over.</b></li>
+  </ul>
+
+  <style>
+    .crumb { font-size: .9em; color: #667085; }
+    .crumb a { color: inherit; }
+    .talent-cta { display: inline-block; background: #F07800; color: #fff; font-weight: 700;
+      padding: .7rem 1.3rem; border-radius: 6px; text-decoration: none; }
+    .talent-cta:hover { background: #d96c00; }
+    .talent-list { list-style: none; padding: 0; }
+    .talent-list li { padding: .45rem 0; border-bottom: 1px solid #eef1f4; }
+    .t-dim { color: #667085; }
+    .t-badge { display: inline-block; margin-left: .5rem; background: #eef6ee; color: #1a7f37;
+      font-size: .8em; font-weight: 700; padding: .1rem .5rem; border-radius: 999px; }
+  </style>
+</Base>
