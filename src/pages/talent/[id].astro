@@ -87,15 +87,53 @@ const AV = { open: 'Open to work', freelance: 'Freelance / contract', 'not-looki
     <>
       <h2>Education</h2>
       {(p.education_items || []).map((e) => (
-        <p class="tp-edu">{[e.credential, e.institution].filter(Boolean).join(' — ')}{e.years ? `, ${e.years}` : ''}</p>
+        <div class="tp-eduitem">
+          <p class="tp-edu">{[[e.degree || e.credential, e.major].filter(Boolean).join(', ') + (e.minor ? ` (minor: ${e.minor})` : ''), e.institution].filter(Boolean).join(' — ')}{e.years ? `, ${e.years}` : ''}</p>
+          {e.comments && <p class="tp-educomment">{e.comments}</p>}
+        </div>
       ))}
       {!(p.education_items || []).length && p.education && <p class="tp-pre">{p.education}</p>}
     </>
   )}
 
-  {p.certifications && <><h2>Certifications</h2><p class="tp-pre">{p.certifications}</p></>}
-  {p.publications && <><h2>Publications, patents, talks</h2><p class="tp-pre">{p.publications}</p></>}
-  {p.awards && <><h2>Recognition</h2><p class="tp-pre">{p.awards}</p></>}
+  {((p.certifications_items || []).length > 0 || p.certifications) && (
+    <>
+      <h2>Certifications</h2>
+      {(p.certifications_items || []).map((c) => (
+        <p class="tp-edu">{[c.name, c.year].filter(Boolean).join(' — ')}{c.expires ? `, expires ${c.expires}` : ''}</p>
+      ))}
+      {!(p.certifications_items || []).length && p.certifications && <p class="tp-pre">{p.certifications}</p>}
+    </>
+  )}
+
+  {((p.publications_items || []).length > 0 || p.publications) && (
+    <>
+      <h2>Publications and talks</h2>
+      {(p.publications_items || []).map((it) => (
+        <p class="tp-edu">{[it.title, it.date].filter(Boolean).join(' — ')}</p>
+      ))}
+      {!(p.publications_items || []).length && p.publications && <p class="tp-pre">{p.publications}</p>}
+    </>
+  )}
+
+  {(p.patents_items || []).length > 0 && (
+    <>
+      <h2>Patents and trademarks</h2>
+      {(p.patents_items || []).map((it) => (
+        <p class="tp-edu">{[it.title, it.date].filter(Boolean).join(' — ')}</p>
+      ))}
+    </>
+  )}
+
+  {((p.awards_items || []).length > 0 || p.awards) && (
+    <>
+      <h2>Recognition</h2>
+      {(p.awards_items || []).map((a) => (
+        <p class="tp-edu">{[a.title, a.date].filter(Boolean).join(' — ')}</p>
+      ))}
+      {!(p.awards_items || []).length && p.awards && <p class="tp-pre">{p.awards}</p>}
+    </>
+  )}
 
   <p class="meta-line">Listed on <a href="/talent/">The AI Talent Network</a>, free to join.
     Profiles renew every 30 days; this page disappears if its owner stops renewing.</p>
@@ -123,5 +161,7 @@ const AV = { open: 'Open to work', freelance: 'Freelance / contract', 'not-looki
     .tp-job h3 { margin-bottom: .1rem; }
     .tp-jobmeta { margin: 0 0 .3rem; color: #667085; font-size: .92em; }
     .tp-edu { margin: .25rem 0; }
+    .tp-eduitem { margin: .25rem 0 .5rem; }
+    .tp-educomment { margin: 0; color: #667085; font-size: .92em; }
   </style>
 </Base>

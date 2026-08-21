@@ -273,9 +273,22 @@ export async function handleTalent(request: Request, env: TalentEnv): Promise<Re
     })).filter((j) => j.employer || j.title || j.description);
     const educationItems = (Array.isArray(p.education_items) ? p.education_items : []).slice(0, 10).map((e: any) => ({
       institution: str(e?.institution, 140),
-      credential: str(e?.credential, 140),
+      degree: str(e?.degree, 120) || str(e?.credential, 120),
+      major: str(e?.major, 120),
+      minor: str(e?.minor, 120),
       years: str(e?.years, 30),
-    })).filter((e) => e.institution || e.credential);
+      comments: str(e?.comments, 500),
+    })).filter((e) => e.institution || e.degree || e.major);
+    const dated = (arr: unknown, keys: [string, number][], cap: number) =>
+      (Array.isArray(arr) ? arr : []).slice(0, cap).map((v: any) => {
+        const o: Record<string, string> = {};
+        for (const [k, max] of keys) o[k] = str(v?.[k], max);
+        return o;
+      }).filter((o) => Object.values(o).some(Boolean));
+    const certItems = dated(p.certifications_items, [["name", 140], ["year", 20], ["expires", 20]], 15);
+    const pubItems = dated(p.publications_items, [["title", 200], ["date", 20]], 20);
+    const patItems = dated(p.patents_items, [["title", 200], ["date", 20]], 15);
+    const awardItems = dated(p.awards_items, [["title", 200], ["date", 20]], 15);
     const profile = {
       first_name: str(p.first_name, 60),
       headline: str(p.headline, 140),
@@ -285,6 +298,11 @@ export async function handleTalent(request: Request, env: TalentEnv): Promise<Re
       summary: str(p.summary, 2000),
       jobs,
       education_items: educationItems,
+      certifications_items: certItems,
+      publications_items: pubItems,
+      patents_items: patItems,
+      awards_items: awardItems,
+      // Legacy text forms, still readable on old rows.
       certifications: str(p.certifications, 2000),
       publications: str(p.publications, 4000),
       awards: str(p.awards, 2000),
@@ -645,20 +663,49 @@ export function talentResumePdf(taiId: string, profile: any, answers: any, pii: 
     if (!jobs.length) body(S(profile.work_experience)); // legacy free text
   }
 
-  if (S(profile.publications)) { heading("Publications"); body(S(profile.publications)); }
+  const pubs: any[] = Array.isArray(profile.publications_items) ? profile.publications_items : [];
+  if (pubs.length || S(profile.publications)) {
+    heading("Publications");
+    for (const it of pubs) body([S(it.title), S(it.date)].filter(Boolean).join(" \u2014 "));
+    if (!pubs.length) body(S(profile.publications));
+  }
+
+  const pats: any[] = Array.isArray(profile.patents_items) ? profile.patents_items : [];
+  if (pats.length) {
+    heading("Patents & Trademarks");
+    for (const it of pats) body([S(it.title), S(it.date)].filter(Boolean).join(" \u2014 "));
+  }
 
   const edu: any[] = Array.isArray(profile.education_items) ? profile.education_items : [];
   if (edu.length || S(profile.education)) {
     heading("Education");
     for (const e of edu) {
-      const line = [S(e.credential), S(e.institution)].filter(Boolean).join(" \u2014 ") + (S(e.years) ? `, ${S(e.years)}` : "");
+      const deg = [S(e.degree) || S(e.credential), S(e.major)].filter(Boolean).join(", ")
+        + (S(e.minor) ? ` (minor: ${S(e.minor)})` : "");
+      const line = [deg, S(e.institution)].filter(Boolean).join(" \u2014 ") + (S(e.years) ? `, ${S(e.years)}` : "");
       if (line.trim()) body(line);
+      if (S(e.comments)) push(S(e.comments), "R", 9, 12);
     }
     if (!edu.length) body(S(profile.education)); // legacy free text
   }
 
-  if (S(profile.certifications)) { heading("Certifications"); body(S(profile.certifications)); }
-  if (S(profile.awards)) { heading("Recognition"); body(S(profile.awards)); }
+  const certs: any[] = Array.isArray(profile.certifications_items) ? profile.certifications_items : [];
+  if (certs.length || S(profile.certifications)) {
+    heading("Certifications");
+    for (const c of certs) {
+      const bits = [S(c.name), S(c.year)].filter(Boolean).join(" \u2014 ")
+        + (S(c.expires) ? `, expires ${S(c.expires)}` : "");
+      if (bits.trim()) body(bits);
+    }
+    if (!certs.length) body(S(profile.certifications));
+  }
+
+  const awards: any[] = Array.isArray(profile.awards_items) ? profile.awards_items : [];
+  if (awards.length || S(profile.awards)) {
+    heading("Recognition");
+    for (const a of awards) body([S(a.title), S(a.date)].filter(Boolean).join(" \u2014 "));
+    if (!awards.length) body(S(profile.awards));
+  }
   if (toolRun.length) { heading("Frameworks, Tools & Platforms"); body(toolRun.join(" \u00b7 ")); }
 
   // Paginate: US Letter, 54pt margins, top-down cursor.
@@ -823,18 +870,45 @@ export function talentResumeDocx(taiId: string, profile: any, answers: any, pii:
     }
     if (!jobs.length) para(S(profile.work_experience));
   }
-  if (S(profile.publications)) { headingP("Publications"); para(S(profile.publications)); }
+  const pubs: any[] = Array.isArray(profile.publications_items) ? profile.publications_items : [];
+  if (pubs.length || S(profile.publications)) {
+    headingP("Publications");
+    for (const it of pubs) para([S(it.title), S(it.date)].filter(Boolean).join(" \u2014 "));
+    if (!pubs.length) para(S(profile.publications));
+  }
+  const pats: any[] = Array.isArray(profile.patents_items) ? profile.patents_items : [];
+  if (pats.length) {
+    headingP("Patents & Trademarks");
+    for (const it of pats) para([S(it.title), S(it.date)].filter(Boolean).join(" \u2014 "));
+  }
   const edu: any[] = Array.isArray(profile.education_items) ? profile.education_items : [];
   if (edu.length || S(profile.education)) {
     headingP("Education");
     for (const e of edu) {
-      const line = [S(e.credential), S(e.institution)].filter(Boolean).join(" \u2014 ") + (S(e.years) ? `, ${S(e.years)}` : "");
+      const deg = [S(e.degree) || S(e.credential), S(e.major)].filter(Boolean).join(", ")
+        + (S(e.minor) ? ` (minor: ${S(e.minor)})` : "");
+      const line = [deg, S(e.institution)].filter(Boolean).join(" \u2014 ") + (S(e.years) ? `, ${S(e.years)}` : "");
       if (line.trim()) para(line);
+      if (S(e.comments)) para(S(e.comments), { size: 18 });
     }
     if (!edu.length) para(S(profile.education));
   }
-  if (S(profile.certifications)) { headingP("Certifications"); para(S(profile.certifications)); }
-  if (S(profile.awards)) { headingP("Recognition"); para(S(profile.awards)); }
+  const certs: any[] = Array.isArray(profile.certifications_items) ? profile.certifications_items : [];
+  if (certs.length || S(profile.certifications)) {
+    headingP("Certifications");
+    for (const c of certs) {
+      const bits = [S(c.name), S(c.year)].filter(Boolean).join(" \u2014 ")
+        + (S(c.expires) ? `, expires ${S(c.expires)}` : "");
+      if (bits.trim()) para(bits);
+    }
+    if (!certs.length) para(S(profile.certifications));
+  }
+  const awardsD: any[] = Array.isArray(profile.awards_items) ? profile.awards_items : [];
+  if (awardsD.length || S(profile.awards)) {
+    headingP("Recognition");
+    for (const a of awardsD) para([S(a.title), S(a.date)].filter(Boolean).join(" \u2014 "));
+    if (!awardsD.length) para(S(profile.awards));
+  }
   if (toolRun.length) { headingP("Frameworks, Tools & Platforms"); para(toolRun.join(" \u00b7 ")); }
 
   const enc = new TextEncoder();

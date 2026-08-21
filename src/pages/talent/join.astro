@@ -94,12 +94,21 @@ const jsonld = JSON.stringify({
     <div id="edu-list"></div>
     <button id="edu-add" type="button" class="t-secondary">+ Add education</button>
 
-    <label class="bg-label" style="margin-top:1rem">Certifications
-      <textarea id="p-certifications" rows="3" maxlength="2000" placeholder="One per line, e.g. Certified ScrumMaster (CSM), Scrum Alliance — 2021"></textarea></label>
-    <label class="bg-label">Publications, patents, talks
-      <textarea id="p-publications" rows="3" maxlength="4000"></textarea></label>
-    <label class="bg-label">Awards and recognition
-      <textarea id="p-awards" rows="3" maxlength="2000"></textarea></label>
+    <h4>Certifications</h4>
+    <div id="cert-list"></div>
+    <button id="cert-add" type="button" class="t-secondary">+ Add a certification</button>
+
+    <h4>Publications and talks</h4>
+    <div id="pub-list"></div>
+    <button id="pub-add" type="button" class="t-secondary">+ Add a publication</button>
+
+    <h4>Patents and trademarks</h4>
+    <div id="pat-list"></div>
+    <button id="pat-add" type="button" class="t-secondary">+ Add a patent or trademark</button>
+
+    <h4>Awards and recognition</h4>
+    <div id="award-list"></div>
+    <button id="award-add" type="button" class="t-secondary">+ Add an award</button>
     <button id="t-save-btn" type="button">Save progress</button>
     <p id="t-save-msg" class="t-msg" role="status"></p>
 
@@ -371,17 +380,58 @@ const jsonld = JSON.stringify({
       d.innerHTML = `
         <div class="rb-grid">
           <label>Institution <input class="e-institution" maxlength="140" /></label>
-          <label>Degree or credential <input class="e-credential" maxlength="140" placeholder="MSc Computer Science" /></label>
+          <label>Degree <input class="e-degree" maxlength="120" placeholder="Master of Science" /></label>
+          <label>Major <input class="e-major" maxlength="120" placeholder="Computer Science" /></label>
+          <label>Minor <input class="e-minor" maxlength="120" /></label>
           <label>Years <input class="e-years" maxlength="30" placeholder="2018" /></label>
         </div>
+        <label class="rb-desc">Comments <textarea class="e-comments" rows="2" maxlength="500" placeholder="Honors, thesis topic, GPA — anything worth noting."></textarea></label>
         <button type="button" class="rb-remove">Remove</button>`;
       d.querySelector('.e-institution').value = e.institution || '';
-      d.querySelector('.e-credential').value = e.credential || '';
+      // Legacy rows stored one combined credential; it lands in Degree for re-splitting.
+      d.querySelector('.e-degree').value = e.degree || e.credential || '';
+      d.querySelector('.e-major').value = e.major || '';
+      d.querySelector('.e-minor').value = e.minor || '';
       d.querySelector('.e-years').value = e.years || '';
+      d.querySelector('.e-comments').value = e.comments || '';
       d.querySelector('.rb-remove').addEventListener('click', () => d.remove());
       $('edu-list').appendChild(d);
       eduSeq++;
     }
+
+    // ---- Small dated repeaters: certifications, publications, patents, awards.
+    // One factory; each kind differs only in its field set.
+    const MINI = {
+      cert:  { list: 'cert-list',  fields: [['name', 'Certification', 140, 'Certified ScrumMaster (CSM), Scrum Alliance'], ['year', 'Year', 20, '2021'], ['expires', 'Expiration', 20, '2027 or None']] },
+      pub:   { list: 'pub-list',   fields: [['title', 'Publication or talk', 200, 'Title, publisher or venue'], ['date', 'Date', 20, '2024']] },
+      pat:   { list: 'pat-list',   fields: [['title', 'Patent or trademark', 200, 'US 1,234,567 or Mark™'], ['date', 'Date', 20, '2023']] },
+      award: { list: 'award-list', fields: [['title', 'Award', 200, "President's Club"], ['date', 'Date', 20, '2004']] },
+    };
+    function miniRow(kind, v) {
+      v = v || {};
+      const cfg = MINI[kind];
+      const d = document.createElement('div');
+      d.className = 'rb-card rb-mini'; d.dataset.kind = kind;
+      d.innerHTML = '<div class="rb-grid rb-wide">' + cfg.fields.map(([k, label, max, ph]) =>
+        `<label class="${k === 'name' || k === 'title' ? 'rb-span2' : ''}">${label} <input class="${kind}-${k}" maxlength="${max}" placeholder="${ph.replace(/"/g, '&quot;')}" /></label>`
+      ).join('') + '</div><button type="button" class="rb-remove">Remove</button>';
+      for (const [k] of cfg.fields) d.querySelector(`.${kind}-${k}`).value = v[k] || '';
+      d.querySelector('.rb-remove').addEventListener('click', () => d.remove());
+      $(cfg.list).appendChild(d);
+    }
+    function miniCollect(kind) {
+      const cfg = MINI[kind];
+      return [...document.querySelectorAll(`#${cfg.list} .rb-card`)].map((d) => {
+        const o = {};
+        for (const [k] of cfg.fields) o[k] = d.querySelector(`.${kind}-${k}`).value;
+        return o;
+      }).filter((o) => Object.values(o).some(Boolean));
+    }
+    $('cert-add').addEventListener('click', () => miniRow('cert'));
+    $('pub-add').addEventListener('click', () => miniRow('pub'));
+    $('pat-add').addEventListener('click', () => miniRow('pat'));
+    $('award-add').addEventListener('click', () => miniRow('award'));
+
     function collectJobs() {
       return [...document.querySelectorAll('#jobs-list .rb-card')].map((d) => ({
         employer: d.querySelector('.j-employer').value, title: d.querySelector('.j-title').value,
@@ -392,9 +442,12 @@ const jsonld = JSON.stringify({
     function collectEdu() {
       return [...document.querySelectorAll('#edu-list .rb-card')].map((d) => ({
         institution: d.querySelector('.e-institution').value,
-        credential: d.querySelector('.e-credential').value,
+        degree: d.querySelector('.e-degree').value,
+        major: d.querySelector('.e-major').value,
+        minor: d.querySelector('.e-minor').value,
         years: d.querySelector('.e-years').value,
-      })).filter((e) => e.institution || e.credential);
+        comments: d.querySelector('.e-comments').value,
+      })).filter((e) => e.institution || e.degree || e.major);
     }
     $('job-add').addEventListener('click', () => jobRow());
     $('edu-add').addEventListener('click', () => eduRow());
@@ -503,7 +556,14 @@ const jsonld = JSON.stringify({
             const uni = rest.match(/\b(university|college|institute|school|polytechnic|academy|tu\s|iit\s)/i);
             if (uni && uni.index > 0) { credential = rest.slice(0, uni.index).replace(/[,;—–-]\s*$/, '').trim(); institution = rest.slice(uni.index).trim(); }
           }
-          entries.push({ institution, credential, years });
+          // "Master of Arts, Political Science (minor: Business Statistics)"
+          // -> degree, major, minor. No comma means the whole thing is the degree.
+          let degree = credential, major = '', minor = '';
+          const mMinor = credential.match(/\(\s*minors?\s*:?\s*([^)]+)\)/i);
+          if (mMinor) { minor = mMinor[1].trim(); credential = credential.replace(mMinor[0], '').trim(); degree = credential; }
+          const dci = credential.indexOf(',');
+          if (dci > 0) { degree = credential.slice(0, dci).trim(); major = credential.slice(dci + 1).trim(); }
+          entries.push({ institution, degree, major, minor, years });
         }
         if (entries.length) {
           $('edu-list').innerHTML = '';
@@ -512,9 +572,37 @@ const jsonld = JSON.stringify({
         }
       }
 
-      for (const [key, id, cap] of [['certifications', 'p-certifications', 2000], ['publications', 'p-publications', 4000], ['awards', 'p-awards', 2000]]) {
-        const text = buckets[key].filter(Boolean).join('\n').replace(/^[-•*]\s*/gm, '').trim().slice(0, cap);
-        if (text) { $(id).value = text; filled.push(key); }
+      // Certifications, publications, awards: one entry per non-empty line,
+      // with a year pulled off the line. Patent- or trademark-looking lines
+      // are peeled out of any of those buckets into their own section.
+      const lineEntries = (bucket) => buckets[bucket]
+        .map((l) => l.replace(/^[-•*]\s*/, '').trim()).filter(Boolean);
+      const yearOf = (l) => { const m = l.match(/(19|20)\d{2}/); return m ? m[0] : ''; };
+      const stripYear = (l) => l.replace(/[,;—–-]?\s*\(?((19|20)\d{2})\)?\.?\s*$/, '').trim();
+      const isPatent = (l) => /\bpatent\b|\btrademark\b|™|®|\bUS\s?\d{1,2}[,.]\d{3}[,.]\d{3}/i.test(l);
+      const patents = [];
+      const route = (bucket, kind, extra) => {
+        const rows = [];
+        for (const l of lineEntries(bucket)) {
+          if (isPatent(l)) { patents.push({ title: stripYear(l), date: yearOf(l) }); continue; }
+          rows.push(extra(l));
+        }
+        if (rows.length) {
+          $(MINI[kind].list).innerHTML = '';
+          rows.slice(0, 20).forEach((r) => miniRow(kind, r));
+          filled.push(rows.length + ' ' + bucket);
+        }
+      };
+      route('certifications', 'cert', (l) => {
+        const exp = l.match(/expir\w*\s*:?\s*((19|20)\d{2})/i);
+        return { name: stripYear(l).replace(/[,;—–-]?\s*expir\w*\s*:?\s*(19|20)\d{2}\.?/i, '').trim(), year: yearOf(l), expires: exp ? exp[1] : '' };
+      });
+      route('publications', 'pub', (l) => ({ title: stripYear(l), date: yearOf(l) }));
+      route('awards', 'award', (l) => ({ title: stripYear(l), date: yearOf(l) }));
+      if (patents.length) {
+        $(MINI.pat.list).innerHTML = '';
+        patents.slice(0, 15).forEach((r) => miniRow('pat', r));
+        filled.push(patents.length + ' patents/trademarks');
       }
 
       say('t-paste-msg', filled.length
@@ -532,7 +620,7 @@ const jsonld = JSON.stringify({
         $('step-form').hidden = false;
         $('t-whoami').textContent = d.email_masked;
         $('t-taiid').textContent = d.tai_id;
-        for (const k of ['first_name', 'headline', 'location', 'availability', 'rate', 'summary', 'certifications', 'publications', 'awards']) {
+        for (const k of ['first_name', 'headline', 'location', 'availability', 'rate', 'summary']) {
           if (d.profile && d.profile[k] && $('p-' + k)) $('p-' + k).value = d.profile[k];
         }
         const pj = (d.profile && d.profile.jobs) || [];
@@ -543,9 +631,23 @@ const jsonld = JSON.stringify({
         // Legacy free-text profiles predate the structured builder: carry the
         // text into one card so a resubmit never silently drops it.
         if (!pj.length && d.profile && d.profile.work_experience) jobRow({ description: d.profile.work_experience });
-        if (!pe.length && d.profile && d.profile.education) eduRow({ credential: '', institution: d.profile.education.slice(0, 140) });
-        if (!$('#jobs-list .rb-card') && !document.querySelector('#jobs-list .rb-card')) jobRow();
+        if (!pe.length && d.profile && d.profile.education) eduRow({ degree: '', institution: d.profile.education.slice(0, 140) });
+        if (!document.querySelector('#jobs-list .rb-card')) jobRow();
         if (!document.querySelector('#edu-list .rb-card')) eduRow();
+        // Dated entries; legacy free-text fields split one entry per line so a
+        // resubmit never drops what was typed before the structured version.
+        const legacyLines = (t) => (t || '').split('\n').map((l) => l.replace(/^[-•*]\s*/, '').trim()).filter(Boolean);
+        const yearIn = (l) => { const m = l.match(/(19|20)\d{2}/); return m ? m[0] : ''; };
+        const fillMini = (kind, arr, legacyText, mk) => {
+          $(MINI[kind].list).innerHTML = '';
+          if (arr && arr.length) arr.forEach((v) => miniRow(kind, v));
+          else legacyLines(legacyText).forEach((l) => miniRow(kind, mk(l)));
+          if (!document.querySelector(`#${MINI[kind].list} .rb-card`)) miniRow(kind);
+        };
+        fillMini('cert', d.profile && d.profile.certifications_items, d.profile && d.profile.certifications, (l) => ({ name: l, year: yearIn(l), expires: '' }));
+        fillMini('pub', d.profile && d.profile.publications_items, d.profile && d.profile.publications, (l) => ({ title: l, date: yearIn(l) }));
+        fillMini('pat', d.profile && d.profile.patents_items, '', (l) => ({ title: l, date: yearIn(l) }));
+        fillMini('award', d.profile && d.profile.awards_items, d.profile && d.profile.awards, (l) => ({ title: l, date: yearIn(l) }));
         const pii = d.pii || {};
         for (const k of ['name_first', 'name_middle', 'name_last', 'phone_area', 'phone_num',
                          'addr_street', 'addr_city', 'addr_region', 'addr_postal', 'country']) {
@@ -594,9 +696,13 @@ const jsonld = JSON.stringify({
         };
       }
       const profile = {};
-      for (const k of ['first_name', 'headline', 'location', 'availability', 'rate', 'summary', 'certifications', 'publications', 'awards']) profile[k] = $('p-' + k).value;
+      for (const k of ['first_name', 'headline', 'location', 'availability', 'rate', 'summary']) profile[k] = $('p-' + k).value;
       profile.jobs = collectJobs();
       profile.education_items = collectEdu();
+      profile.certifications_items = miniCollect('cert');
+      profile.publications_items = miniCollect('pub');
+      profile.patents_items = miniCollect('pat');
+      profile.awards_items = miniCollect('award');
       const pii = {
         name_first: $('pii-name_first').value, name_middle: $('pii-name_middle').value,
         name_last: $('pii-name_last').value,
@@ -701,7 +807,10 @@ const jsonld = JSON.stringify({
     .rb-remove { background: none; border: none; color: #b42318; font: inherit; font-size: .85em; cursor: pointer; padding: .4rem 0 0; }
     .rb-remove:hover { text-decoration: underline; }
     #job-add, #edu-add { margin-top: .2rem; }
-    @media (max-width: 40rem) { .rb-grid { grid-template-columns: 1fr; } }
+    .rb-wide { grid-template-columns: 2fr 1fr 1fr; }
+    .rb-span2 { grid-column: span 1; }
+    .rb-mini { padding-bottom: .4rem; }
+    @media (max-width: 40rem) { .rb-grid, .rb-wide { grid-template-columns: 1fr; } }
     .t-secondary { background: #fff !important; color: #201868 !important; border: 1.5px solid #201868 !important; }
     .q-row { margin: .9rem 0; max-width: 44rem; }
     .q-label { display: block; font-weight: 600; margin-bottom: .25rem; }
