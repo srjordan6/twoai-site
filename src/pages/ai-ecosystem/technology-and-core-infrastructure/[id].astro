@@ -562,6 +562,58 @@ const licLine = (sec.licences || [])
         </section>
       ))}
 
+      {sec.price_moves?.length > 0 && (
+        <section class="letter-block">
+          <h2 id="price-changes">Price changes <span class="n">{sec.price_moves.length}</span></h2>
+          <p>Input-token prices that moved since {sec.price_moves[0].since}, from this site's own
+            daily snapshots of the routing catalog. Largest change first; a negative percentage is
+            a price cut.</p>
+          <table class="pay">
+            <thead><tr><th>Model</th><th>Provider</th><th class="num">Was $/M</th><th class="num">Now $/M</th><th class="num">Change</th></tr></thead>
+            <tbody>
+              {sec.price_moves.map((m) => (
+                <tr>
+                  <td><a href={m.url} rel="noopener">{m.name}</a></td>
+                  <td>{m.provider}</td>
+                  <td class="num">{money(m.from_pm)}</td>
+                  <td class="num">{money(m.to_pm)}</td>
+                  <td class="num">{m.pct > 0 ? `+${m.pct}%` : `${m.pct}%`}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
+      {sec.multi_serving?.length > 0 && (
+        <section class="letter-block">
+          <h2 id="serving-prices">Same model, different serving prices <span class="n">{sec.multi_serving.length}</span></h2>
+          <p>These models are served by two or more operators at different per-token prices —
+            sometimes at different quantizations, which trade a little quality for cost. The
+            spread between the cheapest and most expensive serving of the same weights is real
+            money at volume. Widest spread first.</p>
+          {sec.multi_serving.map((m) => (
+            <details class="msrv">
+              <summary><a href={m.url} rel="noopener">{m.name}</a> — {money(m.low_pm)} to {money(m.high_pm)}/M in across {m.endpoints.length} operators</summary>
+              <table class="pay">
+                <thead><tr><th>Operator</th><th class="num">Context</th><th>Quantization</th><th class="num">$/M in</th><th class="num">$/M out</th></tr></thead>
+                <tbody>
+                  {m.endpoints.map((e) => (
+                    <tr>
+                      <td>{e.provider}</td>
+                      <td class="num">{e.context ? ctx(e.context) : '—'}</td>
+                      <td>{e.quantization || '—'}</td>
+                      <td class="num">{money(e.prompt_pm)}</td>
+                      <td class="num">{money(e.completion_pm)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </details>
+          ))}
+        </section>
+      )}
+
       {sec.retiring?.length > 0 && (
         <section class="letter-block">
           <h2 id="retirements">Scheduled retirements <span class="n">{sec.retiring.length}</span></h2>
@@ -672,4 +724,7 @@ const licLine = (sec.licences || [])
   .vc-table a { color: #201868; text-decoration: none; font-weight: 600; }
   .vc-table a:hover { color: #F07800; }
   .vc-why { display: block; color: #7A8A9E; font-size: 13px; margin-top: 3px; font-weight: 400; }
+  .msrv { margin: 10px 0; }
+  .msrv summary { cursor: pointer; font-weight: 600; }
+  .msrv table { margin-top: 8px; }
 </style>
