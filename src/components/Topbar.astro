@@ -34,6 +34,7 @@
     <div class="topbar-left">
       <span class="topbar-translate notranslate" translate="no"><input id="twoai-lang-input" value="English" autocomplete="off" role="combobox" aria-expanded="false" aria-label="Translate this page. All languages shown on click; type to filter" /><span class="lang-caret" aria-hidden="true">&#9662;</span><ul id="twoai-lang-panel" class="lang-panel" hidden></ul><span id="google_translate_element" class="gt-hidden"></span></span>
     </div>
+    <a class="topbar-talent" href="/talent/login/">AI Talent Network Login</a>
     <div class="topbar-actions">
       <button type="button" class="search-toggle" aria-expanded="false" aria-controls="twoai-search-panel">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" width="15" height="15">
@@ -141,6 +142,17 @@
     gap: 30px; flex-wrap: wrap;
   }
   .topbar-left { display: flex; align-items: center; gap: 24px; }
+  .topbar-talent {
+    font-family: 'Poppins', sans-serif;
+    font-size: 11.5px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color .2s ease;
+  }
+  .topbar-talent:hover { color: var(--orange); }
   .topbar-actions { display: flex; align-items: center; gap: 22px; }
 
   .search-toggle {
@@ -205,6 +217,7 @@
     /* On phones the bar yields the CTA so the selector and search keep their
        full width. The consultation link stays reachable from the footer. */
     .topbar-cta { display: none; }
+    .topbar-talent { display: none; }
   }
 </style>
 
