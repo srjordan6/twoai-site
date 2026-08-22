@@ -1,11 +1,12 @@
 ---
-import Base from '../../layouts/Base.astro';
 import { readFileSync, existsSync } from 'node:fs';
 
 // One page per LIVE, approved profile, from the pipeline-published directory.
-// Everything rendered here passed human review; the page shows a first name
-// and profile id only, the photo and PDF are served by the Worker so an
-// expired profile takes them offline with it, and contact is relay-only.
+// The page IS the resume: a single paper sheet, typeset like the PDF the
+// Worker generates, with nothing around it but a way back to the site.
+// Identity stays first-name-only, contact is relay-only, and the photo and
+// downloads are served by the Worker so an expired profile takes them
+// offline with it.
 export async function getStaticPaths() {
   const f = 'content/talent/profiles.json';
   if (!existsSync(f)) return [];
@@ -17,7 +18,7 @@ export async function getStaticPaths() {
 }
 const { p, generated } = Astro.props;
 const name = p.first_name || 'Anonymous';
-const title = `${name} — ${p.tai_id} — AI Talent Network`;
+const title = `${name}${p.headline ? ' — ' + p.headline : ''} — AI Talent Network`;
 const desc = `${name}${p.headline ? ', ' + p.headline : ''}: verified AI skills profile ${p.tai_id} on The World of AI Talent Network.`;
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org', '@type': 'ProfilePage',
@@ -26,161 +27,192 @@ const jsonld = JSON.stringify({
   isPartOf: { '@type': 'WebSite', name: 'The World of AI', url: 'https://theworldofai.org/' },
 });
 const AV = { open: 'Open to work', freelance: 'Freelance / contract', 'not-looking': 'Not looking right now' };
+const relay = `mailto:theworldofai@inkboxmail.com?subject=${encodeURIComponent('Talent inquiry ' + p.tai_id)}`;
+const jobs = Array.isArray(p.jobs) ? p.jobs : [];
+const edu = Array.isArray(p.education_items) ? p.education_items : [];
+const certs = Array.isArray(p.certifications_items) ? p.certifications_items : [];
+const pubs = Array.isArray(p.publications_items) ? p.publications_items : [];
+const pats = Array.isArray(p.patents_items) ? p.patents_items : [];
+const awards = Array.isArray(p.awards_items) ? p.awards_items : [];
+const skills = Array.isArray(p.skills) ? p.skills : [];
+const matches = Array.isArray(p.matches) ? p.matches : [];
+const contactBits = [p.location, p.years ? `${p.years} years in AI/ML` : '', AV[p.availability] || '', p.rate || ''].filter(Boolean);
+const jobLine = (j) => [j.title, j.employer].filter(Boolean).join(', ');
+const jobMeta = (j) => [j.location, [j.start, j.end].filter(Boolean).join(' – ')].filter(Boolean).join(' | ');
+const eduLine = (e) => {
+  const deg = [e.degree || e.credential, e.major].filter(Boolean).join(', ');
+  return [deg + (e.minor ? ` (minor: ${e.minor})` : ''), e.institution].filter(Boolean).join(' — ');
+};
 ---
-<Base title={title} description={desc} current="/talent/" jsonld={jsonld}>
-  <p class="crumb"><a href="/ai-ecosystem/ecosystem-entities-market-and-operations/">Ecosystem Entities, Market and Operations</a> ›
-    <a href="/talent/">The AI Talent Network</a> › {p.tai_id}</p>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title}</title>
+  <meta name="description" content={desc} />
+  <link rel="canonical" href={`https://theworldofai.org/talent/${p.tai_id.toLowerCase()}/`} />
+  <link rel="icon" type="image/svg+xml" href="/brand/mark.svg" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script type="application/ld+json" set:html={jsonld} />
+</head>
+<body>
+  <nav class="bar">
+    <a class="back" href="https://theworldofai.org/talent/" aria-label="Back to The World of AI">&#8592; theworldofai.org</a>
+    <span class="dl">
+      <a href={`/api/talent/pdf/${p.tai_id}`} rel="nofollow">PDF</a>
+      <a href={`/api/talent/docx/${p.tai_id}`} rel="nofollow">DOCX</a>
+    </span>
+  </nav>
 
-  <div class="tp-head">
-    {p.has_photo && <img class="tp-photo" src={`/api/talent/photo/${p.tai_id}`} alt={`${name}'s headshot`} width="112" height="112" loading="lazy" />}
-    <div>
-      <h1>{name} <span class="tp-id">{p.tai_id}</span></h1>
-      {p.headline && <p class="tp-headline">{p.headline}</p>}
-      <p class="tp-meta">
-        {p.location && <span>{p.location}</span>}
-        {p.availability && AV[p.availability] && <span class="t-badge">{AV[p.availability]}</span>}
-        {p.rate && <span>{p.rate}</span>}
-        {p.years && <span>{p.years} years hands-on</span>}
-      </p>
-    </div>
-  </div>
-  <p class="meta-line">Profile verified by email and reviewed by a person. Last updated: {p.updated || generated}.</p>
+  <main class="sheet">
+    <header class="head">
+      <div class="id">
+        <h1>{name}</h1>
+        {p.headline && <p class="headline">{p.headline}</p>}
+        {contactBits.length > 0 && <p class="contact">{contactBits.join('  ·  ')}</p>}
+        <p class="contact"><a href={relay}>Contact via The World of AI relay</a>  ·  Profile {p.tai_id}</p>
+      </div>
+      {p.has_photo && <img class="photo" src={`/api/talent/photo/${p.tai_id}`} alt={`${name}'s photo`} width="112" height="112" />}
+    </header>
 
-  <div class="tp-contact">
-    <h2>Contact {name}</h2>
-    <p>Email <b>theworldofai@inkboxmail.com</b> with <b>{p.tai_id}</b> in the subject line
-      and your message is relayed. {name} decides whether to reply; no contact details
-      appear on this page.</p>
-    <p><a class="talent-cta" href={`/api/talent/pdf/${p.tai_id}`}>Download {name}'s resume (PDF)</a>
-      {!p.share_pdf && <span class="tp-note"> Identity-redacted: first name only, contact through the relay.</span>}</p>
-  </div>
+    {p.summary && (
+      <section>
+        <h2>Professional Summary</h2>
+        <p>{p.summary}</p>
+      </section>
+    )}
 
-  {(p.skills || []).length > 0 && (
-    <>
-      <h2>Verified skills</h2>
-      {(p.skills || []).map((s) => (
-        <div class="tp-skill">
-          <h3>{s.label}</h3>
-          <p>{s.items.join(' · ')}</p>
-        </div>
-      ))}
-    </>
-  )}
+    {skills.length > 0 && (
+      <section>
+        <h2>Core Competencies</h2>
+        {skills.map((s) => (
+          <p class="comp"><strong>{s.label}:</strong> {s.items.join(' · ')}</p>
+        ))}
+      </section>
+    )}
 
-  {(p.matches || []).length > 0 && (
-    <>
-      <h2>Open roles matching this profile</h2>
-      <p class="tp-match-note">Matched nightly against live listings from company job boards; each link goes to the original posting.</p>
-      <ul class="tp-matches">
-        {(p.matches || []).map((m) => (
-          <li>
-            <a href={m.url} rel="nofollow noopener">{m.title}</a> — {m.company}
-            {m.location && <span class="tp-mloc"> · {m.location}</span>}
-            {m.remote && <span class="tp-mloc"> · Remote</span>}
-          </li>
+    {(jobs.length > 0 || p.work_experience) && (
+      <section>
+        <h2>Professional Experience</h2>
+        {jobs.map((j) => (
+          <div class="job">
+            <p class="job-head">{jobLine(j)}</p>
+            {jobMeta(j) && <p class="job-meta">{jobMeta(j)}</p>}
+            {j.description && <p class="job-desc">{j.description}</p>}
+          </div>
+        ))}
+        {jobs.length === 0 && <p>{p.work_experience}</p>}
+      </section>
+    )}
+
+    {(pubs.length > 0 || p.publications) && (
+      <section>
+        <h2>Publications</h2>
+        <ul>
+          {pubs.map((x) => <li>{[x.title, x.date].filter(Boolean).join(' — ')}</li>)}
+          {pubs.length === 0 && <li>{p.publications}</li>}
+        </ul>
+      </section>
+    )}
+
+    {pats.length > 0 && (
+      <section>
+        <h2>Patents &amp; Trademarks</h2>
+        <ul>{pats.map((x) => <li>{[x.title, x.date].filter(Boolean).join(' — ')}</li>)}</ul>
+      </section>
+    )}
+
+    {(edu.length > 0 || p.education) && (
+      <section>
+        <h2>Education</h2>
+        {edu.map((e) => (
+          <div class="job">
+            <p class="job-head">{eduLine(e)}</p>
+            {e.years && <p class="job-meta">{e.years}</p>}
+            {e.comments && <p class="job-desc">{e.comments}</p>}
+          </div>
+        ))}
+        {edu.length === 0 && <p>{p.education}</p>}
+      </section>
+    )}
+
+    {(certs.length > 0 || p.certifications) && (
+      <section>
+        <h2>Certifications</h2>
+        <ul>
+          {certs.map((c) => <li>{[c.name, c.year].filter(Boolean).join(' — ')}{c.expires ? `, expires ${c.expires}` : ''}</li>)}
+          {certs.length === 0 && <li>{p.certifications}</li>}
+        </ul>
+      </section>
+    )}
+
+    {(awards.length > 0 || p.awards) && (
+      <section>
+        <h2>Awards &amp; Honors</h2>
+        <ul>
+          {awards.map((a) => <li>{[a.title, a.date].filter(Boolean).join(' — ')}</li>)}
+          {awards.length === 0 && <li>{p.awards}</li>}
+        </ul>
+      </section>
+    )}
+
+    <p class="foot">Verified by email and reviewed by a person · The World of AI Talent Network · Last updated {p.updated || generated}</p>
+  </main>
+
+  {matches.length > 0 && (
+    <details class="matches">
+      <summary>Open roles matching this profile ({matches.length})</summary>
+      <ul>
+        {matches.map((m) => (
+          <li><a href={m.url} rel="nofollow noopener">{m.title}</a> — {m.company}{m.location ? ` · ${m.location}` : ''}{m.remote ? ' · Remote' : ''}</li>
         ))}
       </ul>
-    </>
+      <p class="m-note">Matched nightly against live listings from company job boards; each link opens the original posting.</p>
+    </details>
   )}
-
-  {p.summary && <><h2>Summary</h2><p>{p.summary}</p></>}
-
-  {((p.jobs || []).length > 0 || p.work_experience) && (
-    <>
-      <h2>Work experience</h2>
-      {(p.jobs || []).map((j) => (
-        <div class="tp-job">
-          <h3>{[j.employer, j.title].filter(Boolean).join(' — ')}</h3>
-          <p class="tp-jobmeta">{[[j.start, j.end].filter(Boolean).join(' – '), j.location].filter(Boolean).join('  ·  ')}</p>
-          {j.description && <p class="tp-pre">{j.description}</p>}
-        </div>
-      ))}
-      {!(p.jobs || []).length && p.work_experience && <p class="tp-pre">{p.work_experience}</p>}
-    </>
-  )}
-
-  {((p.education_items || []).length > 0 || p.education) && (
-    <>
-      <h2>Education</h2>
-      {(p.education_items || []).map((e) => (
-        <div class="tp-eduitem">
-          <p class="tp-edu">{[[e.degree || e.credential, e.major].filter(Boolean).join(', ') + (e.minor ? ` (minor: ${e.minor})` : ''), e.institution].filter(Boolean).join(' — ')}{e.years ? `, ${e.years}` : ''}</p>
-          {e.comments && <p class="tp-educomment">{e.comments}</p>}
-        </div>
-      ))}
-      {!(p.education_items || []).length && p.education && <p class="tp-pre">{p.education}</p>}
-    </>
-  )}
-
-  {((p.certifications_items || []).length > 0 || p.certifications) && (
-    <>
-      <h2>Certifications</h2>
-      {(p.certifications_items || []).map((c) => (
-        <p class="tp-edu">{[c.name, c.year].filter(Boolean).join(' — ')}{c.expires ? `, expires ${c.expires}` : ''}</p>
-      ))}
-      {!(p.certifications_items || []).length && p.certifications && <p class="tp-pre">{p.certifications}</p>}
-    </>
-  )}
-
-  {((p.publications_items || []).length > 0 || p.publications) && (
-    <>
-      <h2>Publications and talks</h2>
-      {(p.publications_items || []).map((it) => (
-        <p class="tp-edu">{[it.title, it.date].filter(Boolean).join(' — ')}</p>
-      ))}
-      {!(p.publications_items || []).length && p.publications && <p class="tp-pre">{p.publications}</p>}
-    </>
-  )}
-
-  {(p.patents_items || []).length > 0 && (
-    <>
-      <h2>Patents and trademarks</h2>
-      {(p.patents_items || []).map((it) => (
-        <p class="tp-edu">{[it.title, it.date].filter(Boolean).join(' — ')}</p>
-      ))}
-    </>
-  )}
-
-  {((p.awards_items || []).length > 0 || p.awards) && (
-    <>
-      <h2>Recognition</h2>
-      {(p.awards_items || []).map((a) => (
-        <p class="tp-edu">{[a.title, a.date].filter(Boolean).join(' — ')}</p>
-      ))}
-      {!(p.awards_items || []).length && p.awards && <p class="tp-pre">{p.awards}</p>}
-    </>
-  )}
-
-  <p class="meta-line">Listed on <a href="/talent/">The AI Talent Network</a>, free to join.
-    Profiles renew every 30 days; this page disappears if its owner stops renewing.</p>
 
   <style is:global>
-    .crumb { font-size: .9em; color: #667085; }
-    .crumb a { color: inherit; }
-    .tp-head { display: flex; gap: 1.2rem; align-items: center; margin: .6rem 0 0; }
-    .tp-photo { border-radius: 10px; object-fit: cover; border: 1px solid #e3e6ea; }
-    .tp-id { font-size: .55em; color: #667085; font-family: monospace; vertical-align: middle; }
-    .tp-headline { font-size: 1.1em; margin: .2rem 0; }
-    .tp-meta span { margin-right: .9rem; color: #475467; }
-    .t-badge { display: inline-block; background: #eef6ee; color: #1a7f37; font-size: .85em;
-      font-weight: 700; padding: .1rem .55rem; border-radius: 999px; }
-    .tp-contact { border: 1px solid #e3e6ea; border-left: 4px solid #F07800; border-radius: 8px;
-      padding: .9rem 1.2rem; margin: 1.2rem 0; }
-    .tp-contact h2 { margin-top: 0; }
-    .talent-cta { display: inline-block; background: #F07800; color: #fff; font-weight: 700;
-      padding: .55rem 1.1rem; border-radius: 6px; text-decoration: none; }
-    .tp-skill h3 { margin-bottom: .15rem; }
-    .tp-skill p { margin-top: 0; }
-    .tp-matches li { margin-bottom: .35rem; }
-    .tp-match-note { color: var(--gray, #7A8A9E); font-size: .9rem; }
-    .tp-mloc { color: var(--gray, #7A8A9E); }
-    .tp-pre { white-space: pre-wrap; }
-    .tp-note { color: #667085; font-size: .9em; }
-    .tp-job { margin: .8rem 0 1rem; }
-    .tp-job h3 { margin-bottom: .1rem; }
-    .tp-jobmeta { margin: 0 0 .3rem; color: #667085; font-size: .92em; }
-    .tp-edu { margin: .25rem 0; }
-    .tp-eduitem { margin: .25rem 0 .5rem; }
-    .tp-educomment { margin: 0; color: #667085; font-size: .92em; }
+    :root { --navy:#201868; --orange:#F07800; --ink:#26272b; --gray:#7A8A9E; --paper:#ffffff; --desk:#eef0f4; }
+    * { box-sizing: border-box; margin: 0; }
+    body { background: var(--desk); font-family: 'Poppins', Arial, sans-serif; color: var(--ink); font-size: 15px; line-height: 1.55; }
+    .bar { max-width: 860px; margin: 0 auto; padding: 14px 10px; display: flex; justify-content: space-between; align-items: center; }
+    .bar a { color: var(--navy); text-decoration: none; font-weight: 500; font-size: .92rem; }
+    .bar a:hover { color: var(--orange); }
+    .dl a { margin-left: 14px; color: var(--gray); }
+    .sheet { max-width: 860px; margin: 0 auto 28px; background: var(--paper); padding: 56px 64px; box-shadow: 0 2px 24px rgba(32,24,104,.12); border-top: 5px solid var(--orange); }
+    .head { display: flex; justify-content: space-between; gap: 24px; border-bottom: 2px solid var(--navy); padding-bottom: 18px; margin-bottom: 8px; }
+    h1 { font-family: 'Lora', Georgia, serif; color: var(--navy); font-size: 2.2rem; line-height: 1.15; }
+    .headline { font-weight: 600; color: var(--navy); margin-top: 4px; }
+    .contact { color: var(--gray); font-size: .9rem; margin-top: 6px; }
+    .contact a { color: var(--orange); text-decoration: none; }
+    .photo { border-radius: 8px; object-fit: cover; }
+    section { margin-top: 26px; }
+    h2 { font-family: 'Lora', Georgia, serif; color: var(--navy); font-size: 1.12rem; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+    h2::after { content: ""; display: block; width: 44px; height: 3px; background: var(--orange); margin-top: 5px; }
+    .comp { margin-bottom: 6px; }
+    .comp strong { color: var(--navy); font-weight: 600; }
+    .job { margin-bottom: 14px; }
+    .job-head { font-weight: 600; color: var(--navy); }
+    .job-meta { color: var(--gray); font-size: .88rem; }
+    .job-desc { margin-top: 3px; }
+    ul { padding-left: 1.15rem; }
+    li { margin-bottom: 5px; }
+    .foot { margin-top: 34px; padding-top: 14px; border-top: 1px solid #e3e6ec; color: var(--gray); font-size: .8rem; }
+    .matches { max-width: 860px; margin: 0 auto 48px; background: #fff; padding: 18px 28px; box-shadow: 0 1px 10px rgba(32,24,104,.08); }
+    .matches summary { cursor: pointer; font-weight: 600; color: var(--navy); }
+    .matches ul { margin-top: 12px; }
+    .matches a { color: var(--navy); }
+    .m-note { color: var(--gray); font-size: .85rem; margin-top: 10px; }
+    @media (max-width: 700px) { .sheet { padding: 32px 22px; } .head { flex-direction: column; } }
+    @media print {
+      body { background: #fff; }
+      .bar, .matches { display: none; }
+      .sheet { box-shadow: none; margin: 0; max-width: none; padding: 0; border-top: none; }
+    }
   </style>
-</Base>
+</body>
+</html>
