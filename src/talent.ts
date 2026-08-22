@@ -246,8 +246,24 @@ export async function talentWeeklyDigest(env: TalentEnv): Promise<void> {
 //    person follows up; the assistant never guesses in mail any more than
 //    it does on the site.
 const MAIL_ANSWER_CAP = 5;
+// Where mail the bot cannot handle goes: member-relay messages and questions
+// the site does not cover are forwarded here in full, so nothing waits in a
+// mailbox nobody watches.
+const ESCALATE_TO = "srjordan@gmail.com";
 const SKIP_SENDER = /no-?reply|mailer-daemon|postmaster|notification|bounce|do-?not-?reply/i;
 const SKIP_SUBJECT = /^(auto:|automatic reply|autoreply|out of office|delivery status|undeliver)/i;
+
+async function escalateMail(base: string, H: Record<string, string>, m: any, bodyText: string, why: string): Promise<void> {
+  const r = await fetch(base, {
+    method: "POST", headers: H,
+    body: JSON.stringify({
+      recipients: { to: [ESCALATE_TO] },
+      subject: `[${why}] ${String(m.subject || "(no subject)")}`,
+      body_text: `Forwarded from the theworldofai relay mailbox (${why}).\n\nFrom: ${String(m.from_address || "")}\nReceived: ${String(m.created_at || "")}\nSubject: ${String(m.subject || "")}\n\n${bodyText || "(no body captured)"}\n\n--\nReply directly to the sender; this copy came from the auto-answer cron.`,
+    }),
+  });
+  if (!r.ok) console.log("mail-answer escalate http", r.status);
+}
 
 export async function talentMailAnswer(env: TalentEnv): Promise<void> {
   const key = (env.INKBOX_KEY_THEWORLDOFAI || "").trim();
@@ -277,10 +293,14 @@ export async function talentMailAnswer(env: TalentEnv): Promise<void> {
       if (SKIP_SENDER.test(from) || SKIP_SUBJECT.test(subject) || from.endsWith("@inkboxmail.com")) {
         await log("skipped"); handled++; continue;
       }
-      // Mail meant for a member goes to the member, not to a bot.
+      // Mail meant for a member goes to the member, not to a bot: star it
+      // and forward the full text to Stephen for the human relay.
       if (/TAI-[2-9A-HJ-NP-Z]{6}/i.test(subject)) {
+        const rr = await fetch(`${base}/${m.id}`, { headers: H });
+        const rb = rr.ok ? str(((await rr.json()) as any).body_text || "", 4000) : "";
         await fetch(`${base}/${m.id}`, { method: "PATCH", headers: H, body: JSON.stringify({ is_starred: true }) });
-        await log("relay_starred"); handled++; continue;
+        await escalateMail(base, H, m, rb, "member relay");
+        await log("relay_forwarded"); handled++; continue;
       }
       // Fetch the body; a GET with the API key also marks the message read.
       const gr = await fetch(`${base}/${m.id}`, { headers: H });
@@ -313,6 +333,7 @@ export async function talentMailAnswer(env: TalentEnv): Promise<void> {
       } else {
         reply = `Thanks for writing. The site does not cover that question yet, so rather than guess, a person will read your message and follow up.\n\n--\ntheworldofai.org`;
         await fetch(`${base}/${m.id}`, { method: "PATCH", headers: H, body: JSON.stringify({ is_starred: true }) });
+        await escalateMail(base, H, m, bodyText, "needs a human");
       }
       const sr = await fetch(base, {
         method: "POST", headers: H,
