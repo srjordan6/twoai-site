@@ -26,6 +26,8 @@ interface TalentEnv {
   ASSISTANT_DB: D1Database;
   TALENT_R2?: R2Bucket;
   INKBOX_KEY_THEWORLDOFAI?: string;
+  INKBOX_KEY_SRJ?: string;
+  INKBOX_KEY_COORDINATOR?: string;
   RESEND_API_KEY?: string;
   TURNSTILE_SECRET?: string;
   TALENT_RATE?: { limit(opts: { key: string }): Promise<{ success: boolean }> };
@@ -250,6 +252,17 @@ const MAIL_ANSWER_CAP = 5;
 // the site does not cover are forwarded here in full, so nothing waits in a
 // mailbox nobody watches.
 const ESCALATE_TO = "srjordan@gmail.com";
+// Every Inkbox mailbox the cron watches. answer=true runs questions through
+// the theworldofai RAG; the SRJ and coordinator boxes are different brands,
+// so their mail is acknowledged (or not) and forwarded to Stephen instead of
+// being answered from this site's content. A missing key skips that mailbox,
+// the same dark-launch rule as everything else here.
+const MAIL_BOXES: { email: string; keyEnv: "INKBOX_KEY_THEWORLDOFAI" | "INKBOX_KEY_SRJ" | "INKBOX_KEY_COORDINATOR"; answer: boolean; ack: string }[] = [
+  { email: MAILBOX, keyEnv: "INKBOX_KEY_THEWORLDOFAI", answer: true, ack: "" },
+  { email: "srj@inkboxmail.com", keyEnv: "INKBOX_KEY_SRJ", answer: false,
+    ack: "Thanks for reaching out to SRJ Consulting & Services. Your message has been received and forwarded to Stephen Jordan, who will respond personally.\n\n--\nsrjconsultingservices.com" },
+  { email: "coordinator@inkboxmail.com", keyEnv: "INKBOX_KEY_COORDINATOR", answer: false, ack: "" },
+];
 const SKIP_SENDER = /no-?reply|mailer-daemon|postmaster|notification|bounce|do-?not-?reply/i;
 const SKIP_SUBJECT = /^(auto:|automatic reply|autoreply|out of office|delivery status|undeliver)/i;
 
@@ -266,9 +279,15 @@ async function escalateMail(base: string, H: Record<string, string>, m: any, bod
 }
 
 export async function talentMailAnswer(env: TalentEnv): Promise<void> {
-  const key = (env.INKBOX_KEY_THEWORLDOFAI || "").trim();
+  for (const box of MAIL_BOXES) {
+    await answerMailbox(env, box);
+  }
+}
+
+async function answerMailbox(env: TalentEnv, box: { email: string; keyEnv: "INKBOX_KEY_THEWORLDOFAI" | "INKBOX_KEY_SRJ" | "INKBOX_KEY_COORDINATOR"; answer: boolean; ack: string }): Promise<void> {
+  const key = (env[box.keyEnv] || "").trim();
   if (!key) return;
-  const base = `https://inkbox.ai/api/v1/mail/mailboxes/${encodeURIComponent(MAILBOX)}/messages`;
+  const base = `https://inkbox.ai/api/v1/mail/mailboxes/${encodeURIComponent(box.email)}/messages`;
   const H = { "X-API-Key": key, "content-type": "application/json" };
   try {
     await env.ASSISTANT_DB.exec(
@@ -307,6 +326,25 @@ export async function talentMailAnswer(env: TalentEnv): Promise<void> {
       if (!gr.ok) { console.log("mail-answer get http", gr.status, m.id); continue; }
       const full = (await gr.json()) as any;
       const bodyText = str(full.body_text || full.snippet || "", 4000);
+
+      // Non-answering mailboxes (SRJ, coordinator): acknowledge when an ack
+      // is configured, forward everything to Stephen, done. No cross-brand
+      // answers from this site's content.
+      if (!box.answer) {
+        if (box.ack) {
+          await fetch(base, {
+            method: "POST", headers: H,
+            body: JSON.stringify({
+              recipients: { to: [from] },
+              subject: subject.toLowerCase().startsWith("re:") ? subject : "Re: " + subject,
+              body_text: box.ack,
+              in_reply_to_message_id: m.id,
+            }),
+          });
+        }
+        await escalateMail(base, H, m, bodyText, box.email.split("@")[0] + " inbox");
+        await log("forwarded"); handled++; continue;
+      }
       const question = (subject + "\n\n" + bodyText).trim();
       if (question.length < 8) { await log("empty"); handled++; continue; }
 
@@ -348,7 +386,7 @@ export async function talentMailAnswer(env: TalentEnv): Promise<void> {
       await log(answered ? "answered" : "held_for_human");
       handled++;
     }
-    if (handled) console.log("mail-answer handled", handled, "of", inbound.length, "unread");
+    if (handled) console.log("mail-answer", box.email, "handled", handled, "of", inbound.length, "unread");
   } catch (e) {
     console.log("mail-answer error", String(e).slice(0, 200));
   }
