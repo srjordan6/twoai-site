@@ -191,6 +191,9 @@ const jsonld = JSON.stringify({
       profile id in the subject.</p>
   </div>
 
+  <style>
+    .class-gate { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 4px 14px; padding: 10px 12px; border: 1px solid #d9dce4; border-radius: 8px; background: #fafbfd; }
+  </style>
   <script type="application/json" id="t-options" set:html={JSON.stringify(opts.questions || [])} />
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   <script>
@@ -292,10 +295,39 @@ const jsonld = JSON.stringify({
 
     function renderQuestions(saved) {
       const host = $('t-questions');
+      // The per-classification model dropdowns (keys models-*) hide behind a
+      // gate: pick the classifications you have worked with, and only those
+      // dropdowns appear. Anything with saved answers starts revealed.
+      const classQs = QUESTIONS.filter((q) => q.key.startsWith('models-'));
+      if (classQs.length) {
+        const gate = document.createElement('div');
+        gate.className = 'q-row';
+        const gateOpts = classQs.map((q) => {
+          const name = q.label.split(' — ')[0];
+          const prev = saved && saved[q.key];
+          const on = !!(prev && ((prev.selections || []).length || prev.other));
+          return `<label class="q-opt"><input type="checkbox" data-class-gate="${q.key}"${on ? ' checked' : ''}/> <span>${name}</span></label>`;
+        }).join('');
+        gate.innerHTML = `<span class="q-label">Which foundation model classifications have you worked with? Each one you pick opens its own model list below.</span>
+          <div class="class-gate">${gateOpts}</div>`;
+        host.appendChild(gate);
+        host.addEventListener('change', (e) => {
+          const k = e.target.getAttribute && e.target.getAttribute('data-class-gate');
+          if (k) {
+            const row = host.querySelector(`.q-row[data-model-class="${CSS.escape(k)}"]`);
+            if (row) row.hidden = !e.target.checked;
+          }
+        });
+      }
       for (const q of QUESTIONS) {
         const prev = (saved && saved[q.key]) || { selections: [], na: false, other: '' };
         const wrap = document.createElement('div');
         wrap.className = 'q-row';
+        if (q.key.startsWith('models-')) {
+          wrap.setAttribute('data-model-class', q.key);
+          const on = !!((prev.selections || []).length || prev.other);
+          wrap.hidden = !on;
+        }
         const esc = (v) => v.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
         const opts = q.options.map((o) =>
           `<label class="q-opt"><input type="checkbox" data-q="${esc(q.key)}" value="${esc(o)}"${prev.selections.includes(o) ? ' checked' : ''}/> <span>${esc(o)}</span></label>`

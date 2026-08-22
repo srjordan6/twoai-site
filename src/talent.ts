@@ -44,6 +44,11 @@ const QUESTION_KEYS = new Set([
   "models", "frameworks", "agents-mcp", "languages", "apis-integrations",
   "datasets", "infrastructure-hardware", "vector-dbs", "observability", "evaluation",
   "guardrails", "governance-frameworks", "deployment", "experience-years", "role-type",
+  "models-llm", "models-reasoning", "models-multimodal", "models-vision",
+  "models-image-gen", "models-video", "models-audio-speech", "models-music",
+  "models-embedding", "models-ocr-translation", "models-coding", "models-slm",
+  "models-edge", "models-robotics", "models-scientific", "models-medical",
+  "models-legal", "models-financial",
 ]);
 const AVAILABILITY = new Set(["open", "freelance", "not-looking", ""]);
 
@@ -94,6 +99,24 @@ async function ensureSchema(db: D1Database): Promise<void> {
 // because the renderers run in the Worker without a database round trip).
 const SKILL_CATS: [string, string][] = [
   ["models", "Foundation Models"],
+  ["models-llm", "Large Language Models"],
+  ["models-reasoning", "Reasoning Models"],
+  ["models-multimodal", "Multimodal Models"],
+  ["models-vision", "Vision Models"],
+  ["models-image-gen", "Image Generation Models"],
+  ["models-video", "Video Models"],
+  ["models-audio-speech", "Audio & Speech Models"],
+  ["models-music", "Music Models"],
+  ["models-embedding", "Embedding Models"],
+  ["models-ocr-translation", "OCR & Translation Models"],
+  ["models-coding", "Coding Models"],
+  ["models-slm", "Small Language Models"],
+  ["models-edge", "On-device & Edge Models"],
+  ["models-robotics", "Robotics Models"],
+  ["models-scientific", "Scientific Models"],
+  ["models-medical", "Medical Models"],
+  ["models-legal", "Legal Models"],
+  ["models-financial", "Financial Models"],
   ["frameworks", "Application Frameworks"],
   ["agents-mcp", "AI Agents & MCP"],
   ["languages", "Programming Languages & ML Frameworks"],
