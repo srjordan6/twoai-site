@@ -49,6 +49,7 @@ const isDSLic = sec.shape === 'ds-licensing';
 // Vibe Coding: a short authored explainer plus a routing table into the
 // sections that already cover each part of the job. See twoai_vibe_coding.go.
 const isVibe = sec.shape === 'vibe-coding';
+const isProv = sec.shape === 'serving-providers';
 const mdLite = (t: string) => t
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
@@ -84,6 +85,8 @@ const _descRaw = isHW
   ? `Live status for ${sec.total} AI API providers from their own status pages, with current incidents and a 30-day incident count per provider, refreshed daily.`
   : isPricing
   ? `Per-token API pricing for ${sec.total} AI models across ${sec.stats.provider_count} providers, in dollars per million tokens, refreshed daily. Median input price ${money(sec.stats.median_prompt_pm)}/M.`
+  : isProv
+  ? `${sec.total} AI model serving providers with headquarters country, datacenter regions, and links to terms, privacy policy, and live status pages. Refreshed daily.`
   : isAPI
   ? `${sec.total} ${sec.name.toLowerCase()} available over commercial APIs, with context window, per-token pricing, and release date, refreshed daily. ${sec.blurb}`
   : `The ${sec.total} most-downloaded open ${sec.name.toLowerCase()} on the Hugging Face Hub, with licence, downloads, and release date, refreshed daily. ${sec.blurb}`;
@@ -558,6 +561,57 @@ const licLine = (sec.licences || [])
           </table>
         </section>
       ))}
+
+      {sec.retiring?.length > 0 && (
+        <section class="letter-block">
+          <h2 id="retirements">Scheduled retirements <span class="n">{sec.retiring.length}</span></h2>
+          <p>Models with a published shutdown date. The date comes from the routing catalog's own
+            deprecation field; after it, calls to the model stop working and traffic must move to a
+            successor. Soonest first.</p>
+          <table class="pay">
+            <thead><tr><th>Model</th><th>Provider</th><th>Retires</th></tr></thead>
+            <tbody>
+              {sec.retiring.map((m) => (
+                <tr>
+                  <td><a href={m.url} rel="noopener">{m.name}</a></td>
+                  <td>{m.provider}</td>
+                  <td>{m.expires}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+    </>
+  )}
+
+  {isProv && (
+    <>
+      <p class="answer"><b>{sec.total} companies</b> run the inference behind AI model APIs. This
+        directory lists each serving provider with its headquarters country and, where published,
+        its datacenter regions — the two facts that decide which AI regulations (the EU AI Act,
+        data-residency rules, export controls) apply to a deployment — plus links to each
+        provider's own terms of service, privacy policy, and live status page.</p>
+      <p class="meta-line">Last verified: {sec.generated} · Source: the
+        {' '}<a href="https://openrouter.ai/models" rel="noopener">OpenRouter</a> public providers
+        API, refreshed daily. Policy and status links open the provider's own pages.</p>
+      <table class="pay">
+        <thead><tr><th>Provider</th><th>Headquarters</th><th>Datacenters</th><th>Links</th></tr></thead>
+        <tbody>
+          {sec.providers.map((p) => (
+            <tr>
+              <td>{p.name}</td>
+              <td>{p.hq || '—'}</td>
+              <td>{Array.isArray(p.datacenters) ? p.datacenters.join(', ') : '—'}</td>
+              <td>
+                {p.terms && <a href={p.terms} rel="noopener nofollow">Terms</a>}
+                {p.privacy && <> · <a href={p.privacy} rel="noopener nofollow">Privacy</a></>}
+                {p.status && <> · <a href={p.status} rel="noopener nofollow">Status</a></>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </>
   )}
 
