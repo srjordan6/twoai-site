@@ -67,6 +67,22 @@ const AV = { open: 'Open to work', freelance: 'Freelance / contract', 'not-looki
     </>
   )}
 
+  {(p.matches || []).length > 0 && (
+    <>
+      <h2>Open roles matching this profile</h2>
+      <p class="tp-match-note">Matched nightly against live listings from company job boards; each link goes to the original posting.</p>
+      <ul class="tp-matches">
+        {(p.matches || []).map((m) => (
+          <li>
+            <a href={m.url} rel="nofollow noopener">{m.title}</a> — {m.company}
+            {m.location && <span class="tp-mloc"> · {m.location}</span>}
+            {m.remote && <span class="tp-mloc"> · Remote</span>}
+          </li>
+        ))}
+      </ul>
+    </>
+  )}
+
   {p.summary && <><h2>Summary</h2><p>{p.summary}</p></>}
 
   {((p.jobs || []).length > 0 || p.work_experience) && (
@@ -155,6 +171,9 @@ const AV = { open: 'Open to work', freelance: 'Freelance / contract', 'not-looki
       padding: .55rem 1.1rem; border-radius: 6px; text-decoration: none; }
     .tp-skill h3 { margin-bottom: .15rem; }
     .tp-skill p { margin-top: 0; }
+    .tp-matches li { margin-bottom: .35rem; }
+    .tp-match-note { color: var(--gray, #7A8A9E); font-size: .9rem; }
+    .tp-mloc { color: var(--gray, #7A8A9E); }
     .tp-pre { white-space: pre-wrap; }
     .tp-note { color: #667085; font-size: .9em; }
     .tp-job { margin: .8rem 0 1rem; }

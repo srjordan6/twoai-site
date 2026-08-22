@@ -282,6 +282,7 @@ const api = [
   ['content/week/index.json', 'public/api/weeks.json'],
   ['content/compliance/index.json', 'public/api/compliance.json'],
   ['content/mcp/index.json', 'public/api/mcp.json'],
+  ['content/talent/matches.json', 'public/api/talent-matches.json'],
   ['content/people/index.json', 'public/api/people.json'],
   ['content/companies/index.json', 'public/api/companies.json'],
   ['content/research/index.json', 'public/api/research.json'],

@@ -26,6 +26,7 @@ interface TalentEnv {
   ASSISTANT_DB: D1Database;
   TALENT_R2?: R2Bucket;
   INKBOX_KEY_THEWORLDOFAI?: string;
+  RESEND_API_KEY?: string;
   TURNSTILE_SECRET?: string;
   TALENT_RATE?: { limit(opts: { key: string }): Promise<{ success: boolean }> };
 }
@@ -112,10 +113,32 @@ async function verifyTurnstile(env: TalentEnv, token: string, ip: string): Promi
 // paying for. The reason string is safe to surface (no key material, no
 // recipient) and each failure logs the Inkbox response for Workers Logs.
 async function sendMail(env: TalentEnv, to: string, subject: string, text: string): Promise<string> {
+  // Resend first: mail leaves as talent@theworldofai.org, DKIM-signed on our
+  // own domain (records verified 2026-08-21), so it lands in inboxes instead
+  // of spam the way inkboxmail.com's shared reputation does. Replies still
+  // flow to the Inkbox agent mailbox via Reply-To, keeping the relay intact.
+  const rk = (env.RESEND_API_KEY || "").trim();
+  if (rk) {
+    try {
+      const r = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { authorization: "Bearer " + rk, "content-type": "application/json" },
+        body: JSON.stringify({
+          from: "The World of AI <talent@theworldofai.org>",
+          to: [to], subject, text, reply_to: MAILBOX,
+        }),
+      });
+      if (r.ok) return "";
+      console.log("talent sendMail resend refused:", r.status, (await r.text()).slice(0, 300));
+      // Fall through to Inkbox rather than failing the signup outright.
+    } catch (e) {
+      console.log("talent sendMail resend network:", String(e).slice(0, 200));
+    }
+  }
   // A key pasted at a PowerShell prompt can carry a trailing CR; fetch throws
   // on a header value containing \r and the catch below would eat it.
   const key = (env.INKBOX_KEY_THEWORLDOFAI || "").trim();
-  if (!key) return "mail_key_missing";
+  if (!key) return rk ? "mail_resend_failed" : "mail_key_missing";
   try {
     const r = await fetch(INKBOX_SEND, {
       method: "POST",
@@ -133,6 +156,44 @@ async function sendMail(env: TalentEnv, to: string, subject: string, text: strin
 
 const str = (v: unknown, max: number): string =>
   typeof v === "string" ? v.trim().slice(0, max) : "";
+
+// Weekly match digest, called from the Worker's scheduled handler. Reads the
+// public matches feed the pipeline publishes, joins member emails from D1
+// (live members only; addresses never leave this Worker), and sends one short
+// digest per member with links to the original postings. Caps sends per run
+// well inside Resend's free daily limit.
+export async function talentWeeklyDigest(env: TalentEnv): Promise<void> {
+  try {
+    const r = await fetch("https://theworldofai.org/api/talent-matches.json", {
+      headers: { "user-agent": "twoai-worker-digest" },
+    });
+    if (!r.ok) { console.log("digest: matches feed http", r.status); return; }
+    const feed = await r.json() as { members?: Record<string, { first_name?: string; matches?: { title: string; company: string; url: string; location?: string; remote?: boolean }[] }> };
+    const members = feed.members || {};
+    const ids = Object.keys(members).filter((id) => (members[id].matches || []).length > 0);
+    if (ids.length === 0) return;
+    const rows = await env.ASSISTANT_DB.prepare(
+      "SELECT tai_id, email FROM talent_state WHERE status='live'"
+    ).all<{ tai_id: string; email: string }>();
+    const emailOf = new Map((rows.results || []).map((x) => [x.tai_id, x.email]));
+    let sent = 0;
+    for (const id of ids) {
+      if (sent >= 50) break;
+      const to = emailOf.get(id);
+      if (!to) continue;
+      const m = members[id];
+      const lines = (m.matches || []).slice(0, 8).map((j) =>
+        `- ${j.title} — ${j.company}${j.location ? ", " + j.location : ""}${j.remote ? " (Remote)" : ""}\n  ${j.url}`);
+      const err = await sendMail(env, to,
+        "This week's roles matching your AI Talent profile",
+        `Hi${m.first_name ? " " + m.first_name : ""},\n\nFresh openings matching the skills on your profile, pulled from company job boards this week:\n\n${lines.join("\n\n")}\n\nYour full match list: https://theworldofai.org/talent/${id.toLowerCase()}/\n\nEvery link goes to the employer's original posting. To stop these digests, reply with the word stop.\n— The World of AI`);
+      if (err) console.log("digest:", id, err); else sent++;
+    }
+    console.log("digest: sent", sent, "of", ids.length, "eligible");
+  } catch (e) {
+    console.log("digest error:", String(e).slice(0, 200));
+  }
+}
 
 export async function handleTalent(request: Request, env: TalentEnv): Promise<Response> {
   const url = new URL(request.url);

@@ -25,7 +25,7 @@
  *  - It never returns an answer without the pages it came from.
  */
 
-import { handleTalent } from "./talent";
+import { handleTalent, talentWeeklyDigest } from "./talent";
 
 interface Env {
   AI: any;
@@ -120,6 +120,12 @@ const json = (body: unknown, status = 200) =>
   });
 
 export default {
+  // Monday 14:00 UTC (9am CT), after the 11:00 pipeline run has refreshed
+  // listings and matches: one weekly digest per live member, via Resend.
+  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(talentWeeklyDigest(env as unknown as Parameters<typeof talentWeeklyDigest>[0]));
+  },
+
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
