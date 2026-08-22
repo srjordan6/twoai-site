@@ -39,7 +39,8 @@ const ID_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 const RESUME_MAX = 5 * 1024 * 1024;
 
 const QUESTION_KEYS = new Set([
-  "models", "frameworks", "vector-dbs", "observability", "evaluation",
+  "models", "frameworks", "agents-mcp", "languages", "apis-integrations",
+  "datasets", "infrastructure-hardware", "vector-dbs", "observability", "evaluation",
   "guardrails", "governance-frameworks", "deployment", "experience-years", "role-type",
 ]);
 const AVAILABILITY = new Set(["open", "freelance", "not-looking", ""]);
@@ -86,6 +87,26 @@ async function ensureSchema(db: D1Database): Promise<void> {
 // A plain !== short-circuits at the first differing character, which is the
 // timing side channel SAST flags; Workers ships timingSafeEqual, with an
 // XOR-accumulate fallback so the property survives any runtime change.
+// Resume-facing skill categories in form order. Mirrors
+// talent_questions.short_label (single source is SQL; this copy exists
+// because the renderers run in the Worker without a database round trip).
+const SKILL_CATS: [string, string][] = [
+  ["models", "Foundation Models"],
+  ["frameworks", "Application Frameworks"],
+  ["agents-mcp", "AI Agents & MCP"],
+  ["languages", "Programming Languages & ML Frameworks"],
+  ["apis-integrations", "AI APIs & Integrations"],
+  ["datasets", "AI Datasets"],
+  ["infrastructure-hardware", "AI Infrastructure & Hardware"],
+  ["vector-dbs", "Vector Stores & Search"],
+  ["observability", "LLM Observability"],
+  ["evaluation", "Evaluation Frameworks"],
+  ["guardrails", "Guardrails & Safety"],
+  ["governance-frameworks", "AI Governance & Compliance"],
+  ["deployment", "Cloud AI Platforms & Deployment"],
+  ["role-type", "Roles"],
+];
+
 function safeEqual(a: string, b: string): boolean {
   const enc = new TextEncoder();
   const ab = enc.encode(a), bb = enc.encode(b);
@@ -347,6 +368,12 @@ export async function handleTalent(request: Request, env: TalentEnv): Promise<Re
       end: str(j?.end, 30),
       description: str(j?.description, 2000),
     })).filter((j) => j.employer || j.title || j.description);
+    const projectsItems = (Array.isArray(p.projects_items) ? p.projects_items : []).slice(0, 15).map((x: any) => ({
+      company: str(x?.company, 120),
+      title: str(x?.title, 140),
+      year: str(x?.year, 30),
+      description: str(x?.description, 2000),
+    })).filter((x) => x.company || x.title || x.description);
     const educationItems = (Array.isArray(p.education_items) ? p.education_items : []).slice(0, 10).map((e: any) => ({
       institution: str(e?.institution, 140),
       degree: str(e?.degree, 120) || str(e?.credential, 120),
@@ -373,6 +400,7 @@ export async function handleTalent(request: Request, env: TalentEnv): Promise<Re
       rate: str(p.rate, 60),
       summary: str(p.summary, 2000),
       jobs,
+      projects_items: projectsItems,
       education_items: educationItems,
       certifications_items: certItems,
       publications_items: pubItems,
@@ -693,9 +721,7 @@ export function talentResumePdf(taiId: string, profile: any, answers: any, pii: 
     ? [S(profile.location), `Contact: theworldofai@inkboxmail.com, subject ${taiId}`].filter(Boolean)
     : [address || S(profile.location), phone, S(pii.contact_email), ...(Array.isArray(pii.links) ? pii.links : [])].filter(Boolean);
 
-  const competencies = [...selections("role-type"), ...selections("governance-frameworks")];
-  const toolRun = ["models", "frameworks", "vector-dbs", "observability", "evaluation", "guardrails", "deployment"]
-    .flatMap(selections);
+  const aiSkills = SKILL_CATS.map(([k, l]) => ({ l, items: selections(k) })).filter((x) => x.items.length);
   const years = selections("experience-years")[0] || "";
 
   type Seg = { text: string; font: "R" | "B"; size: number; gap: number };
@@ -723,7 +749,10 @@ export function talentResumePdf(taiId: string, profile: any, answers: any, pii: 
   if (S(profile.rate)) summaryBits.push(`Rate: ${S(profile.rate)}.`);
   if (summaryBits.length) { heading("Professional Summary"); body(summaryBits.join(" ")); }
 
-  if (competencies.length) { heading("Core Competencies"); body(competencies.join(" \u00b7 ")); }
+  if (aiSkills.length) {
+    heading("AI Skills");
+    for (const c of aiSkills) body(`${c.l}: ${c.items.join(" \u00b7 ")}`);
+  }
 
   const jobs: any[] = Array.isArray(profile.jobs) ? profile.jobs : [];
   if (jobs.length || S(profile.work_experience)) {
@@ -737,6 +766,18 @@ export function talentResumePdf(taiId: string, profile: any, answers: any, pii: 
       push("", "R", 10, 5);
     }
     if (!jobs.length) body(S(profile.work_experience)); // legacy free text
+  }
+
+  const projects: any[] = Array.isArray(profile.projects_items) ? profile.projects_items : [];
+  if (projects.length) {
+    heading("Projects");
+    for (const x of projects) {
+      const head = [S(x.title), S(x.company)].filter(Boolean).join(" \u2014 ");
+      if (head) push(head, "B", 10.5, 14);
+      if (S(x.year)) push(S(x.year), "R", 9, 12);
+      if (S(x.description)) body(S(x.description));
+      push("", "R", 10, 5);
+    }
   }
 
   const pubs: any[] = Array.isArray(profile.publications_items) ? profile.publications_items : [];
@@ -782,7 +823,6 @@ export function talentResumePdf(taiId: string, profile: any, answers: any, pii: 
     for (const a of awards) body([S(a.title), S(a.date)].filter(Boolean).join(" \u2014 "));
     if (!awards.length) body(S(profile.awards));
   }
-  if (toolRun.length) { heading("Technical Skills"); body(toolRun.join(" \u00b7 ")); }
 
   // Paginate: US Letter, 54pt margins, top-down cursor.
   const pageH = 792, pageW = 612, margin = 54;
@@ -905,8 +945,7 @@ export function talentResumeDocx(taiId: string, profile: any, answers: any, pii:
   const contactBits = redacted
     ? [S(profile.location), `Contact: theworldofai@inkboxmail.com, subject ${taiId}`].filter(Boolean)
     : [address || S(profile.location), phone, S(pii.contact_email), ...(Array.isArray(pii.links) ? pii.links : [])].filter(Boolean);
-  const competencies = [...selections("role-type"), ...selections("governance-frameworks")];
-  const toolRun = ["models", "frameworks", "vector-dbs", "observability", "evaluation", "guardrails", "deployment"].flatMap(selections);
+  const aiSkills = SKILL_CATS.map(([k, l]) => ({ l, items: selections(k) })).filter((x) => x.items.length);
   const years = selections("experience-years")[0] || "";
 
   const paras: string[] = [];
@@ -932,7 +971,10 @@ export function talentResumeDocx(taiId: string, profile: any, answers: any, pii:
   if (S(profile.availability) === "freelance") summaryBits.push("Available for freelance and contract work.");
   if (S(profile.rate)) summaryBits.push(`Rate: ${S(profile.rate)}.`);
   if (summaryBits.length) { headingP("Professional Summary"); para(summaryBits.join(" ")); }
-  if (competencies.length) { headingP("Core Competencies"); para(competencies.join(" \u00b7 ")); }
+  if (aiSkills.length) {
+    headingP("AI Skills");
+    for (const c of aiSkills) para(`${c.l}: ${c.items.join(" \u00b7 ")}`);
+  }
 
   const jobs: any[] = Array.isArray(profile.jobs) ? profile.jobs : [];
   if (jobs.length || S(profile.work_experience)) {
@@ -945,6 +987,16 @@ export function talentResumeDocx(taiId: string, profile: any, answers: any, pii:
       if (S(j.description)) para(S(j.description));
     }
     if (!jobs.length) para(S(profile.work_experience));
+  }
+  const projects: any[] = Array.isArray(profile.projects_items) ? profile.projects_items : [];
+  if (projects.length) {
+    headingP("Projects");
+    for (const x of projects) {
+      const head = [S(x.title), S(x.company)].filter(Boolean).join(" \u2014 ");
+      if (head) para(head, { bold: true, spaceBefore: 160 });
+      if (S(x.year)) para(S(x.year), { size: 18 });
+      if (S(x.description)) para(S(x.description));
+    }
   }
   const pubs: any[] = Array.isArray(profile.publications_items) ? profile.publications_items : [];
   if (pubs.length || S(profile.publications)) {
@@ -985,7 +1037,6 @@ export function talentResumeDocx(taiId: string, profile: any, answers: any, pii:
     for (const a of awardsD) para([S(a.title), S(a.date)].filter(Boolean).join(" \u2014 "));
     if (!awardsD.length) para(S(profile.awards));
   }
-  if (toolRun.length) { headingP("Technical Skills"); para(toolRun.join(" \u00b7 ")); }
 
   const enc = new TextEncoder();
   const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>

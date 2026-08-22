@@ -90,6 +90,10 @@ const jsonld = JSON.stringify({
     <div id="jobs-list"></div>
     <button id="job-add" type="button" class="t-secondary">+ Add a job</button>
 
+    <h4>Projects</h4>
+    <div id="proj-list"></div>
+    <button id="proj-add" type="button" class="t-secondary">+ Add a project</button>
+
     <h4>Education</h4>
     <div id="edu-list"></div>
     <button id="edu-add" type="button" class="t-secondary">+ Add education</button>
@@ -373,6 +377,25 @@ const jsonld = JSON.stringify({
       $('jobs-list').appendChild(d);
       jobSeq++;
     }
+    function projRow(x) {
+      x = x || {};
+      const d = document.createElement('div');
+      d.className = 'rb-card'; d.dataset.kind = 'proj';
+      d.innerHTML = `
+        <div class="rb-grid">
+          <label>Company <input class="pr-company" maxlength="120" /></label>
+          <label>Project title <input class="pr-title" maxlength="140" /></label>
+          <label>Year <input class="pr-year" maxlength="30" placeholder="2025" /></label>
+        </div>
+        <label class="rb-desc">Description <textarea class="pr-description" rows="3" maxlength="2000" placeholder="What the project did and your part in it."></textarea></label>
+        <button type="button" class="rb-remove">Remove this project</button>`;
+      d.querySelector('.pr-company').value = x.company || '';
+      d.querySelector('.pr-title').value = x.title || '';
+      d.querySelector('.pr-year').value = x.year || '';
+      d.querySelector('.pr-description').value = x.description || '';
+      d.querySelector('.rb-remove').addEventListener('click', () => d.remove());
+      $('proj-list').appendChild(d);
+    }
     function eduRow(e) {
       e = e || {};
       const d = document.createElement('div');
@@ -449,6 +472,13 @@ const jsonld = JSON.stringify({
         comments: d.querySelector('.e-comments').value,
       })).filter((e) => e.institution || e.degree || e.major);
     }
+    function collectProjects() {
+      return [...document.querySelectorAll('#proj-list .rb-card')].map((d) => ({
+        company: d.querySelector('.pr-company').value, title: d.querySelector('.pr-title').value,
+        year: d.querySelector('.pr-year').value, description: d.querySelector('.pr-description').value,
+      })).filter((x) => x.company || x.title || x.description);
+    }
+    $('proj-add').addEventListener('click', () => projRow());
     $('job-add').addEventListener('click', () => jobRow());
     $('edu-add').addEventListener('click', () => eduRow());
 
@@ -624,6 +654,9 @@ const jsonld = JSON.stringify({
           if (d.profile && d.profile[k] && $('p-' + k)) $('p-' + k).value = d.profile[k];
         }
         const pj = (d.profile && d.profile.jobs) || [];
+        const pp = (d.profile && d.profile.projects_items) || [];
+        $('proj-list').innerHTML = '';
+        pp.forEach((x) => projRow(x));
         const pe = (d.profile && d.profile.education_items) || [];
         $('jobs-list').innerHTML = ''; $('edu-list').innerHTML = '';
         pj.forEach((j) => jobRow(j));
@@ -698,6 +731,7 @@ const jsonld = JSON.stringify({
       const profile = {};
       for (const k of ['first_name', 'headline', 'location', 'availability', 'rate', 'summary']) profile[k] = $('p-' + k).value;
       profile.jobs = collectJobs();
+      profile.projects_items = collectProjects();
       profile.education_items = collectEdu();
       profile.certifications_items = miniCollect('cert');
       profile.publications_items = miniCollect('pub');

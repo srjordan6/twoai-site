@@ -35,6 +35,7 @@ const pubs = Array.isArray(p.publications_items) ? p.publications_items : [];
 const pats = Array.isArray(p.patents_items) ? p.patents_items : [];
 const awards = Array.isArray(p.awards_items) ? p.awards_items : [];
 const skills = Array.isArray(p.skills) ? p.skills : [];
+const projects = Array.isArray(p.projects_items) ? p.projects_items : [];
 const matches = Array.isArray(p.matches) ? p.matches : [];
 const contactBits = [p.location, p.years ? `${p.years} years in AI/ML` : '', AV[p.availability] || '', p.rate || ''].filter(Boolean);
 const jobLine = (j) => [j.title, j.employer].filter(Boolean).join(', ');
@@ -89,7 +90,7 @@ const eduLine = (e) => {
 
     {skills.length > 0 && (
       <section>
-        <h2>Core Competencies</h2>
+        <h2>AI Skills</h2>
         {skills.map((s) => (
           <p class="comp"><strong>{s.label}:</strong> {s.items.join(' · ')}</p>
         ))}
@@ -107,6 +108,19 @@ const eduLine = (e) => {
           </div>
         ))}
         {jobs.length === 0 && <p>{p.work_experience}</p>}
+      </section>
+    )}
+
+    {projects.length > 0 && (
+      <section>
+        <h2>Projects</h2>
+        {projects.map((x) => (
+          <div class="job">
+            <p class="job-head">{[x.title, x.company].filter(Boolean).join(' — ')}</p>
+            {x.year && <p class="job-meta">{x.year}</p>}
+            {x.description && <p class="job-desc">{x.description}</p>}
+          </div>
+        ))}
       </section>
     )}
 
