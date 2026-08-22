@@ -106,6 +106,13 @@ const next = new Set(localPaths());
 const isRedirected = redirectCovered();
 const isRetired = retired();
 
+// Talent profile pages are membership-lifecycle URLs, not permanent site
+// URLs: a member editing their profile returns it to review (unpublishing
+// the page until a person re-approves), and profiles expire when not
+// renewed. The permanence guard must not hold the whole site's deploys
+// hostage to one member's review cycle (2026-08-22: three blocked builds).
+const isTransient = (p) => /^\/talent\/tai-[a-z0-9]+\/$/i.test(p);
+
 // A URL can leave the sitemap without dying: a page that renders noindex
 // (tracked-only people profiles) is de-listed so the sitemap and the robots
 // meta agree, but its file is still in dist and still serves 200. The guard
@@ -113,13 +120,19 @@ const isRetired = retired();
 // entry whose page still builds is fine and is logged rather than blocked.
 const stillServed = (p) => existsSync(`dist${p.endsWith('/') ? p : `${p}/`}index.html`);
 
+const transientGone = live.filter((p) => isTransient(p) && !next.has(p) && !stillServed(p));
+if (transientGone.length) {
+  console.log(`url-guard: ${transientGone.length} talent profile URL(s) unpublished (review/expiry lifecycle, allowed):`);
+  for (const p of [...new Set(transientGone)].sort().slice(0, 20)) console.log('  ' + p);
+}
+
 const delisted = live.filter((p) => !next.has(p) && !isRedirected(p) && !isRetired.has(p) && stillServed(p));
 if (delisted.length) {
   console.log(`url-guard: ${delisted.length} URL(s) left the sitemap but still build and serve 200 (noindex de-listing):`);
   for (const p of [...new Set(delisted)].sort().slice(0, 20)) console.log('  ' + p);
 }
 
-const dropped = live.filter((p) => !next.has(p) && !isRedirected(p) && !isRetired.has(p) && !stillServed(p));
+const dropped = live.filter((p) => !next.has(p) && !isRedirected(p) && !isRetired.has(p) && !stillServed(p) && !isTransient(p));
 const uniq = [...new Set(dropped)].sort();
 
 if (uniq.length === 0) {
