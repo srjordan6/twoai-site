@@ -82,6 +82,21 @@ async function ensureSchema(db: D1Database): Promise<void> {
 // PBKDF2-SHA-256, 100k iterations, per-account random salt, via WebCrypto -
 // no dependency, constant-time comparison through crypto.subtle output
 // equality on hex strings of fixed length.
+// Constant-time string equality for secrets (password hashes, owner tokens).
+// A plain !== short-circuits at the first differing character, which is the
+// timing side channel SAST flags; Workers ships timingSafeEqual, with an
+// XOR-accumulate fallback so the property survives any runtime change.
+function safeEqual(a: string, b: string): boolean {
+  const enc = new TextEncoder();
+  const ab = enc.encode(a), bb = enc.encode(b);
+  if (ab.length !== bb.length) return false;
+  const subtle = crypto.subtle as unknown as { timingSafeEqual?: (x: ArrayBufferView, y: ArrayBufferView) => boolean };
+  if (typeof subtle.timingSafeEqual === "function") return subtle.timingSafeEqual(ab, bb);
+  let d = 0;
+  for (let i = 0; i < ab.length; i++) d |= ab[i] ^ bb[i];
+  return d === 0;
+}
+
 async function hashPassword(password: string, saltHex: string): Promise<string> {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
@@ -489,7 +504,7 @@ export async function handleTalent(request: Request, env: TalentEnv): Promise<Re
     // enumeration signal the signup path already refuses to give.
     if (!row || !row.pw_salt || !row.pw_hash) return tJson({ error: "Email or password not recognized." }, 401);
     const hash = await hashPassword(password, row.pw_salt);
-    if (hash !== row.pw_hash) return tJson({ error: "Email or password not recognized." }, 401);
+    if (!safeEqual(hash, row.pw_hash)) return tJson({ error: "Email or password not recognized." }, 401);
     return tJson({ ok: true, t: row.confirm_token });
   }
 
@@ -530,7 +545,7 @@ export async function handleTalent(request: Request, env: TalentEnv): Promise<Re
       "SELECT status, photo_type, confirm_token FROM talent_state WHERE tai_id=? LIMIT 1"
     ).bind(taiId).first<{ status: string; photo_type: string | null; confirm_token: string }>();
     if (!row || !row.photo_type) return new Response("Not found", { status: 404 });
-    const allowed = row.status === "live" || (t && t === row.confirm_token);
+    const allowed = row.status === "live" || (!!t && safeEqual(t, row.confirm_token));
     if (!allowed) return new Response("Not found", { status: 404 });
     const obj = await env.TALENT_R2.get(`photos/${taiId}.${row.photo_type}`);
     if (!obj) return new Response("Not found", { status: 404 });
@@ -554,7 +569,7 @@ export async function handleTalent(request: Request, env: TalentEnv): Promise<Re
       "SELECT status, profile, answers, pii, share_pdf, confirm_token FROM talent_state WHERE tai_id=? LIMIT 1"
     ).bind(taiId).first<{ status: string; profile: string; answers: string; pii: string; share_pdf: number; confirm_token: string }>();
     if (!row) return new Response("Not found", { status: 404 });
-    const isOwner = t && t === row.confirm_token;
+    const isOwner = !!t && safeEqual(t, row.confirm_token);
     const isPublic = row.status === "live";
     if (!isOwner && !isPublic) return new Response("Not found", { status: 404 });
     // Everyone can download a LIVE profile's resume; what varies is identity.
@@ -587,7 +602,7 @@ export async function handleTalent(request: Request, env: TalentEnv): Promise<Re
       "SELECT status, profile, answers, pii, share_pdf, confirm_token FROM talent_state WHERE tai_id=? LIMIT 1"
     ).bind(taiId).first<{ status: string; profile: string; answers: string; pii: string; share_pdf: number; confirm_token: string }>();
     if (!row) return new Response("Not found", { status: 404 });
-    const isOwner = t && t === row.confirm_token;
+    const isOwner = !!t && safeEqual(t, row.confirm_token);
     const isPublic = row.status === "live";
     if (!isOwner && !isPublic) return new Response("Not found", { status: 404 });
     const includePii = isOwner || row.share_pdf === 1;
