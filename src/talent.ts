@@ -231,6 +231,108 @@ export async function talentWeeklyDigest(env: TalentEnv): Promise<void> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Automated mailbox answering. A cron every five minutes reads unread inbound
+// mail on the relay mailbox and answers through the same Haiku RAG pipeline
+// that powers /api/ask, replying in-thread from the relay address. Rules that
+// keep this safe:
+//  - Member-relay mail (a TAI id in the subject) is NEVER auto-answered;
+//    it is starred and left for a person, because it is addressed to a
+//    member, not to the site.
+//  - Bounce/auto-reply senders are skipped to prevent loops, and each
+//    message id is answered at most once (D1 ledger), even if mark-read
+//    ever fails.
+//  - "Not covered" questions get one honest holding reply and a star so a
+//    person follows up; the assistant never guesses in mail any more than
+//    it does on the site.
+const MAIL_ANSWER_CAP = 5;
+const SKIP_SENDER = /no-?reply|mailer-daemon|postmaster|notification|bounce|do-?not-?reply/i;
+const SKIP_SUBJECT = /^(auto:|automatic reply|autoreply|out of office|delivery status|undeliver)/i;
+
+export async function talentMailAnswer(env: TalentEnv): Promise<void> {
+  const key = (env.INKBOX_KEY_THEWORLDOFAI || "").trim();
+  if (!key) return;
+  const base = `https://inkbox.ai/api/v1/mail/mailboxes/${encodeURIComponent(MAILBOX)}/messages`;
+  const H = { "X-API-Key": key, "content-type": "application/json" };
+  try {
+    await env.ASSISTANT_DB.exec(
+      "CREATE TABLE IF NOT EXISTS talent_mail_log (message_id TEXT PRIMARY KEY, from_addr TEXT, subject TEXT, action TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')))"
+    );
+    const lr = await fetch(base + "?limit=25", { headers: H });
+    if (!lr.ok) { console.log("mail-answer list http", lr.status); return; }
+    const list = (await lr.json()) as { items?: any[] };
+    const inbound = (list.items || []).filter((m) => m.direction === "inbound" && m.is_read === false);
+    let handled = 0;
+    for (const m of inbound) {
+      if (handled >= MAIL_ANSWER_CAP) break;
+      const already = await env.ASSISTANT_DB.prepare(
+        "SELECT 1 FROM talent_mail_log WHERE message_id=?").bind(m.id).first();
+      if (already) continue;
+      const log = (action: string) => env.ASSISTANT_DB.prepare(
+        "INSERT OR IGNORE INTO talent_mail_log (message_id, from_addr, subject, action) VALUES (?,?,?,?)"
+      ).bind(m.id, str(m.from_address, 254), str(m.subject, 300), action).run();
+
+      const from = String(m.from_address || "");
+      const subject = String(m.subject || "");
+      if (SKIP_SENDER.test(from) || SKIP_SUBJECT.test(subject) || from.endsWith("@inkboxmail.com")) {
+        await log("skipped"); handled++; continue;
+      }
+      // Mail meant for a member goes to the member, not to a bot.
+      if (/TAI-[2-9A-HJ-NP-Z]{6}/i.test(subject)) {
+        await fetch(`${base}/${m.id}`, { method: "PATCH", headers: H, body: JSON.stringify({ is_starred: true }) });
+        await log("relay_starred"); handled++; continue;
+      }
+      // Fetch the body; a GET with the API key also marks the message read.
+      const gr = await fetch(`${base}/${m.id}`, { headers: H });
+      if (!gr.ok) { console.log("mail-answer get http", gr.status, m.id); continue; }
+      const full = (await gr.json()) as any;
+      const bodyText = str(full.body_text || full.snippet || "", 4000);
+      const question = (subject + "\n\n" + bodyText).trim();
+      if (question.length < 8) { await log("empty"); handled++; continue; }
+
+      // Same brain as the site: retrieval, guardrails, citations, logging.
+      let answer = "", answered = false; const links: string[] = [];
+      try {
+        const ar = await fetch("https://theworldofai.org/api/ask", {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ question: question.slice(0, 1500) }),
+        });
+        if (ar.ok) {
+          const a = (await ar.json()) as any;
+          answered = a.answered === true && !!a.answer;
+          answer = String(a.answer || "");
+          for (const s of (a.sources || []).slice(0, 5)) if (s?.url) links.push(String(s.url));
+        }
+      } catch (e) { console.log("mail-answer ask", String(e).slice(0, 120)); }
+
+      let reply: string;
+      if (answered) {
+        reply = `${answer}\n\n` +
+          (links.length ? `Sources on theworldofai.org:\n${links.map((u) => "- " + u).join("\n")}\n\n` : "") +
+          `--\nThis answer was generated from the published pages of theworldofai.org. A person reviews this mailbox; reply if anything needs a human.`;
+      } else {
+        reply = `Thanks for writing. The site does not cover that question yet, so rather than guess, a person will read your message and follow up.\n\n--\ntheworldofai.org`;
+        await fetch(`${base}/${m.id}`, { method: "PATCH", headers: H, body: JSON.stringify({ is_starred: true }) });
+      }
+      const sr = await fetch(base, {
+        method: "POST", headers: H,
+        body: JSON.stringify({
+          recipients: { to: [from] },
+          subject: subject.toLowerCase().startsWith("re:") ? subject : "Re: " + subject,
+          body_text: reply,
+          in_reply_to_message_id: m.id,
+        }),
+      });
+      if (!sr.ok) console.log("mail-answer send http", sr.status, (await sr.text()).slice(0, 200));
+      await log(answered ? "answered" : "held_for_human");
+      handled++;
+    }
+    if (handled) console.log("mail-answer handled", handled, "of", inbound.length, "unread");
+  } catch (e) {
+    console.log("mail-answer error", String(e).slice(0, 200));
+  }
+}
+
 export async function handleTalent(request: Request, env: TalentEnv): Promise<Response> {
   const url = new URL(request.url);
   const path = url.pathname;

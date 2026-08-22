@@ -29,7 +29,7 @@
   },
   // Weekly talent match digest (Monday 14:00 UTC, after the 11:00 pipeline
   // run has refreshed listings and matches).
-  "triggers": { "crons": ["0 14 * * 1"] },
+  "triggers": { "crons": ["*/5 * * * *", "0 14 * * 1"] },
   // Per-IP rate limit for /api/ask. The endpoint now spends real money on
   // every request (Claude Haiku via the Anthropic API), so an unthrottled
   // loop is a direct budget-drain vector. 10 questions a minute is generous

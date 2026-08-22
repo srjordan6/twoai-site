@@ -25,7 +25,7 @@
  *  - It never returns an answer without the pages it came from.
  */
 
-import { handleTalent, talentWeeklyDigest } from "./talent";
+import { handleTalent, talentWeeklyDigest, talentMailAnswer } from "./talent";
 
 interface Env {
   AI: any;
@@ -122,8 +122,12 @@ const json = (body: unknown, status = 200) =>
 export default {
   // Monday 14:00 UTC (9am CT), after the 11:00 pipeline run has refreshed
   // listings and matches: one weekly digest per live member, via Resend.
-  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    ctx.waitUntil(talentWeeklyDigest(env as unknown as Parameters<typeof talentWeeklyDigest>[0]));
+  async scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    const tenv = env as unknown as Parameters<typeof talentMailAnswer>[0];
+    // Two crons share this handler: the five-minute tick answers the relay
+    // mailbox; Monday 14:00 UTC additionally sends the job-match digest.
+    if (event.cron === "0 14 * * 1") ctx.waitUntil(talentWeeklyDigest(tenv));
+    ctx.waitUntil(talentMailAnswer(tenv));
   },
 
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
