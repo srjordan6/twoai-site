@@ -9,6 +9,10 @@ import { readFileSync, existsSync } from 'node:fs';
 const dir = existsSync('content/talent/profiles.json')
   ? JSON.parse(readFileSync('content/talent/profiles.json', 'utf8'))
   : { profiles: [] };
+// Go marshals an empty slice as null, and a pull that catches every profile
+// mid-review publishes exactly that; the hub must render the empty state,
+// not crash the whole site build (bit us 2026-08-22).
+dir.profiles = Array.isArray(dir.profiles) ? dir.profiles : [];
 
 const desc = 'The AI Talent Network: people who work with AI, listed by verified skills — models, frameworks, vector stores, observability, and governance standards. Free to join, privacy-first.';
 const jsonld = JSON.stringify({
