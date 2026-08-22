@@ -704,7 +704,7 @@ export function talentResumePdf(taiId: string, profile: any, answers: any, pii: 
     segs.push({ text, font, size, gap });
   const heading = (t: string) => {
     push("", "R", 10, 6);
-    push(t.toUpperCase().split("").join(" "), "B", 11, 14);
+    push(t.toUpperCase(), "B", 14, 16);
   };
   const body = (t: string, wrapAt = 96) => {
     for (const line of wrapText(t, wrapAt)) push(line, "R", 10, 13);
@@ -721,7 +721,7 @@ export function talentResumePdf(taiId: string, profile: any, answers: any, pii: 
   if (S(profile.availability) === "open") summaryBits.push("Open to work.");
   if (S(profile.availability) === "freelance") summaryBits.push("Available for freelance and contract work.");
   if (S(profile.rate)) summaryBits.push(`Rate: ${S(profile.rate)}.`);
-  if (summaryBits.length) { heading("Summary"); body(summaryBits.join(" ")); }
+  if (summaryBits.length) { heading("Professional Summary"); body(summaryBits.join(" ")); }
 
   if (competencies.length) { heading("Core Competencies"); body(competencies.join(" \u00b7 ")); }
 
@@ -729,9 +729,9 @@ export function talentResumePdf(taiId: string, profile: any, answers: any, pii: 
   if (jobs.length || S(profile.work_experience)) {
     heading("Professional Experience");
     for (const j of jobs) {
-      const head = [S(j.employer), S(j.title)].filter(Boolean).join(" \u2014 ");
+      const head = [S(j.title), S(j.employer)].filter(Boolean).join(", ");
       if (head) push(head, "B", 10.5, 14);
-      const meta = [[S(j.start), S(j.end)].filter(Boolean).join(" \u2013 "), S(j.location)].filter(Boolean).join("  \u00b7  ");
+      const meta = [S(j.location), [S(j.start), S(j.end)].filter(Boolean).join(" \u2013 ")].filter(Boolean).join(" | ");
       if (meta) push(meta, "R", 9, 12);
       if (S(j.description)) body(S(j.description));
       push("", "R", 10, 5);
@@ -778,11 +778,11 @@ export function talentResumePdf(taiId: string, profile: any, answers: any, pii: 
 
   const awards: any[] = Array.isArray(profile.awards_items) ? profile.awards_items : [];
   if (awards.length || S(profile.awards)) {
-    heading("Recognition");
+    heading("Awards & Honors");
     for (const a of awards) body([S(a.title), S(a.date)].filter(Boolean).join(" \u2014 "));
     if (!awards.length) body(S(profile.awards));
   }
-  if (toolRun.length) { heading("Frameworks, Tools & Platforms"); body(toolRun.join(" \u00b7 ")); }
+  if (toolRun.length) { heading("Technical Skills"); body(toolRun.join(" \u00b7 ")); }
 
   // Paginate: US Letter, 54pt margins, top-down cursor.
   const pageH = 792, pageW = 612, margin = 54;
@@ -918,7 +918,7 @@ export function talentResumeDocx(taiId: string, profile: any, answers: any, pii:
       paras.push(`<w:p>${ppr}<w:r>${props}<w:t xml:space="preserve">${xmlEsc(line)}</w:t></w:r></w:p>`);
     }
   };
-  const headingP = (t: string) => para(t, { bold: true, size: 22, caps: true, spaceBefore: 240 });
+  const headingP = (t: string) => para(t, { bold: true, size: 28, caps: true, spaceBefore: 240 });
 
   para(name, { bold: true, size: 40 });
   if (S(profile.headline)) para(S(profile.headline), { bold: true, size: 22 });
@@ -931,16 +931,16 @@ export function talentResumeDocx(taiId: string, profile: any, answers: any, pii:
   if (S(profile.availability) === "open") summaryBits.push("Open to work.");
   if (S(profile.availability) === "freelance") summaryBits.push("Available for freelance and contract work.");
   if (S(profile.rate)) summaryBits.push(`Rate: ${S(profile.rate)}.`);
-  if (summaryBits.length) { headingP("Summary"); para(summaryBits.join(" ")); }
+  if (summaryBits.length) { headingP("Professional Summary"); para(summaryBits.join(" ")); }
   if (competencies.length) { headingP("Core Competencies"); para(competencies.join(" \u00b7 ")); }
 
   const jobs: any[] = Array.isArray(profile.jobs) ? profile.jobs : [];
   if (jobs.length || S(profile.work_experience)) {
     headingP("Professional Experience");
     for (const j of jobs) {
-      const head = [S(j.employer), S(j.title)].filter(Boolean).join(" \u2014 ");
+      const head = [S(j.title), S(j.employer)].filter(Boolean).join(", ");
       if (head) para(head, { bold: true, spaceBefore: 160 });
-      const meta = [[S(j.start), S(j.end)].filter(Boolean).join(" \u2013 "), S(j.location)].filter(Boolean).join("  \u00b7  ");
+      const meta = [S(j.location), [S(j.start), S(j.end)].filter(Boolean).join(" \u2013 ")].filter(Boolean).join(" | ");
       if (meta) para(meta, { size: 18 });
       if (S(j.description)) para(S(j.description));
     }
@@ -981,11 +981,11 @@ export function talentResumeDocx(taiId: string, profile: any, answers: any, pii:
   }
   const awardsD: any[] = Array.isArray(profile.awards_items) ? profile.awards_items : [];
   if (awardsD.length || S(profile.awards)) {
-    headingP("Recognition");
+    headingP("Awards & Honors");
     for (const a of awardsD) para([S(a.title), S(a.date)].filter(Boolean).join(" \u2014 "));
     if (!awardsD.length) para(S(profile.awards));
   }
-  if (toolRun.length) { headingP("Frameworks, Tools & Platforms"); para(toolRun.join(" \u00b7 ")); }
+  if (toolRun.length) { headingP("Technical Skills"); para(toolRun.join(" \u00b7 ")); }
 
   const enc = new TextEncoder();
   const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
