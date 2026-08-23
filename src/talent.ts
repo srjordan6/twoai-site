@@ -275,7 +275,7 @@ const MAIL_ANSWER_CAP = 5;
 // Where mail the bot cannot handle goes: member-relay messages and questions
 // the site does not cover are forwarded here in full, so nothing waits in a
 // mailbox nobody watches.
-const ESCALATE_TO = "srjordan@gmail.com";
+const ESCALATE_TO = "srj@srjconsultingservices.com";
 // Every Inkbox mailbox the cron watches. answer=true runs questions through
 // the theworldofai RAG; the SRJ and coordinator boxes are different brands,
 // so their mail is acknowledged (or not) and forwarded to Stephen instead of
@@ -730,7 +730,7 @@ export async function handleTalent(request: Request, env: TalentEnv): Promise<Re
     // FYI to the operator - not an approval request. Keeps eyes on what is
     // being published without gating anyone.
     const revName = (profile.first_name || "") + (profile.headline ? " — " + profile.headline : "");
-    await sendMail(env, "srjordan@gmail.com",
+    await sendMail(env, ESCALATE_TO,
       `Talent profile saved: ${row.tai_id}`,
       `${revName || row.tai_id} (${row.email}) saved their profile. It is live and publishes at the next site build.\n\n` +
       `If it needs to come down:\nwrangler d1 execute twoai-assistant --remote --command "UPDATE talent_state SET status='confirmed' WHERE tai_id='${row.tai_id}';"`);
