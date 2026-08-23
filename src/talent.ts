@@ -625,10 +625,14 @@ export async function handleTalent(request: Request, env: TalentEnv): Promise<Re
         for (const [k, max] of keys) o[k] = str(v?.[k], max);
         return o;
       }).filter((o) => Object.values(o).some(Boolean));
-    const certItems = dated(p.certifications_items, [["name", 140], ["year", 20], ["expires", 20]], 15);
-    const pubItems = dated(p.publications_items, [["title", 200], ["date", 20]], 20);
-    const patItems = dated(p.patents_items, [["title", 200], ["date", 20]], 15);
-    const awardItems = dated(p.awards_items, [["title", 200], ["date", 20]], 15);
+    // These caps must match the maxlength on the join form. They were 140/200
+    // against one-line inputs; the fields are now wrapping textareas, and a
+    // server cap below the form's cap truncates silently - the writer sees
+    // their full text, saves, and loses the tail with no error.
+    const certItems = dated(p.certifications_items, [["name", 300], ["year", 20], ["expires", 20]], 15);
+    const pubItems = dated(p.publications_items, [["title", 500], ["date", 20]], 20);
+    const patItems = dated(p.patents_items, [["title", 500], ["date", 20]], 15);
+    const awardItems = dated(p.awards_items, [["title", 500], ["date", 20]], 15);
     const profile = {
       first_name: str(p.first_name, 60),
       headline: str(p.headline, 140),

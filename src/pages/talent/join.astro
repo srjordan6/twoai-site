@@ -456,21 +456,41 @@ const jsonld = JSON.stringify({
 
     // ---- Small dated repeaters: certifications, publications, patents, awards.
     // One factory; each kind differs only in its field set.
+    // The name/title field in each of these is a TEXTAREA, not an input.
+    // A publication cites a title, a venue and often co-authors; a patent
+    // carries a number and a mark; an award has a body and a category. All of
+    // that ran off the end of a one-line box with no way to see what you had
+    // typed. These wrap and grow as you type, and the caps went up to match
+    // what people actually need to write.
     const MINI = {
-      cert:  { list: 'cert-list',  fields: [['name', 'Certification', 140, 'Certified ScrumMaster (CSM), Scrum Alliance'], ['year', 'Year', 20, '2021'], ['expires', 'Expiration', 20, '2027 or None']] },
-      pub:   { list: 'pub-list',   fields: [['title', 'Publication or talk', 200, 'Title, publisher or venue'], ['date', 'Date', 20, '2024']] },
-      pat:   { list: 'pat-list',   fields: [['title', 'Patent or trademark', 200, 'US 1,234,567 or Mark™'], ['date', 'Date', 20, '2023']] },
-      award: { list: 'award-list', fields: [['title', 'Award', 200, "President's Club"], ['date', 'Date', 20, '2004']] },
+      cert:  { list: 'cert-list',  fields: [['name', 'Certification', 300, 'Certified ScrumMaster (CSM), Scrum Alliance', true], ['year', 'Year', 20, '2021'], ['expires', 'Expiration', 20, '2027 or None']] },
+      pub:   { list: 'pub-list',   fields: [['title', 'Publication or talk', 500, 'Title, publisher or venue, co-authors', true], ['date', 'Date', 20, '2024']] },
+      pat:   { list: 'pat-list',   fields: [['title', 'Patent or trademark', 500, 'US 1,234,567 or Mark™, with what it covers', true], ['date', 'Date', 20, '2023']] },
+      award: { list: 'award-list', fields: [['title', 'Award', 500, "President's Club, awarding body, category", true], ['date', 'Date', 20, '2004']] },
     };
+
+    // Grow a textarea to fit its content, so nothing is ever hidden above the
+    // fold of a two-line box.
+    function autoGrow(el) {
+      const fit = () => { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 260) + 'px'; };
+      el.addEventListener('input', fit);
+      requestAnimationFrame(fit);
+      return el;
+    }
     function miniRow(kind, v) {
       v = v || {};
       const cfg = MINI[kind];
       const d = document.createElement('div');
       d.className = 'rb-card rb-mini'; d.dataset.kind = kind;
-      d.innerHTML = '<div class="rb-grid rb-wide">' + cfg.fields.map(([k, label, max, ph]) =>
-        `<label class="${k === 'name' || k === 'title' ? 'rb-span2' : ''}">${label} <input class="${kind}-${k}" maxlength="${max}" placeholder="${ph.replace(/"/g, '&quot;')}" /></label>`
-      ).join('') + '</div><button type="button" class="rb-remove">Remove</button>';
+      d.innerHTML = '<div class="rb-grid rb-wide">' + cfg.fields.map(([k, label, max, ph, multi]) => {
+        const cls = k === 'name' || k === 'title' ? 'rb-span2' : '';
+        const esc = ph.replace(/"/g, '&quot;');
+        return multi
+          ? `<label class="${cls} rb-desc">${label} <textarea class="${kind}-${k} rb-mini-area" rows="2" maxlength="${max}" placeholder="${esc}"></textarea></label>`
+          : `<label class="${cls}">${label} <input class="${kind}-${k}" maxlength="${max}" placeholder="${esc}" /></label>`;
+      }).join('') + '</div><button type="button" class="rb-remove">Remove</button>';
       for (const [k] of cfg.fields) d.querySelector(`.${kind}-${k}`).value = v[k] || '';
+      d.querySelectorAll('.rb-mini-area').forEach(autoGrow);
       d.querySelector('.rb-remove').addEventListener('click', () => d.remove());
       $(cfg.list).appendChild(d);
     }
@@ -867,6 +887,10 @@ const jsonld = JSON.stringify({
     .rb-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem .9rem; }
     .rb-grid label, .rb-desc { display: block; font-weight: 600; font-size: .92em; }
     .rb-grid input, .rb-desc textarea { display: block; width: 100%; margin-top: .2rem; padding: .45rem .55rem; border: 1px solid #c7ced6; border-radius: 6px; font: inherit; font-weight: 400; }
+    /* Wrapping title fields on certifications, publications, patents and
+       awards. min-height holds two comfortable lines; autoGrow takes it from
+       there, and vertical resize stays available for anyone who wants more. */
+    .rb-mini-area { min-height: 3.1rem; resize: vertical; line-height: 1.4; overflow-y: hidden; }
     .rb-desc { margin-top: .5rem; }
     .rb-dates .rb-daterow { display: flex; gap: .4rem; align-items: center; font-weight: 400; }
     .rb-dash { color: #667085; }
