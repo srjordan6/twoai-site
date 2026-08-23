@@ -33,7 +33,7 @@ export function getStaticPaths() {
 const { sec } = Astro.props;
 
 const isPricing = sec.tax === 'api-pricing';
-const isAPI = sec.source === 'openrouter' && !isPricing;
+const isAPI = sec.source === 'openrouter' && !isPricing && sec.shape !== 'serving-providers';
 const hf = sec.source === 'huggingface';
 const isRepo = sec.source === 'github';
 const isStatus = sec.tax === 'api-status-uptime';
@@ -84,7 +84,7 @@ const _descRaw = isHW
   : isStatus
   ? `Live status for ${sec.total} AI API providers from their own status pages, with current incidents and a 30-day incident count per provider, refreshed daily.`
   : isPricing
-  ? `Per-token API pricing for ${sec.total} AI models across ${sec.stats.provider_count} providers, in dollars per million tokens, refreshed daily. Median input price ${money(sec.stats.median_prompt_pm)}/M.`
+  ? `Per-token API pricing for ${sec.total} AI models across ${sec.stats?.provider_count} providers, in dollars per million tokens, refreshed daily. Median input price ${money(sec.stats?.median_prompt_pm)}/M.`
   : isProv
   ? `${sec.total} AI model serving providers with headquarters country, datacenter regions, and links to terms, privacy policy, and live status pages. Refreshed daily.`
   : isAPI
@@ -492,11 +492,11 @@ const licLine = (sec.licences || [])
   {isAPI && (
     <>
       <p class="answer"><b>{sec.total} {sec.name.toLowerCase()}</b> are available over commercial
-        APIs right now, from <b>{sec.stats.provider_count} providers</b>. Median price:
-        {' '}<b>{money(sec.stats.median_prompt_pm)}</b> per million input tokens and
-        {' '}<b>{money(sec.stats.median_completion_pm)}</b> per million output tokens. The largest
-        context window in this set is <b>{ctx(sec.stats.context_max)} tokens</b>;
-        {' '}{sec.stats.open_weight_count} of these models also publish open weights. {sec.blurb}</p>
+        APIs right now, from <b>{sec.stats?.provider_count} providers</b>. Median price:
+        {' '}<b>{money(sec.stats?.median_prompt_pm)}</b> per million input tokens and
+        {' '}<b>{money(sec.stats?.median_completion_pm)}</b> per million output tokens. The largest
+        context window in this set is <b>{ctx(sec.stats?.context_max)} tokens</b>;
+        {' '}{sec.stats?.open_weight_count} of these models also publish open weights. {sec.blurb}</p>
       <p class="meta-line">Last verified: {sec.generated} · Source: the
         {' '}<a href="https://openrouter.ai/models" rel="noopener">OpenRouter</a> public model API,
         refreshed daily. Newest releases first. Prices are per one million tokens.</p>
@@ -526,9 +526,9 @@ const licLine = (sec.licences || [])
   {isPricing && (
     <>
       <p class="answer">Per-token prices for <b>{sec.total} AI models</b> across
-        {' '}<b>{sec.stats.provider_count} providers</b>, in dollars per million tokens. The median
-        model costs <b>{money(sec.stats.median_prompt_pm)}/M input</b> and
-        {' '}<b>{money(sec.stats.median_completion_pm)}/M output</b>.
+        {' '}<b>{sec.stats?.provider_count} providers</b>, in dollars per million tokens. The median
+        model costs <b>{money(sec.stats?.median_prompt_pm)}/M input</b> and
+        {' '}<b>{money(sec.stats?.median_completion_pm)}/M output</b>.
         {sec.free_count > 0 && <> <b>{sec.free_count}</b> models are currently listed free to
         call, usually rate-limited.</>}
         {sec.cheapest && <> Cheapest paid model right now:
