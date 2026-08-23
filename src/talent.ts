@@ -669,6 +669,17 @@ export async function handleTalent(request: Request, env: TalentEnv): Promise<Re
       ).bind(JSON.stringify(profile), JSON.stringify(answers), JSON.stringify(pii), sharePdf, row.tai_id).run();
     }
 
+    // Tell the reviewer. Approval is a manual step, which is only workable
+    // if a submission actually reaches the person who approves; silence here
+    // left profiles sitting in review with nobody notified (2026-08-22).
+    const revName = (profile.first_name || "") + (profile.headline ? " — " + profile.headline : "");
+    const wasLive = row.status === "live" ? "This profile WAS LIVE; its page is unpublished until re-approved.\n\n" : "";
+    await sendMail(env, "srjordan@gmail.com",
+      `Talent profile awaiting review: ${row.tai_id}`,
+      `${revName || row.tai_id} (${row.email}) submitted their profile for review.\n\n${wasLive}` +
+      `Approve it with:\nwrangler d1 execute assistant-db --remote --command "UPDATE talent_state SET status='live' WHERE tai_id='${row.tai_id}';"\n\n` +
+      `The page publishes on the next pipeline run after approval.`);
+
     return tJson({ ok: true, tai_id: row.tai_id, message: "Submitted. Profiles are reviewed by a person before they go live." });
   }
 
