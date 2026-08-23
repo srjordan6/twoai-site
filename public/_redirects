@@ -186,14 +186,12 @@
 /ai-ecosystem/concept-taxonomy/  /ai-ecosystem/research-knowledge-and-learning/7f3a1c95/  301
 /ai-ecosystem/knowledge-graph/  /ai-ecosystem/research-knowledge-and-learning/21f4f8f2/  301
 
-# VENDOR POSTS THE PIPELINE DEMOTED, 2026-08-18. Both slugs are still in
-# content/news/vendor.json's archive but carry has_page=false, the pipeline's
-# judgement that there is too little in the post to fill a page, so the route
-# no longer builds them. They are live today, so they get a 301 to the vendor
-# hub rather than a 404. If the pipeline ever restores has_page on either,
-# delete its line here, because a redirect rule shadows the built page.
-/ai-news/vendor/introducing-chatgpt-atlas-the-browser-with-chatgpt-built-in-b9ca7a/  /ai-news/vendor/  301
-/ai-news/vendor/introducing-gpt-5-5-3aa153/  /ai-news/vendor/  301
+# VENDOR POSTS THE PIPELINE DEMOTED - RULES REMOVED 2026-08-23. These slugs
+# used to 301 to the hub because the route refused to build a page for any
+# post carrying has_page=false. That is no longer true: thin posts keep their
+# permalink and carry noindex,follow instead, so the real page exists again
+# and a redirect here would shadow it. The comment stays as the record of why
+# these lines went away.
 
 # DEAD URLS FOUND IN THE 2026-08-18 GSC COVERAGE EXPORT. Google had crawled
 # all of these; every one 404ed. They are grouped by how they died.
@@ -221,16 +219,55 @@
 # a deleted row means we cannot say from the database what the case was.
 /ai-lawsuits/concurrent-ventures-v-nvidia-corporation/  /ai-lawsuits/  301
 
-# EIGHT VENDOR PERMALINKS CULLED BY THE 120-CHARACTER SUMMARY FLOOR. The cull
-# on 2026-08-13 was deliberate and is recorded in twoai_url_registry, but the
-# URLs were left to 404 rather than redirected, which is still a dead
-# published URL. They join the two demoted posts above in pointing at the
-# vendor hub.
-/ai-news/vendor/arm-executorch-0-7-bringing-generative-ai-to-the-masses-41c05e/  /ai-news/vendor/  301
-/ai-news/vendor/intel-and-hugging-face-partner-to-democratize-machine-learni-a4feed/  /ai-news/vendor/  301
-/ai-news/vendor/introducing-three-new-serverless-inference-providers-hyperbo-fbfff1/  /ai-news/vendor/  301
-/ai-news/vendor/machine-learning-experts-sasha-luccioni-6be386/  /ai-news/vendor/  301
-/ai-news/vendor/physics-ai-research-that-s-shaping-the-industry-323eb5/  /ai-news/vendor/  301
-/ai-news/vendor/smaller-is-better-q8-chat-an-efficient-generative-ai-experie-0b10fc/  /ai-news/vendor/  301
-/ai-news/vendor/the-ai-tools-for-art-newsletter-issue-1-3f517a/  /ai-news/vendor/  301
-/ai-news/vendor/the-newsroom-ai-catalyst-a-global-program-with-wan-ifra-33ab6d/  /ai-news/vendor/  301
+# EIGHT VENDOR PERMALINKS CULLED BY THE 120-CHARACTER SUMMARY FLOOR - RULES
+# REMOVED 2026-08-23. The 2026-08-13 cull deleted the pages and these lines
+# redirected the survivors to the hub. Search Console then reported thirteen
+# of these as 404s, which is what a deleted published URL looks like to
+# Google. The route now builds every archived post and marks the thin ones
+# noindex, so all of them resolve again and these rules would shadow the
+# pages they were standing in for.
+
+# SEARCH CONSOLE 404 SWEEP, 2026-08-23. Every rule below is a URL Google has
+# on file and crawled to a 404. A dead published URL is a broken promise, so
+# each one goes to the nearest page that still answers the question.
+
+# The glossary term was RENAMED, not removed: it is live at
+# /ai-glossary/mcp-model-context-protocol/. This is the only rule in this
+# sweep that lands on the same content the visitor asked for.
+/ai-glossary/model-context-protocol/  /ai-glossary/mcp-model-context-protocol/  301
+
+# SIXTEEN MORE O*NET OCCUPATION PAGES. The skills section published 38
+# occupations and now carries 18. Four of the dropped codes were already
+# covered by the earlier sweep above; these are the rest. The data is gone
+# from twoai_onet, so there is nothing to restore and no equivalent page to
+# point at - the hub is the honest destination. If the set widens again,
+# delete the matching line, because a redirect rule shadows a rebuilt page.
+/skills/13-1082.00/  /skills/  301
+/skills/13-1111.00/  /skills/  301
+/skills/15-1299.02/  /skills/  301
+/skills/15-1299.07/  /skills/  301
+/skills/15-2041.01/  /skills/  301
+/skills/15-2051.01/  /skills/  301
+/skills/15-2099.01/  /skills/  301
+/skills/17-2111.00/  /skills/  301
+/skills/17-2112.02/  /skills/  301
+/skills/19-1029.01/  /skills/  301
+/skills/19-3011.01/  /skills/  301
+/skills/19-3022.00/  /skills/  301
+/skills/19-4061.00/  /skills/  301
+/skills/19-4099.01/  /skills/  301
+/skills/43-9111.00/  /skills/  301
+/skills/49-2022.00/  /skills/  301
+
+# The second NVIDIA lawsuit page. Its sibling
+# (concurrent-ventures-v-nvidia-corporation) was already redirected when its
+# row left ai_lawsuits; this one was missed in the same sweep.
+/ai-lawsuits/haugland-v-nvidia-corporation/  /ai-lawsuits/  301
+
+# THREE DAILY-BRIEFING STORY PAGES. /ai-news/{story}/ pages are generated
+# from each day's clusters and rotate out when the story stops being covered,
+# so these will keep appearing. The archive is the durable home for a story
+# that has aged out of the briefing.
+/ai-news/artificial-intelligence-stocks-to-keep-an-eye-on-x2013-augus/  /ai-news/archive/  301
+/ai-news/delhi-hc-restrains-misuse-of-actress-tabu-s-identity-orders/   /ai-news/archive/  301
+/ai-news/forget-the-artificial-intelligence-ai-capex-bubble-spacex-ce/  /ai-news/archive/  301

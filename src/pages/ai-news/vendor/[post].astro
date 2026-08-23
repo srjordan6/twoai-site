@@ -26,22 +26,23 @@ export function getStaticPaths() {
   const seen = new Set<string>();
   for (const a of data?.archive ?? []) {
     if (!a.slug || seen.has(a.slug)) continue;
-    // has_page is the pipeline's judgement that there is enough here to fill a
-    // page. Undefined means an older file from before the flag existed, and
-    // those posts already have live URLs, so they keep them.
-    if (a.has_page === false) continue;
+    // has_page is the pipeline's judgement that there is too little here to be
+    // worth indexing. It used to skip the path entirely, which DELETED 2,948
+    // permalinks - and Search Console found thirteen of them already indexed
+    // and now returning 404, because the threshold was applied to posts that
+    // had already been published. Existing published URLs never move.
+    //
+    // Thin posts therefore keep their page and carry noindex,follow instead.
+    // Google drops them from the index without ever seeing a 404, the outbound
+    // link still works for anyone holding the URL, and link equity still
+    // flows. This is the same treatment the /mcp/ section already gives its
+    // one-sentence server pages, decided 2026-08-13.
     seen.add(a.slug);
-    out.push({ params: { post: a.slug }, props: { it: a, vendor: a.vendor } });
+    out.push({ params: { post: a.slug }, props: { it: a, vendor: a.vendor, thin: a.has_page === false } });
   }
-  // The vendors blocks are a fallback for the first build after the archive
-  // landed. They must not resurrect a slug the archive has judged too thin for
-  // a page, or the threshold does nothing.
-  const suppressed = new Set(
-    (data?.archive ?? []).filter((a: any) => a.has_page === false).map((a: any) => a.slug)
-  );
   for (const v of data?.vendors ?? []) {
     for (const it of v.items ?? []) {
-      if (!it.slug || seen.has(it.slug) || suppressed.has(it.slug)) continue;
+      if (!it.slug || seen.has(it.slug)) continue;
       seen.add(it.slug);
       out.push({ params: { post: it.slug }, props: { it, vendor: v.vendor } });
     }
@@ -49,7 +50,7 @@ export function getStaticPaths() {
   return out;
 }
 
-const { it, vendor } = Astro.props;
+const { it, vendor, thin = false } = Astro.props;
 
 /* Onward links come from src/lib/related.ts, shared by every page type, so the
  * matching rule lives in one place. The outbound link to the vendor stays
@@ -84,7 +85,7 @@ const jsonld = JSON.stringify({
   description,
 });
 ---
-<Base title={title} description={description} current="/ai-news/" jsonld={jsonld} ogType="article">
+<Base title={title} description={description} current="/ai-news/" jsonld={jsonld} ogType="article" noindex={thin}>
   <p class="meta-line"><a href="/ai-news/">AI News</a> · <a href="/ai-news/vendor/">AI Vendor News</a> · {vendor}</p>
   <h1>{it.title}</h1>
   <p class="dateline">
