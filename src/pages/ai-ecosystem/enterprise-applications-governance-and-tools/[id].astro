@@ -41,20 +41,27 @@ export function getStaticPaths() {
 const { sec, secu, law } = Astro.props;
 
 const clamp158 = (s) => (s.length <= 158 ? s : `${s.slice(0, 157).replace(/\s+\S*$/, '')}…`);
+const isCases = !!sec && sec.shape === 'case-studies';
+// This route's per-industry branch was written as "any sec that is not the
+// hub", so every new sec shape added later fell into it and crashed on
+// sec.points. It now names what it renders instead of what it excludes.
+const isIndustry = !!sec && sec.shape !== 'industry-hub' && !isCases;
 const desc = clamp158(law
   ? `${law.total} AI-related bills that have become law across ${law.states} US states, detected from the legislative record on the day the status changes, each linked to the bill itself.`
-  : secu ? `${secu.blurb}` : `${sec.summary || sec.blurb || ''}`);
+  : secu ? `${secu.blurb}` : isCases
+  ? `${sec.total} published accounts of real AI deployments from ${sec.publishers.length} research publishers, newest first, sector-tagged and linked to the original. Updated daily.`
+  : `${sec.summary || sec.blurb || ''}`);
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',
-  name: law ? `Enacted AI Laws — The World of AI` : secu ? `${secu.name} — AI Security and Risk — The World of AI` : (sec.shape === 'industry-hub' ? `${sec.name} — The World of AI` : `AI in ${sec.name} — The World of AI`),
+  name: law ? `Enacted AI Laws — The World of AI` : secu ? `${secu.name} — AI Security and Risk — The World of AI` : (sec.shape === 'industry-hub' || isCases ? `${sec.name} — The World of AI` : `AI in ${sec.name} — The World of AI`),
   description: desc,
   url: `https://theworldofai.org${BASE}/${(law || secu || sec).uid}/`,
   dateModified: (law || secu || sec).generated,
   isPartOf: { '@type': 'CollectionPage', name: CATEGORY_NAME, url: `https://theworldofai.org${BASE}/` },
 });
 ---
-<Base title={law ? 'Enacted AI Laws: US Bills That Became Law — The World of AI' : secu ? `${secu.name} — AI Security and Risk — The World of AI` : `AI in ${sec.name} — The World of AI`} description={desc}
+<Base title={law ? 'Enacted AI Laws: US Bills That Became Law — The World of AI' : secu ? `${secu.name} — AI Security and Risk — The World of AI` : isCases ? `AI Case Studies: Real Deployments, Indexed — The World of AI` : `AI in ${sec.name} — The World of AI`} description={desc}
   current={`${BASE}/`} jsonld={jsonld}>
 
   <p class="meta-line"><a href="/">AI Ecosystem</a> ·
@@ -286,7 +293,7 @@ const jsonld = JSON.stringify({
     </>
   )}
 
-  {sec && sec.shape !== 'industry-hub' && (
+  {isIndustry && (
     <>
   <h1>AI in {sec.name}</h1>
 
@@ -295,7 +302,7 @@ const jsonld = JSON.stringify({
     source. Where a sector has no verifiable primary source beyond the official adoption
     survey, this page says less rather than inventing case studies.</p>
 
-  {sec.btos && sec.btos.latest && sec.btos.latest !== 'S' && (
+  {isIndustry && sec.btos && sec.btos.latest && sec.btos.latest !== 'S' && (
     <div class="dom">
       <h3>The official adoption number for this sector</h3>
       <p><b>{sec.btos.latest}</b> of firms in {sec.btos.label} used AI in the last two
@@ -306,7 +313,7 @@ const jsonld = JSON.stringify({
     </div>
   )}
 
-  {sec.analysis && (
+  {isIndustry && sec.analysis && (
     <section>
       <h2>The state of AI in {sec.name.toLowerCase()}</h2>
       {sec.analysis.body.split('\n\n').map((para) => <p>{para}</p>)}
@@ -318,9 +325,9 @@ const jsonld = JSON.stringify({
     </section>
   )}
 
-  {sec.analysis && <h2>The sourced record</h2>}
+  {isIndustry && sec.analysis && <h2>The sourced record</h2>}
 
-  {sec.points.map((f) => (
+  {isIndustry && sec.points.map((f) => (
     <div class="dom">
       <h3>{f.name}</h3>
       <p>{f.desc}</p>
@@ -385,4 +392,68 @@ const jsonld = JSON.stringify({
     </>
   )}
 
+  {isCases && (
+    <>
+      <h1>AI Case Studies</h1>
+      <p class="answer"><b>{sec.total} published accounts of real AI deployments</b>, indexed from
+        {' '}{sec.publishers.length} research publishers and refreshed daily, newest first.
+        {sec.sectors_tagged > 0 && <> {sec.sectors_tagged} industries are represented.</>} Each
+        entry links to the original: this is an index of who has written up what, not a copy of
+        their work.</p>
+      <p class="meta-line">Last verified: {sec.generated} · Headline, date and link are recorded
+        here; the full case study stays on the publisher's own site, where it belongs.</p>
+      <p class="meta-line">This list is deliberately short. Sponsored and vendor-funded posts are
+        refused outright rather than labelled, and product launches, funding rounds and market
+        commentary are filtered out even when they arrive from the same feed, because a page
+        called case studies should contain case studies. What is left is an account of a named
+        organisation actually deploying AI. Product announcements live on
+        {' '}<a href="/ai-news/vendor/">vendor news</a>.</p>
+
+      <section>
+        <h2>Where these come from</h2>
+        <table class="pay">
+          <thead><tr><th>Publisher</th><th>What it publishes</th><th class="num">Indexed</th></tr></thead>
+          <tbody>
+            {sec.publishers.map((p) => (
+              <tr>
+                <td><a href={p.home_url} rel="noopener nofollow">{p.name}</a></td>
+                <td>{p.what_it_is}</td>
+                <td class="num">{p.count}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p class="meta-line">A publisher whose feed stops responding keeps its existing entries and
+          stops gaining new ones, rather than disappearing without explanation.</p>
+      </section>
+
+      <section>
+        <h2>The index</h2>
+        <ol class="cs-list">
+          {sec.studies.map((c) => (
+            <li>
+              <a href={c.url} rel="noopener nofollow">{c.title}</a>
+              <div class="meta-line">{c.publisher}{c.posted_on ? ` · ${c.posted_on}` : ''}
+                {c.sector && c.sector_url ? <> · <a href={c.sector_url}>{c.sector}</a></> : c.sector ? ` · ${c.sector}` : ''}</div>
+              {c.summary && <p class="cs-sum">{c.summary}</p>}
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <p class="meta-line">Related on this site: <a href={`${BASE}/`}>enterprise applications and
+        governance</a> · <a href="/industries/">AI by industry</a> ·
+        {' '}<a href="/ai-compliance/">the governance library</a>.</p>
+
+      <div class="cite-box">Cite this page: <code>"AI Case Studies." The World of AI,
+        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
+    </>
+  )}
+
 </Base>
+
+<style>
+  .cs-list { padding-left: 1.2rem; }
+  .cs-list li { margin-bottom: 1.1rem; }
+  .cs-sum { margin: .25rem 0 0; color: #46505e; }
+</style>
