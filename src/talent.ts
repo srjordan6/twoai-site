@@ -29,6 +29,7 @@ interface TalentEnv {
   INKBOX_KEY_SRJ?: string;
   INKBOX_KEY_COORDINATOR?: string;
   RESEND_API_KEY?: string;
+  ANTHROPIC_API_KEY?: string;
   TURNSTILE_SECRET?: string;
   TALENT_RATE?: { limit(opts: { key: string }): Promise<{ success: boolean }> };
 }
@@ -280,9 +281,41 @@ const ESCALATE_TO = "srjordan@gmail.com";
 // so their mail is acknowledged (or not) and forwarded to Stephen instead of
 // being answered from this site's content. A missing key skips that mailbox,
 // the same dark-launch rule as everything else here.
-const MAIL_BOXES: { email: string; keyEnv: "INKBOX_KEY_THEWORLDOFAI" | "INKBOX_KEY_SRJ" | "INKBOX_KEY_COORDINATOR"; answer: boolean; ack: string }[] = [
+// What the SRJ answerer is allowed to know. A hand-curated brief, not
+// retrieval: srjconsultingservices.com content lives in Postgres, which this
+// Worker cannot reach, and a wrong fact in a consulting reply costs more than
+// a missing one. Facts only - no prices, no availability, no commitments.
+const SRJ_BRIEF = `You draft email replies for SRJ Consulting & Services LLC (srjconsultingservices.com), founded by Stephen R. Jordan, based in Frisco, Texas. The practice: AI risk, governance, security, and compliance consulting for organizations adopting AI - audits, implementation engagements, and advisory work built around Stephen's published frameworks.
+Published work: a multi-volume book series on AI business strategy, governance, risk, and security (including AI-IT Security Implementation Strategy), plus executive briefings and consulting toolkits, all described at srjconsultingservices.com/books/. The practice also publishes theworldofai.org, a free daily-rebuilt AI reference atlas.
+Contact: info@srjconsultingservices.com. Site: srjconsultingservices.com.
+RULES: Never state prices, rates, dates, availability, or any commitment on Stephen's behalf. Never invent services, credentials, or client names. If the message is a sales pitch to SRJ, a partnership offer, legal or financial matter, complaint, or anything needing a decision, reply with exactly ESCALATE and nothing else. Otherwise write a short, professional reply (under 150 words) answering what you factually can from this brief, note that Stephen will follow up personally on specifics, and sign as "SRJ Consulting & Services - automated assistant". Plain text only.`;
+
+// One Haiku call, direct API - the same route /api/ask uses. Returns the
+// draft, or null on any failure or an ESCALATE verdict, and null always
+// falls back to the ack-and-forward path, so this can only add capability.
+async function srjDraftReply(env: TalentEnv, subject: string, body: string): Promise<string | null> {
+  const k = (env.ANTHROPIC_API_KEY || "").trim();
+  if (!k) return null;
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": k, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5", max_tokens: 500, system: SRJ_BRIEF,
+        messages: [{ role: "user", content: `Subject: ${subject}\n\n${body}`.slice(0, 6000) }],
+      }),
+    });
+    if (!r.ok) return null;
+    const out: any = await r.json();
+    const text = String(Array.isArray(out?.content) ? out.content.map((c: any) => c?.text ?? "").join("") : "").trim();
+    if (!text || /^ESCALATE\b/.test(text) || text.length < 20) return null;
+    return text;
+  } catch { return null; }
+}
+
+const MAIL_BOXES: { email: string; keyEnv: "INKBOX_KEY_THEWORLDOFAI" | "INKBOX_KEY_SRJ" | "INKBOX_KEY_COORDINATOR"; answer: boolean; ack: string; draft?: boolean }[] = [
   { email: MAILBOX, keyEnv: "INKBOX_KEY_THEWORLDOFAI", answer: true, ack: "" },
-  { email: "srj@inkboxmail.com", keyEnv: "INKBOX_KEY_SRJ", answer: false,
+  { email: "srj@inkboxmail.com", keyEnv: "INKBOX_KEY_SRJ", answer: false, draft: true,
     ack: "Thanks for reaching out to SRJ Consulting & Services. Your message has been received and forwarded to Stephen Jordan, who will respond personally.\n\n--\nsrjconsultingservices.com" },
   { email: "coordinator@inkboxmail.com", keyEnv: "INKBOX_KEY_COORDINATOR", answer: false, ack: "" },
 ];
@@ -307,7 +340,7 @@ export async function talentMailAnswer(env: TalentEnv): Promise<void> {
   }
 }
 
-async function answerMailbox(env: TalentEnv, box: { email: string; keyEnv: "INKBOX_KEY_THEWORLDOFAI" | "INKBOX_KEY_SRJ" | "INKBOX_KEY_COORDINATOR"; answer: boolean; ack: string }): Promise<void> {
+async function answerMailbox(env: TalentEnv, box: { email: string; keyEnv: "INKBOX_KEY_THEWORLDOFAI" | "INKBOX_KEY_SRJ" | "INKBOX_KEY_COORDINATOR"; answer: boolean; ack: string; draft?: boolean }): Promise<void> {
   const key = (env[box.keyEnv] || "").trim();
   if (!key) return;
   const base = `https://inkbox.ai/api/v1/mail/mailboxes/${encodeURIComponent(box.email)}/messages`;
@@ -354,7 +387,27 @@ async function answerMailbox(env: TalentEnv, box: { email: string; keyEnv: "INKB
       // is configured, forward everything to Stephen, done. No cross-brand
       // answers from this site's content.
       if (!box.answer) {
-        if (box.ack) {
+        // Draft-capable mailboxes (SRJ) get a real Haiku reply grounded in
+        // the brand brief; anything the brief cannot answer - or any failure
+        // at all - falls back to the acknowledgment. Every message is still
+        // forwarded to Stephen either way, so nothing rides on the machine.
+        let sent = false, action = "forwarded";
+        if (box.draft) {
+          const draft = await srjDraftReply(env, subject, bodyText);
+          if (draft) {
+            const dr = await fetch(base, {
+              method: "POST", headers: H,
+              body: JSON.stringify({
+                recipients: { to: [from] },
+                subject: subject.toLowerCase().startsWith("re:") ? subject : "Re: " + subject,
+                body_text: draft + "\n\n--\nSRJ Consulting & Services - automated assistant. Stephen Jordan reads every message and follows up personally on specifics.\nsrjconsultingservices.com",
+                in_reply_to_message_id: m.id,
+              }),
+            });
+            sent = dr.ok; if (sent) action = "answered_srj";
+          }
+        }
+        if (!sent && box.ack) {
           await fetch(base, {
             method: "POST", headers: H,
             body: JSON.stringify({
@@ -366,7 +419,7 @@ async function answerMailbox(env: TalentEnv, box: { email: string; keyEnv: "INKB
           });
         }
         await escalateMail(base, H, m, bodyText, box.email.split("@")[0] + " inbox");
-        await log("forwarded"); handled++; continue;
+        await log(action); handled++; continue;
       }
       const question = (subject + "\n\n" + bodyText).trim();
       if (question.length < 8) { await log("empty"); handled++; continue; }
