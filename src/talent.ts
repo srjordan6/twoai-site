@@ -658,29 +658,31 @@ export async function handleTalent(request: Request, env: TalentEnv): Promise<Re
       }
     }
 
+    // Saves go live directly - no manual review gate. The email-confirm step
+    // already proves ownership, the sanitizers above bound every field, and a
+    // page only publishes what its owner typed. Manual approval unpublished
+    // live pages on every edit and left submissions waiting on a human; the
+    // owner notification below keeps an audit trail instead.
     if (pwSet) {
       const [salt, hash] = JSON.parse(pwSet);
       await env.ASSISTANT_DB.prepare(
-        "UPDATE talent_state SET profile=?, answers=?, pii=?, share_pdf=?, pw_salt=?, pw_hash=?, status='submitted', updated_at=datetime('now') WHERE tai_id=?"
+        "UPDATE talent_state SET profile=?, answers=?, pii=?, share_pdf=?, pw_salt=?, pw_hash=?, status='live', updated_at=datetime('now') WHERE tai_id=?"
       ).bind(JSON.stringify(profile), JSON.stringify(answers), JSON.stringify(pii), sharePdf, salt, hash, row.tai_id).run();
     } else {
       await env.ASSISTANT_DB.prepare(
-        "UPDATE talent_state SET profile=?, answers=?, pii=?, share_pdf=?, status='submitted', updated_at=datetime('now') WHERE tai_id=?"
+        "UPDATE talent_state SET profile=?, answers=?, pii=?, share_pdf=?, status='live', updated_at=datetime('now') WHERE tai_id=?"
       ).bind(JSON.stringify(profile), JSON.stringify(answers), JSON.stringify(pii), sharePdf, row.tai_id).run();
     }
 
-    // Tell the reviewer. Approval is a manual step, which is only workable
-    // if a submission actually reaches the person who approves; silence here
-    // left profiles sitting in review with nobody notified (2026-08-22).
+    // FYI to the operator - not an approval request. Keeps eyes on what is
+    // being published without gating anyone.
     const revName = (profile.first_name || "") + (profile.headline ? " — " + profile.headline : "");
-    const wasLive = row.status === "live" ? "This profile WAS LIVE; its page is unpublished until re-approved.\n\n" : "";
     await sendMail(env, "srjordan@gmail.com",
-      `Talent profile awaiting review: ${row.tai_id}`,
-      `${revName || row.tai_id} (${row.email}) submitted their profile for review.\n\n${wasLive}` +
-      `Approve it with:\nwrangler d1 execute assistant-db --remote --command "UPDATE talent_state SET status='live' WHERE tai_id='${row.tai_id}';"\n\n` +
-      `The page publishes on the next pipeline run after approval.`);
+      `Talent profile saved: ${row.tai_id}`,
+      `${revName || row.tai_id} (${row.email}) saved their profile. It is live and publishes at the next site build.\n\n` +
+      `If it needs to come down:\nwrangler d1 execute twoai-assistant --remote --command "UPDATE talent_state SET status='confirmed' WHERE tai_id='${row.tai_id}';"`);
 
-    return tJson({ ok: true, tai_id: row.tai_id, message: "Submitted. Profiles are reviewed by a person before they go live." });
+    return tJson({ ok: true, tai_id: row.tai_id, message: "Saved. Your page updates at the next site publish." });
   }
 
   // ---- POST /api/talent/resume?t=  (body: application/pdf) -----------------

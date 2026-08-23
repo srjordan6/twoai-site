@@ -183,7 +183,7 @@ const jsonld = JSON.stringify({
     <input type="file" id="t-resume" accept="application/pdf" />
     <p id="t-resume-msg" class="t-msg" role="status"></p>
 
-    <button id="t-submit-btn" type="button">Submit profile for review</button>
+    <button id="t-submit-btn" type="button">Save profile</button>
     <p id="t-submit-msg" class="t-msg" role="status"></p>
     <p class="meta-line">Profiles renew by email every 30 days; unanswered reminders remove
       the profile and erase the personal data behind it. Listing is open to people 18 and
@@ -794,7 +794,7 @@ const jsonld = JSON.stringify({
         say(msgId, r.ok ? doneMsg : (d.error || 'Something went wrong.'), r.ok);
       } catch { say(msgId, 'Network error. Try again.', false); }
     }
-    $('t-submit-btn').addEventListener('click', () => saveProfile('t-submit-msg', 'Submitted. Profiles are reviewed by a person before they go live.'));
+    $('t-submit-btn').addEventListener('click', () => saveProfile('t-submit-msg', 'Saved. Your page updates at the next site publish.'));
     $('t-save-btn').addEventListener('click', () => saveProfile('t-save-msg', 'Saved.'));
 
     $('t-resume').addEventListener('change', async (e) => {
