@@ -21,6 +21,12 @@ const mcp = readJSON('content/mcp/index.json');
 const compliance = readJSON('content/compliance/index.json');
 const glossary = readJSON('content/glossary/glossary.json');
 const research = readJSON('content/research/index.json');
+// Case studies publishes only after the first harvest lands, and this file
+// must not advertise a page that does not render yet, so the entry below is
+// emitted only when the content file exists and carries rows.
+const caseStudies = readJSON('content/industries/case-studies.json');
+const csCount = caseStudies?.total ?? 0;
+const csUID = caseStudies?.uid ?? '';
 
 const caseCount = lawsuits?.count ?? 104;
 const generated = lawsuits?.generated ?? '2026-08-20';
@@ -122,6 +128,13 @@ that built the pages, in the build dated ${generated}.
   original.
 - [AI Prompts](https://theworldofai.org/ai-prompts/): prompting techniques and
   domain prompt guides.
+- [AI Talent Network](https://theworldofai.org/talent/): profiles of
+  practitioners open to AI work, matched daily against live job postings;
+  candidates own their pages and publish them with a save.${csCount > 0 ? `
+- [AI Case Studies](https://theworldofai.org/ai-ecosystem/enterprise-applications-governance-and-tools/${csUID}/): ${fmt(csCount)}
+  published accounts of real AI deployments, indexed from research publishers
+  with sponsored content refused and product news filtered out; every entry
+  links to the original.` : ''}
 - [Sources and References](https://theworldofai.org/sources/): the primary
   sources behind every fact on the site, across EU and Council of Europe, US
   federal, US state and city, other jurisdictions, standards bodies and SROs,
