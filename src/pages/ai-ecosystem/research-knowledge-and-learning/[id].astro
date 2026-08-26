@@ -34,12 +34,11 @@ const BASE = `/ai-ecosystem/${CATEGORY}`;
 // the wider catalogue and the split looked like an omission. Read here rather
 // than hard-coded so the link disappears on its own if the harvest is ever
 // empty and the page stops rendering.
-let bookCatalogUID = '';
-let bookCatalogTotal = 0;
+let bookCatalog = null;
 try {
   if (existsSync('content/learn/book-catalog.json')) {
     const bc = JSON.parse(readFileSync('content/learn/book-catalog.json', 'utf8'));
-    if (bc?.total > 0 && bc?.uid) { bookCatalogUID = bc.uid; bookCatalogTotal = bc.total; }
+    if (bc?.total > 0 && Array.isArray(bc.groups)) bookCatalog = bc;
   }
 } catch { /* a malformed catalogue must not cost the Books page its render */ }
 
@@ -246,13 +245,7 @@ const jsonld = JSON.stringify(
       <p class="meta-line">Last verified: {learn.generated} · Source links re-verified daily.
         Membership is editorial: significance, not sponsorship — nothing here is paid placement.
         Skills these teach map to the <a href="/skills/">AI Skills Graph</a>.</p>
-      {learn.tax === 'books' && bookCatalogUID && (
-        <p class="answer">Looking for more than a shortlist? The
-          {' '}<a href={`${BASE}/${bookCatalogUID}/`}>AI Book Catalogue</a> lists
-          {' '}{bookCatalogTotal} AI books you can read or borrow today, catalogued from
-          Open Library. This page is the editorial shortlist; that one is everything
-          reachable.</p>
-      )}
+
       {learn.items.map((l) => (
         <div class="dom">
           <h3><a href={l.source_url} rel="noopener">{l.name}</a></h3>
@@ -264,54 +257,40 @@ const jsonld = JSON.stringify(
             verified {l.verified}</p>
         </div>
       ))}
-      <div class="cite-box">Cite this page: <code>"{learn.name}." The World of AI,
-        theworldofai.org{BASE}/{learn.uid}/. Retrieved {learn.generated}.</code></div>
-    </>
-  )}
-
-  {learn && learn.shape === 'book-catalog' && (
-    <>
-      <h1>{learn.name}</h1>
-      <p class="answer"><b>{learn.total} artificial intelligence books you can open today</b>,
-        across {learn.topics} subjects, {learn.free} free to read in full and the rest borrowable
-        free from the Internet Archive. Catalogued from Open Library, whose bibliographic records
-        are public domain.</p>
-      <p class="meta-line">Last verified: {learn.generated} · This is a catalogue, not a
-        recommendation list: inclusion means the book is about AI and a reader can actually get
-        to it, nothing more. For the shortlist of titles worth your time, see
-        {' '}<a href={`${BASE}/299aeca2/`}>AI Books</a>.</p>
-      <p class="meta-line">Fiction is excluded even when tagged artificial intelligence, and so
-        are conference proceedings: a novel where an AI is a character is not a book about AI,
-        and a volume of symposium papers is not something you read. Only titles Open Library
-        marks readable or borrowable are listed, which is why this shelf is short.</p>
-
-      {/* Defensive: a content file that arrives without groups, or a group
-          without books, must not take the whole build down with it. One
-          malformed section file blocking every deploy is exactly how the
-          _redirects outage happened. */}
-      {(learn.groups || []).map((g) => (
-        <section>
-          <h2>{g.topic}</h2>
-          <ul class="bk-list">
-            {(g.books || []).map((b) => (
-              <li>
-                <a href={b.read_url || b.url} rel="noopener">{b.title}</a>
-                {b.year ? <span class="bk-yr"> ({b.year})</span> : null}
-                <div class="meta-line">
-                  {(b.authors || []).length ? b.authors.join(', ') : 'Author not recorded'} ·
-                  {' '}{b.access === 'public' ? 'Free to read' : 'Borrowable free'} ·
-                  {' '}<a href={b.url} rel="noopener">Open Library record</a>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
-
-      <p class="meta-line">Records from <a href="https://openlibrary.org/" rel="noopener">Open
-        Library</a>, a project of the Internet Archive. Titles, authors and dates are facts and
-        are reproduced as such; no description or review text is copied, and every entry links
-        back to the source.</p>
+      {learn.tax === 'books' && bookCatalog && (
+        <>
+          <h2>Borrow or read online</h2>
+          <p class="answer"><b>{bookCatalog.total} more AI books you can open today</b>, across
+            {' '}{bookCatalog.topics} subjects, {bookCatalog.free} free to read in full and the
+            rest borrowable free from the Internet Archive. Catalogued from Open Library, whose
+            bibliographic records are public domain.</p>
+          <p class="meta-line">Last verified: {bookCatalog.generated} · These are catalogued, not
+            curated: inclusion means the book is about AI and a reader can actually reach it.
+            Fiction tagged artificial intelligence and conference proceedings are excluded, which
+            is why the list is shorter than a library search would suggest.</p>
+          {(bookCatalog.groups || []).map((g) => (
+            <section>
+              <h3>{g.topic}</h3>
+              <ul class="bk-list">
+                {(g.books || []).map((b) => (
+                  <li>
+                    <a href={b.read_url || b.url} rel="noopener">{b.title}</a>
+                    {b.year ? <span class="bk-yr"> ({b.year})</span> : null}
+                    <div class="meta-line">
+                      {(b.authors || []).length ? b.authors.join(', ') : 'Author not recorded'} ·
+                      {' '}{b.access === 'public' ? 'Free to read' : 'Borrowable free'} ·
+                      {' '}<a href={b.url} rel="noopener">Open Library record</a>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+          <p class="meta-line">Catalogue records from <a href="https://openlibrary.org/" rel="noopener">Open
+            Library</a>, a project of the Internet Archive. Titles, authors and dates are facts and
+            are reproduced as such; no description or review text is copied.</p>
+        </>
+      )}
       <div class="cite-box">Cite this page: <code>"{learn.name}." The World of AI,
         theworldofai.org{BASE}/{learn.uid}/. Retrieved {learn.generated}.</code></div>
     </>

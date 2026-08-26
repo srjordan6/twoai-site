@@ -271,3 +271,9 @@
 /ai-news/artificial-intelligence-stocks-to-keep-an-eye-on-x2013-augus/  /ai-news/archive/  301
 /ai-news/delhi-hc-restrains-misuse-of-actress-tabu-s-identity-orders/   /ai-news/archive/  301
 /ai-news/forget-the-artificial-intelligence-ai-capex-bubble-spacex-ce/  /ai-news/archive/  301
+
+# The AI Book Catalogue was published on 2026-08-25 as its own section and
+# merged into AI Books a day later: two pages in one category making
+# adjacent promises read as duplication to everyone but their author.
+# The URL was live and indexed, so it redirects rather than disappearing.
+/ai-ecosystem/research-knowledge-and-learning/ca6615c8/  /ai-ecosystem/research-knowledge-and-learning/299aeca2/  301
