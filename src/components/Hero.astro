@@ -65,7 +65,16 @@ const total = bills + terms + cases + servers;
       <a href="/mcp/"><b>{servers.toLocaleString()}</b><span>MCP servers</span></a>
     </div>
 
-    {generated && <p class="stamp">Last rebuilt {generated}</p>}
+    {/* The date was already here and already correct, but as bare text. A
+        crawler looking for freshness wants a machine-readable element, and an
+        AEO audit on 2026-08-26 reported "Last Updated: Not detected" on a page
+        that was rebuilt the previous day and said so in plain sight. The fact
+        was right and unreadable, which for a site whose whole argument is
+        being citable is the worse half. "Last updated" is also the phrase
+        those parsers look for; "rebuilt" is our word, not theirs. */}
+    {generated && (
+      <p class="stamp">Last updated <time datetime={generated}>{generated}</time></p>
+    )}
   </div>
 </section>
 

@@ -42,6 +42,19 @@ const jsonld = JSON.stringify({
   description: desc,
   url: 'https://theworldofai.org/',
   dateModified: generated,
+  datePublished: '2026-08-01',
+  inLanguage: 'en',
+  // WHO STANDS BEHIND THIS. An AEO audit flagged "no author information" as
+  // its one critical issue. A byline would be a fiction here: these pages are
+  // generated from a database, not written by a person, and inventing an
+  // author to satisfy a checker is exactly the kind of thing this site tells
+  // other people not to do. The honest equivalent is the publisher, which was
+  // genuinely missing from the schema and is now stated.
+  publisher: {
+    '@type': 'Organization',
+    name: 'SRJ Consulting & Services LLC',
+    url: 'https://srjconsultingservices.com/',
+  },
   hasPart: cats.map((c) => ({
     '@type': 'CollectionPage',
     name: c.name,
