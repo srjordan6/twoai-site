@@ -36,14 +36,51 @@ const { t, generated, related } = Astro.props;
 // Definitions and examples name real companies; those were dead text.
 const krCompanies = companiesNamedIn(`${t.definition ?? ''} ${t.example ?? ''} ${t.origin ?? ''}`, { limit: 4 });
 const desc = t.definition.length > 152 ? t.definition.slice(0, 149) + '...' : t.definition;
+// AN FAQ ONLY WHERE THE ANSWERS ALREADY EXIST. Every entry below is built
+// from a field already rendered on this page - the definition, the worked
+// example, the origin, the related terms. Nothing is invented to satisfy a
+// schema, and an entry is omitted entirely when its source field is empty,
+// so a sparse term gets a shorter FAQ rather than a padded one.
+//
+// The Q&A is also RENDERED, not schema-only. Google requires FAQPage markup
+// to describe content the reader can actually see, and a page that claims
+// questions it does not display is exactly the kind of thing this site tells
+// other people not to do.
+const faq = [
+  {
+    q: `What is ${t.term}?`,
+    a: t.definition,
+  },
+  ...(t.example ? [{
+    q: `Can you give an example of ${t.term}?`,
+    a: t.example,
+  }] : []),
+  ...(t.origin ? [{
+    q: `Where does the term ${t.term} come from?`,
+    a: t.origin,
+  }] : []),
+  ...(related.length > 0 ? [{
+    q: `What terms are related to ${t.term}?`,
+    a: `${related.map((r) => r.term).join(', ')} sit in the same category, ${t.category}.`,
+  }] : []),
+].filter((f) => f.a && String(f.a).trim().length > 0);
+
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
+  '@graph': [{
   '@type': 'DefinedTerm',
   name: t.term,
   description: t.definition,
   url: `https://theworldofai.org/ai-glossary/${t.slug}/`,
   ...(generated ? { dateModified: generated } : {}),
   inDefinedTermSet: { '@type': 'DefinedTermSet', name: 'The World of AI Glossary', url: 'https://theworldofai.org/ai-glossary/' },
+  }, {
+    '@type': 'FAQPage',
+    mainEntity: faq.map((f) => ({
+      '@type': 'Question', name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  }],
 });
 ---
 <Base title={`What is ${t.term}? Definition in plain English — The World of AI`.length <= 70
@@ -83,6 +120,18 @@ const jsonld = JSON.stringify({
       </ul>
     </>
   )}
+  {faq.length > 1 && (
+    <>
+      <h2>Frequently asked questions</h2>
+      {faq.map((f) => (
+        <div class="faq-item">
+          <h3 style="font-family:Poppins;font-size:16.5px;font-weight:600;color:#201868;margin:0 0 .3rem;">{f.q}</h3>
+          <p style="margin:0;line-height:1.7;">{f.a}</p>
+        </div>
+      ))}
+    </>
+  )}
+
   <div class="cite-box">Cite this definition: <code>"{t.term}." The World of AI Glossary,
     theworldofai.org/ai-glossary/{t.slug}/.{generated ? ` Verified ${generated}.` : ''}</code></div>
   <KeepReading blocks={[
