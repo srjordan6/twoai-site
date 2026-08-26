@@ -220,8 +220,21 @@ try {
      four colours left an outline nobody recognises. The brand colours ARE the
      recognition, which is what a social icon is for. Reverted to match SRJ. */
   .f-social { display: flex; gap: 10px; margin-top: 20px; }
-  .f-social a {
+  /* Scoped under .site-foot deliberately. The tap-target rule below,
+     ".site-foot a { display: inline-block; padding-top: 4px }", matches these
+     tiles with EXACTLY the same specificity and is declared later, so it was
+     winning: the tiles rendered display:block, which silently disables the
+     align-items and justify-content that centre the mark, and its padding
+     pushed each icon down 4px. Measured on the live page, the mark sat at
+     offset (0,4) inside a 40px tile instead of (10,10) - the marks looked
+     oversized and shoved into the top-left corner, while the CSS read as
+     correct. Adding .site-foot here wins on specificity without weakening the
+     tap-target rule, which every other footer link still needs; padding and
+     min-height are reset because a fixed 40px tile does not want either. */
+  .site-foot .f-social a {
     display: inline-flex;
+    padding: 0;
+    min-height: 0;
     align-items: center;
     justify-content: center;
     width: 40px;
@@ -230,11 +243,11 @@ try {
     color: var(--white, #fff);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
-  .f-social a:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.18); }
-  .f-social .ic-li { background: #0a66c2; }
-  .f-social .ic-yt { background: red; }
-  .f-social .ic-g  { background: #fff; border: 1px solid #DADCE0; }
-  .f-social a svg { width: 20px; height: 20px; display: block; }
+  .site-foot .f-social a:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.18); }
+  .site-foot .f-social .ic-li { background: #0a66c2; }
+  .site-foot .f-social .ic-yt { background: red; }
+  .site-foot .f-social .ic-g  { background: #fff; border: 1px solid #DADCE0; }
+  .site-foot .f-social a svg { width: 20px; height: 20px; display: block; }
 
   .f-grid h3 {
     font-family: 'Poppins', sans-serif;
