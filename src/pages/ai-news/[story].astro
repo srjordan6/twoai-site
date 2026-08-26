@@ -141,12 +141,66 @@ const jsonld = JSON.stringify({
     {known4.map((e) => <a class="pill" href={e.href}>{e.label}</a>)}
   </div>
 
-  <div class="cols">
+  <Fragment slot="rail">
+      <div class="panel sticky">
+        <p class="box-label">On this page</p>
+        <ul class="toc">
+          {story.Summary && <li><a href="#the-story">The story</a></li>}
+          {story.Why && <li><a href="#why">Why it matters</a></li>}
+          <li><a href="#coverage">Coverage</a></li>
+          {timeline.length > 0 && <li><a href="#timeline">Coverage timeline</a></li>}
+          <li><a href="/ai-news/daily/">Back to the briefing</a></li>
+        </ul>
+      </div>
+
+      <div class="panel">
+        <p class="box-label">Key numbers</p>
+        <table class="dash">
+          <tbody>
+            <tr><th scope="row">Outlets</th><td>{story.DomainCount}</td></tr>
+            <tr><th scope="row">Articles in 36h</th><td>{story.ArticleCount}</td></tr>
+            <tr><th scope="row">Days of coverage</th><td>{timeline.length}</td></tr>
+            <tr><th scope="row">Category</th><td>{cat.name}</td></tr>
+          </tbody>
+        </table>
+        {story.Domains.length > 0 && <p class="doms">{story.Domains.join(' · ')}</p>}
+      </div>
+
+      {(knownPersons.length > 0 || knownOrgs.length > 0) && (
+        <div class="panel">
+          <p class="box-label">Covered on this site</p>
+          {knownPersons.length > 0 && (
+            <p class="wl"><span>People</span>{knownPersons.map((e, i) => (
+              <>{i > 0 && ', '}<a href={e.href}>{e.label}</a></>
+            ))}</p>
+          )}
+          {knownOrgs.length > 0 && (
+            <p class="wl"><span>Organizations</span>{knownOrgs.map((e, i) => (
+              <>{i > 0 && ', '}<a href={e.href}>{e.label}</a></>
+            ))}</p>
+          )}
+        </div>
+      )}
+  </Fragment>
+
+  <div class="story-body">
     <div class="main">
       {story.Summary && (
         <div class="story-summary" id="the-story">
           <h2>The story</h2>
-          {story.Summary.split('\n').filter((p: string) => p.trim()).map((p: string) => <p>{p}</p>)}
+          {/* The summariser writes Markdown, and its output is stored as
+              written: dozens of archive summaries begin "# Summary". Split on
+              lines and printed verbatim, that hash reached the reader as a
+              literal character at the top of the story - the same defect the
+              ask box had. Heading lines are dropped rather than rendered,
+              because the section already carries its own "The story" heading
+              and a second one saying "Summary" adds nothing; bold and italic
+              markers are unwrapped in place. */}
+          {story.Summary.split('\n')
+            .map((p: string) => p.trim())
+            .filter((p: string) => p && !/^#{1,6}\s/.test(p))
+            .map((p: string) => p.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/(^|\s)\*([^*]+)\*/g, '$1$2'))
+            .map((p: string) => <p>{p}</p>)}
           {story.SummaryURL && (
             <p class="summary-attribution">
               Summarized from reporting first published by {story.SummaryDomain}.
@@ -210,48 +264,6 @@ const jsonld = JSON.stringify({
         sources.
       </p>
     </div>
-
-    <aside class="side">
-      <div class="panel sticky">
-        <p class="box-label">On this page</p>
-        <ul class="toc">
-          {story.Summary && <li><a href="#the-story">The story</a></li>}
-          {story.Why && <li><a href="#why">Why it matters</a></li>}
-          <li><a href="#coverage">Coverage</a></li>
-          {timeline.length > 0 && <li><a href="#timeline">Coverage timeline</a></li>}
-          <li><a href="/ai-news/daily/">Back to the briefing</a></li>
-        </ul>
-      </div>
-
-      <div class="panel">
-        <p class="box-label">Key numbers</p>
-        <table class="dash">
-          <tbody>
-            <tr><th scope="row">Outlets</th><td>{story.DomainCount}</td></tr>
-            <tr><th scope="row">Articles in 36h</th><td>{story.ArticleCount}</td></tr>
-            <tr><th scope="row">Days of coverage</th><td>{timeline.length}</td></tr>
-            <tr><th scope="row">Category</th><td>{cat.name}</td></tr>
-          </tbody>
-        </table>
-        {story.Domains.length > 0 && <p class="doms">{story.Domains.join(' · ')}</p>}
-      </div>
-
-      {(knownPersons.length > 0 || knownOrgs.length > 0) && (
-        <div class="panel">
-          <p class="box-label">Covered on this site</p>
-          {knownPersons.length > 0 && (
-            <p class="wl"><span>People</span>{knownPersons.map((e, i) => (
-              <>{i > 0 && ', '}<a href={e.href}>{e.label}</a></>
-            ))}</p>
-          )}
-          {knownOrgs.length > 0 && (
-            <p class="wl"><span>Organizations</span>{knownOrgs.map((e, i) => (
-              <>{i > 0 && ', '}<a href={e.href}>{e.label}</a></>
-            ))}</p>
-          )}
-        </div>
-      )}
-    </aside>
   </div>
   <KeepReading blocks={[
     { label: 'Terms in this story, defined',
@@ -283,8 +295,15 @@ const jsonld = JSON.stringify({
   .wl a:hover { color: #F07800; }
   .pill-cat { background: #F07800; text-decoration: none; }
 
-  .cols { display: grid; grid-template-columns: minmax(0,1fr) 280px; gap: 40px; align-items: start; }
-  @media (max-width: 960px) { .cols { grid-template-columns: 1fr; } }
+  /* THE NESTED SECOND SIDEBAR IS GONE. This template used to open its own
+     two-column grid INSIDE Base's main column, while Base was already
+     reserving a 300px rail beside it. At 1440px that produced three columns
+     and left the article text 374 pixels wide - narrower than the panels
+     beside it - and below 960px the panels dropped underneath the article at
+     full width, which is the layout Stephen photographed. The panels now go
+     into Base's own rail slot, so the page has ONE right-hand rail like every
+     other page on the site and the article keeps the full measure. */
+  .story-body { max-width: 100%; }
 
   h2 { color: #201868; font-size: 24px; margin: 30px 0 4px; }
   .rule { width: 56px; height: 3px; background: #F07800; margin: 0 0 18px; }
@@ -318,7 +337,7 @@ const jsonld = JSON.stringify({
   .note { margin-top: 34px; font-size: 14px; color: #7A8A9E; font-style: italic; max-width: 68ch; }
   .note a { color: #201868; }
 
-  .side { display: flex; flex-direction: column; gap: 20px; }
+  /* .side is retired with the nested grid; Base owns rail spacing now. */
   .panel { border: 1px solid #e6e4de; border-radius: 10px; padding: 18px 20px; background: #fafaf6; }
   .sticky { position: sticky; top: 20px; }
   .toc { list-style: none; margin: 0; padding: 0; }
@@ -327,7 +346,13 @@ const jsonld = JSON.stringify({
   .toc a:hover { color: #F07800; }
   .dash { width: 100%; border-collapse: collapse; }
   .dash th, .dash td { font-size: 13.5px; padding: 7px 0; border-bottom: 1px solid #eceae4; text-align: left; }
-  .dash th { color: #7A8A9E; font-weight: 500; }
+  /* Base styles every th in the site with a navy fill and white text, which
+     is right for a data table and wrong for a two-column key-value panel: the
+     local rule here overrode the COLOUR to grey but not the BACKGROUND, so the
+     labels rendered grey-on-navy - unreadable bars down the side of the rail.
+     Same shape as the footer icon defect: a global rule and a local one
+     touching the same element, and only the rendered result shows it. */
+  .dash th { color: #7A8A9E; font-weight: 500; background: transparent; padding-left: 0; }
   .dash td { color: #201868; font-weight: 700; text-align: right; }
   .dash tr:last-child th, .dash tr:last-child td { border-bottom: none; }
   .doms { font-size: 12px; color: #7A8A9E; line-height: 1.6; margin: 10px 0 0; }
