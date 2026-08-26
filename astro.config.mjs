@@ -60,18 +60,54 @@ function noindexPeoplePaths() {
 
 const excluded = new Set([...redirectedPaths(), ...noindexPeoplePaths()]);
 
+// Pages the sitemap deliberately withholds, recorded as the build decides
+// them. THIS EXISTS BECAUSE url_registry READS THE SITEMAP. That was the right
+// source while "in the sitemap" and "on the site" meant the same thing; the
+// moment vendor permalinks were withdrawn for crawl budget on 2026-08-26,
+// 5,000 live pages started reporting as gone and the registry raised 2,218
+// URLs for redirect-or-restore that need neither. Publishing the withheld set
+// keeps the registry's founding property intact: it still learns the site from
+// the build, so it cannot disagree with what actually rendered.
+const unlisted = new Set();
+
+function sitemapKeeps(page) {
+  if (/\/mcp\/[^/]+\/$/.test(page) && !page.endsWith('/mcp/')) return false;
+  // Vendor permalinks out, the hub itself in.
+  if (/\/ai-news\/vendor\/[^/]+\/$/.test(page)) return false;
+  const path = new URL(page).pathname;
+  return !excluded.has(path);
+}
+
+// Emits /unlisted-urls.json alongside the sitemap: live, reachable pages that
+// are intentionally not advertised. A consumer that wants "every URL this
+// build serves" reads the sitemap and this file together.
+function unlistedManifest() {
+  return {
+    name: 'twoai-unlisted-manifest',
+    hooks: {
+      'astro:build:done': async ({ pages, dir }) => {
+        const all = pages.map((p) => `https://theworldofai.org/${p.pathname}`);
+        const withheld = all.filter((u) => !sitemapKeeps(u)).sort();
+        const { writeFileSync } = await import('node:fs');
+        writeFileSync(
+          new URL('unlisted-urls.json', dir),
+          JSON.stringify({
+            note: 'Live pages deliberately kept out of sitemap.xml. They answer 200 and are linked; they are simply not advertised for crawl budget or noindex reasons.',
+            generated: new Date().toISOString().slice(0, 10),
+            count: withheld.length,
+            urls: withheld,
+          })
+        );
+        console.log(`unlisted-urls.json: ${withheld.length} live pages withheld from the sitemap`);
+      },
+    },
+  };
+}
+
 // Static output; content is fetched from the twoai-content repo by
 // scripts/fetch-content.mjs before every build (see package.json prebuild).
 export default defineConfig({
   site: 'https://theworldofai.org',
-  integrations: [sitemap({
-    filter: (page) => {
-      if (/\/mcp\/[^/]+\/$/.test(page) && !page.endsWith('/mcp/')) return false;
-      // Vendor permalinks out, the hub itself in.
-      if (/\/ai-news\/vendor\/[^/]+\/$/.test(page)) return false;
-      const path = new URL(page).pathname;
-      return !excluded.has(path);
-    },
-  })],
+  integrations: [sitemap({ filter: sitemapKeeps }), unlistedManifest()],
   build: { format: 'directory' },
 });
