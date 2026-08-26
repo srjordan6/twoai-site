@@ -15,6 +15,22 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 //    future retirement drops out of the sitemap automatically.
 // 3. Tracked-only people profiles: they render noindex (see the people
 //    directory route), so they must not be advertised either.
+// 4. Vendor news permalinks: live, linked and readable, but not advertised.
+//    This one is a crawl-budget decision rather than a quality one, and the
+//    numbers made it: on 2026-08-26 these were 2,227 of 4,315 live URLs, 51.6%
+//    of the site, while Google Search Console reported 763 of them "Discovered
+//    - currently not indexed" alongside 144 glossary terms in the same queue.
+//    Google rations attention across a site, and half the queue was the least
+//    valuable half - third-party feed summaries competing against the
+//    definitions this site is actually cited for.
+//
+//    They are NOT noindexed and NOT removed. Every permalink still answers
+//    200, still carries its archive links, and can still be indexed if Google
+//    arrives by another route. Removing them was never an option: a summary
+//    floor applied to this same set on 2026-08-22 deleted 2,948 published
+//    URLs and produced thirteen 404s in Search Console, and published URLs do
+//    not move here. The /ai-news/vendor/ hub and the archive stay in the
+//    sitemap, so the set remains discoverable as a set.
 
 function redirectedPaths() {
   const out = new Set();
@@ -51,6 +67,8 @@ export default defineConfig({
   integrations: [sitemap({
     filter: (page) => {
       if (/\/mcp\/[^/]+\/$/.test(page) && !page.endsWith('/mcp/')) return false;
+      // Vendor permalinks out, the hub itself in.
+      if (/\/ai-news\/vendor\/[^/]+\/$/.test(page)) return false;
       const path = new URL(page).pathname;
       return !excluded.has(path);
     },
