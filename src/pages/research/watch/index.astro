@@ -83,26 +83,7 @@ const jsonld = JSON.stringify({
     <p class="empty">The watch publishes with the pipeline&rsquo;s next morning run.</p>
   )}
 
-  <div class="cols">
-    <div class="main">
-      <ul class="papers">
-        {papers.map((p) => (
-          <li>
-            <a href={p.url} rel="noopener" target="_blank">{p.title}</a>
-            <span class="meta"><span class="pill">mentions {p.match}</span> Surfaced {p.surfaced} · arXiv preprint</span>
-          </li>
-        ))}
-      </ul>
-      {papers.length > 0 && (
-        <p class="note">
-          Preprints have not been peer reviewed. Every link goes to the paper&rsquo;s arXiv
-          abstract page. The match label means the name appears in the title or abstract; arXiv
-          does not expose author affiliations, so no affiliation is claimed.
-        </p>
-      )}
-    </div>
-
-    <aside class="side">
+  <Fragment slot="rail">
       <div class="panel sticky">
         <p class="box-label">The numbers</p>
         <table class="dash">
@@ -128,7 +109,26 @@ const jsonld = JSON.stringify({
           <li><a href="/ai-news/">Today&rsquo;s AI News &rarr;</a></li>
         </ul>
       </div>
-    </aside>
+  </Fragment>
+
+  <div class="story-body">
+    <div class="main">
+      <ul class="papers">
+        {papers.map((p) => (
+          <li>
+            <a href={p.url} rel="noopener" target="_blank">{p.title}</a>
+            <span class="meta"><span class="pill">mentions {p.match}</span> Surfaced {p.surfaced} · arXiv preprint</span>
+          </li>
+        ))}
+      </ul>
+      {papers.length > 0 && (
+        <p class="note">
+          Preprints have not been peer reviewed. Every link goes to the paper&rsquo;s arXiv
+          abstract page. The match label means the name appears in the title or abstract; arXiv
+          does not expose author affiliations, so no affiliation is claimed.
+        </p>
+      )}
+    </div>
   </div>
 </Base>
 
@@ -141,8 +141,13 @@ const jsonld = JSON.stringify({
   .answer-box a { color: #201868; font-weight: 600; }
   .answer-label { font-size: 11px !important; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #F07800; margin: 0 0 8px !important; }
 
-  .cols { display: grid; grid-template-columns: minmax(0,1fr) 280px; gap: 40px; align-items: start; }
-  @media (max-width: 960px) { .cols { grid-template-columns: 1fr; } }
+  /* Panels go in Base's rail slot, not a nested grid. This template used to
+     open its own two-column layout INSIDE Base's main column while Base was
+     already reserving a rail beside it, producing three columns on a wide
+     screen and dropping the panels full-width underneath the content below
+     960px. Same defect fixed on ai-news/[story] the same day; these were the
+     last two templates carrying it. */
+  .story-body { max-width: 100%; }
 
   .box-label { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #F07800; margin: 0 0 10px; }
 
@@ -156,7 +161,7 @@ const jsonld = JSON.stringify({
 
   .note { margin-top: 30px; font-size: 14px; color: #7A8A9E; font-style: italic; max-width: 68ch; }
 
-  .side { display: flex; flex-direction: column; gap: 20px; }
+  /* .side retired with the nested grid; Base owns rail spacing. */
   .panel { border: 1px solid #e6e4de; border-radius: 10px; padding: 18px 20px; background: #fafaf6; }
   .sticky { position: sticky; top: 20px; }
   .toc { list-style: none; margin: 0; padding: 0; }
@@ -166,7 +171,7 @@ const jsonld = JSON.stringify({
   .mn { color: #F07800; font-weight: 700; }
   .dash { width: 100%; border-collapse: collapse; }
   .dash th, .dash td { font-size: 13.5px; padding: 7px 0; border-bottom: 1px solid #eceae4; text-align: left; }
-  .dash th { color: #7A8A9E; font-weight: 500; }
+  .dash th { color: #7A8A9E; font-weight: 500; background: transparent; padding-left: 0; }
   .dash td { color: #201868; font-weight: 700; text-align: right; }
   .dash tr:last-child th, .dash tr:last-child td { border-bottom: none; }
 
