@@ -21,14 +21,56 @@ const krPosts = vendorPostsNaming(t.vendor || t.name, 4);
 // Alternatives and integrations named in the profile are companies too; the
 // vendor alone left 23 tool pages naming OpenAI with no route to it.
 const krNamed = companiesNamedIn(JSON.stringify(t ?? {}), { limit: 4, exclude: t.vendor || t.name });
+// FAQ FROM THE PROFILE, NOT FROM IMAGINATION. Each answer is a field this
+// page already shows: what the tool is for, what the cheapest tier costs,
+// what it is weakest at, what to use instead. An entry is skipped when its
+// field is empty, so a thin profile gets a short FAQ instead of a padded one.
+//
+// The cost answer deliberately quotes the LOWEST tier and names it, because
+// "what does it cost" answered with an enterprise figure is misleading, and
+// answered with "it depends" is useless.
+const cheapest = Array.isArray(t.pricing) && t.pricing.length > 0 ? t.pricing[0] : null;
+const faq = [
+  ...(t.value ? [{
+    q: `What is ${t.name} used for?`,
+    a: t.value,
+  }] : []),
+  ...(cheapest?.model ? [{
+    q: `How much does ${t.name} cost?`,
+    // limits text is authored without terminal punctuation, so it is
+    // sentence-ended here rather than run into the tier count behind it.
+    a: [
+      `The ${cheapest.tier || 'entry'} tier is ${cheapest.model}.`,
+      cheapest.limits ? String(cheapest.limits).replace(/[.;,]\s*$/, '') + '.' : '',
+      t.pricing.length > 1 ? `There are ${t.pricing.length} tiers listed on this page; check the vendor for current terms.` : '',
+    ].filter(Boolean).join(' '),
+  }] : []),
+  ...(Array.isArray(t.cons) && t.cons.length > 0 ? [{
+    q: `What are the drawbacks of ${t.name}?`,
+    a: t.cons[0],
+  }] : []),
+  ...(Array.isArray(t.alternatives) && t.alternatives.length > 0 ? [{
+    q: `What are the alternatives to ${t.name}?`,
+    a: `${t.alternatives.join(', ')}${t.category ? `, in the same category, ${t.category}` : ''}.`,
+  }] : []),
+].filter((f) => f.a && String(f.a).trim().length > 0);
+
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
+  '@graph': [{
   '@type': 'SoftwareApplication',
   name: t.name,
   description: t.tagline || t.value,
   applicationCategory: t.category || 'Artificial Intelligence',
   url: `https://theworldofai.org/ai-tools/${t.slug}/`,
   ...(t.vendor ? { author: { '@type': 'Organization', name: t.vendor } } : {}),
+  }, ...(faq.length > 1 ? [{
+    '@type': 'FAQPage',
+    mainEntity: faq.map((f) => ({
+      '@type': 'Question', name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  }] : [])],
 });
 ---
 <Base title={`${t.name}: what it does, what it costs, and where it falls short`} description={desc} current="/ai-tools/" jsonld={jsonld}>
@@ -100,6 +142,18 @@ const jsonld = JSON.stringify({
   {t.audience?.length > 0 && (
     <p class="meta-line">Best suited to: {t.audience.join(', ')}
       {t.tags?.length > 0 && <> · {t.tags.join(' · ')}</>}</p>
+  )}
+
+  {faq.length > 1 && (
+    <>
+      <h2>Frequently asked questions</h2>
+      {faq.map((f) => (
+        <div class="faq-item">
+          <h3 style="font-family:Poppins;font-size:16.5px;font-weight:600;color:#201868;margin:0 0 .3rem;">{f.q}</h3>
+          <p style="margin:0;line-height:1.7;">{f.a}</p>
+        </div>
+      ))}
+    </>
   )}
 
   <div class="cite-box">Cite this profile: <code>"{t.name}." The World of AI Tools Directory,
