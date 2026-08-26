@@ -88,6 +88,49 @@ const jsonld = JSON.stringify({
           return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
         });
       }
+      // The model answers in Markdown. Until now the answer was escaped and
+      // then only split on blank lines, so every "#" and "**" printed as a
+      // literal character: the reader saw "# Texas AI Law" and "**HB 149**"
+      // and the whole box read like a debug view next to the polished header
+      // search. This turns the small subset of Markdown the assistant actually
+      // uses into HTML.
+      //
+      // ORDER MATTERS AND IS THE SECURITY PROPERTY: esc() runs FIRST on the
+      // raw answer, so any angle bracket in the model output is already inert
+      // before a single tag is introduced here. Everything below then operates
+      // on escaped text and can only produce the tags it writes itself.
+      function render(md) {
+        var lines = esc(md || '').split('\n');
+        var html = '', inList = false;
+        function inline(t) {
+          return t
+            .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+            .replace(/(^|[\s(])\*([^*\n]+)\*/g, '$1<em>$2</em>')
+            .replace(/`([^`]+)`/g, '<code>$1</code>');
+        }
+        for (var i = 0; i < lines.length; i++) {
+          var line = lines[i].trim();
+          var m;
+          if (!line) { if (inList) { html += '</ul>'; inList = false; } continue; }
+          if ((m = line.match(/^(#{1,4})\s+(.*)$/))) {
+            if (inList) { html += '</ul>'; inList = false; }
+            // Headings inside an answer start at h3: the page already has an
+            // h1 and the section carries the h2.
+            var level = Math.min(m[1].length + 2, 5);
+            html += '<h' + level + '>' + inline(m[2]) + '</h' + level + '>';
+            continue;
+          }
+          if ((m = line.match(/^[-*]\s+(.*)$/))) {
+            if (!inList) { html += '<ul>'; inList = true; }
+            html += '<li>' + inline(m[1]) + '</li>';
+            continue;
+          }
+          if (inList) { html += '</ul>'; inList = false; }
+          html += '<p>' + inline(line) + '</p>';
+        }
+        if (inList) html += '</ul>';
+        return html;
+      }
       function ask() {
         var text = q.value.trim();
         if (!text || busy) return;
@@ -104,8 +147,7 @@ const jsonld = JSON.stringify({
           body: JSON.stringify({ question: text })
         }).then(function (r) { return r.json(); }).then(function (d) {
           if (d.error) { out.innerHTML = '<p class="ask-wait">' + esc(d.error) + '</p>'; return; }
-          var html = '<div class="ask-answer">' +
-            esc(d.answer).replace(/\n\n+/g, '</p><p>').replace(/^/, '<p>') + '</p></div>';
+          var html = '<div class="ask-answer">' + render(d.answer) + '</div>';
           if (d.sources && d.sources.length) {
             html += '<p class="ask-src-label">Sources on this site</p><ul class="ask-src">';
             for (var i = 0; i < d.sources.length; i++) {
@@ -180,6 +222,20 @@ const jsonld = JSON.stringify({
   .ask-out { margin: 20px auto 0; max-width: 640px; text-align: left; }
   .ask-wait { font-size: 14px; color: #7A8A9E; font-style: italic; }
   .ask-answer p { font-size: 15px; line-height: 1.7; margin: 0 0 .8em; }
+  /* The assistant answers in Markdown and it is now rendered as such. These
+     keep a heading inside an answer subordinate to the section it sits in:
+     an h3 here is a paragraph label, not a page division. */
+  .ask-answer h3, .ask-answer h4, .ask-answer h5 {
+    font-family: var(--font-body); font-size: 15px; font-weight: 600;
+    color: var(--navy, #201868); margin: 1.2em 0 .4em; line-height: 1.4;
+  }
+  .ask-answer h3:first-child, .ask-answer h4:first-child { margin-top: 0; }
+  .ask-answer ul { margin: 0 0 .8em; padding-left: 1.2em; }
+  .ask-answer li { font-size: 15px; line-height: 1.7; margin: 0 0 .3em; }
+  .ask-answer code {
+    font-size: 13px; background: rgba(32,24,104,.06);
+    padding: .1em .35em; border-radius: 3px;
+  }
   .ask-src-label { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
     color: #F07800; margin: 14px 0 6px; }
   .ask-src { list-style: none; margin: 0; padding: 0; }
