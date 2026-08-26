@@ -36,7 +36,7 @@ const jsonld = JSON.stringify({
   <article class="doc">
     <h1>{d.title}</h1>
     <p class="lede">{d.description}</p>
-    <p class="verified">Last updated: {d.updated}</p>
+    <p class="verified">Last updated: <time datetime={d.updated}>{d.updated}</time></p>
     {d.sections.map((s) => (
       <section>
         <h2>{s.h}</h2>

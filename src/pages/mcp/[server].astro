@@ -59,7 +59,7 @@ const jsonld = JSON.stringify({
     {s.vendor && <>Published by {s.vendor} · </>}
     {s.version && <>Version {s.version} · </>}
     {s.transport && <>Runs as a {s.transport} · </>}
-    {generated && <>Last verified: {generated}</>}
+    {generated && <>Last verified: <time datetime={generated}>{generated}</time></>}
   </p>
 
   {(s.remote_url || s.package_id) && (

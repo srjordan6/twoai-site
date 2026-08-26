@@ -52,7 +52,7 @@ const jsonld = JSON.stringify({
   <p class="answer"><b>{d.name} has {d.count} artificial intelligence bill{d.count === 1 ? '' : 's'}</b> tracked
     as of {d.generated}, drawn daily from the LegiScan legislative database. Every bill below
     links to its official page with full text, sponsors, and status history.</p>
-  <p class="meta-line">Last verified: {d.generated} · Source: LegiScan API ·
+  <p class="meta-line">Last verified: <time datetime={d.generated}>{d.generated}</time> · Source: LegiScan API ·
     <a href="/ai-laws/">All states</a></p>
 
   {d.count > 0 ? (

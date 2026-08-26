@@ -50,7 +50,7 @@ const jsonld = JSON.stringify({
     ? `What is ${t.term}? Definition in plain English — The World of AI`
     : (`What is ${t.term}? — AI Glossary`.length <= 70 ? `What is ${t.term}? — AI Glossary` : `What is ${t.term}?`)} description={desc} current="/ai-glossary/" jsonld={jsonld}>
   <h1>{t.term}</h1>
-  <p class="meta-line"><span class="badge">{t.category}</span>{generated && <> · Last verified: {generated}</>}</p>
+  <p class="meta-line"><span class="badge">{t.category}</span>{generated && <> · Last verified: <time datetime={generated}>{generated}</time></>}</p>
   <p class="answer">{t.definition}</p>
   {t.example && (<><h2>Example</h2><p>{t.example}</p></>)}
 

@@ -37,7 +37,7 @@ const jsonld = JSON.stringify({
   <p class="meta-line">
     {t.vendor && <>Vendor: {t.vendor} · </>}
     {t.status && <>Status: {t.status} · </>}
-    {t.generated && <>Last verified: {t.generated}</>}
+    {t.generated && <>Last verified: <time datetime={t.generated}>{t.generated}</time></>}
   </p>
   {t.url && <p><a href={t.url} rel="noopener nofollow">Visit the {t.name} site</a></p>}
 

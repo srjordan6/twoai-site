@@ -74,7 +74,7 @@ const jsonld = JSON.stringify({
         the tables below.</p>
     </div>
   )}
-  {w.generated && <p class="meta-line">Last verified: {w.generated} · Sources: LegiScan, the Federal Register, CourtListener</p>}
+  {w.generated && <p class="meta-line">Last verified: <time datetime={w.generated}>{w.generated}</time> · Sources: LegiScan, the Federal Register, CourtListener</p>}
 
   {themes.length > 0 && (
     <>

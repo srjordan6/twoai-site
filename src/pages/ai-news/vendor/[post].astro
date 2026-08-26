@@ -95,7 +95,7 @@ const jsonld = JSON.stringify({
     {vendorCompany
       ? <a class="pill" href={`/companies/${vendorCompany.uid}/`}>{vendor}</a>
       : <a class="pill" href="/ai-news/vendor/">{vendor}</a>}
-    Surfaced {it.date} · Announcement · {host}</p>
+    Surfaced <time datetime={it.date}>{it.date}</time> · Announcement · {host}</p>
 
   <div class="answer-box">
     <p class="answer-label">{it.summary ? `In ${vendor}\u2019s words` : 'What this is'}</p>

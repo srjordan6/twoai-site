@@ -65,7 +65,7 @@ const jsonld = JSON.stringify({
   <h1>{d.title}</h1>
   {d.subtitle && <p class="lede">{d.subtitle}</p>}
   {d.short && <p class="answer">{d.short}</p>}
-  {d.generated && <p class="meta-line">Last verified: {d.generated}</p>}
+  {d.generated && <p class="meta-line">Last verified: <time datetime={d.generated}>{d.generated}</time></p>}
 
   <div class="body" set:html={d.body_html} />
 
