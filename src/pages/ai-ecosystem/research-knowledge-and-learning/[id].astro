@@ -27,6 +27,22 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 const CATEGORY = 'research-knowledge-and-learning';
 const BASE = `/ai-ecosystem/${CATEGORY}`;
 
+// The Books shelf and the Open Library catalogue are deliberately separate
+// pages with different promises, which only works if each one points at the
+// other. The catalogue linked back to Books from the day it shipped; Books
+// did not link forward, so a reader on the curated shelf had no way to reach
+// the wider catalogue and the split looked like an omission. Read here rather
+// than hard-coded so the link disappears on its own if the harvest is ever
+// empty and the page stops rendering.
+let bookCatalogUID = '';
+let bookCatalogTotal = 0;
+try {
+  if (existsSync('content/learn/book-catalog.json')) {
+    const bc = JSON.parse(readFileSync('content/learn/book-catalog.json', 'utf8'));
+    if (bc?.total > 0 && bc?.uid) { bookCatalogUID = bc.uid; bookCatalogTotal = bc.total; }
+  }
+} catch { /* a malformed catalogue must not cost the Books page its render */ }
+
 export function getStaticPaths() {
   const paths = [];
   if (existsSync('content/learn')) {
@@ -230,6 +246,13 @@ const jsonld = JSON.stringify(
       <p class="meta-line">Last verified: {learn.generated} · Source links re-verified daily.
         Membership is editorial: significance, not sponsorship — nothing here is paid placement.
         Skills these teach map to the <a href="/skills/">AI Skills Graph</a>.</p>
+      {learn.tax === 'books' && bookCatalogUID && (
+        <p class="answer">Looking for more than a shortlist? The
+          {' '}<a href={`${BASE}/${bookCatalogUID}/`}>AI Book Catalogue</a> lists
+          {' '}{bookCatalogTotal} AI books you can read or borrow today, catalogued from
+          Open Library. This page is the editorial shortlist; that one is everything
+          reachable.</p>
+      )}
       {learn.items.map((l) => (
         <div class="dom">
           <h3><a href={l.source_url} rel="noopener">{l.name}</a></h3>
