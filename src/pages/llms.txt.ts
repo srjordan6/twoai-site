@@ -27,6 +27,13 @@ const research = readJSON('content/research/index.json');
 const caseStudies = readJSON('content/industries/case-studies.json');
 const csCount = caseStudies?.total ?? 0;
 const csUID = caseStudies?.uid ?? '';
+// Same rule for the book catalogue: it is harvested from Open Library and
+// only exists after a run has kept some titles.
+const bookCat = readJSON('content/learn/book-catalog.json');
+const bcCount = bookCat?.total ?? 0;
+const bcFree = bookCat?.free ?? 0;
+const bcTopics = bookCat?.topics ?? 0;
+const bcUID = bookCat?.uid ?? '';
 
 const caseCount = lawsuits?.count ?? 104;
 const generated = lawsuits?.generated ?? '2026-08-20';
@@ -192,7 +199,16 @@ that built the pages, in the build dated ${generated}.
   rather than summarised.
 - Books (under Research, Knowledge and Learning): an independent shelf of AI
   titles, followed by the SRJ book series on AI audit, governance, and
-  security, labelled as the publisher's own and linked with rel=sponsored.
+  security, labelled as the publisher's own and linked with rel=sponsored.${bcCount && bcUID ? `
+- [AI Book Catalogue](https://theworldofai.org/ai-ecosystem/research-knowledge-and-learning/${bcUID}/):
+  ${bcCount} artificial intelligence books a reader can open today, across
+  ${bcTopics} subjects, ${bcFree} free to read in full and the rest borrowable
+  free from the Internet Archive. Catalogued from Open Library, whose
+  bibliographic records are public domain. Distinct from the curated Books
+  shelf above: inclusion means only that the book is about AI and is actually
+  reachable. Fiction tagged artificial intelligence and conference proceedings
+  are excluded, which is why the shelf is short. Metadata only, with every
+  entry linking to the Open Library record.` : ''}
 
 ## Ask this site
 Every page carries an ask box backed by POST https://theworldofai.org/api/ask

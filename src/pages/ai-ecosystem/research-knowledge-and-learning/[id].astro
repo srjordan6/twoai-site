@@ -90,7 +90,7 @@ const hasPage = (u) => {
   catch { return false; }
 };
 const _descRaw = learn
-  ? `${learn.total} ${learn.name.toLowerCase()}, ${learn.free} free, curated by level and audience with a verified source each${learn.with_code ? `, ${learn.with_code} with companion code` : ''}, re-verified daily.`
+  ? `${learn.total} ${(learn.name || 'entries').toLowerCase()}, ${learn.free} free, curated by level and audience with a verified source each${learn.with_code ? `, ${learn.with_code} with companion code` : ''}, re-verified daily.`
   : section
   ? String(section.answer || '').slice(0, 300)
   : hub
@@ -205,7 +205,7 @@ const jsonld = JSON.stringify(
   {learn && learn.shape === 'media' && (
     <>
       <h1>{learn.name}</h1>
-      <p class="answer"><b>{learn.total} curated entries</b> in {learn.name.toLowerCase()} — every
+      <p class="answer"><b>{learn.total} curated entries</b> in {(learn.name || 'entries').toLowerCase()} — every
         one links its own home, and image sources state their licence terms. {learn.blurb}</p>
       <p class="meta-line">Last verified: {learn.generated} · Links re-verified daily. This
         repository links out; it does not host or reproduce the media itself.</p>
@@ -224,7 +224,7 @@ const jsonld = JSON.stringify(
   {learn && learn.shape === 'learning' && (
     <>
       <h1>{learn.name}</h1>
-      <p class="answer"><b>{learn.total} {learn.name.toLowerCase()}</b>, {learn.free} of them
+      <p class="answer"><b>{learn.total} {(learn.name || 'entries').toLowerCase()}</b>, {learn.free} of them
         free{learn.with_code ? <>, <b>{learn.with_code}</b> with public companion code</> : null} —
         curated by level and audience, one verified source each. {learn.blurb}</p>
       <p class="meta-line">Last verified: {learn.generated} · Source links re-verified daily.
@@ -262,16 +262,20 @@ const jsonld = JSON.stringify(
         and a volume of symposium papers is not something you read. Only titles Open Library
         marks readable or borrowable are listed, which is why this shelf is short.</p>
 
-      {learn.groups.map((g) => (
+      {/* Defensive: a content file that arrives without groups, or a group
+          without books, must not take the whole build down with it. One
+          malformed section file blocking every deploy is exactly how the
+          _redirects outage happened. */}
+      {(learn.groups || []).map((g) => (
         <section>
           <h2>{g.topic}</h2>
           <ul class="bk-list">
-            {g.books.map((b) => (
+            {(g.books || []).map((b) => (
               <li>
                 <a href={b.read_url || b.url} rel="noopener">{b.title}</a>
                 {b.year ? <span class="bk-yr"> ({b.year})</span> : null}
                 <div class="meta-line">
-                  {b.authors.length ? b.authors.join(', ') : 'Author not recorded'} ·
+                  {(b.authors || []).length ? b.authors.join(', ') : 'Author not recorded'} ·
                   {' '}{b.access === 'public' ? 'Free to read' : 'Borrowable free'} ·
                   {' '}<a href={b.url} rel="noopener">Open Library record</a>
                 </div>
