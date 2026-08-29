@@ -22,6 +22,22 @@ export function getStaticPaths() {
 }
 const { s, generated } = Astro.props;
 const label = s.title || s.name;
+/* PAGE TITLE CARRIES THE REGISTRY NAME, the H1 does not.
+
+   Publishers reuse display titles. A crawl on 2026-08-28 found 15 collisions
+   across these pages, mostly a publisher shipping a successor under a new
+   registry name while keeping the old display title: ai.dinglebear/apprise-rmcp
+   and ai.dinglebear/rapprise are both titled Apprise RMCP, and they are
+   genuinely different servers with different repos, versions and packages, so
+   neither a redirect nor a canonical would be honest.
+
+   The registry name is unique by construction, all 2,008 of them, so appending
+   it makes every title tag distinct without inventing anything or touching a
+   published URL. Titleless servers already fall back to the name and stay as
+   they are rather than repeating it twice. */
+const pageTitle = s.title && s.title !== s.name
+  ? `${s.title} (${s.name}) — MCP server — The World of AI`
+  : `${label} — MCP server — The World of AI`;
 const krTerms = matchTerms(`${s.title ?? ''} ${s.name} ${s.description ?? ''}`);
 const krCompany = companyFor(s.vendor || '');
 const desc = `${label}: an MCP server published by ${s.vendor || 'its author'} to the official Model Context Protocol registry. ${s.description}`.slice(0, 300);
@@ -48,7 +64,7 @@ const jsonld = JSON.stringify({
   ...(s.vendor ? { author: { '@type': 'Organization', name: s.vendor } } : {}),
 });
 ---
-<Base title={`${label} — MCP server — The World of AI`} description={desc} current="/mcp/" jsonld={jsonld} noindex={!indexable}>
+<Base title={pageTitle} description={desc} current="/mcp/" jsonld={jsonld} noindex={!indexable}>
   <p class="meta-line"><a href="/">AI Ecosystem</a> ·
     <a href="/ai-ecosystem/technology-and-core-infrastructure/">Technology and Core Infrastructure</a> ·
     <a href="/mcp/">MCP Servers</a></p>
