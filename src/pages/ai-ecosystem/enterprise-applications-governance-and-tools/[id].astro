@@ -36,9 +36,46 @@ export function getStaticPaths() {
     const d = JSON.parse(readFileSync('content/compliance/enacted-ai-laws.json', 'utf8'));
     if (d.uid) paths.push({ params: { id: d.uid }, props: { law: d } });
   }
+  // AI Case Law: the pre-AI precedents current AI litigation is argued from.
+  // The index and the per-case dissections are separate documents so the
+  // list page stays light; each case page carries everything it renders.
+  if (existsSync('content/caselaw')) {
+    for (const f of readdirSync('content/caselaw')) {
+      if (!f.endsWith('.json')) continue;
+      const d = JSON.parse(readFileSync(`content/caselaw/${f}`, 'utf8'));
+      if (d.shape === 'caselaw-index' && d.uid) paths.push({ params: { id: d.uid }, props: { clx: d } });
+      else if (d.shape === 'caselaw-case' && d.case && d.case.uid) paths.push({ params: { id: d.case.uid }, props: { clc: d } });
+    }
+  }
   return paths;
 }
-const { sec, secu, law } = Astro.props;
+const { sec, secu, law, clx, clc } = Astro.props;
+const dcase = clc ? clc.case : null;
+const diss = dcase && dcase.dissection ? dcase.dissection : null;
+// Fixed pillar order and field labels for the five-pillar dissection. Keys
+// match the jsonb contract in twoai_precedents.dissection exactly, so a
+// missing field simply does not render and a renamed field is visible as a
+// hole in the page rather than a silent omission.
+const PILLARS = [
+  ['technology', '1 · Facts and technical architecture', [
+    ['architecture', 'The technology'], ['data_inputs', 'Data inputs'],
+    ['outputs', 'Outputs'], ['human_agency', 'Human agency'],
+    ['ai_mapping', 'Where it maps onto AI, and where it does not']]],
+  ['threshold', '2 · Threshold jurisdiction and standing', [
+    ['legal_personhood', 'Legal personhood'], ['liability_allocation', 'Liability allocation'],
+    ['standing', 'Standing']]],
+  ['claims', '3 · Substantive claims', [
+    ['ip', 'Intellectual property'], ['tort', 'Tort'],
+    ['privacy_consumer', 'Privacy and consumer protection']]],
+  ['evidence', '4 · Evidence and algorithmic provenance', [
+    ['black_box', 'The black box problem'], ['technical_evidence', 'Technical evidence']]],
+  ['policy', '5 · Normative policy and precedential impact', [
+    ['regulatory_alignment', 'Regulatory alignment'], ['market_impact', 'Economic and market impact']]],
+];
+const doctrines = clx ? [...new Set(clx.cases.map((c) => c.doctrine))] : [];
+const yrs = clx ? clx.cases.map((c) => +c.decided_on.slice(0, 4)) : [];
+const yrMin = yrs.length ? Math.min(...yrs) : 0;
+const yrMax = yrs.length ? Math.max(...yrs) : 0;
 
 const clamp158 = (s) => (s.length <= 158 ? s : `${s.slice(0, 157).replace(/\s+\S*$/, '')}…`);
 const isCases = !!sec && sec.shape === 'case-studies';
@@ -46,22 +83,36 @@ const isCases = !!sec && sec.shape === 'case-studies';
 // hub", so every new sec shape added later fell into it and crashed on
 // sec.points. It now names what it renders instead of what it excludes.
 const isIndustry = !!sec && sec.shape !== 'industry-hub' && !isCases;
-const desc = clamp158(law
+const desc = clamp158(clc
+  ? `${dcase.case_name}, ${dcase.citation}: what it held, why AI ${dcase.posture === 'plaintiff' ? 'plaintiffs' : 'defendants'} cite it, and where the analogy to machine learning breaks down. With the full five-pillar dissection.`
+  : clx
+  ? `${clx.total} pre-AI court decisions that current AI litigation is argued from: the holding, why AI parties cite each one, and where the analogy fails, every citation verified against the court record.`
+  : law
   ? `${law.total} AI-related bills that have become law across ${law.states} US states, detected from the legislative record on the day the status changes, each linked to the bill itself.`
   : secu ? `${secu.blurb}` : isCases
   ? `${sec.total} published accounts of real AI deployments from ${sec.publishers.length} research publishers, newest first, sector-tagged and linked to the original. Updated daily.`
   : `${sec.summary || sec.blurb || ''}`);
-const jsonld = JSON.stringify({
+const jsonld = JSON.stringify(clc ? {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: `${dcase.case_name}: the five-pillar dissection`,
+  description: desc,
+  url: `https://theworldofai.org${BASE}/${dcase.uid}/`,
+  dateModified: clc.generated,
+  citation: `${dcase.case_name}, ${dcase.citation} (${dcase.decided_on.slice(0, 4)})`,
+  author: { '@type': 'Organization', name: 'The World of AI' },
+  isPartOf: { '@type': 'CollectionPage', name: 'AI Case Law', url: `https://theworldofai.org${BASE}/${clc.section.uid}/` },
+} : {
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',
-  name: law ? `Enacted AI Laws — The World of AI` : secu ? `${secu.name} — AI Security and Risk — The World of AI` : (sec.shape === 'industry-hub' || isCases ? `${sec.name} — The World of AI` : `AI in ${sec.name} — The World of AI`),
+  name: clx ? `AI Case Law: The Precedents Behind the Defenses — The World of AI` : law ? `Enacted AI Laws — The World of AI` : secu ? `${secu.name} — AI Security and Risk — The World of AI` : (sec.shape === 'industry-hub' || isCases ? `${sec.name} — The World of AI` : `AI in ${sec.name} — The World of AI`),
   description: desc,
-  url: `https://theworldofai.org${BASE}/${(law || secu || sec).uid}/`,
-  dateModified: (law || secu || sec).generated,
+  url: `https://theworldofai.org${BASE}/${(clx || law || secu || sec).uid}/`,
+  dateModified: (clx || law || secu || sec).generated,
   isPartOf: { '@type': 'CollectionPage', name: CATEGORY_NAME, url: `https://theworldofai.org${BASE}/` },
 });
 ---
-<Base title={law ? 'Enacted AI Laws: US Bills That Became Law — The World of AI' : secu ? `${secu.name} — AI Security and Risk — The World of AI` : isCases ? `AI Case Studies: Real Deployments, Indexed — The World of AI` : `AI in ${sec.name} — The World of AI`} description={desc}
+<Base title={clc ? `${dcase.case_name} — AI Case Law — The World of AI` : clx ? 'AI Case Law: The Precedents Behind the Defenses — The World of AI' : law ? 'Enacted AI Laws: US Bills That Became Law — The World of AI' : secu ? `${secu.name} — AI Security and Risk — The World of AI` : isCases ? `AI Case Studies: Real Deployments, Indexed — The World of AI` : `AI in ${sec.name} — The World of AI`} description={desc}
   current={`${BASE}/`} jsonld={jsonld}>
 
   <p class="meta-line"><a href="/">AI Ecosystem</a> ·
@@ -389,6 +440,124 @@ const jsonld = JSON.stringify({
 
       <div class="cite-box">Cite this page: <code>"Enacted AI Laws." The World of AI,
         theworldofai.org{BASE}/{law.uid}/. Retrieved {law.generated}.</code></div>
+    </>
+  )}
+
+  {clx && (
+    <>
+      <h1>{clx.name}</h1>
+      <p class="answer"><b>{clx.total} decisions, handed down between {yrMin} and {yrMax}, are
+        doing most of the work in current AI litigation.</b> Every training, scraping and
+        platform defense argued today is built from this shelf. Each profile states what the
+        case held, why AI parties cite it, and where the analogy to machine learning is
+        weakest, with a five-pillar dissection covering the technology, the threshold
+        questions, the claims, the evidence and the policy stakes. {clx.dissected} of
+        {' '}{clx.total} carry the full dissection so far.</p>
+      <p class="meta-line">Last verified: {clx.generated} · Every citation, court and decision
+        date was verified against the public court record before publication, and each page
+        links to the opinion itself. Cases marked <span class="badge">cited against AI</span>
+        are the precedents most used by plaintiffs; a reference that omitted them would be
+        advocacy rather than reference.</p>
+
+      {doctrines.map((d) => (
+        <section>
+          <h2>{d}</h2>
+          <table>
+            <thead><tr><th>Case</th><th>Citation</th><th>Decided</th><th>Holding</th></tr></thead>
+            <tbody>
+              {clx.cases.filter((c) => c.doctrine === d).map((c) => (
+                <tr>
+                  <td><a href={`${BASE}/${c.uid}/`}>{c.case_name}</a>
+                    {c.posture === 'plaintiff' && <><br/><span class="badge">cited against AI</span></>}</td>
+                  <td>{c.citation}</td>
+                  <td>{c.decided_on.slice(0, 4)}</td>
+                  <td>{c.holding}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      ))}
+
+      <p class="meta-line">Related on this site: <a href="/ai-lawsuits/">the AI lawsuit
+        tracker</a> · <a href="/ai-laws/">AI laws by state</a> ·
+        {' '}<a href="/ai-compliance/">the governance library</a>.</p>
+
+      <div class="cite-box">Cite this page: <code>"{clx.name}." The World of AI,
+        theworldofai.org{BASE}/{clx.uid}/. Retrieved {clx.generated}.</code></div>
+    </>
+  )}
+
+  {clc && (
+    <>
+      <h1>{dcase.case_name}</h1>
+      <p class="meta-line">{dcase.citation} · {dcase.court} · Decided {dcase.decided_on} ·
+        {' '}<a href={`${BASE}/${clc.section.uid}/`}>Part of AI Case Law</a></p>
+      {dcase.posture === 'plaintiff' && (
+        <p class="meta-line"><span class="badge">cited against AI</span> One of the precedents
+          most used by plaintiffs against AI companies. It sits in this reference because a
+          shelf of defenses that hid the cases cutting the other way would be advocacy.</p>
+      )}
+      <p class="answer"><b>{dcase.holding}</b></p>
+      <p class="meta-line">Last verified: {clc.generated} · Citation, court and date verified
+        against the public court record on {dcase.verified_on} ·
+        {' '}<a href={dcase.source_url} rel="noopener">Read the opinion</a> ({dcase.source_name}).</p>
+
+      <section>
+        <h2>Why AI {dcase.posture === 'plaintiff' ? 'plaintiffs' : 'defendants'} cite it</h2>
+        <p>{dcase.why_ai_cites_it}</p>
+      </section>
+      {dcase.limits && (
+        <section>
+          <h2>Where the analogy is weakest</h2>
+          <p>{dcase.limits}</p>
+        </section>
+      )}
+      {dcase.era_technology && (
+        <p class="meta-line">The technology of the case: {dcase.era_technology}.</p>
+      )}
+
+      {diss && PILLARS.map(([key, heading, fields]) => diss[key] && (
+        <section>
+          <h2>{heading}</h2>
+          {fields.map(([fk, fl]) => diss[key][fk] && (
+            <div class="dom">
+              <h3>{fl}</h3>
+              <p>{diss[key][fk]}</p>
+            </div>
+          ))}
+        </section>
+      ))}
+
+      {diss && diss.teaching && (
+        <section>
+          <h2>Teaching the case</h2>
+          {diss.teaching.analogy && (
+            <div class="dom"><h3>Deconstruct the analogy</h3><p>{diss.teaching.analogy}</p></div>
+          )}
+          {diss.teaching.socratic && diss.teaching.socratic.length > 0 && (
+            <div class="dom"><h3>Socratic questions</h3>
+              <ol class="chain">{diss.teaching.socratic.map((q) => <li>{q}</li>)}</ol></div>
+          )}
+          {diss.teaching.exercise && (
+            <div class="dom"><h3>Exercise: reverse-engineer the compliance</h3>
+              <p>{diss.teaching.exercise}</p></div>
+          )}
+        </section>
+      )}
+
+      {!diss && (
+        <p class="meta-line">The full five-pillar dissection of this case, covering the
+          technology, the threshold questions, the claims, the evidence and the policy stakes,
+          is being written. Everything above is complete and verified.</p>
+      )}
+
+      <p class="meta-line">Related on this site: <a href={`${BASE}/${clc.section.uid}/`}>all
+        {' '}precedents in AI Case Law</a> · <a href="/ai-lawsuits/">the AI lawsuit tracker</a> ·
+        {' '}<a href="/ai-compliance/">the governance library</a>.</p>
+
+      <div class="cite-box">Cite this page: <code>"{dcase.case_name}: AI Case Law." The World of
+        AI, theworldofai.org{BASE}/{dcase.uid}/. Retrieved {clc.generated}.</code></div>
     </>
   )}
 
