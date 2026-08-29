@@ -50,6 +50,18 @@ const isDSLic = sec.shape === 'ds-licensing';
 // sections that already cover each part of the job. See twoai_vibe_coding.go.
 const isVibe = sec.shape === 'vibe-coding';
 const isProv = sec.shape === 'serving-providers';
+const isDC = sec.shape === 'datacenters';
+const dcOps = isDC ? (sec.metrics || []).filter((m) => m.track === 'operations') : [];
+const dcMkt = isDC ? (sec.metrics || []).filter((m) => m.track === 'market') : [];
+const dcOpsCats = [...new Set(dcOps.map((m) => m.category))];
+const dcMktCats = [...new Set(dcMkt.map((m) => m.category))];
+const dcSrcKinds = [
+  ['grid-queue', 'Grid operators and public power data'],
+  ['market-intel', 'Market intelligence, commercial'],
+  ['standard', 'Standards and industry bodies'],
+  ['dcim', 'Operations software, DCIM'],
+];
+const dollars = (v) => '$' + (v / 1e9).toFixed(1) + 'B';
 const mdLite = (t: string) => t
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
@@ -148,6 +160,116 @@ const licLine = (sec.licences || [])
     <a href={`${BASE}/`}>{CATEGORY_NAME}</a></p>
 
   <h1>{sec.name}</h1>
+
+  {isDC && (
+    <>
+      <p class="answer"><b>The physical layer of the AI boom, tracked from primary
+        sources.</b> Quarterly capital expenditure from {sec.capex?.length || 0} builders,
+        hyperscalers, colocation giants, and the pure-play AI cloud, read from each
+        company's own SEC filings; their material facility and deal 8-Ks as they land;
+        {' '}{sec.metrics?.length || 0} operations and market metrics defined in plain
+        English; and a directory of who publishes what this page cannot verify.</p>
+      <p class="meta-line">Last verified: {sec.generated} · Capex and filings refresh
+        daily from SEC EDGAR. Definitions and the directory are editorial, in this
+        site's own words, with the standard-setter linked.</p>
+
+      <section>
+        <h2>Two ways to track a data center</h2>
+        <p>The industry track watches the market: megawatts in construction, land
+          locked up, grid interconnection queues, power purchase agreements, capital
+          spending, and what a kilowatt rents for. The operations track watches a
+          facility from inside: how efficiently it turns grid power into computing,
+          how it stays cool at AI rack densities, what it consumes in water and
+          carbon, and whether it keeps its nines. This page carries both, and is
+          plain about which numbers are audited filings and which live behind
+          commercial research paywalls.</p>
+      </section>
+
+      {sec.capex && sec.capex.length > 0 && (
+        <section>
+          <h2>Capital expenditure, straight from the filings</h2>
+          <p class="meta-line">Quarterly capex read from each company's XBRL company
+            facts on data.sec.gov. Companies tag capex under different concepts; the
+            fetcher keeps whichever tag each company currently files.</p>
+          <table>
+            <thead><tr><th>Company</th><th>Latest quarter ended</th><th>Quarterly capex</th></tr></thead>
+            <tbody>
+              {sec.capex.map((c) => (
+                <tr><td>{c.name}</td><td>{c.end}</td><td>{dollars(c.latest)}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
+      {sec.filings && sec.filings.length > 0 && (
+        <section>
+          <h2>Material events on the record</h2>
+          <p class="meta-line">The most recent 8-K filings reporting a material
+            definitive agreement (Item 1.01) or a completed acquisition or
+            disposition (Item 2.01) from the same builders. The filing says an event
+            class occurred; read the document for what it was.</p>
+          <ul class="sections">
+            {sec.filings.map((f) => (
+              <li>{f.filed} — {f.company}, items {f.items}
+                {f.doc_url && <> (<a href={f.doc_url} rel="noopener">filing</a>)</>}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section>
+        <h2>Inside the facility: the metrics operations run on</h2>
+        {dcOpsCats.map((cat) => (
+          <div class="dom">
+            <h3>{cat}</h3>
+            {dcOps.filter((m) => m.category === cat).map((m) => (
+              <p><b>{m.metric}.</b> {m.definition}{m.formula && <> Formula:
+                {' '}<code>{m.formula}</code>.</>} {m.why}{m.target && <> {m.target}</>}
+                {m.source_url && <> {' '}<a href={m.source_url} rel="noopener">{m.source_name || 'Standard'}</a>.</>}</p>
+            ))}
+          </div>
+        ))}
+      </section>
+
+      <section>
+        <h2>The market variables: what moves, and who measures it</h2>
+        {dcMktCats.map((cat) => (
+          <div class="dom">
+            <h3>{cat}</h3>
+            {dcMkt.filter((m) => m.category === cat).map((m) => (
+              <p><b>{m.metric}.</b> {m.definition} {m.why}{m.target && <> {m.target}</>}
+                {m.source_url && <> {' '}<a href={m.source_url} rel="noopener">{m.source_name || 'Source'}</a>.</>}</p>
+            ))}
+          </div>
+        ))}
+      </section>
+
+      <section>
+        <h2>Who publishes the rest</h2>
+        <p class="meta-line">Construction pipelines in megawatts, colocation rates,
+          and lead-time surveys are compiled by commercial research firms. This site
+          links to who publishes them rather than republishing figures it cannot
+          verify. Grid queues and federal filings are public.</p>
+        {dcSrcKinds.map(([kind, label]) => (sec.sources || []).some((x) => x.kind === kind) && (
+          <div class="dom">
+            <h3>{label}</h3>
+            <table>
+              <thead><tr><th>Source</th><th>What it publishes</th><th>Access</th></tr></thead>
+              <tbody>
+                {(sec.sources || []).filter((x) => x.kind === kind).map((x) => (
+                  <tr><td><a href={x.url} rel="noopener">{x.name}</a></td><td>{x.publishes}</td><td>{x.access}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
+      </section>
+
+      <div class="cite-box">Cite this page: <code>"{sec.name}." The World of AI,
+        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
+    </>
+  )}
 
   {isHW && (
     <>

@@ -29,6 +29,9 @@ const csCount = caseStudies?.total ?? 0;
 const csUID = caseStudies?.uid ?? '';
 // The Open Library catalogue is a band inside the Books page rather than a
 // section of its own, so its counts describe Books rather than a second URL.
+const dc = readJSON('content/tech/datacenters.json');
+const dcUID = dc?.uid ?? '';
+const dcMetrics = Array.isArray(dc?.metrics) ? dc.metrics.length : 0;
 const bookCat = readJSON('content/learn/book-catalog.json');
 const bcCount = bookCat?.total ?? 0;
 const bcFree = bookCat?.free ?? 0;
@@ -139,7 +142,12 @@ that built the pages, in the build dated ${generated}.
 - [AI Case Studies](https://theworldofai.org/ai-ecosystem/enterprise-applications-governance-and-tools/${csUID}/): ${fmt(csCount)}
   published accounts of real AI deployments, indexed from research publishers
   with sponsored content refused and product news filtered out; every entry
-  links to the original.` : ''}
+  links to the original.` : ''}${dcUID ? `
+- [Data Centers](https://theworldofai.org/ai-ecosystem/technology-and-core-infrastructure/${dcUID}/): the
+  physical layer of the AI boom, quarterly capital expenditure from hyperscalers
+  and colocation operators read from SEC filings, material facility 8-Ks, ${fmt(dcMetrics)}
+  operations and market metrics defined, and a directory of grid queues, market
+  researchers, and standards bodies.` : ''}
 - [Sources and References](https://theworldofai.org/sources/): the primary
   sources behind every fact on the site, across EU and Council of Europe, US
   federal, US state and city, other jurisdictions, standards bodies and SROs,
