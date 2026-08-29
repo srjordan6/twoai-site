@@ -468,7 +468,8 @@ const jsonld = JSON.stringify(clc ? {
               {clx.cases.filter((c) => c.doctrine === d).map((c) => (
                 <tr>
                   <td><a href={`${BASE}/${c.uid}/`}>{c.case_name}</a>
-                    {c.posture === 'plaintiff' && <><br/><span class="badge">cited against AI</span></>}</td>
+                    {c.posture === 'plaintiff' && <><br/><span class="badge">cited against AI</span></>}
+                    {c.live_total > 0 && <><br/><span class="meta-line">{c.live_total} active {c.live_total === 1 ? 'case' : 'cases'} in this lane</span></>}</td>
                   <td>{c.citation}</td>
                   <td>{c.decided_on.slice(0, 4)}</td>
                   <td>{c.holding}</td>
@@ -515,6 +516,26 @@ const jsonld = JSON.stringify(clc ? {
       )}
       {dcase.era_technology && (
         <p class="meta-line">The technology of the case: {dcase.era_technology}.</p>
+      )}
+
+      {dcase.live_total > 0 && dcase.live_cases && dcase.live_cases.length > 0 && (
+        <section>
+          <h2>Active AI cases in this doctrine's lane</h2>
+          <p class="meta-line">The lawsuit tracker classifies {dcase.live_total} active
+            {' '}{dcase.live_total === 1 ? 'case' : 'cases'} under the claim category this
+            precedent governs, newest first below. This is the tracker's own classification
+            of what each case is about, not a verified record of which briefs quote this
+            decision.</p>
+          <ul class="sections">
+            {dcase.live_cases.map((lc) => (
+              <li><a href={lc.path}>{lc.name}</a></li>
+            ))}
+          </ul>
+          {dcase.live_total > dcase.live_cases.length && (
+            <p class="meta-line">All {dcase.live_total} are in
+              {' '}<a href="/ai-lawsuits/">the AI lawsuit tracker</a>.</p>
+          )}
+        </section>
       )}
 
       {diss && PILLARS.map(([key, heading, fields]) => diss[key] && (
