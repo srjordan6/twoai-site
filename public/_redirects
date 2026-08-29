@@ -277,3 +277,13 @@
 # adjacent promises read as duplication to everyone but their author.
 # The URL was live and indexed, so it redirects rather than disappearing.
 /ai-ecosystem/research-knowledge-and-learning/ca6615c8/  /ai-ecosystem/research-knowledge-and-learning/299aeca2/  301
+
+# Model Serving Providers was advertised on the AI APIs hub at an identifier
+# that never existed. Section uids are sha256("section:" + slug) truncated to
+# eight characters; the taxonomy row for serving-providers was written with
+# sha256("serving-providers"), no prefix, so the hub linked c765b3c2 while the
+# page built at 7f1d5827. A crawl on 2026-08-28 found it as a 404. The taxonomy
+# row is corrected, and the bad identifier redirects because it was a live link
+# on a live hub page for six days and anything that saw it should land somewhere
+# real.
+/ai-ecosystem/technology-and-core-infrastructure/c765b3c2/  /ai-ecosystem/technology-and-core-infrastructure/7f1d5827/  301
