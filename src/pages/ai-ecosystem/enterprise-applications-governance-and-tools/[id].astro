@@ -518,6 +518,24 @@ const jsonld = JSON.stringify(clc ? {
         <p class="meta-line">The technology of the case: {dcase.era_technology}.</p>
       )}
 
+      {dcase.quoted_in && dcase.quoted_in.length > 0 && (
+        <section>
+          <h2>Quoted in the live AI docket record</h2>
+          <p class="meta-line">Found by scanning the extracted text of filings in the public
+            docket record. Each entry names the case and the specific document in which this
+            decision appears.</p>
+          <ul class="sections">
+            {dcase.quoted_in.map((q) => (
+              <li><a href={q.path}>{q.lawsuit}</a> &mdash; {q.by === 'court' ? 'cited by the court' : q.by === 'defense' ? 'cited by the defense' : q.by === 'plaintiff' ? 'cited by the plaintiffs' : 'cited in a filing'}{q.doc_url && <> (<a href={q.doc_url} rel="nofollow">{q.doc || 'document'}</a>)</>}</li>
+            ))}
+          </ul>
+          {dcase.quoted_total > dcase.quoted_in.length && (
+            <p class="meta-line">{dcase.quoted_total} documents in total cite this decision
+              across the tracker.</p>
+          )}
+        </section>
+      )}
+
       {dcase.live_total > 0 && dcase.live_cases && dcase.live_cases.length > 0 && (
         <section>
           <h2>Active AI cases in this doctrine's lane</h2>
