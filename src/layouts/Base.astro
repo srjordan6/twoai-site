@@ -14,12 +14,12 @@ import AmazonShelf from '../components/AmazonShelf.astro';
 import PillarBox from '../components/PillarBox.astro';
 import Topbar from '../components/Topbar.astro';
 
-interface Props { title: string; description: string; current?: string; jsonld?: string; canonicalOverride?: string; noindex?: boolean; ogType?: string; rail?: boolean; }
+interface Props { title: string; description: string; current?: string; jsonld?: string; canonicalOverride?: string; noindex?: boolean; ogType?: string; rail?: boolean; titleTail?: string; }
 /* rail=false drops the section-index card and lets the content run full width.
    The home page opts out: it IS the ecosystem map, so a card listing the same
    five categories beside it is the page repeating itself in miniature, and it
    pushed the hero, the ask box and everything below off centre. */
-const { title, description, current = '', jsonld, canonicalOverride, noindex = false, ogType = 'website', rail = true } = Astro.props;
+const { title, description, current = '', jsonld, canonicalOverride, noindex = false, ogType = 'website', rail = true, titleTail } = Astro.props;
 const nav = [
   { href: '/ai-ecosystem/technology-and-core-infrastructure/', label: 'Technology & Infrastructure', short: 'Technology' },
   { href: '/ai-ecosystem/ecosystem-entities-market-and-operations/', label: 'Market & Entities', short: 'Market' },
@@ -69,6 +69,27 @@ const PILLAR_LABEL: Record<string, string> = {
 };
 
 let pageTitle = title;
+/* PROTECTED DISCRIMINATOR. A page whose title is not unique on its own passes
+   the distinguishing part as titleTail, and the clamp below eats the head
+   instead of the tail.
+
+   Without this the clamp defeats the disambiguation it is handed. The MCP
+   pages append the registry name to separate servers that share a display
+   title, and on 2026-08-28 two of them still shipped byte-identical titles:
+   "AutEng MCP - Markdown Publishing & Document Share Links" is 54 characters
+   before any suffix, so the name was clamped straight back off and both pages
+   emitted the same truncated string. Clamping from the right is correct when
+   the right is the least informative part, and wrong the moment it is the only
+   informative part. */
+if (titleTail) {
+  let head = title.replace(/\s+[—|-]\s+The World of AI\s*$/, '');
+  let candidate = `${head} ${titleTail}`;
+  while (overBudget(candidate) && head.length > 12) {
+    head = wordClamp(head, Math.min(MAX_CH, head.length - 1));
+    candidate = `${head} ${titleTail}`;
+  }
+  pageTitle = candidate;
+} else {
 // Over budget: drop the site-name suffix first, since it is the least
 // informative part, then cut at a word boundary until both limits are met.
 if (overBudget(pageTitle)) pageTitle = pageTitle.replace(/\s+[—|-]\s+The World of AI\s*$/, '');
@@ -93,6 +114,7 @@ if (pageTitle.length < MIN_CH) {
     const withSite = `${pageTitle.replace(/\s+[—|-]\s+The World of AI\s*$/, '')} — The World of AI, an atlas of AI`;
     if (!overBudget(withSite)) pageTitle = withSite;
   }
+}
 }
 let metaDesc = wordClamp(description, 158);
 if (metaDesc.length < 110) {
