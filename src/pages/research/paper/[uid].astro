@@ -3,16 +3,22 @@
  * One AI research paper page at /research/paper/{uid}/.
  *
  * Reads content/research/paper/{uid}.json, which the pipeline writes from
- * twoai_research_papers (one row per paper). Every paper page carries the
- * same fixed layout Stephen specified: title and paper type, then year,
- * authors, journal, volume and DOI in a facts strip, then the abstract with
- * an attribution line (Consensus, subscription required), then three plain-
+ * twoai_research_papers (one row per paper). Fixed layout: title and paper
+ * type, then year, authors, journal, volume and DOI in a facts strip, then
+ * the abstract with attribution when one exists, then up to three plain-
  * English explanations for a beginner, a practitioner and a business reader.
  *
- * The Consensus attribution and subscription notice appear on EVERY page,
- * even when the abstract or explanations are still being written by the
- * scheduled Cowork task. Missing fields render an honest note rather than
- * silence, so a partial page is always readable.
+ * A missing field renders NOTHING, not a promise. This page used to print
+ * "has not been added yet" and "is being written by our scheduled research
+ * task" for every absent block, and on 2026-08-29, with 129 of 134 papers
+ * still unwritten, AdSense flagged the site for low value content, the
+ * under-construction verdict. Placeholder text on a published page is an
+ * announcement that the page should not have been published. The page now
+ * says what it has; a paper with no abstract and no explanations renders
+ * noindex, and astro.config keeps it out of the sitemap so the two signals
+ * agree, the same containment the MCP pages use. The content itself arrives
+ * from the scheduled research task; when a paper gains its first block, the
+ * page indexes again automatically on the next build.
  */
 import Base from '../../../layouts/Base.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
@@ -34,6 +40,11 @@ const beg = (p.explain_beginner || '').trim();
 const prac = (p.explain_practitioner || '').trim();
 const biz = (p.explain_business || '').trim();
 const paperType = p.paper_type || 'Journal Article';
+// A paper with none of its written blocks is a catalogue entry, not an
+// article. It stays reachable and linked, but it is not advertised: noindex
+// here, and the matching sitemap exclusion lives in astro.config.mjs.
+const thin = !abstract && !beg && !prac && !biz;
+const anyExplain = !!(beg || prac || biz);
 
 const authors = (p.authors || '').trim();
 const authorList = authors ? authors.split(/\s*,\s*|\s+and\s+/).filter(Boolean) : [];
@@ -63,7 +74,7 @@ const jsonld = JSON.stringify({
   dateModified: p.generated,
 });
 ---
-<Base title={pageTitle} description={desc} current="/research/" jsonld={jsonld} ogType="article">
+<Base title={pageTitle} description={desc} current="/research/" jsonld={jsonld} ogType="article" noindex={thin}>
   <p class="meta-line">
     <a href="/research/">AI Research Library</a>
     {p.topic_slug && p.topic_name && (
@@ -107,29 +118,38 @@ const jsonld = JSON.stringify({
       </p>
     </>
   ) : (
-    <p class="pending">
-      The abstract for this paper has not been added yet. Read the
-      <a href={p.url} rel="noopener">source paper</a> at the original
-      publisher.
+    <p class="attribution">
+      Read the <a href={p.url} rel="noopener">source paper</a> at the
+      original publisher.
     </p>
   )}
 
-  <h2>Three ways to read this paper</h2>
+  {anyExplain && (
+    <>
+      <h2>Three ways to read this paper</h2>
 
-  <section class="explain">
-    <h3>For a beginner</h3>
-    {beg ? <p>{beg}</p> : <p class="pending">This explanation is being written by our scheduled research task and will appear on the next refresh.</p>}
-  </section>
+      {beg && (
+        <section class="explain">
+          <h3>For a beginner</h3>
+          <p>{beg}</p>
+        </section>
+      )}
 
-  <section class="explain">
-    <h3>For a practitioner</h3>
-    {prac ? <p>{prac}</p> : <p class="pending">This explanation is being written by our scheduled research task and will appear on the next refresh.</p>}
-  </section>
+      {prac && (
+        <section class="explain">
+          <h3>For a practitioner</h3>
+          <p>{prac}</p>
+        </section>
+      )}
 
-  <section class="explain">
-    <h3>For a business reader</h3>
-    {biz ? <p>{biz}</p> : <p class="pending">This explanation is being written by our scheduled research task and will appear on the next refresh.</p>}
-  </section>
+      {biz && (
+        <section class="explain">
+          <h3>For a business reader</h3>
+          <p>{biz}</p>
+        </section>
+      )}
+    </>
+  )}
 
   {p.note && (
     <>

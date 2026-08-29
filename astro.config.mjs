@@ -15,7 +15,15 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 //    future retirement drops out of the sitemap automatically.
 // 3. Tracked-only people profiles: they render noindex (see the people
 //    directory route), so they must not be advertised either.
-// 4. Vendor news permalinks: live, linked and readable, but not advertised.
+// 4. Research paper pages with no written content: a paper row whose
+//    abstract and all three explanations are still empty is a catalogue
+//    entry, not an article. On 2026-08-29 that was 129 of 134 papers, each
+//    rendering four placeholder paragraphs, and AdSense flagged the site
+//    for low value content the same day. Those pages now render noindex
+//    (see the paper route) and are withheld here so the two signals agree.
+//    A paper indexes again automatically the moment its first written
+//    block lands, because both checks read the same content document.
+// 5. Vendor news permalinks: live, linked and readable, but not advertised.
 //    This one is a crawl-budget decision rather than a quality one, and the
 //    numbers made it: on 2026-08-26 these were 2,227 of 4,315 live URLs, 51.6%
 //    of the site, while Google Search Console reported 763 of them "Discovered
@@ -58,7 +66,23 @@ function noindexPeoplePaths() {
   return out;
 }
 
-const excluded = new Set([...redirectedPaths(), ...noindexPeoplePaths()]);
+function thinPaperPaths() {
+  const out = new Set();
+  const dir = 'content/research/paper';
+  if (!existsSync(dir)) return out;
+  const has = (s) => typeof s === 'string' && s.trim() !== '';
+  for (const f of readdirSync(dir)) {
+    if (!f.endsWith('.json')) continue;
+    try {
+      const p = JSON.parse(readFileSync(`${dir}/${f}`, 'utf8'));
+      if (p.uid && !has(p.abstract) && !has(p.explain_beginner) && !has(p.explain_practitioner) && !has(p.explain_business))
+        out.add(`/research/paper/${p.uid}/`);
+    } catch { /* a malformed file fails the build elsewhere; not here */ }
+  }
+  return out;
+}
+
+const excluded = new Set([...redirectedPaths(), ...noindexPeoplePaths(), ...thinPaperPaths()]);
 
 // Pages the sitemap deliberately withholds, recorded as the build decides
 // them. THIS EXISTS BECAUSE url_registry READS THE SITEMAP. That was the right
