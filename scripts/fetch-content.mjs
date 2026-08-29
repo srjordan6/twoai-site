@@ -26,12 +26,15 @@ import { createHash } from 'node:crypto';
 
 const REPO = 'https://github.com/srjordan6/twoai-content';
 const R2 = 'https://pub-b8347c6e4e8c40febe3c83d8860826e2.r2.dev';
-const dirs = ['laws', 'glossary', 'lawsuits', 'static', 'tools', 'week', 'ecosystem', 'compliance', 'mcp', 'people', 'companies', 'research', 'sources', 'benchmarks', 'prompts', 'news', 'timeline', 'jobs', 'skills', 'models', 'repos', 'status', 'tech', 'learn', 'industries', 'observatory', 'security', 'downloads', 'talent', 'meta'];
+const dirs = ['laws', 'glossary', 'lawsuits', 'caselaw', 'static', 'tools', 'week', 'ecosystem', 'compliance', 'mcp', 'people', 'companies', 'research', 'sources', 'benchmarks', 'prompts', 'news', 'timeline', 'jobs', 'skills', 'models', 'repos', 'status', 'tech', 'learn', 'industries', 'observatory', 'security', 'downloads', 'talent', 'meta'];
 // 'downloads' was missing here while the pipeline was already writing
 // downloads/*.json and the /downloads/ routes were live, so the hub counted
 // zero documents and every template returned 404. A directory absent from this
 // list is not fetched, so the route's getStaticPaths sees nothing and fails
-// silently: no build error, just missing pages.
+// silently: no build error, just missing pages. 'caselaw' then repeated the
+// same failure on 2026-08-29: stage shipped, route shipped, taxonomy live,
+// and all sixteen pages 404ed for one build because the only list that
+// mattered was this one.
 
 mkdirSync('content', { recursive: true });
 for (const d of dirs) mkdirSync(`content/${d}`, { recursive: true });
