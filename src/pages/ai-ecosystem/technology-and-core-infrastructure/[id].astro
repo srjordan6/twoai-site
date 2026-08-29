@@ -590,6 +590,7 @@ const licLine = (sec.licences || [])
         {' '}<a href="https://huggingface.co/models" rel="noopener">Hugging Face Hub</a> public API,
         sorted by all-time downloads, refreshed daily. Every model links to its own Hub page.</p>
 
+      <div class="tbl-scroll">
       <table class="pay">
         <thead><tr><th>Model</th><th>Licence</th><th class="num">Downloads</th><th class="num">Likes</th><th>Task</th><th>Released</th></tr></thead>
         <tbody>
@@ -605,6 +606,7 @@ const licLine = (sec.licences || [])
           ))}
         </tbody>
       </table>
+      </div>
       <p class="meta-line">Downloads are the Hub's all-time counter and favour older models;
         the Released column is what shows you the newer entries climbing. A missing licence
         means the repository does not declare one, which itself matters if you plan to ship it.</p>
@@ -820,6 +822,14 @@ const licLine = (sec.licences || [])
 </Base>
 
 <style>
+  /* The HF catalog table's first column carries repo ids like
+     org/very-long-model-name that used to set the table's minimum width
+     wider than the content column, so the right columns slid under the
+     sticky pillar card. Two defences: ids may wrap anywhere, and the
+     table scrolls inside its own container instead of overflowing the
+     grid column. Screenshot bug, 2026-08-29. */
+  .tbl-scroll { overflow-x: auto; }
+  .tbl-scroll .pay td:first-child { overflow-wrap: anywhere; }
   .pay { width: 100%; border-collapse: collapse; margin: 1em 0 1.6em; font-size: .92rem; }
   .pay th, .pay td { text-align: left; padding: .45em .6em; border-bottom: 1px solid #e7e7ee; }
   .pay th.num, .pay td.num { text-align: right; font-variant-numeric: tabular-nums; }
