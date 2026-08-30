@@ -230,6 +230,54 @@ const jsonld = JSON.stringify(clc ? {
           </ul>
         </section>
       ))}
+      {secu.atlas && (
+        <section id="atlas" class="secdom-group">
+          <h2>MITRE ATLAS: how AI systems are actually attacked</h2>
+          <p>Everything above is the defensive picture. ATLAS is the offensive one:
+            MITRE's ATT&amp;CK-style knowledge base of real adversary behaviour against
+            AI systems, built from documented incidents rather than theory. We track
+            its releases so this page reflects the current matrix rather than whatever
+            was true when it was written.</p>
+          <p class="answer"><b>Release {secu.atlas.release}</b>, published
+            {' '}{secu.atlas.release_date}: {secu.atlas.techniques} techniques across
+            {' '}{secu.atlas.tactics} tactics, {secu.atlas.mitigations} mitigations, and
+            {' '}{secu.atlas.case_studies} documented case studies.</p>
+
+          {secu.atlas.newest_techniques && secu.atlas.newest_techniques.length > 0 && (
+            <>
+              <h3>Newest techniques</h3>
+              <ul class="sections">
+                {secu.atlas.newest_techniques.map((t) => (
+                  <li>{t.name} <span class="atlas-id">{t.id}</span>
+                    {t.created && <span class="atlas-id"> · added {t.created}</span>}</li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {secu.atlas.newest_case_studies && secu.atlas.newest_case_studies.length > 0 && (
+            <>
+              <h3>Newest case studies</h3>
+              <ul class="sections">
+                {secu.atlas.newest_case_studies.map((c) => (
+                  <li>{c.name} <span class="atlas-id">{c.id}</span>
+                    {c.target && <p>Target: {c.target}</p>}</li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          <p class="meta-line">Source: <a href={secu.atlas.site_url} rel="noopener">MITRE
+            ATLAS</a>, data from <a href={secu.atlas.data_url} rel="noopener">mitre-atlas/atlas-data</a>,
+            licensed Apache 2.0, copyright MITRE. Release manifest checked
+            {' '}{secu.atlas.checked}; a new release is ingested the day it appears. We
+            publish identifiers, names, and counts and send you to MITRE for the
+            technique descriptions, which are theirs. Individual ATLAS identifiers are
+            given as text because atlas.mitre.org renders client-side and does not
+            serve stable deep links.</p>
+        </section>
+      )}
+
       <div class="cite-box">Cite this page: <code>"{secu.name}." The World of AI,
         theworldofai.org{BASE}/{secu.uid}/. Retrieved {secu.generated}.</code></div>
     </>
@@ -660,6 +708,7 @@ const jsonld = JSON.stringify(clc ? {
 </Base>
 
 <style>
+  .atlas-id { font-size: 12px; color: #7A8A9E; font-family: ui-monospace, monospace; }
   .cs-list { padding-left: 1.2rem; }
   .cs-list li { margin-bottom: 1.1rem; }
   .cs-sum { margin: .25rem 0 0; color: #46505e; }
