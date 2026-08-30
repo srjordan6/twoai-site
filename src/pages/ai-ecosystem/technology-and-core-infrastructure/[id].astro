@@ -76,10 +76,29 @@ const fmt = (n) => Number(n).toLocaleString();
 const money = (v) => (v === null || v === undefined ? '—' : `$${v}`);
 const ctx = (n) => (n >= 1000 ? `${Math.round(n / 1000)}k` : `${n}`);
 
-const _descRaw = isHW
-  ? `${sec.total} ${sec.name.toLowerCase()} entries, each curated with a verified vendor or primary source and re-verified daily. ${sec.blurb}`
+// The Data Centers children (state and country directories, metrics,
+// builders, the SMR tracker, the Grid Observatory) are the one family of
+// docs on this route with no `name` field: they carry `state`, or a metric
+// title, or nothing at all. Every branch below reaches for sec.name, so
+// without this they fall through to the final fallback and the build dies
+// on `Cannot read properties of undefined (reading 'toLowerCase')`, which
+// is exactly what took the site down between 03:19 and 15:37 on 2026-08-30.
+// Give them their own description, and make every other branch tolerate a
+// missing name rather than trusting it.
+const secName = sec.name || sec.state || 'AI infrastructure';
+
+const _descRaw = isDCChild
+  ? (sec.shape === 'dc-state'
+      ? `${sec.count} mapped data centers in ${sec.state}, with operator and locality where OpenStreetMap contributors have tagged them. Part of the data center facility registry.`
+      : sec.shape === 'dc-grid'
+      ? `US grid interconnection queues harvested daily from the operators' own files: requests, megawatts tracked, and the storage, solar, wind and gas split behind the AI data center buildout.`
+      : sec.shape === 'dc-smr'
+      ? `Small modular reactor programs signed to power data centers, with deal status, NRC licensing pathway, fuel type and target date, every figure sourced.`
+      : `${secName}, part of the Data Centers section: the capital, buildings and power behind AI compute.`)
+  : isHW
+  ? `${sec.total} ${secName.toLowerCase()} entries, each curated with a verified vendor or primary source and re-verified daily. ${sec.blurb}`
   : isDS
-  ? `${sec.total} ${sec.name.toLowerCase()}, curated for significance with downloads, licence, and gating refreshed daily from the Hugging Face Hub. ${sec.blurb}`
+  ? `${sec.total} ${secName.toLowerCase()}, curated for significance with downloads, licence, and gating refreshed daily from the Hugging Face Hub. ${sec.blurb}`
   : isDSLic
   ? `Licence split, gating, and provenance context for the dataset catalogue on this site, with the live copyright docket linked from the lawsuit tracker.`
   : isA2A
@@ -95,7 +114,7 @@ const _descRaw = isHW
   : isLang
   ? `${sec.total} programming languages that carry AI work, from Python's interface layer to the C++ and Rust systems underneath, each profiled with steward, first release, and the tracked repositories written in it.`
   : isRepo
-  ? `The ${sec.total} ${sec.name.toLowerCase()} that matter, tracked from their own repositories: stars, licence, language, and last activity, refreshed daily. ${sec.blurb}`
+  ? `The ${sec.total} ${secName.toLowerCase()} that matter, tracked from their own repositories: stars, licence, language, and last activity, refreshed daily. ${sec.blurb}`
   : isStatus
   ? `Live status for ${sec.total} AI API providers from their own status pages, with current incidents and a 30-day incident count per provider, refreshed daily.`
   : isPricing
@@ -103,8 +122,8 @@ const _descRaw = isHW
   : isProv
   ? `${sec.total} AI model serving providers with headquarters country, datacenter regions, and links to terms, privacy policy, and live status pages. Refreshed daily.`
   : isAPI
-  ? `${sec.total} ${sec.name.toLowerCase()} available over commercial APIs, with context window, per-token pricing, and release date, refreshed daily. ${sec.blurb}`
-  : `The ${sec.total} most-downloaded open ${sec.name.toLowerCase()} on the Hugging Face Hub, with licence, downloads, and release date, refreshed daily. ${sec.blurb}`;
+  ? `${sec.total} ${secName.toLowerCase()} available over commercial APIs, with context window, per-token pricing, and release date, refreshed daily. ${sec.blurb}`
+  : `The ${sec.total} most-downloaded open ${secName.toLowerCase()} on the Hugging Face Hub, with licence, downloads, and release date, refreshed daily. ${sec.blurb}`;
 const desc = _descRaw.length <= 158 ? _descRaw : `${_descRaw.slice(0, 157).replace(/\s+\S*$/, '')}…`;
 
 const jsonld = JSON.stringify({
