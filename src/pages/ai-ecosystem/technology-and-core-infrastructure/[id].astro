@@ -51,7 +51,7 @@ const isDSLic = sec.shape === 'ds-licensing';
 const isVibe = sec.shape === 'vibe-coding';
 const isProv = sec.shape === 'serving-providers';
 const isDC = sec.shape === 'datacenters';
-const isDCChild = ['dc-state', 'dc-metric', 'dc-builder', 'dc-smr', 'dc-grid'].includes(sec.shape);
+const isDCChild = ['dc-state', 'dc-metric', 'dc-builder', 'dc-smr', 'dc-grid', 'dc-facility'].includes(sec.shape);
 const metricUID = isDC ? Object.fromEntries((sec.metric_pages || []).map((m) => [m.label, m.uid])) : {};
 const builderUID = isDC ? Object.fromEntries((sec.builder_pages || []).map((b) => [b.label, b.uid])) : {};
 const dcOps = isDC ? (sec.metrics || []).filter((m) => m.track === 'operations') : [];
@@ -87,8 +87,22 @@ const ctx = (n) => (n >= 1000 ? `${Math.round(n / 1000)}k` : `${n}`);
 // missing name rather than trusting it.
 const secName = sec.name || sec.state || 'AI infrastructure';
 
+// The dc children carry no `name` field, and sec.name straight into the
+// <title> is what published "undefined — The World of AI" on every one of
+// those pages until 2026-08-30. Each shape knows its own headline.
+const pageTitle =
+  sec.shape === 'dc-state' ? `Data centers in ${sec.state}` :
+  sec.shape === 'dc-facility' ? sec.name :
+  sec.shape === 'dc-metric' ? (sec.metric?.metric || secName) :
+  sec.shape === 'dc-builder' ? `${sec.builder?.name || secName} data center capex` :
+  sec.shape === 'dc-smr' ? 'SMR programs powering data centers' :
+  sec.shape === 'dc-grid' ? 'The Grid Observatory' :
+  secName;
+
 const _descRaw = isDCChild
-  ? (sec.shape === 'dc-state'
+  ? (sec.shape === 'dc-facility'
+      ? `${sec.name}: ${sec.mw ? `${sec.mw} MW IT capacity, ` : ''}operator-published facility specifications with source and retrieval date, in the ${sec.state || sec.country} directory of the data center registry.`
+      : sec.shape === 'dc-state'
       ? `${sec.count} mapped data centers in ${sec.state}, with operator and locality where OpenStreetMap contributors have tagged them. Part of the data center facility registry.`
       : sec.shape === 'dc-grid'
       ? `US grid interconnection queues harvested daily from the operators' own files: requests, megawatts tracked, and the storage, solar, wind and gas split behind the AI data center buildout.`
@@ -129,7 +143,7 @@ const desc = _descRaw.length <= 158 ? _descRaw : `${_descRaw.slice(0, 157).repla
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',
-  name: `${sec.name} — The World of AI`,
+  name: `${pageTitle} — The World of AI`,
   description: desc.slice(0, 300),
   url: `https://theworldofai.org${BASE}/${sec.uid}/`,
   dateModified: sec.generated,
@@ -141,7 +155,7 @@ const licLine = (sec.licences || [])
   .map((l) => `${l.licence} (${l.count})`)
   .join(', ');
 ---
-<Base title={`${sec.name} — The World of AI`} description={desc.slice(0, 300)}
+<Base title={`${pageTitle} — The World of AI`} description={desc.slice(0, 300)}
   current={`${BASE}/`} jsonld={jsonld}>
   {isVibe && (
     <>
@@ -181,7 +195,7 @@ const licLine = (sec.licences || [])
   <p class="meta-line"><a href="/">AI Ecosystem</a> ·
     <a href={`${BASE}/`}>{CATEGORY_NAME}</a></p>
 
-  <h1>{sec.name}</h1>
+  <h1>{pageTitle}</h1>
 
   {isDC && (
     <>
@@ -540,21 +554,89 @@ const licLine = (sec.licences || [])
           <p class="meta-line">Last verified: {sec.generated} · Part of the
             {' '}<a href={`${BASE}/${sec.parent.uid}/`}>{sec.parent.name}</a> facility registry ·
             Facility data © <a href="https://www.openstreetmap.org/copyright"
-            rel="noopener">OpenStreetMap contributors</a>, ODbL.</p>
+            rel="noopener">OpenStreetMap contributors</a>, ODbL. Rows whose name links to a
+            profile carry specifications read from the operator's own published spec page,
+            with the source and retrieval date on the profile.</p>
+          {sec.total_mw > 0 && (
+            <p><b>{Math.round(sec.total_mw).toLocaleString()} MW of IT capacity</b> is
+              operator-published across the profiled facilities below. That is a floor, not a
+              state total: it counts only what operators state on their own spec pages.</p>
+          )}
           <div class="tbl-scroll"><table>
-            <thead><tr><th>Facility</th><th>Operator</th><th>Locality</th><th>Map</th></tr></thead>
+            <thead><tr><th>Facility</th><th>Operator</th><th>Locality</th><th class="num">IT MW</th><th>Map</th></tr></thead>
             <tbody>
               {(sec.facilities || []).map((f) => (
                 <tr>
-                  <td>{f.website ? <a href={f.website} rel="noopener">{f.name}</a> : f.name}</td>
+                  <td>{f.uid ? <a href={`${BASE}/${f.uid}/`}>{f.name}</a>
+                    : f.website ? <a href={f.website} rel="noopener">{f.name}</a> : f.name}</td>
                   <td>{f.operator || '—'}</td>
                   <td>{f.city || '—'}</td>
+                  <td class="num">{f.mw ? f.mw : '—'}</td>
                   <td>{f.lat ? <a href={`https://www.openstreetmap.org/?mlat=${f.lat}&mlon=${f.lon}#map=16/${f.lat}/${f.lon}`}
                     rel="noopener">view</a> : '—'}</td>
                 </tr>
               ))}
             </tbody>
           </table></div>
+        </>
+      )}
+      {sec.shape === 'dc-facility' && (
+        <>
+          <p class="answer"><b>{sec.mw ? `${sec.mw} MW of IT capacity` : sec.name}</b>
+            {sec.profile?.technical_space_sqft > 0 && <> across
+            {' '}{Number(sec.profile.technical_space_sqft).toLocaleString()} sq ft of technical
+            space</>}{sec.profile?.campus && <>, campus {sec.profile.campus}</>}, published by
+            {' '}{sec.operator} on its own facility page. Every figure here is the operator's
+            stated specification, read on {sec.profile?.source?.retrieved || sec.generated}.</p>
+          <p class="meta-line">Last verified: {sec.generated} · Operator: {sec.operator} ·
+            {sec.state_page?.uid && <> Directory:
+            {' '}<a href={`${BASE}/${sec.state_page.uid}/`}>data centers in {sec.state || sec.country}</a> ·</>}
+            {' '}Source: <a href={sec.profile?.source?.page || sec.website} rel="noopener">
+            {sec.profile?.source?.publisher || sec.operator} facility page</a>.</p>
+
+          {Array.isArray(sec.profile?.address) && sec.profile.address.length > 0 && (
+            <section>
+              <h2>Location</h2>
+              {sec.profile.address.map((a) => <p>{a}</p>)}
+              <p class="meta-line">{sec.city}{sec.state && <>, {sec.state}</>}
+                {sec.profile.postal_code && <> {sec.profile.postal_code}</>}</p>
+            </section>
+          )}
+
+          <section>
+            <h2>Published specifications</h2>
+            <table>
+              <tbody>
+                {sec.mw > 0 && (
+                  <tr><td>Total IT capacity</td><td class="num">{sec.mw} MW</td></tr>
+                )}
+                {sec.profile?.technical_space_sqft > 0 && (
+                  <tr><td>Technical IT space</td>
+                    <td class="num">{Number(sec.profile.technical_space_sqft).toLocaleString()} sq ft</td></tr>
+                )}
+                {Array.isArray(sec.profile?.facility_codes) && sec.profile.facility_codes.length > 0 && (
+                  <tr><td>Facilities on campus</td>
+                    <td>{sec.profile.facility_codes.join(', ')}</td></tr>
+                )}
+              </tbody>
+            </table>
+          </section>
+
+          {Array.isArray(sec.profile?.certifications) && sec.profile.certifications.length > 0 && (
+            <section>
+              <h2>Compliance certifications the operator lists</h2>
+              <p>{sec.profile.certifications.join(' · ')}</p>
+            </section>
+          )}
+
+          <section>
+            <h2>What this page is, and is not</h2>
+            <p>{sec.profile?.source?.basis || 'Operator-published structured facts only.'} Fields
+              the operator does not publish, rack density, PUE, redundancy topology, tenancy, are
+              absent here rather than estimated: this registry states what the operator states,
+              with the source, and stops. The crowd-mapped baseline for the rest of the state is
+              in the <a href={`${BASE}/${sec.state_page?.uid || sec.parent.uid}/`}>directory</a>.</p>
+          </section>
         </>
       )}
       {sec.shape === 'dc-metric' && sec.metric && (

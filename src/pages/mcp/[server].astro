@@ -102,9 +102,20 @@ const jsonld = JSON.stringify({
             {s.package_id && <tr><th>Package</th><td><code>{s.package_id}</code></td></tr>}
             {s.package_registry && <tr><th>Registry</th><td>{s.package_registry}</td></tr>}
             {s.package_version && <tr><th>Version</th><td><code>{s.package_version}</code></td></tr>}
+            {s.package_latest && s.package_latest !== s.package_version &&
+              <tr><th>Latest on registry</th><td><code>{s.package_latest}</code></td></tr>}
+            {s.package_license && <tr><th>Licence</th><td>{s.package_license}</td></tr>}
+            {s.package_last_publish && <tr><th>Last published</th><td>{s.package_last_publish}</td></tr>}
+            {s.package_weekly_downloads > 0 &&
+              <tr><th>Downloads, last week</th><td>{Number(s.package_weekly_downloads).toLocaleString()}</td></tr>}
           </tbody>
         </table>
       </div>
+      {s.package_facts_on && (
+        <p class="meta-line">Licence, latest version, publish date and downloads read from the
+          {' '}<a href={s.package_facts_source} rel="noopener">{s.package_registry} registry record</a>
+          {' '}on {s.package_facts_on}; the MCP registry entry above may lag it.</p>
+      )}
       <h2>Before you connect it</h2>
       <p>
         An MCP server is a set of capabilities an agent can invoke on your behalf, so the questions

@@ -139,6 +139,13 @@ export default {
       return handleTalent(request, env as unknown as Parameters<typeof handleTalent>[1]);
     }
 
+    if (url.pathname === "/sitemap.xml") {
+      // robots.txt names /sitemap-index.xml, but enough crawlers and tools ask
+      // for the conventional path that a 404 there reads as "no sitemap".
+      // Verified still 404 on 2026-08-30; one redirect ends it.
+      return Response.redirect(`${url.origin}/sitemap-index.xml`, 301);
+    }
+
     if (url.pathname !== "/api/ask") {
       // Everything else is the static site, untouched.
       return env.ASSETS.fetch(request);
