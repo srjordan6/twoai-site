@@ -51,7 +51,7 @@ const isDSLic = sec.shape === 'ds-licensing';
 const isVibe = sec.shape === 'vibe-coding';
 const isProv = sec.shape === 'serving-providers';
 const isDC = sec.shape === 'datacenters';
-const isDCChild = ['dc-state', 'dc-metric', 'dc-builder', 'dc-smr'].includes(sec.shape);
+const isDCChild = ['dc-state', 'dc-metric', 'dc-builder', 'dc-smr', 'dc-grid'].includes(sec.shape);
 const metricUID = isDC ? Object.fromEntries((sec.metric_pages || []).map((m) => [m.label, m.uid])) : {};
 const builderUID = isDC ? Object.fromEntries((sec.builder_pages || []).map((b) => [b.label, b.uid])) : {};
 const dcOps = isDC ? (sec.metrics || []).filter((m) => m.track === 'operations') : [];
@@ -395,6 +395,17 @@ const licLine = (sec.licences || [])
           paradigm and the sourced anchors, not the disputed totals.</p>
       </section>
 
+      {sec.grid && (
+        <section>
+          <h2>The Grid Observatory</h2>
+          <p>The interconnection queues are the leading indicator of everything on
+            this page: gigawatts of storage, solar, and gas lining up for a wire,
+            harvested daily from the grid operators' own files into
+            {' '}<a href={`${BASE}/${sec.grid.uid}/`}>a running observatory</a> with a
+            plain-English read on what the numbers mean.</p>
+        </section>
+      )}
+
       {sec.smr && sec.smr.count > 0 && (
         <section>
           <h2>Nuclear for the next gigawatt</h2>
@@ -538,6 +549,62 @@ const licLine = (sec.licences || [])
           )}
         </>
       )}
+      {sec.shape === 'dc-grid' && (
+        <>
+          <p class="answer"><b>The Grid Observatory: what is waiting to plug in.</b> Every
+            day this page harvests the public interconnection queues of the US grid
+            operators, the lists of every power plant and battery asking for a wire,
+            and snapshots the totals. The queues are where the AI buildout is visible
+            before it is built: the surge of storage, solar, and gas below is the
+            grid's answer to data center load.</p>
+          <p class="meta-line">Last harvested: {sec.generated} · {sec.series_days} day{sec.series_days === 1 ? '' : 's'} in
+            our own series · Part of the <a href={`${BASE}/${sec.parent.uid}/`}>{sec.parent.name}</a> section ·
+            Numbers come from each operator's own published file, linked per row.</p>
+
+          <table>
+            <thead><tr><th>Grid operator</th><th>Requests</th><th>MW tracked</th>
+              <th>Storage</th><th>Solar</th><th>Wind</th><th>Gas</th><th>Snapshot</th></tr></thead>
+            <tbody>
+              {sec.sources.map((g) => (
+                <tr>
+                  <td><a href={g.url} rel="noopener">{g.name}</a></td>
+                  <td>{g.requests.toLocaleString()}</td>
+                  <td>{Math.round(g.mw).toLocaleString()}</td>
+                  <td>{Math.round(g.by_fuel?.storage || 0).toLocaleString()}</td>
+                  <td>{Math.round(g.by_fuel?.solar || 0).toLocaleString()}</td>
+                  <td>{Math.round(g.by_fuel?.wind || 0).toLocaleString()}</td>
+                  <td>{Math.round(g.by_fuel?.gas || 0).toLocaleString()}</td>
+                  <td>{g.as_of}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p class="meta-line">Scope differs by operator and the numbers are not
+            directly comparable: {sec.sources.map((g, i) => (
+              <>{i > 0 && ' '}<b>{g.name}:</b> {g.scope}</>
+            ))}</p>
+
+          {sec.analysis && (
+            <div class="dom">
+              <h3>What the numbers mean</h3>
+              {sec.analysis.body.split('\n\n').map((para) => (
+                <p>{para}</p>
+              ))}
+              <p class="meta-line">Interpretation written by {sec.analysis.model} on
+                {' '}{sec.analysis.generated_on}, from the harvested numbers above and
+                nothing else. It regenerates only when the data changes.</p>
+            </div>
+          )}
+
+          <p>Queue totals are planned generation and storage waiting for
+            interconnection, not data center demand itself. But the two are one
+            story: the storage and gas surging through these queues is largely a
+            response to load growth, and the load growing fastest is compute. Read
+            beside the <a href={`${BASE}/${sec.parent.uid}/`}>capex table and facility
+            registry</a>: money, buildings, and megawatts are the same bet three ways.</p>
+        </>
+      )}
+
       {sec.shape === 'dc-smr' && (
         <>
           <p class="answer"><b>{(sec.projects || []).length} small modular reactor programs
