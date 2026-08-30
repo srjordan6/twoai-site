@@ -51,7 +51,7 @@ const isDSLic = sec.shape === 'ds-licensing';
 const isVibe = sec.shape === 'vibe-coding';
 const isProv = sec.shape === 'serving-providers';
 const isDC = sec.shape === 'datacenters';
-const isDCChild = ['dc-state', 'dc-metric', 'dc-builder'].includes(sec.shape);
+const isDCChild = ['dc-state', 'dc-metric', 'dc-builder', 'dc-smr'].includes(sec.shape);
 const metricUID = isDC ? Object.fromEntries((sec.metric_pages || []).map((m) => [m.label, m.uid])) : {};
 const builderUID = isDC ? Object.fromEntries((sec.builder_pages || []).map((b) => [b.label, b.uid])) : {};
 const dcOps = isDC ? (sec.metrics || []).filter((m) => m.track === 'operations') : [];
@@ -307,6 +307,18 @@ const licLine = (sec.licences || [])
         </section>
       )}
 
+      {sec.smr && sec.smr.count > 0 && (
+        <section>
+          <h2>Nuclear for the next gigawatt</h2>
+          <p>The AI buildout has made small modular reactors a data center story:
+            hyperscalers have signed for gigawatts of planned nuclear capacity, none
+            of it operating in the US yet. The tracker follows
+            {' '}<a href={`${BASE}/${sec.smr.uid}/`}>{sec.smr.count} SMR programs</a>,
+            each against its own primary source, with licensing status and a hard
+            line between executed agreements and stated intentions.</p>
+        </section>
+      )}
+
       <section>
         <h2>Who publishes the rest</h2>
         <p class="meta-line">Construction pipelines in megawatts, colocation rates,
@@ -436,6 +448,42 @@ const licLine = (sec.licences || [])
               </ul>
             </section>
           )}
+        </>
+      )}
+      {sec.shape === 'dc-smr' && (
+        <>
+          <p class="answer"><b>{(sec.projects || []).length} small modular reactor programs
+            tracked as data center power</b>, from signed hyperscaler agreements to design
+            approvals still waiting on a customer. No commercial SMR operates in the United
+            States today; first new-build operation is expected between 2029 and 2032, and the
+            status column below keeps announced and licensed strictly apart.</p>
+          <p class="meta-line">Last verified: {sec.generated} · Part of
+            {' '}<a href={`${BASE}/${sec.parent.uid}/`}>{sec.parent.name}</a> · Licensing from
+            NRC public dockets; deals from each program's own announcement, linked per row.</p>
+          {(sec.projects || []).map((x) => (
+            <div class="dom">
+              <h3>{x.project}</h3>
+              <p>{x.vendor} · {x.model}
+                {x.total_mw > 0 && <> · {x.total_mw} MW</>}
+                {x.customer && <> · for {x.customer}</>}
+                {(x.site || x.state) && <> · {[x.site, x.state].filter(Boolean).join(', ')}</>}</p>
+              {x.note && <p>{x.note}</p>}
+              <p class="meta-line">Deal status: {x.deal_status}
+                {x.nrc_status && <> · NRC: {x.nrc_status}</>}
+                {x.fuel && <> · Fuel: {x.fuel.replace('_', '-').toUpperCase()}</>}
+                {x.target_cod && <> · Target: {x.target_cod}</>}
+                {' '}· <a href={x.source_url} rel="noopener">Source</a> · Verified {x.verified}</p>
+            </div>
+          ))}
+          <section>
+            <h2>What the tracker refuses to blur</h2>
+            <p>An executed power purchase agreement, a development agreement with an
+              anchor investment, and a nonbinding memorandum are three different
+              commitments; the deal status field keeps them apart. The same
+              discipline applies to fuel: most Gen IV designs cannot run without
+              HALEU, which only one US producer is licensed to make, so a
+              gigawatt of announcements can still hang on a single supply chain.</p>
+          </section>
         </>
       )}
       <div class="cite"><b>Cite this page:</b> <code>The World of AI.
