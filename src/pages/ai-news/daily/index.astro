@@ -190,6 +190,13 @@ const jsonld = JSON.stringify({
         <p>{summary}</p>
       </div>
 
+      {incidents.length > 0 && (
+        <p class="harm-jump">
+          <a href="#incidents">When AI goes wrong: {incidents.length} logged harms &darr;</a>
+          <span> reported today from deployed AI systems, each linked to the outlet that covered it.</span>
+        </p>
+      )}
+
       {top5.length > 0 && (
         <ol class="top5">
           {top5.map((s) => (
@@ -318,6 +325,15 @@ const jsonld = JSON.stringify({
 
   .answer-box { background: #FFF6EC; border: 1px solid #F0D6B0; border-radius: 6px; padding: 22px 26px; margin: 0 0 18px; }
   .answer-box p { font-size: 16px; line-height: 1.75; color: #2C2C2A; margin: 0; }
+  /* The rail collapses below 1040px and its panels drop under the article,
+     which put the on-this-page link to the harm ledger at the very bottom of
+     a phone screen: present, and useless. This lives in the content column so
+     it is visible on every viewport, directly under the summary. */
+  .harm-jump { margin: 0 0 22px; padding: 10px 14px; border-left: 3px solid #F07800;
+    background: #fff8f2; font-size: 14px; line-height: 1.5; }
+  .harm-jump a { font-weight: 700; color: #201868; text-decoration: none; }
+  .harm-jump a:hover { text-decoration: underline; }
+  .harm-jump span { color: #555; }
   .incident-intro { font-size: 15px; line-height: 1.6; color: #333; margin: 0 0 18px; }
   .incidents { list-style: none; padding: 0; margin: 0 0 18px; }
   .incidents li { padding: 10px 0; border-bottom: 1px solid #eee; }
