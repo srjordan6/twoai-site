@@ -34,6 +34,7 @@ const stories: Story[] = raw.map((s: any) => ({
   Articles: s.Articles ?? [],
 }));
 
+const incidents = news?.incidents ?? [];
 const grouped = groupByCategory(stories);
 // Chips are links to pages this site owns, never raw extractor output. Count
 // every name first, then resolve, then cap: resolving after the cap would
@@ -218,6 +219,36 @@ const jsonld = JSON.stringify({
         </section>
       ))}
 
+      {incidents.length > 0 && (
+        <section class="cat" id="incidents">
+          <h2>When AI goes wrong: logged harms</h2>
+          <div class="rule"></div>
+          <p class="incident-intro">The briefing above is what AI did today. This is
+            what it cost. Each entry is a report of real-world harm from a deployed AI
+            system, catalogued by the <a href="https://incidentdatabase.ai/"
+            rel="noopener">AI Incident Database</a>, with the incident number and a
+            link to the outlet that reported it. We publish the facts and the links,
+            never the database's own write-ups or the publishers' text.</p>
+          <ul class="incidents">
+            {incidents.map((inc) => (
+              <li>
+                <a href={inc.url} rel="noopener nofollow">{inc.title}</a>
+                <span class="inc-meta">{inc.domain}
+                  {inc.published && <> &middot; {inc.published}</>} &middot;
+                  {' '}<a href={inc.cite_url} rel="noopener">AIID incident #{inc.incident_id}</a>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p class="incident-src">Incident records from the
+            {' '}<a href="https://incidentdatabase.ai/" rel="noopener">AI Incident
+            Database</a>, Responsible AI Collaborative, licensed CC BY-SA 4.0.
+            Headlines and articles belong to the publishers linked above. Listing an
+            incident is not a finding of fault, it is a record that the harm was
+            reported.</p>
+        </section>
+      )}
+
       <section class="faq" id="faq">
         <h2>Frequently asked questions</h2>
         <div class="rule"></div>
@@ -250,6 +281,14 @@ const jsonld = JSON.stringify({
 
   .answer-box { background: #FFF6EC; border: 1px solid #F0D6B0; border-radius: 6px; padding: 22px 26px; margin: 0 0 18px; }
   .answer-box p { font-size: 16px; line-height: 1.75; color: #2C2C2A; margin: 0; }
+  .incident-intro { font-size: 15px; line-height: 1.6; color: #333; margin: 0 0 18px; }
+  .incidents { list-style: none; padding: 0; margin: 0 0 18px; }
+  .incidents li { padding: 10px 0; border-bottom: 1px solid #eee; }
+  .incidents li a { font-weight: 600; color: #201868; text-decoration: none; }
+  .incidents li a:hover { text-decoration: underline; }
+  .inc-meta { display: block; margin-top: 4px; font-size: 12px; color: #7A8A9E; }
+  .inc-meta a { font-weight: 400; color: #7A8A9E; }
+  .incident-src { font-size: 12px; color: #7A8A9E; line-height: 1.55; margin: 0; }
   .answer-label { font-size: 11px !important; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #F07800; margin: 0 0 8px !important; }
 
   .top5 { margin: 0 0 46px; padding-left: 22px; }
