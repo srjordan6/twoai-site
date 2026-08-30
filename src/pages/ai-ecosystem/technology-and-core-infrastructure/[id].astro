@@ -584,6 +584,52 @@ const licLine = (sec.licences || [])
               <>{i > 0 && ' '}<b>{g.name}:</b> {g.scope}</>
             ))}</p>
 
+          {sec.eia && (sec.eia.planned_capacity_mw || sec.eia.commercial_sales_mwh) && (
+            <div class="dom">
+              <h3>The federal layer</h3>
+              <p>PJM runs the grid under Northern Virginia, the densest data center
+                market on earth, but its terms forbid republishing anything derived
+                from its data without a license it issues, so no PJM number appears
+                on this page. The federal statistics agency fills the gap: public
+                domain, every state, and the inventory of what is actually scheduled
+                to be built.</p>
+              {sec.eia.planned_capacity_mw && (
+                <p><b>{Math.round(sec.eia.planned_capacity_mw.value).toLocaleString()} MW
+                  of generating capacity reported as planned</b> across
+                  {' '}{sec.eia.planned_capacity_mw.detail?.units?.toLocaleString()} units,
+                  for {sec.eia.planned_capacity_mw.detail?.period}. This is the build
+                  pipeline the queues above eventually become: a project counts here
+                  once it is scheduled, not merely requested.</p>
+              )}
+              {sec.eia.commercial_sales_mwh && sec.eia.commercial_sales_mwh.detail?.by_state && (
+                <>
+                  <p><b>Commercial-sector electricity sales, {sec.eia.commercial_sales_mwh.detail.period}.</b>
+                    {' '}Data centers are billed mostly in the commercial class, so this
+                    is the closest public proxy for their load in the states where they
+                    cluster. It is a proxy, not a measurement: offices and retail are in
+                    the same class.</p>
+                  <table>
+                    <thead><tr><th>State</th><th>Commercial sales (MWh)</th><th>Average price (cents/kWh)</th></tr></thead>
+                    <tbody>
+                      {Object.entries(sec.eia.commercial_sales_mwh.detail.by_state)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([st, mwh]) => (
+                        <tr>
+                          <td>{st}</td>
+                          <td>{Math.round(mwh).toLocaleString()}</td>
+                          <td>{(sec.eia.commercial_sales_mwh.detail.price_by_state?.[st] || 0).toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+              <p class="meta-line">Source: US Energy Information Administration, public
+                domain. Survey data lags roughly two months, so the period above is the
+                newest month EIA has reported, not the current month.</p>
+            </div>
+          )}
+
           {sec.analysis && (
             <div class="dom">
               <h3>What the numbers mean</h3>
