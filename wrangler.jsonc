@@ -28,18 +28,31 @@
     "binding": "AI"
   },
   // Observability, declared here so the deployed state is whatever this file
-  // says rather than whatever was last clicked in the dashboard. Config drift
-  // between the two is its own small outage risk.
+  // says rather than whatever was last clicked in the dashboard. That cuts
+  // both ways: this block is authoritative, so leaving it false while the
+  // dashboard toggle is on means the next deploy silently switches logging
+  // back off. It is set true to match.
   //
-  // "enabled": false matches the current dashboard setting and keeps Workers
-  // Logs off, so no log storage is billed. "invocation_logs": true means that
-  // if logs are ever switched on, Cloudflare's own per-request records come
-  // with them rather than having to be enabled separately. Flip "enabled" to
-  // true to start collecting; nothing else needs to change.
+  // Cost is not the constraint it first appeared to be. Workers Paid includes
+  // 20 million log events a month with 7-day retention, and this Worker
+  // serves well under one percent of that, so sampling stays at 100 percent:
+  // a partial sample of a small number of requests is worse than useless
+  // when the thing being debugged is rare.
+  //
+  // What this buys: per-request visibility into /api/ask, which spends real
+  // money per call, and into 404s. Both were invisible during the twelve-hour
+  // build outage on 2026-08-30.
+  //
+  // Traces and Logpush stay off deliberately. Traces adds cost for detail
+  // this Worker does not need with one real route, and Logpush bills per
+  // million records to ship logs somewhere we have no destination for.
   "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
     "logs": {
-      "enabled": false,
-      "invocation_logs": true
+      "enabled": true,
+      "invocation_logs": true,
+      "head_sampling_rate": 1
     }
   },
   // Weekly talent match digest (Monday 14:00 UTC, after the 11:00 pipeline
