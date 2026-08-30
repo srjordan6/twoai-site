@@ -112,6 +112,27 @@ const jsonld = JSON.stringify({
         </table>
       </div>
       {s.package_facts_on && (
+        <p><b>What the registry record means.</b>
+          {' '}{(() => {
+            const lic = String(s.package_license || '');
+            const L = lic.toUpperCase();
+            const perm = /MIT|APACHE|BSD|ISC|MPL|UNLICENSE|CC0|0BSD/.test(L);
+            const copyleft = /GPL|AGPL|LGPL|EUPL/.test(L);
+            const licText = !lic ? 'No licence is declared on the package, so by default all rights are reserved and using it in a product needs the author\u2019s permission.'
+              : perm ? `${lic} is a permissive licence: it can be used in commercial products with attribution.`
+              : copyleft ? `${lic} is a copyleft licence: shipping it inside a product can oblige you to release your own code under the same terms; check the terms before bundling it.`
+              : `${lic} is not a licence this site classifies; read its terms before using the package in a product.`;
+            const days = s.package_last_publish ? Math.round((Date.parse(s.package_facts_on) - Date.parse(s.package_last_publish)) / 86400000) : null;
+            const maint = days === null ? '' : days <= 90 ? ' The last publish was within the past three months, which reads as actively maintained.'
+              : days <= 365 ? ' The last publish was more than three months ago; check the repository before depending on it.'
+              : ' The last publish was more than a year ago, which reads as unmaintained.';
+            const dl = s.package_weekly_downloads;
+            const adopt = !dl ? '' : dl >= 100000 ? ' Weekly downloads in the hundreds of thousands put it among the most-installed packages in the ecosystem.'
+              : dl >= 10000 ? ' Weekly downloads in the tens of thousands mean real production use.'
+              : dl >= 1000 ? ' Weekly downloads in the thousands mean a working user base beyond its author.'
+              : ' Weekly downloads under a thousand mean early or niche use; expect to be one of the first to hit any bug.';
+            return licText + maint + adopt;
+          })()}</p>
         <p class="meta-line">Licence, latest version, publish date and downloads read from the
           {' '}<a href={s.package_facts_source} rel="noopener">{s.package_registry} registry record</a>
           {' '}on {s.package_facts_on}; the MCP registry entry above may lag it.</p>

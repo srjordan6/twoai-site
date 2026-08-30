@@ -104,6 +104,8 @@ faqs.push({
     ? `Yes. ${plural(mcp.length, 'server')} under the ${n} namespace appear in the official Model Context Protocol registry: ${mcp.map((m) => m.name).join(', ')}.`
     : `No. As of ${generated}, no server under the ${n} namespace appears in the official Model Context Protocol registry.`,
 });
+const law = company.law_exposure || null;
+if (law) faqs.push({ q: `Which state AI laws apply to ${n}?`, a: `${n} is headquartered in ${law.name}, where this site tracks ${law.count} AI bill${law.count === 1 ? '' : 's'}. State AI law reaches a company by where it operates and whom it serves, not only where it sits, so ${law.name}'s bills are the floor, not the whole exposure.` });
 if (website) faqs.push({ q: `What is ${n}'s website?`, a: `${n}'s website is ${website}.` });
 
 const desc = `${n} ${who}. ${plural(products.length, 'AI product')} tracked${cases.length ? `, ${plural(cases.length, 'lawsuit')}` : ''}${mcp.length ? `, ${plural(mcp.length, 'MCP server')}` : ''}: what ships, what is contested, what is published, verified from primary sources.`;
@@ -215,6 +217,19 @@ const jsonld = JSON.stringify({
     <p>No. As of {generated}, no server under the {n} namespace appears in the official Model
       Context Protocol registry, which this site reads daily. Attribution is by exact namespace,
       never by a name that merely resembles the company's.</p>
+  )}
+
+  {law && (
+    <>
+      <h2>Which state AI laws apply to {n}?</h2>
+      <p>{n} is headquartered in {law.name}, where this site tracks
+        {' '}<a href={`/ai-laws/${law.slug}/`}><b>{law.count} AI bill{law.count === 1 ? '' : 's'}</b></a>, each
+        linked to its LegiScan record. That is the floor of the company's exposure, not the whole of
+        it: state AI law reaches a company by where it operates and whom it serves, and federal
+        action sits above all of it. Every capability a company ships still runs on compute,
+        buildings and power, so the laws that matter most are increasingly the ones that decide
+        where a data center can connect.</p>
+    </>
   )}
 
   <h2>Where else does {n} appear on this site?</h2>

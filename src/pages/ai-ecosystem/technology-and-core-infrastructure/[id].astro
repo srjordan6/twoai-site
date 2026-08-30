@@ -672,6 +672,17 @@ const licLine = (sec.licences || [])
             </section>
           )}
 
+          {sec.reading?.body && (
+            <section>
+              <h2>What do these specifications mean for AI?</h2>
+              {String(sec.reading.body).split(/\n\n+/).map((p) => <p>{p}</p>)}
+              <p class="meta-line">Reading written by {sec.reading.model} on {sec.reading.generated_on} from
+                the published specifications above and this site's own state registry, nothing else.
+                Rack and accelerator figures are arithmetic on a stated assumption, not the operator's
+                claim. It regenerates only when the operator's published facts change.</p>
+            </section>
+          )}
+
           <section>
             <h2>What this page is, and is not</h2>
             <p>{sec.profile?.source?.basis || 'Operator-published structured facts only.'} Fields
