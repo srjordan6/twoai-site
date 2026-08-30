@@ -140,7 +140,50 @@ const _descRaw = isDCChild
   : `The ${sec.total} most-downloaded open ${secName.toLowerCase()} on the Hugging Face Hub, with licence, downloads, and release date, refreshed daily. ${sec.blurb}`;
 const desc = _descRaw.length <= 158 ? _descRaw : `${_descRaw.slice(0, 157).replace(/\s+\S*$/, '')}…`;
 
-const jsonld = JSON.stringify({
+// The thinnest pages on the site on 2026-08-30 were the metric and builder
+// children, at 86 to 102 words. Each now answers the questions a reader
+// actually arrives with, and the same pairs go out as FAQPage schema so the
+// visible answer and the machine-readable one never differ.
+const dcFaqs = [];
+if (sec.shape === 'dc-metric' && sec.metric) {
+  const m = sec.metric;
+  dcFaqs.push({ q: `What is ${m.metric}?`, a: m.definition });
+  if (m.formula) dcFaqs.push({ q: `How is ${m.metric} calculated?`, a: `${m.metric} is computed as ${m.formula}.` });
+  dcFaqs.push({ q: `Why does ${m.metric} matter for AI data centers?`, a: m.why });
+  if (m.target) dcFaqs.push({ q: `What is a good ${m.metric}?`, a: m.target });
+  if (m.source_name) dcFaqs.push({ q: `Who defines ${m.metric}?`, a: `${m.source_name} publishes the definition this page follows.` });
+}
+const bSeries = sec.shape === 'dc-builder' && sec.builder ? (sec.builder.series || []) : [];
+const bPrior = bSeries.length > 1 ? bSeries[1] : null;
+const bYear = bSeries.length > 4 ? bSeries[4] : null;
+const pct = (a, b) => (b ? Math.round(((a - b) / b) * 100) : null);
+const bRank = sec.shape === 'dc-builder' && sec.peers
+  ? sec.peers.findIndex((p) => p.name === sec.builder.name) + 1 : 0;
+if (sec.shape === 'dc-builder' && sec.builder) {
+  const b = sec.builder;
+  dcFaqs.push({ q: `How much is ${b.name} spending on data centers?`, a: `${b.name} reported ${dollars(b.latest)} of capital expenditure for the quarter ended ${b.end}, per its own XBRL company facts filed with the SEC.` });
+  if (bPrior) dcFaqs.push({ q: `Is ${b.name}'s capex rising or falling?`, a: `Against the prior quarter (${bPrior.end}, ${dollars(bPrior.val)}) the latest figure is ${pct(b.latest, bPrior.val) >= 0 ? 'up' : 'down'} ${Math.abs(pct(b.latest, bPrior.val))}%${bYear ? `; against the same quarter a year earlier (${bYear.end}, ${dollars(bYear.val)}) it is ${pct(b.latest, bYear.val) >= 0 ? 'up' : 'down'} ${Math.abs(pct(b.latest, bYear.val))}%` : ''}.` });
+  if (bRank > 0) dcFaqs.push({ q: `How does ${b.name} compare with other data center builders?`, a: `${b.name} ranks ${bRank} of ${sec.peers.length} builders this site tracks by latest quarterly capex; the largest is ${sec.peers[0].name} at ${dollars(sec.peers[0].latest)}.` });
+  dcFaqs.push({ q: `Where does this number come from?`, a: `From ${b.name}'s XBRL company facts on data.sec.gov, read daily. Capex is tagged under different concepts by different filers; the fetcher keeps whichever tag the company currently files.` });
+}
+
+const jsonld = JSON.stringify(dcFaqs.length ? {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'CollectionPage',
+      name: `${pageTitle} — The World of AI`,
+      description: desc.slice(0, 300),
+      url: `https://theworldofai.org${BASE}/${sec.uid}/`,
+      dateModified: sec.generated,
+      isPartOf: { '@type': 'CollectionPage', name: CATEGORY_NAME, url: `https://theworldofai.org${BASE}/` },
+    },
+    {
+      '@type': 'FAQPage',
+      mainEntity: dcFaqs.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
+    },
+  ],
+} : {
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',
   name: `${pageTitle} — The World of AI`,
@@ -647,16 +690,25 @@ const licLine = (sec.licences || [])
             {' '}<a href={`${BASE}/${sec.parent.uid}/`}>{sec.parent.name}</a> reference ·
             Category: {sec.metric.category}.</p>
           {sec.metric.formula && (
-            <section><h2>How it is computed</h2><p><code>{sec.metric.formula}</code></p></section>
+            <section><h2>How is {sec.metric.metric} calculated?</h2><p><code>{sec.metric.formula}</code></p></section>
           )}
-          <section><h2>Why it matters</h2><p>{sec.metric.why}</p></section>
+          <section><h2>Why does {sec.metric.metric} matter for AI data centers?</h2><p>{sec.metric.why}</p></section>
           {sec.metric.target && (
-            <section><h2>What good looks like</h2><p>{sec.metric.target}</p></section>
+            <section><h2>What is a good {sec.metric.metric}?</h2><p>{sec.metric.target}</p></section>
           )}
           {sec.metric.source_url && (
-            <section><h2>Who defines it</h2>
+            <section><h2>Who defines {sec.metric.metric}?</h2>
               <p><a href={sec.metric.source_url} rel="noopener">{sec.metric.source_name || 'The standard-setter'}</a> is
                 the authority this definition follows.</p></section>
+          )}
+          {sec.siblings && sec.siblings.length > 0 && (
+            <section>
+              <h2>Which other {sec.metric.category.toLowerCase()} metrics belong with it?</h2>
+              <p>The metrics this site defines in the same category, each on its own page:
+                {' '}{sec.siblings.map((x, i) => (
+                  <>{i > 0 && ', '}<a href={`${BASE}/${x.uid}/`}>{x.label}</a></>
+                ))}.</p>
+            </section>
           )}
         </>
       )}
@@ -669,7 +721,15 @@ const licLine = (sec.licences || [])
             builders tracked in <a href={`${BASE}/${sec.parent.uid}/`}>{sec.parent.name}</a>.</p>
           {sec.builder.series && sec.builder.series.length > 0 && (
             <section>
-              <h2>The quarterly capex record</h2>
+              <h2>How has {sec.builder.name}'s capex changed?</h2>
+              {bPrior && (
+                <p>Against the prior quarter ({bPrior.end}, {dollars(bPrior.val)}) the latest figure is
+                  {' '}<b>{pct(sec.builder.latest, bPrior.val) >= 0 ? 'up' : 'down'} {Math.abs(pct(sec.builder.latest, bPrior.val))}%</b>
+                  {bYear && <>; against the same quarter a year earlier ({bYear.end}, {dollars(bYear.val)}) it is
+                    {' '}<b>{pct(sec.builder.latest, bYear.val) >= 0 ? 'up' : 'down'} {Math.abs(pct(sec.builder.latest, bYear.val))}%</b></>}.
+                  Capital expenditure is the AI roadmap stated in dollars: a rising line is next year's
+                  training capacity being poured in concrete.</p>
+              )}
               <div class="tbl-scroll"><table>
                 <thead><tr><th>Quarter ended</th><th>Capex</th></tr></thead>
                 <tbody>
@@ -680,9 +740,26 @@ const licLine = (sec.licences || [])
               </table></div>
             </section>
           )}
+          {sec.peers && sec.peers.length > 1 && (
+            <section>
+              <h2>How does {sec.builder.name} compare with other builders?</h2>
+              <p>{bRank > 0 && <>{sec.builder.name} ranks <b>{bRank} of {sec.peers.length}</b> builders this site
+                tracks by latest quarterly capex. </>}Same source for every row, each company's own XBRL
+                facts, so the comparison is filing against filing rather than estimate against estimate.</p>
+              <div class="tbl-scroll"><table>
+                <thead><tr><th>Builder</th><th>Latest quarter</th><th>Quarterly capex</th></tr></thead>
+                <tbody>
+                  {sec.peers.map((p) => (
+                    <tr><td>{p.name === sec.builder.name ? <b>{p.name}</b> : <a href={`${BASE}/${p.uid}/`}>{p.name}</a>}</td>
+                      <td>{p.end}</td><td>{dollars(p.latest)}</td></tr>
+                  ))}
+                </tbody>
+              </table></div>
+            </section>
+          )}
           {sec.filings && sec.filings.length > 0 && (
             <section>
-              <h2>Material events on the record</h2>
+              <h2>What material events has {sec.builder.name} filed?</h2>
               <ul class="sections">
                 {sec.filings.map((f) => (
                   <li>{f.filed} — items {f.items}
@@ -830,6 +907,14 @@ const licLine = (sec.licences || [])
               gigawatt of announcements can still hang on a single supply chain.</p>
           </section>
         </>
+      )}
+      {dcFaqs.length > 0 && (
+        <section>
+          <h2>Frequently asked questions</h2>
+          {dcFaqs.map((f) => (
+            <div class="faq"><h3>{f.q}</h3><p>{f.a}</p></div>
+          ))}
+        </section>
       )}
       <div class="cite"><b>Cite this page:</b> <code>The World of AI.
         theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
@@ -1398,6 +1483,8 @@ const licLine = (sec.licences || [])
   /* A verified date that has stopped moving needs to say why. Italic and grey
      so it reads as a footnote on the claim rather than a warning about it. */
   .vnote { font-style: italic; color: #7A8A9E; }
+  .faq h3 { margin: 1.1em 0 .3em; font-size: 1.05rem; }
+  .faq p { margin: 0 0 .6em; }
   .vc-block { margin: 2em 0 0; max-width: 760px; }
   .vc-block :global(p) { line-height: 1.75; }
   .vc-block :global(li) { line-height: 1.7; margin-bottom: .4em; }

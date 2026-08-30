@@ -7,10 +7,15 @@
  * across every page on this site, so a source that spells "OpenAI Global, LLC"
  * lands on the same page as one that spells "OpenAI, Inc."
  *
- * We show what the company publishes that we track, whether it is named as a
- * defendant in a lawsuit we follow, and whether it has published to the Model
- * Context Protocol registry. Everything is drawn from those records rather
- * than from the company's own marketing.
+ * Two layers of data arrive in the document. `company` carries the facts this
+ * site holds: profile fields verified from primary sources, the products we
+ * track, lawsuits naming the company, MCP servers under its namespace. The
+ * top-level `profile_text` and `website` are patched in by the company
+ * harvester: a description written by a model from the company's own site
+ * plus those held facts, regenerated when the site changes. Until 2026-08-30
+ * this template read only `company`, so 248 written profiles never rendered
+ * and 260 of 270 company pages measured under 300 words. Both layers render
+ * now, and every section is a question with its answer under it.
  */
 import Base from '../../layouts/Base.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
@@ -22,9 +27,12 @@ export function getStaticPaths() {
     .filter((f) => f.endsWith('.json') && f !== 'index.json')
     .map((f) => JSON.parse(readFileSync(`content/companies/${f}`, 'utf8')))
     .filter((d) => d && d.company && d.company.uid)
-    .map((d) => ({ params: { id: d.company.uid }, props: { company: d.company, generated: d.generated } }));
+    .map((d) => ({
+      params: { id: d.company.uid },
+      props: { company: d.company, generated: d.generated, profileText: d.profile_text || null, siteUrl: d.website || '' },
+    }));
 }
-const { company, generated } = Astro.props;
+const { company, generated, profileText, siteUrl } = Astro.props;
 const profile = company.profile || {};
 const products = company.products || [];
 const cases = company.cases || [];
@@ -36,6 +44,10 @@ const categories = [...new Set(products.map((p) => p.category).filter(Boolean))]
 // the tools hub.
 const catSlug = (n) => String(n).toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const catLinks = categories.map((n) => ({ name: n, slug: catSlug(n) }));
+const website = profile.website || siteUrl || '';
+const paras = profileText && profileText.body
+  ? String(profileText.body).split(/\n\n+/).map((p) => p.trim()).filter(Boolean)
+  : [];
 
 function fmtRevenue(usd) {
   if (typeof usd !== 'number') return null;
@@ -46,43 +58,97 @@ function fmtRevenue(usd) {
 }
 const revenue = fmtRevenue(profile.last_revenue_usd);
 const orgLabels = {
-  'public-company': 'Public company',
-  'startup': 'Private company',
-  'research-lab': 'Research lab',
-  'university-lab': 'University lab',
-  'government-lab': 'Government lab',
-  'nonprofit': 'Nonprofit',
-  'open-source-foundation': 'Open source foundation',
+  'public-company': 'public company',
+  'startup': 'private company',
+  'research-lab': 'research lab',
+  'university-lab': 'university lab',
+  'government-lab': 'government lab',
+  'nonprofit': 'nonprofit',
+  'open-source-foundation': 'open source foundation',
 };
 const orgLabel = orgLabels[profile.org_type] || null;
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const n = company.name;
+const plural = (k, w) => `${k} ${w}${k === 1 ? '' : 's'}`;
 
-const desc = `${company.name}: ${products.length} AI product${products.length === 1 ? '' : 's'} we track${cases.length ? `, ${cases.length} tracked lawsuit${cases.length === 1 ? '' : 's'}` : ''}${mcp.length ? `, ${mcp.length} MCP server${mcp.length === 1 ? '' : 's'}` : ''}. What ships, what is contested, and what is published, from the AI Company Directory.`;
+// The answer, first: who the company is in one sentence built only from
+// verified fields, then what this site tracks about it.
+const who = [
+  orgLabel ? `is a ${orgLabel}` : 'is an organisation',
+  profile.headquarters ? `based in ${profile.headquarters}` : '',
+  profile.founded ? `founded in ${profile.founded}` : '',
+].filter(Boolean).join(' ');
 
-const jsonld = JSON.stringify({
-  '@context': 'https://schema.org',
+// FAQ: only questions the data can answer. The same pairs feed the FAQPage
+// schema, so the visible answer and the machine-readable one never differ.
+const faqs = [];
+if (paras.length) faqs.push({ q: `What does ${n} do?`, a: paras[0] });
+else if (products.length) faqs.push({ q: `What does ${n} do?`, a: `${n} publishes ${plural(products.length, 'AI product')} this site tracks: ${products.map((p) => p.name).join(', ')}.` });
+if (profile.headquarters) faqs.push({ q: `Where is ${n} headquartered?`, a: `${n} is headquartered in ${profile.headquarters}, as stated in the company's own published records.` });
+if (profile.founded) faqs.push({ q: `When was ${n} founded?`, a: `${n} was founded in ${profile.founded}.` });
+if (orgLabel) faqs.push({
+  q: `Is ${n} a public company?`,
+  a: profile.org_type === 'public-company'
+    ? `Yes. ${n} is publicly traded${profile.ticker ? ` under the ticker ${profile.ticker}` : ''}${profile.cik ? `, SEC CIK ${profile.cik}` : ''}.`
+    : `No. ${n} is a ${orgLabel}${profile.for_profit === false ? ', not for profit' : ''}.`,
+});
+faqs.push({
+  q: `Is ${n} a defendant in any AI lawsuit?`,
+  a: cases.length
+    ? `${n} is named as a defendant in ${plural(cases.length, 'case')} on this site's AI lawsuit tracker: ${cases.map((c) => c.name).join('; ')}. Being named is not a finding of wrongdoing.`
+    : `Not on this site's tracker. As of ${generated}, ${n} is not named as a defendant in any AI lawsuit followed here.`,
+});
+faqs.push({
+  q: `Does ${n} publish MCP servers?`,
+  a: mcp.length
+    ? `Yes. ${plural(mcp.length, 'server')} under the ${n} namespace appear in the official Model Context Protocol registry: ${mcp.map((m) => m.name).join(', ')}.`
+    : `No. As of ${generated}, no server under the ${n} namespace appears in the official Model Context Protocol registry.`,
+});
+if (website) faqs.push({ q: `What is ${n}'s website?`, a: `${n}'s website is ${website}.` });
+
+const desc = `${n} ${who}. ${plural(products.length, 'AI product')} tracked${cases.length ? `, ${plural(cases.length, 'lawsuit')}` : ''}${mcp.length ? `, ${plural(mcp.length, 'MCP server')}` : ''}: what ships, what is contested, what is published, verified from primary sources.`;
+
+const org = {
   '@type': 'Organization',
-  name: company.name,
-  description: desc,
+  name: n,
+  description: desc.slice(0, 300),
   identifier: company.uid,
   url: `https://theworldofai.org/companies/${company.uid}/`,
-  ...(products.some((p) => p.url) ? { sameAs: [...new Set(products.map((p) => p.url).filter(Boolean))] } : {}),
+  ...(website ? { sameAs: [website, ...new Set(products.map((p) => p.url).filter(Boolean))] } : {}),
+  ...(profile.founded ? { foundingDate: String(profile.founded) } : {}),
+  ...(profile.headquarters ? { address: profile.headquarters } : {}),
+};
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@graph': [
+    org,
+    {
+      '@type': 'FAQPage',
+      mainEntity: faqs.map((f) => ({
+        '@type': 'Question', name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    },
+  ],
 });
 ---
-<Base title={`${company.name}: AI products, lawsuits, and MCP servers`} description={desc} current="/companies/" jsonld={jsonld}>
+<Base title={`${n}: AI products, lawsuits, and MCP servers`} description={desc.slice(0, 300)} current="/companies/" jsonld={jsonld}>
   <p class="meta-line"><a href="/companies/">AI Company Directory</a></p>
-  <h1>{company.name}</h1>
-  <p class="answer">{company.name} publishes <b>{products.length}</b> AI product{products.length === 1 ? '' : 's'} we track
-    {cases.length > 0 && <>, is a defendant in <b>{cases.length}</b> lawsuit{cases.length === 1 ? '' : 's'} on our tracker</>}
+  <h1>{n}</h1>
+  <p class="answer"><b>{n} {who}.</b> It publishes <b>{products.length}</b> AI product{products.length === 1 ? '' : 's'} this site tracks
+    {cases.length > 0 && <>, is a defendant in <b>{cases.length}</b> lawsuit{cases.length === 1 ? '' : 's'} on the tracker</>}
     {mcp.length > 0 && <>, and has published <b>{mcp.length}</b> server{mcp.length === 1 ? '' : 's'} to the MCP registry</>}.
-    Everything below is drawn from those records rather than from the company's own marketing.</p>
+    {website && <> Website: <a href={website} rel="noopener">{website.replace(/^https?:\/\//, '').replace(/\/$/, '')}</a>.</>}
+    {' '}Every fact below names its source; nothing here is taken from the company's marketing on trust.</p>
   {generated && <p class="meta-line">Last verified: <time datetime={generated}>{generated}</time> · Entity ID <code>{company.uid}</code></p>}
 
-  {(orgLabel || profile.founded || profile.headquarters || profile.ticker || revenue) && (
+  {(orgLabel || profile.founded || profile.headquarters || profile.ticker || revenue || website) && (
     <table class="facts">
       <tbody>
-        {orgLabel && <tr><th>Organisation</th><td>{orgLabel}{profile.for_profit === false && <> · not for profit</>}</td></tr>}
+        {orgLabel && <tr><th>Organisation</th><td>{cap(orgLabel)}{profile.for_profit === false && <> · not for profit</>}</td></tr>}
         {profile.founded && <tr><th>Founded</th><td>{profile.founded}</td></tr>}
         {profile.headquarters && <tr><th>Headquarters</th><td>{profile.headquarters}</td></tr>}
+        {website && <tr><th>Website</th><td><a href={website} rel="noopener">{website}</a></td></tr>}
         {profile.ticker && <tr><th>Ticker</th><td>{profile.ticker}{profile.cik && <> · SEC CIK <a href={`https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${profile.cik}`} rel="noopener">{profile.cik}</a></>}</td></tr>}
         {revenue && (
           <tr>
@@ -95,66 +161,90 @@ const jsonld = JSON.stringify({
     </table>
   )}
 
-  {products.length > 0 && (
+  {paras.length > 0 && (
     <>
-      <h2>Products</h2>
-      <table>
-        <thead><tr><th>Product</th><th>Category</th><th>What it does</th></tr></thead>
-        <tbody>
-          {products.map((p) => (
-            <tr>
-              <td>{p.profile
-                ? <a href={`/ai-tools/${p.profile}/`}>{p.name}</a>
-                : (p.url ? <a href={p.url} rel="noopener nofollow">{p.name}</a> : p.name)}</td>
-              <td>{p.category}</td>
-              <td>{p.note}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <h2>What does {n} do?</h2>
+      {paras.map((p) => <p>{p}</p>)}
+      <p class="meta-line">Written by {profileText.model} on {profileText.generated_on} from what {n} states on
+        its own site and the facts this site holds; regenerated when the site changes. Claims attributed
+        to the company are its own; the numbers in the table above are verified separately.</p>
     </>
   )}
 
-  {cases.length > 0 && (
+  <h2>What AI products does {n} make?</h2>
+  {products.length > 0 ? (
+    <table>
+      <thead><tr><th>Product</th><th>Category</th><th>What it does</th></tr></thead>
+      <tbody>
+        {products.map((p) => (
+          <tr>
+            <td>{p.profile
+              ? <a href={`/ai-tools/${p.profile}/`}>{p.name}</a>
+              : (p.url ? <a href={p.url} rel="noopener nofollow">{p.name}</a> : p.name)}</td>
+            <td>{p.category}</td>
+            <td>{p.note}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  ) : (
+    <p>This site tracks no product from {n} yet. The company is in the directory because it
+      appears in another record this site keeps, a lawsuit, an MCP namespace or a filing.</p>
+  )}
+
+  <h2>Is {n} named in any AI lawsuit this site tracks?</h2>
+  {cases.length > 0 ? (
     <>
-      <h2>Lawsuits we track</h2>
       <ul>{cases.map((c) => (
         <li><a href={`/ai-lawsuits/${c.slug}/`}>{c.name}</a>{c.court && <>, {c.court}</>}</li>
       ))}</ul>
-      <p class="meta-line">Matched on the defendant field of our tracker. Being named as a
+      <p class="meta-line">Matched on the defendant field of the tracker. Being named as a
         defendant is not a finding of wrongdoing.</p>
     </>
+  ) : (
+    <p>Not as of {generated}. {n} is not named as a defendant in any case on the
+      {' '}<a href="/ai-lawsuits/">AI lawsuit tracker</a>, which is refreshed daily from court dockets.</p>
   )}
 
-  {mcp.length > 0 && (
-    <>
-      <h2>MCP servers</h2>
-      <ul>{mcp.map((m) => (
-        <li><a href={`/mcp/${m.slug}/`}>{m.name}</a>{m.description && <> — {m.description}</>}</li>
-      ))}</ul>
-    </>
+  <h2>Does {n} publish MCP servers?</h2>
+  {mcp.length > 0 ? (
+    <ul>{mcp.map((m) => (
+      <li><a href={`/mcp/${m.slug}/`}>{m.name}</a>{m.description && <> — {m.description}</>}</li>
+    ))}</ul>
+  ) : (
+    <p>No. As of {generated}, no server under the {n} namespace appears in the official Model
+      Context Protocol registry, which this site reads daily. Attribution is by exact namespace,
+      never by a name that merely resembles the company's.</p>
   )}
 
-  <h2>Elsewhere on this site</h2>
-  <p>The pages that actually name {company.name}, so you can see the same organisation from
-    each angle we track it from. Hubs are listed only where they carry an entry for it.</p>
+  <h2>Where else does {n} appear on this site?</h2>
+  <p>The pages that actually name {n}, so the same organisation can be seen from each angle
+    this site tracks it from. Hubs are listed only where they carry an entry for it.</p>
   <ul>
-    <li><a href={`/companies/#c-${company.uid}`}>{company.name} in the AI Company Directory</a></li>
+    <li><a href={`/companies/#c-${company.uid}`}>{n} in the AI Company Directory</a></li>
     {products.filter((p) => p.profile).map((p) => (
       <li><a href={`/ai-tools/${p.profile}/`}>{p.name}</a> — full tool profile</li>
     ))}
     {catLinks.map((c) => (
-      <li><a href={`/ai-tools/category/${c.slug}/`}>{c.name}</a> — the tools category {company.name} appears in</li>
+      <li><a href={`/ai-tools/category/${c.slug}/`}>{c.name}</a> — the tools category {n} appears in</li>
     ))}
     {cases.map((c) => (
-      <li><a href={`/ai-lawsuits/${c.slug}/`}>{c.name}</a> — case page naming {company.name}</li>
+      <li><a href={`/ai-lawsuits/${c.slug}/`}>{c.name}</a> — case page naming {n}</li>
     ))}
     {mcp.map((m) => (
-      <li><a href={`/mcp/${m.slug}/`}>{m.name}</a> — MCP server published by {company.name}</li>
+      <li><a href={`/mcp/${m.slug}/`}>{m.name}</a> — MCP server published by {n}</li>
     ))}
   </ul>
 
-  <div class="cite-box">Cite this page: <code>"{company.name}." AI Company Directory,
+  <h2>Frequently asked questions</h2>
+  {faqs.map((f) => (
+    <div class="faq">
+      <h3>{f.q}</h3>
+      <p>{f.a}</p>
+    </div>
+  ))}
+
+  <div class="cite-box">Cite this page: <code>"{n}." AI Company Directory,
     The World of AI, theworldofai.org/companies/{company.uid}/.{generated ? ` Verified ${generated}.` : ''}</code></div>
 
   <p class="meta-line">Entity ID <code>{company.uid}</code>. That identifier is stable across
@@ -171,6 +261,8 @@ const jsonld = JSON.stringify({
   table th { font-weight: 600; background: #f7f7fb; }
   table.facts th { white-space: nowrap; width: 12em; }
   code { font-family: ui-monospace, monospace; font-size: .92em; }
+  .faq h3 { margin: 1.1em 0 .3em; font-size: 1.05rem; }
+  .faq p { margin: 0 0 .6em; }
   .cite-box { margin-top: 1.6em; padding: .9em 1em; background: #f7f7fb; border-left: 3px solid #201868; font-size: .9rem; }
   .cite-box code { display: block; margin-top: .3em; }
 </style>
