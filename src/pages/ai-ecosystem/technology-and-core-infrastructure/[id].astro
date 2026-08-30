@@ -51,6 +51,9 @@ const isDSLic = sec.shape === 'ds-licensing';
 const isVibe = sec.shape === 'vibe-coding';
 const isProv = sec.shape === 'serving-providers';
 const isDC = sec.shape === 'datacenters';
+const isDCChild = ['dc-state', 'dc-metric', 'dc-builder'].includes(sec.shape);
+const metricUID = isDC ? Object.fromEntries((sec.metric_pages || []).map((m) => [m.label, m.uid])) : {};
+const builderUID = isDC ? Object.fromEntries((sec.builder_pages || []).map((b) => [b.label, b.uid])) : {};
 const dcOps = isDC ? (sec.metrics || []).filter((m) => m.track === 'operations') : [];
 const dcMkt = isDC ? (sec.metrics || []).filter((m) => m.track === 'market') : [];
 const dcOpsCats = [...new Set(dcOps.map((m) => m.category))];
@@ -195,7 +198,9 @@ const licLine = (sec.licences || [])
             <thead><tr><th>Company</th><th>Latest quarter ended</th><th>Quarterly capex</th></tr></thead>
             <tbody>
               {sec.capex.map((c) => (
-                <tr><td>{c.name}</td><td>{c.end}</td><td>{dollars(c.latest)}</td></tr>
+                <tr><td>{builderUID[c.name]
+                  ? <a href={`${BASE}/${builderUID[c.name]}/`}>{c.name}</a> : c.name}</td>
+                  <td>{c.end}</td><td>{dollars(c.latest)}</td></tr>
               ))}
             </tbody>
           </table>
@@ -224,7 +229,9 @@ const licLine = (sec.licences || [])
           <div class="dom">
             <h3>{cat}</h3>
             {dcOps.filter((m) => m.category === cat).map((m) => (
-              <p><b>{m.metric}.</b> {m.definition}{m.formula && <> Formula:
+              <p><b>{metricUID[m.metric]
+                ? <a href={`${BASE}/${metricUID[m.metric]}/`}>{m.metric}</a>
+                : m.metric}.</b> {m.definition}{m.formula && <> Formula:
                 {' '}<code>{m.formula}</code>.</>} {m.why}{m.target && <> {m.target}</>}
                 {m.source_url && <> {' '}<a href={m.source_url} rel="noopener">{m.source_name || 'Standard'}</a>.</>}</p>
             ))}
@@ -238,12 +245,67 @@ const licLine = (sec.licences || [])
           <div class="dom">
             <h3>{cat}</h3>
             {dcMkt.filter((m) => m.category === cat).map((m) => (
-              <p><b>{m.metric}.</b> {m.definition} {m.why}{m.target && <> {m.target}</>}
+              <p><b>{metricUID[m.metric]
+                ? <a href={`${BASE}/${metricUID[m.metric]}/`}>{m.metric}</a>
+                : m.metric}.</b> {m.definition} {m.why}{m.target && <> {m.target}</>}
                 {m.source_url && <> {' '}<a href={m.source_url} rel="noopener">{m.source_name || 'Source'}</a>.</>}</p>
             ))}
           </div>
         ))}
       </section>
+
+      {sec.operators && sec.operators.length > 0 && (
+        <section>
+          <h2>The AI cloud operators</h2>
+          <p class="meta-line">The companies renting GPU capacity out of these
+            buildings, each entry against its own primary page, re-verified daily.
+            Absorbed from this domain's former Datacenters page, which now lives
+            here.</p>
+          {sec.operators.map((o) => (
+            <p><b>{o.name}</b>{o.maker && <> ({o.maker})</>}. {o.note}
+              {o.source_url && <> {' '}<a href={o.source_url} rel="noopener">Source</a>.</>}
+              {o.verified && <> {' '}Verified {o.verified}.</>}</p>
+          ))}
+        </section>
+      )}
+
+      {sec.state_pages && sec.state_pages.length > 0 && (
+        <section>
+          <h2>The facility registry: data centers across America</h2>
+          <p><b>{sec.fac_total} mapped facilities, {sec.fac_ops} with a named
+            operator, one directory page per state.</b> The registry is built from
+            OpenStreetMap, where contributors have mapped the buildings themselves,
+            and it is the largest openly licensed facility dataset that exists. It
+            is not every data center in America; nobody publishes that for free.
+            Complete per-facility spec sheets, megawatts, tier ratings, live only
+            in commercial databases and on operator spec pages, so this registry
+            holds the mapped baseline and grows a sourced profile per facility from
+            operator publications.</p>
+          <p class="meta-line">Facility data © <a
+            href="https://www.openstreetmap.org/copyright"
+            rel="noopener">OpenStreetMap contributors</a>, ODbL. State assignment
+            via the FCC census area API.</p>
+          <div class="dom">
+            <h3>Directories by state</h3>
+            <p>{sec.state_pages.map((st, i) => (
+              <>{i > 0 && ' · '}<a href={`${BASE}/${st.uid}/`}>{st.code}&nbsp;({st.count})</a></>
+            ))}</p>
+          </div>
+          <div class="dom">
+            <h3>What a complete facility profile captures</h3>
+            <p>Five dimensions, filled per facility as operators publish them, each
+              value carrying its own source: <b>power</b> (utility allocation in MW,
+              design density per rack, redundancy topology, N+1, 2N, 2N+1, and
+              generator runtime); <b>cooling and environment</b> (air, direct-to-chip
+              liquid, rear-door, or immersion; PUE and WUE against targets; cold-aisle
+              thermal boundaries); <b>footprint</b> (gross versus white space, floor
+              loading, expansion land); <b>connectivity</b> (carrier count and
+              meet-me-rooms, IXP and subsea access, latency to cloud regions); and
+              <b> commercial and risk</b> (Uptime tier, interconnection and PPA
+              status, SOC 2, ISO 27001 and FedRAMP audits, tenancy structure).</p>
+          </div>
+        </section>
+      )}
 
       <section>
         <h2>Who publishes the rest</h2>
@@ -290,6 +352,93 @@ const licLine = (sec.licences || [])
         </div>
       ))}
   <div class="cite-box">Cite this page: <code>"{sec.name}." The World of AI,
+        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
+    </>
+  )}
+
+  {isDCChild && (
+    <>
+      {sec.shape === 'dc-state' && (
+        <>
+          <p class="answer"><b>{sec.count} mapped data center{sec.count === 1 ? '' : 's'} in
+            {' '}{sec.state}.</b> Every facility OpenStreetMap contributors have mapped in the
+            state, with operator and locality where tagged. The map is crowd-built, so absence
+            here means unmapped, not nonexistent.</p>
+          <p class="meta-line">Last verified: {sec.generated} · Part of the
+            {' '}<a href={`${BASE}/${sec.parent.uid}/`}>{sec.parent.name}</a> facility registry ·
+            Facility data © <a href="https://www.openstreetmap.org/copyright"
+            rel="noopener">OpenStreetMap contributors</a>, ODbL.</p>
+          <div class="tbl-scroll"><table>
+            <thead><tr><th>Facility</th><th>Operator</th><th>Locality</th><th>Map</th></tr></thead>
+            <tbody>
+              {(sec.facilities || []).map((f) => (
+                <tr>
+                  <td>{f.website ? <a href={f.website} rel="noopener">{f.name}</a> : f.name}</td>
+                  <td>{f.operator || '—'}</td>
+                  <td>{f.city || '—'}</td>
+                  <td>{f.lat ? <a href={`https://www.openstreetmap.org/?mlat=${f.lat}&mlon=${f.lon}#map=16/${f.lat}/${f.lon}`}
+                    rel="noopener">view</a> : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table></div>
+        </>
+      )}
+      {sec.shape === 'dc-metric' && sec.metric && (
+        <>
+          <p class="answer"><b>{sec.metric.metric}.</b> {sec.metric.definition}</p>
+          <p class="meta-line">Last verified: {sec.generated} · A
+            {' '}{sec.metric.track === 'market' ? 'market' : 'facility operations'} metric in the
+            {' '}<a href={`${BASE}/${sec.parent.uid}/`}>{sec.parent.name}</a> reference ·
+            Category: {sec.metric.category}.</p>
+          {sec.metric.formula && (
+            <section><h2>How it is computed</h2><p><code>{sec.metric.formula}</code></p></section>
+          )}
+          <section><h2>Why it matters</h2><p>{sec.metric.why}</p></section>
+          {sec.metric.target && (
+            <section><h2>What good looks like</h2><p>{sec.metric.target}</p></section>
+          )}
+          {sec.metric.source_url && (
+            <section><h2>Who defines it</h2>
+              <p><a href={sec.metric.source_url} rel="noopener">{sec.metric.source_name || 'The standard-setter'}</a> is
+                the authority this definition follows.</p></section>
+          )}
+        </>
+      )}
+      {sec.shape === 'dc-builder' && sec.builder && (
+        <>
+          <p class="answer"><b>{sec.builder.name} is spending {dollars(sec.builder.latest)} a
+            quarter building capacity</b>, as of the quarter ended {sec.builder.end}, read from
+            its own XBRL company facts on SEC EDGAR.</p>
+          <p class="meta-line">Last verified: {sec.generated} · Refreshes daily · One of the
+            builders tracked in <a href={`${BASE}/${sec.parent.uid}/`}>{sec.parent.name}</a>.</p>
+          {sec.builder.series && sec.builder.series.length > 0 && (
+            <section>
+              <h2>The quarterly capex record</h2>
+              <div class="tbl-scroll"><table>
+                <thead><tr><th>Quarter ended</th><th>Capex</th></tr></thead>
+                <tbody>
+                  {sec.builder.series.map((q) => (
+                    <tr><td>{q.end}</td><td>{dollars(q.val)}</td></tr>
+                  ))}
+                </tbody>
+              </table></div>
+            </section>
+          )}
+          {sec.filings && sec.filings.length > 0 && (
+            <section>
+              <h2>Material events on the record</h2>
+              <ul class="sections">
+                {sec.filings.map((f) => (
+                  <li>{f.filed} — items {f.items}
+                    {f.doc_url && <> (<a href={f.doc_url} rel="noopener">filing</a>)</>}</li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </>
+      )}
+      <div class="cite"><b>Cite this page:</b> <code>The World of AI.
         theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
     </>
   )}
