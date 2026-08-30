@@ -27,6 +27,21 @@
   "ai": {
     "binding": "AI"
   },
+  // Observability, declared here so the deployed state is whatever this file
+  // says rather than whatever was last clicked in the dashboard. Config drift
+  // between the two is its own small outage risk.
+  //
+  // "enabled": false matches the current dashboard setting and keeps Workers
+  // Logs off, so no log storage is billed. "invocation_logs": true means that
+  // if logs are ever switched on, Cloudflare's own per-request records come
+  // with them rather than having to be enabled separately. Flip "enabled" to
+  // true to start collecting; nothing else needs to change.
+  "observability": {
+    "logs": {
+      "enabled": false,
+      "invocation_logs": true
+    }
+  },
   // Weekly talent match digest (Monday 14:00 UTC, after the 11:00 pipeline
   // run has refreshed listings and matches).
   "triggers": { "crons": ["*/5 * * * *", "0 14 * * 1"] },
