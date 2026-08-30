@@ -207,6 +207,49 @@ const licLine = (sec.licences || [])
           commercial research paywalls.</p>
       </section>
 
+      {sec.indexes && sec.indexes.length > 0 && (
+        <section class="dcx">
+          <h2>The industry at a glance, today</h2>
+          <p class="dcx-lede">Six numbers this site harvests rather than repeats. Every
+            one comes from a grid operator's own queue file, an SEC filing, a signed
+            reactor agreement, or the open facility map. They move as the industry
+            moves, and they carry today's date because they were fetched today.</p>
+          <div class="dcx-grid">
+            {sec.indexes.map((ix) => (
+              <div class="dcx-cell">
+                <div class="dcx-val">
+                  {ix.unit === '$B' && '$'}
+                  {ix.value >= 1000
+                    ? Math.round(ix.value).toLocaleString()
+                    : ix.value >= 100
+                    ? Math.round(ix.value).toLocaleString()
+                    : ix.value.toFixed(1)}
+                  <span class="dcx-unit">{ix.unit === '$B' ? 'B' : ix.unit === '%' ? '%' : ` ${ix.unit}`}</span>
+                </div>
+                <div class="dcx-label">
+                  {ix.link && sec.index_uids && sec.index_uids[ix.link]
+                    ? <a href={`${BASE}/${sec.index_uids[ix.link]}/`}>{ix.label}</a>
+                    : ix.label}
+                </div>
+                {ix.has_delta && ix.delta !== 0 && (
+                  <div class={`dcx-delta ${ix.delta > 0 ? 'up' : 'down'}`}>
+                    {ix.delta > 0 ? '\u25b2' : '\u25bc'} {Math.abs(ix.delta) >= 100
+                      ? Math.round(Math.abs(ix.delta)).toLocaleString()
+                      : Math.abs(ix.delta).toFixed(1)} since last reading
+                  </div>
+                )}
+                <div class="dcx-note">{ix.note}</div>
+              </div>
+            ))}
+          </div>
+          <p class="meta-line">Read as of {sec.generated}. Queue figures combine five
+            US grid operators whose scopes differ, so the total measures the whole
+            pipeline rather than ranking one against another. A change figure appears
+            once there are two readings to compare; a series that started today shows
+            none rather than a zero pretending to be one.</p>
+        </section>
+      )}
+
       <section>
         <h2>Why data centers are an AI story</h2>
         <p>Every capability this encyclopedia tracks, the <a href={`${BASE}/87868942/`}>models</a>,
@@ -1239,6 +1282,19 @@ const licLine = (sec.licences || [])
 </Base>
 
 <style>
+  .dcx-lede { font-size: 15px; line-height: 1.6; color: #444; margin: 0 0 18px; }
+  .dcx-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+    gap: 1px; background: #e6e6ef; border: 1px solid #e6e6ef; margin: 0 0 14px; }
+  .dcx-cell { background: #fff; padding: 16px 18px 18px; }
+  .dcx-val { font-family: Lora, Georgia, serif; font-size: 30px; line-height: 1.1;
+    color: #201868; font-weight: 600; }
+  .dcx-unit { font-size: 15px; color: #7A8A9E; font-weight: 400; }
+  .dcx-label { font-size: 13.5px; font-weight: 600; color: #2c2c44; margin: 6px 0 0; line-height: 1.35; }
+  .dcx-label a { color: #201868; text-decoration: none; border-bottom: 1px solid #F07800; }
+  .dcx-delta { font-size: 12px; margin-top: 5px; font-weight: 600; }
+  .dcx-delta.up { color: #0a7c42; }
+  .dcx-delta.down { color: #b3261e; }
+  .dcx-note { font-size: 12px; color: #7A8A9E; line-height: 1.45; margin-top: 8px; }
   /* The HF catalog table's first column carries repo ids like
      org/very-long-model-name that used to set the table's minimum width
      wider than the content column, so the right columns slid under the
