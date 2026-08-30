@@ -305,6 +305,21 @@ const licLine = (sec.licences || [])
               <>{i > 0 && ' · '}<a href={`${BASE}/${st.uid}/`}>{st.code}&nbsp;({st.count})</a></>
             ))}</p>
           </div>
+          {sec.intl_pages && sec.intl_pages.length > 0 && (
+            <div class="dom">
+              <h3>Beyond America: China and Europe</h3>
+              <p>The registry harvests one additional country each day on rotation,
+                because AI compute is not an American monopoly: Europe builds under
+                the Energy Efficiency Directive's mandatory facility reporting, and
+                China builds under the Eastern Data Western Computing hub program
+                with minimal public disclosure. European mapping is reasonably
+                dense; the Chinese directory is thin and will stay thin until
+                someone maps what the state does not publish.</p>
+              <p>{sec.intl_pages.map((c, i) => (
+                <>{i > 0 && ' · '}<a href={`${BASE}/${c.uid}/`}>{c.code}&nbsp;({c.count})</a></>
+              ))}</p>
+            </div>
+          )}
           <div class="dom">
             <h3>What a complete facility profile captures</h3>
             <p>Five dimensions, filled per facility as operators publish them, each
@@ -387,8 +402,8 @@ const licLine = (sec.licences || [])
       {sec.shape === 'dc-state' && (
         <>
           <p class="answer"><b>{sec.count} mapped data center{sec.count === 1 ? '' : 's'} in
-            {' '}{sec.state}.</b> Every facility OpenStreetMap contributors have mapped in the
-            state, with operator and locality where tagged. The map is crowd-built, so absence
+            {' '}{sec.state}.</b> Every facility OpenStreetMap contributors have mapped there,
+            with operator and locality where tagged. The map is crowd-built, so absence
             here means unmapped, not nonexistent.</p>
           <p class="meta-line">Last verified: {sec.generated} · Part of the
             {' '}<a href={`${BASE}/${sec.parent.uid}/`}>{sec.parent.name}</a> facility registry ·
