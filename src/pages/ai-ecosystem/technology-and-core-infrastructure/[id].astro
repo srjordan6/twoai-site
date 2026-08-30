@@ -336,6 +336,65 @@ const licLine = (sec.licences || [])
         </section>
       )}
 
+      <section>
+        <h2>Three ways to power the boom: America, China, Europe</h2>
+        <p class="answer">The same AI compute demand hits three power systems and
+          produces three completely different answers. America builds where the
+          market lets it and routes around a slow grid. China decides by policy
+          where compute goes and moves the power to meet it. Europe caps what the
+          grid will bear and forces efficiency and heat reuse. The constraint is
+          identical, gigawatts faster than wires; the response is a fingerprint of
+          each system.</p>
+
+        <div class="dom">
+          <h3>America: the market races the grid</h3>
+          <p>US siting is developer-led, and the binding constraint is time to
+            power. Interconnection queues in the big grid regions run for years, so
+            hyperscalers route around them: dedicated gas microgrids, grid-scale
+            batteries, and direct deals with nuclear plants, including the small
+            modular reactor off-takes tracked above. The grid is the bottleneck and
+            private capital is the workaround, which is exactly why the
+            behind-the-meter and nuclear deals in this section exist.</p>
+        </div>
+
+        <div class="dom">
+          <h3>China: the state moves the power to the compute</h3>
+          <p>China's answer is spatial and directed from the center. The East Data
+            West Computing program (东数西算), launched by the National Development
+            and Reform Commission in 2022, routes latency-tolerant AI training and
+            storage to eight hub clusters in resource-rich western provinces, Inner
+            Mongolia, Guizhou, Gansu, and Ningxia, near the solar and wind
+            megacomplexes, and carries the electricity east on ultra-high-voltage
+            lines. Efficiency is mandated, not encouraged: national hub data centers
+            must hit a power usage effectiveness of 1.25 or better. Where America
+            waits for a queue, China approves the site and the transmission together.</p>
+        </div>
+
+        <div class="dom">
+          <h3>Europe: the grid sets the ceiling</h3>
+          <p>Europe's constraint is regulatory and local, and its response is
+            efficiency plus circularity rather than raw scale. Grid operators in the
+            established hubs, Dublin, Frankfurt, Amsterdam, have imposed connection
+            caps or moratoriums, pushing new AI builds to the Nordics for hydro and
+            free cooling and to southern Europe for cheap solar. Under the EU Energy
+            Efficiency Directive, facilities above 500 kW must report power and water
+            figures, and waste heat is increasingly piped into municipal district
+            heating. Ireland is the sharpest case: its Central Statistics Office puts
+            data centers at 23 percent of national metered electricity in 2025, up
+            from 5 percent in 2015, and new connections now require meeting at least
+            80 percent of annual demand from new renewables.</p>
+        </div>
+
+        <p class="meta-line">Ireland figure: <a
+          href="https://www.cso.ie/en/statistics/energy/datacentresmeteredelectricityconsumption/"
+          rel="noopener">Ireland CSO</a> · China program and efficiency targets:
+          NDRC East Data West Computing · Europe reporting: EU Energy Efficiency
+          Directive. National electricity-share and total-consumption figures
+          circulating for these three regions come from commercial analyst models
+          without a citable primary source, so this encyclopedia states the
+          paradigm and the sourced anchors, not the disputed totals.</p>
+      </section>
+
       {sec.smr && sec.smr.count > 0 && (
         <section>
           <h2>Nuclear for the next gigawatt</h2>
