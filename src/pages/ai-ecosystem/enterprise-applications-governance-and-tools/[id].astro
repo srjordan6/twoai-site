@@ -278,6 +278,61 @@ const jsonld = JSON.stringify(clc ? {
         </section>
       )}
 
+      {secu.owasp && (
+        <section id="owasp" class="secdom-group">
+          <h2>OWASP Top 10 for LLM Applications</h2>
+          <p>The list a security team is most often asked about by name, and the one
+            auditors and procurement questionnaires cite. We track what OWASP has
+            actually published on the web rather than what has been announced, because
+            the two are not always the same thing.</p>
+          <p class="answer"><b>The {secu.owasp.edition} edition is the published web
+            list</b>, ten risks, each with its own OWASP page linked below. The
+            {' '}{secu.owasp.newest_edition} edition was
+            {' '}<a href={secu.owasp.newest_url} rel="noopener">released as a document</a>
+            {' '}on {secu.owasp.newest_published}; when OWASP publishes its per-risk
+            pages, this list moves with it automatically.</p>
+          <ul class="sections">
+            {secu.owasp.risks.map((r) => (
+              <li><a href={r.url} rel="noopener">{r.title}</a>
+                {' '}<span class="atlas-id">{r.code}</span></li>
+            ))}
+          </ul>
+          <p class="meta-line">Source: <a href={secu.owasp.list_url} rel="noopener">OWASP
+            Gen AI Security Project</a>, checked {secu.owasp.checked}. Titles and links
+            only; the risk descriptions are OWASP's and stay on their pages.</p>
+        </section>
+      )}
+
+      {secu.avid && (
+        <section id="avid" class="secdom-group">
+          <h2>AVID: the AI Vulnerability Database</h2>
+          <p>Where ATLAS describes adversary behaviour and OWASP ranks risk classes,
+            AVID catalogues the individual findings: a report is one concrete
+            occurrence with evidence, a vulnerability is a recurring failure mode.
+            It is the granular layer under the other two.</p>
+          <p class="answer"><b>{secu.avid.total.toLocaleString()} records catalogued</b>,
+            {' '}{secu.avid.reports.toLocaleString()} reports and
+            {' '}{secu.avid.vulnerabilities.toLocaleString()} vulnerabilities, spanning
+            {' '}{secu.avid.first_year} to {secu.avid.latest_year}.</p>
+          {secu.avid.newest && secu.avid.newest.length > 0 && (
+            <>
+              <h3>Most recent records</h3>
+              <ul class="sections">
+                {secu.avid.newest.map((r) => (
+                  <li><a href={r.url} rel="noopener">{r.id}</a>
+                    {' '}<span class="atlas-id">{r.kind}</span></li>
+                ))}
+              </ul>
+            </>
+          )}
+          <p class="meta-line">Source: <a href={secu.avid.site_url} rel="noopener">AVID</a>,
+            database at <a href={secu.avid.data_url} rel="noopener">avidml/avid-db</a>,
+            MIT licensed. Checked {secu.avid.checked}. We publish record identifiers,
+            types and counts and link to AVID for each finding; the write-ups are
+            theirs and stay on their site.</p>
+        </section>
+      )}
+
       <div class="cite-box">Cite this page: <code>"{secu.name}." The World of AI,
         theworldofai.org{BASE}/{secu.uid}/. Retrieved {secu.generated}.</code></div>
     </>
