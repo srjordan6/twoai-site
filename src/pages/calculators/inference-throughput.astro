@@ -1,0 +1,78 @@
+---
+import Base from '../../layouts/Base.astro';
+const desc = 'Free LLM inference throughput calculator: tokens per second required from concurrent users, accelerators needed, and the latency each user sees at your batch size.';
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org', '@type': 'WebApplication',
+  name: 'Inference Throughput Calculator', applicationCategory: 'DeveloperApplication',
+  operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  url: 'https://theworldofai.org/calculators/inference-throughput/',
+});
+---
+<Base title="LLM Inference Throughput Calculator: tokens per second and GPUs needed — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
+  <h1>Inference Throughput Calculator</h1>
+  <p class="answer">Serving capacity is set by how many tokens a second the fleet must produce and how many each accelerator can produce. Divide the first by the second and you have the accelerator count; the answer moves sharply with batch size, because batching raises throughput per GPU while raising latency for each individual request.</p>
+  <p class="meta-line">Formula and defaults last reviewed: 2026-08-31.</p>
+
+  <div class="calc">
+    <label>Peak concurrent requests <input type="number" id="users" value="500" step="10" min="1" /></label>
+    <label>Output tokens per response <input type="number" id="out" value="400" step="50" min="1" /></label>
+    <label>Target time to complete a response (seconds) <input type="number" id="resp" value="8" step="1" min="1" /></label>
+    <label>Throughput per accelerator (tokens/sec, batched) <input type="number" id="pergpu" value="2500" step="100" min="1" /></label>
+    <label>Usable utilisation (%) <input type="number" id="util" value="70" step="5" min="1" /></label>
+    <div class="out" id="out2" aria-live="polite"></div>
+  </div>
+
+  <h2>How the math works</h2>
+  <p>Required throughput = concurrent requests × output tokens ÷ target response time.
+    Accelerators = required throughput ÷ (per-accelerator throughput × usable utilisation).
+    Utilisation below 100% covers scheduling gaps, model loading, failed requests and the
+    reality that a fleet sized to exactly its peak has no margin at all.</p>
+  <h2>Prefill and decode are different problems</h2>
+  <p>Generation has two phases with different characteristics. Prefill processes the whole
+    prompt at once and is compute-bound; decode produces one token at a time and is bound by
+    memory bandwidth, because every token requires reading the model weights and the KV cache.
+    That is why decode throughput, the number this calculator asks for, is usually the binding
+    constraint, and why long prompts and long outputs load a fleet quite differently.</p>
+  <h2>What this does not tell you</h2>
+  <p>Per-accelerator throughput is not a property of the hardware alone: it depends on the model,
+    quantization, batch size, sequence length, and the serving stack. Take the figure from your
+    own benchmark on your own model rather than a vendor sheet. Memory is a separate limit that
+    can bind before throughput does, which the
+    <a href="/calculators/vram/">VRAM estimator</a> covers.</p>
+
+  <div class="cite-box">Cite this tool: <code>"Inference Throughput Calculator." The World of AI,
+    theworldofai.org/calculators/inference-throughput/.</code></div>
+
+  <script is:inline>
+  (function () {
+    function n(i) { return parseFloat(document.getElementById(i).value) || 0; }
+    function f(v, d) { return v.toLocaleString(undefined, { maximumFractionDigits: d === undefined ? 0 : d }); }
+    var IDS = ['users','out','resp','pergpu','util'];
+    function calc() {
+      var need = n('resp') > 0 ? (n('users') * n('out')) / n('resp') : 0;
+      var eff = n('pergpu') * (n('util') / 100);
+      var gpus = eff > 0 ? Math.ceil(need / eff) : 0;
+      var perUser = n('out') > 0 && n('resp') > 0 ? n('out') / n('resp') : 0;
+      document.getElementById('out2').innerHTML =
+        'Fleet throughput required: <b>' + f(need) + ' tokens/sec</b><br>' +
+        'Accelerators at ' + f(n('util')) + '% usable: <b>' + gpus + '</b><br>' +
+        'Each user sees about <b>' + f(perUser, 1) + ' tokens/sec</b>, which is roughly ' + f(perUser * 0.75, 1) + ' words a second<br>' +
+        '<span class="sub">Headroom matters more than the mean: size on peak concurrency, not average, or every busy hour queues.</span>';
+    }
+    IDS.forEach(function (i) {
+      document.getElementById(i).addEventListener('input', calc);
+      document.getElementById(i).addEventListener('change', calc);
+    });
+    calc();
+  })();
+  </script>
+  <style>
+    .calc { border: 1px solid #e6e4de; border-radius: 10px; padding: 18px 20px; background: #fafaf6; margin: 1.4em 0; }
+    .calc label { display: block; margin: 0 0 12px; font-size: 14px; color: #26262b; }
+    .calc input, .calc select { display: block; margin-top: 4px; padding: 7px 9px; font-size: 15px;
+      border: 1px solid #cfcdc6; border-radius: 6px; width: 220px; max-width: 100%; }
+    .out { margin-top: 14px; padding-top: 14px; border-top: 1px solid #e6e4de; font-size: 16px; line-height: 1.7; }
+    .out b { color: #201868; }
+    .sub { color: #7A8A9E; font-size: 13.5px; }
+  </style>
+</Base>

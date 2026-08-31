@@ -1,0 +1,73 @@
+---
+import Base from '../../layouts/Base.astro';
+const desc = 'Free PUE calculator: Power Usage Effectiveness and DCiE from facility and IT power, the overhead in kilowatts and dollars, and what the number does not capture.';
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org', '@type': 'WebApplication',
+  name: 'PUE Calculator', applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  url: 'https://theworldofai.org/calculators/pue/',
+});
+---
+<Base title="PUE Calculator: Power Usage Effectiveness and DCiE — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
+  <h1>PUE Calculator</h1>
+  <p class="answer">Power Usage Effectiveness is total facility power divided by IT equipment power. A PUE of 1.0 would mean every watt entering the building reaches the servers; 1.5 means half again is spent on cooling, conversion and distribution. It is the most quoted number in the industry and the most easily gamed, because it improves when IT draws more, not only when overhead falls.</p>
+  <p class="meta-line">Formula and defaults last reviewed: 2026-08-31.</p>
+
+  <div class="calc">
+    <label>Total facility power (kW) <input type="number" id="total" value="1400" step="10" min="0" /></label>
+    <label>IT equipment power (kW) <input type="number" id="it" value="1000" step="10" min="0" /></label>
+    <label>Electricity price ($/kWh) <input type="number" id="rate" value="0.08" step="0.01" min="0" /></label>
+    <div class="out" id="out" aria-live="polite"></div>
+  </div>
+
+  <h2>How the math works</h2>
+  <p>PUE = total facility power ÷ IT equipment power. DCiE, the older metric, is its reciprocal
+    as a percentage. Total facility power is everything at the meter: IT, cooling, UPS and
+    transformer losses, lighting, and building services. The Green Grid, which defined PUE,
+    distinguishes measurement categories by where and how often power is measured, and an annual
+    figure measured at the IT equipment input is stricter than a spot reading at the UPS output.</p>
+  <h2>What PUE does not capture, and why that matters</h2>
+  <p>PUE improves when IT power rises even if nothing about the facility got better, so a hall
+    running dense AI training will report a flattering number. It says nothing about how much
+    useful work the IT actually did, nothing about water, and nothing about the carbon intensity
+    of the electricity. A site with a 1.1 PUE on coal is worse for emissions than a 1.4 on
+    hydro. Water Usage Effectiveness and Carbon Usage Effectiveness exist because of exactly
+    this gap.</p>
+
+  <div class="cite-box">Cite this tool: <code>"PUE Calculator." The World of AI,
+    theworldofai.org/calculators/pue/.</code></div>
+
+  <script is:inline>
+  (function () {
+    function n(i) { return parseFloat(document.getElementById(i).value) || 0; }
+    function f(v, d) { return v.toLocaleString(undefined, { maximumFractionDigits: d === undefined ? 0 : d }); }
+    var IDS = ['total','it','rate'];
+    function calc() {
+      var it = n('it'), tot = n('total');
+      if (it <= 0) { document.getElementById('out').innerHTML = 'Enter an IT load above zero.'; return; }
+      var pue = tot / it, dcie = (it / tot) * 100, over = tot - it;
+      var yr = over * 8760 * n('rate');
+      var note = pue < 1 ? '<span class="sub">A PUE below 1.0 is not physically possible: check that total power includes cooling and losses.</span>'
+        : '<span class="sub">Every 0.1 of PUE on this IT load costs about $' + f(it * 0.1 * 8760 * n('rate')) + ' a year.</span>';
+      document.getElementById('out').innerHTML =
+        'PUE: <b>' + pue.toFixed(3) + '</b> &nbsp;·&nbsp; DCiE: <b>' + dcie.toFixed(1) + '%</b><br>' +
+        'Overhead: <b>' + f(over) + ' kW</b>, about ' + f(over * 8760 / 1000) + ' MWh a year<br>' +
+        'Annual cost of that overhead: <b>$' + f(yr) + '</b><br>' + note;
+    }
+    IDS.forEach(function (i) {
+      document.getElementById(i).addEventListener('input', calc);
+      document.getElementById(i).addEventListener('change', calc);
+    });
+    calc();
+  })();
+  </script>
+  <style>
+    .calc { border: 1px solid #e6e4de; border-radius: 10px; padding: 18px 20px; background: #fafaf6; margin: 1.4em 0; }
+    .calc label { display: block; margin: 0 0 12px; font-size: 14px; color: #26262b; }
+    .calc input, .calc select { display: block; margin-top: 4px; padding: 7px 9px; font-size: 15px;
+      border: 1px solid #cfcdc6; border-radius: 6px; width: 220px; max-width: 100%; }
+    .out { margin-top: 14px; padding-top: 14px; border-top: 1px solid #e6e4de; font-size: 16px; line-height: 1.7; }
+    .out b { color: #201868; }
+    .sub { color: #7A8A9E; font-size: 13.5px; }
+  </style>
+</Base>

@@ -1,0 +1,77 @@
+---
+import Base from '../../layouts/Base.astro';
+const desc = 'Free data center power sizing calculator: turn rack count and per-rack draw into IT load, facility load at your PUE, and the utility capacity to reserve, with headroom for growth.';
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org', '@type': 'WebApplication',
+  name: 'Data Center Power Sizing Calculator', applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  url: 'https://theworldofai.org/calculators/power-sizing/',
+});
+---
+<Base title="Data Center Power Sizing Calculator: racks to megawatts — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
+  <h1>Power Sizing Calculator</h1>
+  <p class="answer">Facility power is IT load multiplied by PUE. IT load is rack count times
+    average draw per rack, reduced by diversity because racks rarely peak together, then raised
+    by whatever headroom you want for growth. An AI hall changes the arithmetic by changing one
+    number: a general-purpose rack draws 5 to 10 kW, a dense GPU rack draws 40 to 130 kW, so the
+    same floor can need ten times the utility service.</p>
+  <p class="meta-line">Formula and defaults last reviewed: 2026-08-31.</p>
+
+  <div class="calc">
+    <label>Racks <input type="number" id="racks" value="200" min="1" step="1" /></label>
+    <label>Average draw per rack (kW) <input type="number" id="perRack" value="12" min="0.1" step="0.5" /></label>
+    <label>Diversity factor (%) <input type="number" id="div" value="85" min="10" max="100" step="5" /></label>
+    <label>Growth headroom (%) <input type="number" id="growth" value="20" min="0" max="200" step="5" /></label>
+    <label>PUE <input type="number" id="pue" value="1.3" min="1" max="3" step="0.01" /></label>
+    <div class="out" id="out" aria-live="polite"></div>
+  </div>
+
+  <h2>How the math works</h2>
+  <p>IT load = racks × kW per rack × diversity. Design IT load adds growth headroom on top.
+    Facility load = design IT load × PUE, and that is the figure a utility interconnection
+    request and a generator or UPS specification are sized against, not the IT number.</p>
+  <p>Diversity below 100% reflects that nameplate draw and real draw differ. Training clusters
+    are the exception worth knowing: a synchronised job can push a whole hall to near-peak at
+    once, so for AI training capacity many operators design at or near 100% diversity.</p>
+
+  <h2>What this does not tell you</h2>
+  <p>Utility service is sized in kVA, not kW, so a power factor below unity raises the service
+    above the number here. Redundancy topology matters as much as load: 2N doubles the UPS and
+    distribution you buy without changing IT load at all. And the grid, not the building, is
+    usually the constraint on when capacity can actually be energised.</p>
+
+  <div class="cite-box">Cite this tool: <code>"Power Sizing Calculator." The World of AI,
+    theworldofai.org/calculators/power-sizing/.</code></div>
+
+  <script is:inline>
+  (function () {
+    var ids = ['racks', 'perRack', 'div', 'growth', 'pue'];
+    function n(i) { return parseFloat(document.getElementById(i).value) || 0; }
+    function calc() {
+      var it = n('racks') * n('perRack') * (n('div') / 100);
+      var design = it * (1 + n('growth') / 100);
+      var fac = design * n('pue');
+      function f(v, d) { return v.toLocaleString(undefined, { maximumFractionDigits: d || 0 }); }
+      document.getElementById('out').innerHTML =
+        'IT load today: <b>' + f(it) + ' kW</b> (' + f(it / 1000, 2) + ' MW)<br>' +
+        'Design IT load with headroom: <b>' + f(design) + ' kW</b><br>' +
+        'Facility load to reserve: <b>' + f(fac) + ' kW</b> (' + f(fac / 1000, 2) + ' MW)<br>' +
+        '<span class="sub">Cooling and losses account for ' + f(fac - design) + ' kW of that.</span>';
+    }
+    ids.forEach(function (i) {
+      document.getElementById(i).addEventListener('input', calc);
+      document.getElementById(i).addEventListener('change', calc);
+    });
+    calc();
+  })();
+  </script>
+  <style>
+    .calc { border: 1px solid #e6e4de; border-radius: 10px; padding: 18px 20px; background: #fafaf6; margin: 1.4em 0; }
+    .calc label { display: block; margin: 0 0 12px; font-size: 14px; color: #26262b; }
+    .calc input, .calc select { display: block; margin-top: 4px; padding: 7px 9px; font-size: 15px;
+      border: 1px solid #cfcdc6; border-radius: 6px; width: 220px; max-width: 100%; }
+    .out { margin-top: 14px; padding-top: 14px; border-top: 1px solid #e6e4de; font-size: 16px; line-height: 1.7; }
+    .out b { color: #201868; }
+    .sub { color: #7A8A9E; font-size: 13.5px; }
+  </style>
+</Base>

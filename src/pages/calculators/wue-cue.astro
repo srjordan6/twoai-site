@@ -1,0 +1,83 @@
+---
+import Base from '../../layouts/Base.astro';
+const desc = 'Free WUE and CUE calculator for data centers: water usage effectiveness in litres per kWh and carbon usage effectiveness in kg CO2 per kWh, with annual totals in context.';
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org', '@type': 'WebApplication',
+  name: 'WUE and CUE Calculator', applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  url: 'https://theworldofai.org/calculators/wue-cue/',
+});
+---
+<Base title="WUE and CUE Calculator: data center water and carbon — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
+  <h1>WUE and CUE Calculator</h1>
+  <p class="answer">Water Usage Effectiveness is litres of water per kilowatt-hour of IT energy, and Carbon Usage Effectiveness is kilograms of CO2 per kilowatt-hour of IT energy. Both are deliberately expressed against IT energy rather than facility energy so they can be compared across sites with different PUE.</p>
+  <p class="meta-line">Formula and defaults last reviewed: 2026-08-31.</p>
+
+  <div class="calc">
+    <label>IT load (kW) <input type="number" id="it" value="1000" step="10" min="0" /></label>
+    <label>PUE <input type="number" id="pue" value="1.3" step="0.01" min="1" /></label>
+    <label>Site water use (litres per year) <input type="number" id="water" value="15000000" step="100000" min="0" /></label>
+    <label>Grid carbon intensity (g CO2 per kWh) <input type="number" id="grid" value="380" step="10" min="0" /></label>
+    <label>Electricity supply
+      <select id="src">
+        <option value="1" selected>Grid average as entered</option>
+        <option value="0">100% carbon-free supply, contracted hourly</option>
+      </select>
+    </label>
+    <div class="out" id="out" aria-live="polite"></div>
+  </div>
+
+  <h2>How the math works</h2>
+  <p>WUE = annual site water in litres ÷ annual IT energy in kilowatt-hours. CUE = annual
+    facility energy × grid carbon intensity ÷ annual IT energy, which is equivalent to PUE ×
+    carbon intensity. Both are defined by The Green Grid against IT energy, so a site cannot
+    improve either by making its IT less efficient.</p>
+  <h2>What this does not tell you</h2>
+  <p>This is operational water and Scope 2 electricity carbon only. It excludes the water used
+    to generate the electricity, which for thermoelectric generation can exceed on-site use, and
+    it excludes embodied carbon in buildings, servers and accelerators, which for a modern AI
+    facility is a large share of lifetime emissions. Annual average grid intensity also hides
+    the hourly picture: a load running through the evening peak is dirtier than the average
+    suggests.</p>
+
+  <div class="cite-box">Cite this tool: <code>"WUE and CUE Calculator." The World of AI,
+    theworldofai.org/calculators/wue-cue/.</code></div>
+
+  <script is:inline>
+  (function () {
+    function n(i) { return parseFloat(document.getElementById(i).value) || 0; }
+    function f(v, d) { return v.toLocaleString(undefined, { maximumFractionDigits: d === undefined ? 0 : d }); }
+    var IDS = ['it','pue','water','grid','src'];
+    function calc() {
+      var itMwh = n('it') * 8760 / 1000;
+      var facMwh = itMwh * n('pue');
+      var itKwh = itMwh * 1000;
+      var wue = itKwh > 0 ? n('water') / itKwh : 0;
+      var gi = n('grid') * (n('src') === 1 ? 1 : 0);
+      var cue = itKwh > 0 ? (facMwh * 1000 * gi / 1000) / itKwh : 0;
+      var tonnes = facMwh * gi / 1000;
+      var homes = n('water') / 300000;
+      document.getElementById('out').innerHTML =
+        'WUE: <b>' + wue.toFixed(3) + ' L/kWh</b><br>' +
+        'CUE: <b>' + cue.toFixed(3) + ' kg CO2/kWh</b><br>' +
+        'IT energy ' + f(itMwh) + ' MWh/yr, facility energy ' + f(facMwh) + ' MWh/yr<br>' +
+        'Annual emissions: <b>' + f(tonnes) + ' tonnes CO2</b><br>' +
+        '<span class="sub">That water is roughly the annual household use of ' + f(homes) + ' US homes at 300,000 L each.</span>';
+    }
+    IDS.forEach(function (i) {
+      document.getElementById(i).addEventListener('input', calc);
+      document.getElementById(i).addEventListener('change', calc);
+    });
+    calc();
+  })();
+  </script>
+  <style>
+    .calc { border: 1px solid #e6e4de; border-radius: 10px; padding: 18px 20px; background: #fafaf6; margin: 1.4em 0; }
+    .calc label { display: block; margin: 0 0 12px; font-size: 14px; color: #26262b; }
+    .calc input, .calc select { display: block; margin-top: 4px; padding: 7px 9px; font-size: 15px;
+      border: 1px solid #cfcdc6; border-radius: 6px; width: 220px; max-width: 100%; }
+    .out { margin-top: 14px; padding-top: 14px; border-top: 1px solid #e6e4de; font-size: 16px; line-height: 1.7; }
+    .out b { color: #201868; }
+    .sub { color: #7A8A9E; font-size: 13.5px; }
+  </style>
+</Base>

@@ -1,0 +1,78 @@
+---
+import Base from '../../layouts/Base.astro';
+const desc = 'Free colocation cost calculator: monthly and annual cost of cabinets, committed power, overage and cross-connects, with an effective cost per kW and per rack.';
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org', '@type': 'WebApplication',
+  name: 'Colocation Cost Calculator', applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  url: 'https://theworldofai.org/calculators/colocation-cost/',
+});
+---
+<Base title="Colocation Cost Calculator: monthly space, power and cross-connects — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
+  <h1>Colocation Cost Calculator</h1>
+  <p class="answer">Colocation is billed on committed power far more than on floor space. A cabinet rents for a monthly fee that includes a power allowance; kilowatts beyond it are billed per kW committed, whether or not they are drawn, and cross-connects are charged per circuit per month.</p>
+  <p class="meta-line">Formula and defaults last reviewed: 2026-08-31.</p>
+
+  <div class="calc">
+    <label>Cabinets <input type="number" id="cabs" value="20" step="1" min="1" /></label>
+    <label>Cabinet rate ($ per cabinet per month) <input type="number" id="cabrate" value="900" step="50" min="0" /></label>
+    <label>Power included per cabinet (kW) <input type="number" id="incl" value="5" step="0.5" min="0" /></label>
+    <label>Power drawn per cabinet (kW) <input type="number" id="draw" value="8" step="0.5" min="0" /></label>
+    <label>Committed power rate ($ per kW per month) <input type="number" id="kwrate" value="150" step="5" min="0" /></label>
+    <label>Cross-connects <input type="number" id="xc" value="8" step="1" min="0" /></label>
+    <label>Cross-connect ($ each per month) <input type="number" id="xcrate" value="300" step="25" min="0" /></label>
+    <label>One-off install and setup ($) <input type="number" id="setup" value="25000" step="1000" min="0" /></label>
+    <div class="out" id="out" aria-live="polite"></div>
+  </div>
+
+  <h2>How the math works</h2>
+  <p>Monthly = cabinets × cabinet rate, plus power drawn above the included allowance × the
+    per-kW rate, plus cross-connects × their rate. The power line is the one that surprises
+    people: at 8 kW a cabinet with a 5 kW allowance, power is often the largest single item on
+    the invoice.</p>
+  <h2>What to check in the contract, not the calculator</h2>
+  <p>Whether power is billed on commitment or on metered draw changes the arithmetic entirely,
+    and commitment is the more common structure for high density. Ask whether the rate is per kW
+    of UPS capacity or of utility feed, whether redundancy is A+B and how each feed is billed,
+    and what the escalator is: a 3% annual uplift over a five-year term is a real cost this
+    calculator does not model. High-density AI cabinets are also frequently quoted outside
+    standard rate cards altogether.</p>
+
+  <div class="cite-box">Cite this tool: <code>"Colocation Cost Calculator." The World of AI,
+    theworldofai.org/calculators/colocation-cost/.</code></div>
+
+  <script is:inline>
+  (function () {
+    function n(i) { return parseFloat(document.getElementById(i).value) || 0; }
+    function f(v, d) { return v.toLocaleString(undefined, { maximumFractionDigits: d === undefined ? 0 : d }); }
+    var IDS = ['cabs','cabrate','incl','draw','kwrate','xc','xcrate','setup'];
+    function calc() {
+      var space = n('cabs') * n('cabrate');
+      var extraKw = Math.max(0, n('draw') - n('incl')) * n('cabs');
+      var power = extraKw * n('kwrate');
+      var xc = n('xc') * n('xcrate');
+      var month = space + power + xc;
+      var totalKw = n('draw') * n('cabs');
+      document.getElementById('out').innerHTML =
+        'Monthly: <b>$' + f(month) + '</b> &nbsp;·&nbsp; annual: <b>$' + f(month * 12) + '</b><br>' +
+        'Space $' + f(space) + ' &nbsp;·&nbsp; power beyond allowance $' + f(power) + ' (' + f(extraKw, 1) + ' kW) &nbsp;·&nbsp; cross-connects $' + f(xc) + '<br>' +
+        'Year one including setup: <b>$' + f(month * 12 + n('setup')) + '</b><br>' +
+        '<span class="sub">Effective $' + f(totalKw > 0 ? month / totalKw : 0) + ' per kW per month across ' + f(totalKw, 1) + ' kW, or $' + f(month / (n('cabs') || 1)) + ' per cabinet.</span>';
+    }
+    IDS.forEach(function (i) {
+      document.getElementById(i).addEventListener('input', calc);
+      document.getElementById(i).addEventListener('change', calc);
+    });
+    calc();
+  })();
+  </script>
+  <style>
+    .calc { border: 1px solid #e6e4de; border-radius: 10px; padding: 18px 20px; background: #fafaf6; margin: 1.4em 0; }
+    .calc label { display: block; margin: 0 0 12px; font-size: 14px; color: #26262b; }
+    .calc input, .calc select { display: block; margin-top: 4px; padding: 7px 9px; font-size: 15px;
+      border: 1px solid #cfcdc6; border-radius: 6px; width: 220px; max-width: 100%; }
+    .out { margin-top: 14px; padding-top: 14px; border-top: 1px solid #e6e4de; font-size: 16px; line-height: 1.7; }
+    .out b { color: #201868; }
+    .sub { color: #7A8A9E; font-size: 13.5px; }
+  </style>
+</Base>

@@ -1,6 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
-const desc = 'Free AI calculators: token cost, GPU VRAM, context window fit, training cost, energy and carbon, and AI ROI. No signup, nothing uploaded, answers instantly.';
+const desc = 'Free AI and data center calculators: power sizing, cooling and airflow, liquid cooling flow, PUE, WUE and CUE, build cost per megawatt, colocation, token cost, GPU VRAM, inference throughput and cluster fabric sizing. No signup, nothing uploaded.';
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',
@@ -9,16 +9,104 @@ const jsonld = JSON.stringify({
   url: 'https://theworldofai.org/calculators/',
 });
 ---
-<Base title="AI Calculators: cost, memory, context, energy, and ROI — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
+<Base title="AI and Data Center Calculators: power, cooling, cost, efficiency, and cluster sizing — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <p class="meta-line"><a href="/">AI Ecosystem</a> ·
     <a href="/ai-ecosystem/enterprise-applications-governance-and-tools/">Enterprise Applications, Governance and Tools</a></p>
   <h1>AI Calculators</h1>
-  <p class="answer">Six working tools for the questions that decide whether an AI project is
-    viable: <b>what it costs to run</b>, <b>what hardware it needs</b>, <b>whether your input
-    fits</b>, <b>what a training run costs</b>, <b>what it burns</b>, and <b>whether it pays
-    back</b>. Everything runs in your browser. Nothing you type is uploaded or stored.</p>
+  <p class="answer">Nineteen working tools across the questions that decide whether an AI
+    build is viable, from <b>the megawatts a hall needs</b> and <b>the tons of cooling that
+    implies</b>, through <b>what it costs to build and to run</b>, to <b>the accelerators,
+    memory and network a model actually requires</b>. Everything runs in your browser. Nothing
+    you type is uploaded or stored.</p>
+  <p>They are grouped the way the work is: electrical sizing first, because power decides what
+    is possible; then heat, which follows power; then money; then the efficiency metrics
+    everyone is measured on; and finally the AI workload itself.</p>
 
-  <h2>Cost and return</h2>
+  <h2>Power and electrical sizing</h2>
+  <ul class="grid">
+    <li class="card">
+      <a href="/calculators/power-sizing/">Power Sizing Calculator</a>
+      <p>Racks and per-rack draw into IT load, facility load at your PUE, and the utility capacity to reserve.</p>
+    </li>
+    <li class="card">
+      <a href="/calculators/ups-runtime/">UPS and Battery Runtime Calculator</a>
+      <p>kVA from load and power factor, battery kWh for a target runtime, lithium-ion against VRLA over a facility life.</p>
+    </li>
+    <li class="card">
+      <a href="/calculators/three-phase/">Three-Phase Amperage Calculator</a>
+      <p>Current at 208V, 415V or 480V, breaker size at the 80% continuous rule, and racks per circuit.</p>
+    </li>
+  </ul>
+
+  <h2>Thermal and cooling</h2>
+  <ul class="grid">
+    <li class="card">
+      <a href="/calculators/heat-load/">Heat Load Calculator</a>
+      <p>IT kilowatts into BTU per hour and tons of refrigeration, with redundancy uplift.</p>
+    </li>
+    <li class="card">
+      <a href="/calculators/airflow-cfm/">Airflow (CFM) Calculator</a>
+      <p>Airflow required at your delta-T, per rack and per hall, and where air cooling stops working.</p>
+    </li>
+    <li class="card">
+      <a href="/calculators/liquid-cooling/">Liquid Cooling Flow Rate Calculator</a>
+      <p>GPM and litres per minute for direct-to-chip or immersion loops, and how many CDUs that needs.</p>
+    </li>
+  </ul>
+
+  <h2>Build and operating cost</h2>
+  <ul class="grid">
+    <li class="card">
+      <a href="/calculators/datacenter-capex/">Data Center Build Cost Calculator</a>
+      <p>Capital cost per megawatt across electrical, mechanical, shell and land, with cost per rack position.</p>
+    </li>
+    <li class="card">
+      <a href="/calculators/datacenter-opex/">Data Center Energy Cost Calculator</a>
+      <p>Annual energy and demand charges from load, PUE and tariff, and what a tenth of PUE is worth.</p>
+    </li>
+    <li class="card">
+      <a href="/calculators/colocation-cost/">Colocation Cost Calculator</a>
+      <p>Cabinets, committed power, overage and cross-connects, with the effective cost per kW.</p>
+    </li>
+  </ul>
+
+  <h2>Efficiency and sustainability</h2>
+  <ul class="grid">
+    <li class="card">
+      <a href="/calculators/pue/">PUE Calculator</a>
+      <p>Power Usage Effectiveness and DCiE, the overhead in kilowatts and dollars, and what PUE hides.</p>
+    </li>
+    <li class="card">
+      <a href="/calculators/wue-cue/">WUE and CUE Calculator</a>
+      <p>Water and carbon usage effectiveness against IT energy, with annual totals in context.</p>
+    </li>
+    <li class="card">
+      <a href="/calculators/energy-carbon/">Energy and Carbon Estimator</a>
+      <p>Kilowatt hours and CO2e from GPU hours, data center PUE, and grid intensity.</p>
+    </li>
+  </ul>
+
+  <h2>AI workload, hardware and cluster sizing</h2>
+  <ul class="grid">
+    <li class="card">
+      <a href="/calculators/vram/">GPU VRAM Estimator</a>
+      <p>How much memory a model needs at FP16, 8-bit, or 4-bit, with headroom for context.</p>
+    </li>
+    <li class="card">
+      <a href="/calculators/inference-throughput/">Inference Throughput Calculator</a>
+      <p>Tokens per second a fleet must produce, accelerators to serve it, and the latency each user sees.</p>
+    </li>
+    <li class="card">
+      <a href="/calculators/ai-fabric/">AI Fabric Sizing Calculator</a>
+      <p>Spine-leaf switch counts, oversubscription and bisection bandwidth for a training cluster.</p>
+    </li>
+    <li class="card">
+      <a href="/calculators/context-window/">Context Window Calculator</a>
+      <p>Words, pages, or characters into tokens, and whether it fits with room for the answer.</p>
+    </li>
+  </ul>
+
+  <h2>Cost and return on the model itself</h2>
   <ul class="grid">
     <li class="card">
       <a href="/calculators/token-cost/">LLM Token Cost Calculator</a>
@@ -31,22 +119,6 @@ const jsonld = JSON.stringify({
     <li class="card">
       <a href="/calculators/roi/">AI ROI Calculator</a>
       <p>Payback period and the adoption rate a deployment has to hit to break even.</p>
-    </li>
-  </ul>
-
-  <h2>Capacity and footprint</h2>
-  <ul class="grid">
-    <li class="card">
-      <a href="/calculators/vram/">GPU VRAM Estimator</a>
-      <p>How much memory a model needs at FP16, 8-bit, or 4-bit, with headroom for context.</p>
-    </li>
-    <li class="card">
-      <a href="/calculators/context-window/">Context Window Calculator</a>
-      <p>Words, pages, or characters into tokens, and whether it fits with room for the answer.</p>
-    </li>
-    <li class="card">
-      <a href="/calculators/energy-carbon/">Energy and Carbon Estimator</a>
-      <p>Kilowatt hours and CO2e from GPU hours, datacenter PUE, and grid intensity.</p>
     </li>
   </ul>
 

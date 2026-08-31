@@ -1,0 +1,88 @@
+---
+import Base from '../../layouts/Base.astro';
+const desc = 'Free AI cluster fabric calculator: leaf and spine switch counts for a spine-leaf topology, uplink bandwidth, oversubscription ratio and optics count for GPU training clusters.';
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org', '@type': 'WebApplication',
+  name: 'AI Fabric Sizing Calculator', applicationCategory: 'DeveloperApplication',
+  operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  url: 'https://theworldofai.org/calculators/ai-fabric/',
+});
+---
+<Base title="AI Cluster Network Fabric Calculator: spine-leaf sizing and oversubscription — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
+  <h1>AI Fabric Sizing Calculator</h1>
+  <p class="answer">A training cluster's network is sized so that every accelerator can talk to every other at close to full rate, because synchronised collectives run at the speed of the slowest link. A non-blocking spine-leaf fabric needs as much uplink bandwidth out of each leaf as it has downlink bandwidth to hosts, which is what 1:1 oversubscription means and why AI fabrics cost what they do.</p>
+  <p class="meta-line">Formula and defaults last reviewed: 2026-08-31.</p>
+
+  <div class="calc">
+    <label>Accelerators in the cluster <input type="number" id="gpus" value="1024" step="64" min="2" /></label>
+    <label>Fabric NICs per accelerator <input type="number" id="nicper" value="1" step="1" min="1" /></label>
+    <label>NIC bandwidth each (Gbps) <input type="number" id="nic" value="400" step="100" min="1" /></label>
+    <label>Host-facing ports per leaf switch <input type="number" id="leafdown" value="32" step="8" min="2" /></label>
+    <label>Uplink ports per leaf switch <input type="number" id="leafup" value="32" step="8" min="1" /></label>
+    <label>Uplink port bandwidth (Gbps) <input type="number" id="upbw" value="400" step="100" min="1" /></label>
+    <div class="out" id="out" aria-live="polite"></div>
+  </div>
+
+  <h2>How the math works</h2>
+  <p>Leaf switches = endpoints ÷ host ports per leaf. In a two-tier spine-leaf, every leaf
+    connects to every spine, so the number of spines equals the uplink ports on a leaf.
+    Oversubscription = host-facing bandwidth ÷ uplink bandwidth per leaf; 1:1 is non-blocking.
+    Bisection bandwidth here is the aggregate leaf-to-spine capacity, the figure that governs
+    all-to-all traffic.</p>
+  <h2>Why AI fabrics are built differently</h2>
+  <p>Enterprise networks are routinely oversubscribed 3:1 or more because traffic is bursty and
+    uncorrelated. Distributed training is the opposite: an all-reduce has every accelerator
+    sending at once, and the step does not complete until the slowest has finished, so tail
+    latency and any oversubscription translate directly into idle accelerators. That is why
+    training clusters are built non-blocking, why the network is a separate rail from storage
+    and management traffic, and why lossless transport, InfiniBand or RoCEv2 with priority flow
+    control, is used rather than best-effort Ethernet.</p>
+  <h2>What this does not tell you</h2>
+  <p>This models a two-tier topology. Above roughly the port count of one spine layer a third
+    tier or a rail-optimised design is required, which changes both the switch count and the
+    latency profile. Cable length, optics type and power draw per port are real constraints in a
+    dense hall and are not modelled here.</p>
+
+  <div class="cite-box">Cite this tool: <code>"AI Fabric Sizing Calculator." The World of AI,
+    theworldofai.org/calculators/ai-fabric/.</code></div>
+
+  <script is:inline>
+  (function () {
+    function n(i) { return parseFloat(document.getElementById(i).value) || 0; }
+    function f(v, d) { return v.toLocaleString(undefined, { maximumFractionDigits: d === undefined ? 0 : d }); }
+    var IDS = ['gpus','nicper','nic','leafdown','leafup','upbw'];
+    function calc() {
+      var endpoints = n('gpus') * n('nicper');
+      var leaves = n('leafdown') > 0 ? Math.ceil(endpoints / n('leafdown')) : 0;
+      var downBw = n('leafdown') * n('nic');
+      var upBw = n('leafup') * n('upbw');
+      var ratio = upBw > 0 ? downBw / upBw : 0;
+      var spines = n('leafup');
+      var optics = leaves * (n('leafdown') + n('leafup'));
+      var verdict = ratio <= 1.001
+        ? 'non-blocking (1:1)'
+        : f(ratio, 2) + ':1 oversubscribed, so collectives will bottleneck at the uplinks';
+      document.getElementById('out').innerHTML =
+        'Endpoints: <b>' + f(endpoints) + '</b> &nbsp;·&nbsp; leaf switches: <b>' + leaves + '</b> &nbsp;·&nbsp; spine switches: <b>' + spines + '</b><br>' +
+        'Per leaf: ' + f(downBw) + ' Gbps down, ' + f(upBw) + ' Gbps up<br>' +
+        'Oversubscription: <b>' + verdict + '</b><br>' +
+        'Bisection bandwidth: <b>' + f(leaves * upBw / 1000, 1) + ' Tbps</b><br>' +
+        '<span class="sub">Roughly ' + f(optics) + ' transceivers plus cabling, which is often a larger line item than the switches.</span>';
+    }
+    IDS.forEach(function (i) {
+      document.getElementById(i).addEventListener('input', calc);
+      document.getElementById(i).addEventListener('change', calc);
+    });
+    calc();
+  })();
+  </script>
+  <style>
+    .calc { border: 1px solid #e6e4de; border-radius: 10px; padding: 18px 20px; background: #fafaf6; margin: 1.4em 0; }
+    .calc label { display: block; margin: 0 0 12px; font-size: 14px; color: #26262b; }
+    .calc input, .calc select { display: block; margin-top: 4px; padding: 7px 9px; font-size: 15px;
+      border: 1px solid #cfcdc6; border-radius: 6px; width: 220px; max-width: 100%; }
+    .out { margin-top: 14px; padding-top: 14px; border-top: 1px solid #e6e4de; font-size: 16px; line-height: 1.7; }
+    .out b { color: #201868; }
+    .sub { color: #7A8A9E; font-size: 13.5px; }
+  </style>
+</Base>

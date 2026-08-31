@@ -1,0 +1,77 @@
+---
+import Base from '../../layouts/Base.astro';
+const desc = 'Free three-phase amperage calculator for data center racks: current draw at 208V, 415V and 480V, breaker size at the 80% continuous rule, and how many racks a circuit supports.';
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org', '@type': 'WebApplication',
+  name: 'Three-Phase Amperage Calculator', applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  url: 'https://theworldofai.org/calculators/three-phase/',
+});
+---
+<Base title="Three-Phase Amperage Calculator for Data Center Racks — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
+  <h1>Three-Phase Amperage Calculator</h1>
+  <p class="answer">Current on a three-phase circuit is power divided by voltage times the square root of three times power factor. Because continuous loads are limited to 80% of breaker rating by code convention, the breaker you specify is always larger than the current you calculate, and that 80% rule is what decides how many racks a circuit really supports.</p>
+  <p class="meta-line">Formula and defaults last reviewed: 2026-08-31.</p>
+
+  <div class="calc">
+    <label>Rack or circuit load (kW) <input type="number" id="kw" value="12" step="0.5" min="0" /></label>
+    <label>Voltage
+      <select id="v">
+        <option value="208" selected>208V three-phase (US common)</option>
+        <option value="415">415V three-phase (400/415V, higher density)</option>
+        <option value="480">480V three-phase (distribution)</option>
+        <option value="400">400V three-phase (IEC)</option>
+      </select>
+    </label>
+    <label>Power factor <input type="number" id="pf" value="0.99" step="0.01" min="0.5" /></label>
+    <label>Breaker rating available (A) <input type="number" id="brk" value="60" step="5" min="5" /></label>
+    <div class="out" id="out" aria-live="polite"></div>
+  </div>
+
+  <h2>How the math works</h2>
+  <p>Amps = (kW × 1000) ÷ (volts × √3 × power factor). The √3 comes from the phase relationship
+    in a balanced three-phase system. Power factor near 1.0 is realistic for modern server power
+    supplies with active correction; older or lightly loaded equipment sits lower and draws more
+    current for the same real power.</p>
+  <h2>What this does not tell you</h2>
+  <p>This assumes balanced phases. Real cabinets rarely balance perfectly, and the phase carrying
+    the most current is the one that trips, so per-phase metering matters more than the average
+    this produces. Voltage drop over long runs, harmonic content and derating for ambient
+    temperature or conduit fill are all real and none of them are modelled here.</p>
+
+  <div class="cite-box">Cite this tool: <code>"Three-Phase Amperage Calculator." The World of AI,
+    theworldofai.org/calculators/three-phase/.</code></div>
+
+  <script is:inline>
+  (function () {
+    function n(i) { return parseFloat(document.getElementById(i).value) || 0; }
+    function f(v, d) { return v.toLocaleString(undefined, { maximumFractionDigits: d === undefined ? 0 : d }); }
+    var IDS = ['kw','v','pf','brk'];
+    function calc() {
+      var amps = (n('kw') * 1000) / (n('v') * Math.sqrt(3) * n('pf'));
+      var need = amps / 0.8;
+      var usable = n('brk') * 0.8;
+      var perCircuit = amps > 0 ? Math.floor(usable / amps) : 0;
+      document.getElementById('out').innerHTML =
+        'Current draw: <b>' + f(amps, 1) + ' A per phase</b><br>' +
+        'Minimum breaker at the 80% continuous rule: <b>' + f(need, 1) + ' A</b><br>' +
+        'A ' + f(n('brk')) + 'A breaker gives ' + f(usable, 1) + 'A usable, supporting <b>' + perCircuit + '</b> load(s) of this size<br>' +
+        '<span class="sub">Higher voltage means lower current for the same power, which is why dense halls move to 415V: thinner conductors, less copper, less loss.</span>';
+    }
+    IDS.forEach(function (i) {
+      document.getElementById(i).addEventListener('input', calc);
+      document.getElementById(i).addEventListener('change', calc);
+    });
+    calc();
+  })();
+  </script>
+  <style>
+    .calc { border: 1px solid #e6e4de; border-radius: 10px; padding: 18px 20px; background: #fafaf6; margin: 1.4em 0; }
+    .calc label { display: block; margin: 0 0 12px; font-size: 14px; color: #26262b; }
+    .calc input, .calc select { display: block; margin-top: 4px; padding: 7px 9px; font-size: 15px;
+      border: 1px solid #cfcdc6; border-radius: 6px; width: 220px; max-width: 100%; }
+    .out { margin-top: 14px; padding-top: 14px; border-top: 1px solid #e6e4de; font-size: 16px; line-height: 1.7; }
+    .out b { color: #201868; }
+    .sub { color: #7A8A9E; font-size: 13.5px; }
+  </style>
+</Base>

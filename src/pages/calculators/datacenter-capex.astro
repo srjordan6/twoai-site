@@ -1,0 +1,82 @@
+---
+import Base from '../../layouts/Base.astro';
+const desc = 'Free data center build cost calculator: capital cost per megawatt for electrical, mechanical and shell, plus land and contingency, and cost per rack at your density.';
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org', '@type': 'WebApplication',
+  name: 'Data Center Build Cost Calculator', applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  url: 'https://theworldofai.org/calculators/datacenter-capex/',
+});
+---
+<Base title="Data Center Build Cost Calculator: cost per megawatt — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
+  <h1>Data Center Build Cost Calculator</h1>
+  <p class="answer">Data center construction is priced per megawatt of IT capacity, not per square foot, because the electrical and mechanical plant dominates the cost. Published ranges cluster around $7 to $12 million per MW for a conventional build and higher for dense liquid-cooled AI halls, with the shell itself a minority of the total.</p>
+  <p class="meta-line">Formula and defaults last reviewed: 2026-08-31.</p>
+
+  <div class="calc">
+    <label>IT capacity (MW) <input type="number" id="mw" value="20" step="1" min="0.1" /></label>
+    <label>Electrical and mechanical cost ($ per MW) <input type="number" id="permw" value="8500000" step="250000" min="0" /></label>
+    <label>Building area (sq ft) <input type="number" id="sqft" value="180000" step="5000" min="0" /></label>
+    <label>Shell and fit-out ($ per sq ft) <input type="number" id="shell" value="180" step="10" min="0" /></label>
+    <label>Land and site works ($) <input type="number" id="land" value="12000000" step="500000" min="0" /></label>
+    <label>Contingency (%) <input type="number" id="cont" value="10" step="1" min="0" /></label>
+    <label>Rack density for the cost-per-rack view (kW) <input type="number" id="density" value="12" step="1" min="0.5" /></label>
+    <div class="out" id="out" aria-live="polite"></div>
+  </div>
+
+  <h2>How the math works</h2>
+  <p>Total = (MW × cost per MW) + (area × cost per sq ft) + land, plus contingency. The cost per
+    MW line carries the switchgear, generators, UPS, distribution and the entire cooling plant,
+    which is why it dominates: a data hall is an electrical and mechanical building with a roof
+    on it, not an office with servers inside.</p>
+  <h2>What moves the number most</h2>
+  <p>Redundancy topology: 2N electrical roughly doubles the most expensive line. Cooling
+    approach: liquid cooling adds CDUs and secondary loops but removes chiller and air-handling
+    capacity, so the direction of the change depends on the design. Region: labour, permitting
+    and seismic or wind requirements move totals by a wide margin between markets. And the
+    grid connection, which is often the longest lead item and is sometimes not a capital cost
+    to the developer at all but a queue position that cannot be bought.</p>
+  <h2>What this does not tell you</h2>
+  <p>These are construction costs and exclude IT equipment entirely. For an AI build the servers
+    and accelerators usually cost several times the building that houses them, so a capital plan
+    that stops at the shell is missing most of the money.</p>
+
+  <div class="cite-box">Cite this tool: <code>"Data Center Build Cost Calculator." The World of AI,
+    theworldofai.org/calculators/datacenter-capex/.</code></div>
+
+  <script is:inline>
+  (function () {
+    function n(i) { return parseFloat(document.getElementById(i).value) || 0; }
+    function f(v, d) { return v.toLocaleString(undefined, { maximumFractionDigits: d === undefined ? 0 : d }); }
+    var IDS = ['mw','permw','sqft','shell','land','cont','density'];
+    function calc() {
+      var mep = n('mw') * n('permw');
+      var shell = n('sqft') * n('shell');
+      var sub = mep + shell + n('land');
+      var total = sub * (1 + n('cont') / 100);
+      var perMw = n('mw') > 0 ? total / n('mw') : 0;
+      var racks = n('density') > 0 ? (n('mw') * 1000) / n('density') : 0;
+      document.getElementById('out').innerHTML =
+        'Electrical and mechanical: <b>$' + f(mep) + '</b><br>' +
+        'Shell and fit-out: $' + f(shell) + ' &nbsp;·&nbsp; land and site: $' + f(n('land')) + '<br>' +
+        'Total with ' + f(n('cont')) + '% contingency: <b>$' + f(total) + '</b><br>' +
+        'All-in cost per MW: <b>$' + f(perMw) + '</b><br>' +
+        '<span class="sub">About ' + f(racks) + ' racks at ' + f(n('density')) + ' kW, roughly $' + f(racks > 0 ? total / racks : 0) + ' of capital per rack position.</span>';
+    }
+    IDS.forEach(function (i) {
+      document.getElementById(i).addEventListener('input', calc);
+      document.getElementById(i).addEventListener('change', calc);
+    });
+    calc();
+  })();
+  </script>
+  <style>
+    .calc { border: 1px solid #e6e4de; border-radius: 10px; padding: 18px 20px; background: #fafaf6; margin: 1.4em 0; }
+    .calc label { display: block; margin: 0 0 12px; font-size: 14px; color: #26262b; }
+    .calc input, .calc select { display: block; margin-top: 4px; padding: 7px 9px; font-size: 15px;
+      border: 1px solid #cfcdc6; border-radius: 6px; width: 220px; max-width: 100%; }
+    .out { margin-top: 14px; padding-top: 14px; border-top: 1px solid #e6e4de; font-size: 16px; line-height: 1.7; }
+    .out b { color: #201868; }
+    .sub { color: #7A8A9E; font-size: 13.5px; }
+  </style>
+</Base>

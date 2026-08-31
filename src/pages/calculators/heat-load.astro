@@ -1,0 +1,76 @@
+---
+import Base from '../../layouts/Base.astro';
+const desc = 'Free data center heat load calculator: convert IT kilowatts to BTU per hour and tons of refrigeration to size chillers and CRAH units, with redundancy and non-IT gains.';
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org', '@type': 'WebApplication',
+  name: 'Heat Load Calculator', applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  url: 'https://theworldofai.org/calculators/heat-load/',
+});
+---
+<Base title="Data Center Heat Load Calculator: kW to BTU and tons of cooling — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
+  <h1>Heat Load Calculator</h1>
+  <p class="answer">Almost all the electricity a data hall draws leaves it as heat, so cooling is sized from IT load directly. One kilowatt is 3,412 BTU per hour, and one ton of refrigeration is 12,000 BTU per hour, so a megawatt of IT needs roughly 284 tons of cooling before any redundancy is added.</p>
+  <p class="meta-line">Formula and defaults last reviewed: 2026-08-31.</p>
+
+  <div class="calc">
+    <label>IT load (kW) <input type="number" id="itkw" value="1000" step="10" min="0" /></label>
+    <label>Non-IT heat in the space, lighting, people, envelope (kW) <input type="number" id="other" value="25" step="5" min="0" /></label>
+    <label>Redundancy uplift (%) <input type="number" id="nplus" value="25" step="5" min="0" /></label>
+    <label>Show capacity in
+      <select id="unit">
+        <option value="12000" selected>Tons of refrigeration</option>
+        <option value="12660">Tons, with 5.5% compressor allowance</option>
+      </select>
+    </label>
+    <div class="out" id="out" aria-live="polite"></div>
+  </div>
+
+  <h2>How the math works</h2>
+  <p>BTU per hour = kilowatts × 3,412.142. Tons = BTU per hour ÷ 12,000. Electrical energy
+    entering IT equipment is converted almost entirely to heat, so IT kilowatts and thermal
+    kilowatts are treated as equal; the small fraction that leaves as light, sound or data
+    signalling is not material at this scale.</p>
+  <h2>What this does not tell you</h2>
+  <p>This is sensible heat only and says nothing about humidity control, which matters in
+    humid climates. Redundancy uplift here is a simple percentage; a real N+1 or 2N chiller
+    plant is sized so that the design load is met with a unit out of service, which is a
+    different calculation. Air-cooled racks above roughly 30 kW usually cannot be cooled by
+    air alone regardless of total tonnage, which is where liquid cooling starts.</p>
+
+  <div class="cite-box">Cite this tool: <code>"Heat Load Calculator." The World of AI,
+    theworldofai.org/calculators/heat-load/.</code></div>
+
+  <script is:inline>
+  (function () {
+    function n(i) { return parseFloat(document.getElementById(i).value) || 0; }
+    function f(v, d) { return v.toLocaleString(undefined, { maximumFractionDigits: d === undefined ? 0 : d }); }
+    var IDS = ['itkw','other','nplus','unit'];
+    function calc() {
+      var kw = n('itkw') + n('other');
+      var btu = kw * 3412.142;
+      var tons = btu / n('unit');
+      var withRed = tons * (1 + n('nplus') / 100);
+      document.getElementById('out').innerHTML =
+        'Heat to reject: <b>' + f(btu) + ' BTU/hr</b> (' + f(kw) + ' kW thermal)<br>' +
+        'Cooling capacity: <b>' + f(tons, 1) + ' tons</b><br>' +
+        'With redundancy uplift: <b>' + f(withRed, 1) + ' tons</b><br>' +
+        '<span class="sub">Rule of thumb: about ' + f(tons / (n('itkw') / 1000 || 1), 0) + ' tons per MW of IT.</span>';
+    }
+    IDS.forEach(function (i) {
+      document.getElementById(i).addEventListener('input', calc);
+      document.getElementById(i).addEventListener('change', calc);
+    });
+    calc();
+  })();
+  </script>
+  <style>
+    .calc { border: 1px solid #e6e4de; border-radius: 10px; padding: 18px 20px; background: #fafaf6; margin: 1.4em 0; }
+    .calc label { display: block; margin: 0 0 12px; font-size: 14px; color: #26262b; }
+    .calc input, .calc select { display: block; margin-top: 4px; padding: 7px 9px; font-size: 15px;
+      border: 1px solid #cfcdc6; border-radius: 6px; width: 220px; max-width: 100%; }
+    .out { margin-top: 14px; padding-top: 14px; border-top: 1px solid #e6e4de; font-size: 16px; line-height: 1.7; }
+    .out b { color: #201868; }
+    .sub { color: #7A8A9E; font-size: 13.5px; }
+  </style>
+</Base>

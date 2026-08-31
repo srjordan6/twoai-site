@@ -1,0 +1,87 @@
+---
+import Base from '../../layouts/Base.astro';
+const desc = 'Free UPS sizing and battery runtime calculator: kVA from load and power factor, battery kWh for a target runtime, and lithium-ion versus VRLA replacement cost over a 15-year life.';
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org', '@type': 'WebApplication',
+  name: 'UPS and Battery Runtime Calculator', applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  url: 'https://theworldofai.org/calculators/ups-runtime/',
+});
+---
+<Base title="UPS Sizing and Battery Runtime Calculator — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
+  <h1>UPS and Battery Runtime Calculator</h1>
+  <p class="answer">A UPS is sized in kVA from the load and its power factor, and the battery is sized in kilowatt-hours from the load and the runtime you need, divided by how deeply the chemistry can be discharged. Lithium-ion is usable to about 80% depth of discharge and lasts 10 to 15 years; VRLA is held to about 50% and replaced every 3 to 5, which is the whole of the cost argument.</p>
+  <p class="meta-line">Formula and defaults last reviewed: 2026-08-31.</p>
+
+  <div class="calc">
+    <label>Critical load (kW) <input type="number" id="kw" value="500" step="10" min="0" /></label>
+    <label>Power factor <input type="number" id="pf" value="0.95" step="0.01" min="0.5" /></label>
+    <label>Runtime required (minutes) <input type="number" id="mins" value="10" step="1" min="1" /></label>
+    <label>UPS and inverter efficiency (%) <input type="number" id="eff" value="95" step="1" min="50" /></label>
+    <label>Battery chemistry
+      <select id="chem">
+        <option value="0.8|12|1" selected>Lithium-ion, 80% usable, about 12-year life</option>
+        <option value="0.5|4|0.55">VRLA, 50% usable, about 4-year life</option>
+      </select>
+    </label>
+    <label>Planning horizon (years) <input type="number" id="years" value="15" step="1" min="1" /></label>
+    <div class="out" id="out" aria-live="polite"></div>
+  </div>
+
+  <h2>How the math works</h2>
+  <p>kVA = kW ÷ power factor. Battery energy = (load ÷ inverter efficiency) × runtime in hours,
+    because the battery must cover the inverter's losses as well as the load. Installed capacity
+    = that energy ÷ usable depth of discharge, since no chemistry is run flat.</p>
+  <h2>Why the chemistries differ so much</h2>
+  <p>VRLA is cheaper per kilowatt-hour at purchase and is held to roughly half its capacity to
+    preserve life, so it needs about 1.6 times the installed capacity for the same runtime, and
+    it is replaced three to four times over a fifteen-year facility life. Lithium-ion costs more
+    up front, is usable to about 80%, tolerates warmer rooms, and usually outlives one facility
+    refresh cycle. Runtime is also only a bridge: it exists to carry the load until generators
+    take over, so five to ten minutes is a design choice, not a shortfall.</p>
+  <h2>What this does not tell you</h2>
+  <p>Real battery runtime is not linear with load, because discharge at high rates yields less
+    energy than the rating suggests, an effect described by Peukert's law and captured in
+    manufacturer discharge tables rather than in a formula like this. Ambient temperature is the
+    other missing variable: VRLA life roughly halves for every 10°C above 25°C.</p>
+
+  <div class="cite-box">Cite this tool: <code>"UPS and Battery Runtime Calculator." The World of AI,
+    theworldofai.org/calculators/ups-runtime/.</code></div>
+
+  <script is:inline>
+  (function () {
+    function n(i) { return parseFloat(document.getElementById(i).value) || 0; }
+    function f(v, d) { return v.toLocaleString(undefined, { maximumFractionDigits: d === undefined ? 0 : d }); }
+    var IDS = ['kw','pf','mins','eff','chem','years'];
+    function calc() {
+      var parts = document.getElementById('chem').value.split('|');
+      var dod = parseFloat(parts[0]), life = parseFloat(parts[1]), rel = parseFloat(parts[2]);
+      var kva = n('pf') > 0 ? n('kw') / n('pf') : 0;
+      var effF = n('eff') > 0 ? n('eff') / 100 : 1;
+      var energy = (n('kw') / effF) * (n('mins') / 60);
+      var installed = energy / dod;
+      var swaps = Math.max(0, Math.ceil(n('years') / life) - 1);
+      document.getElementById('out').innerHTML =
+        'UPS rating: <b>' + f(kva) + ' kVA</b> for a ' + f(n('kw')) + ' kW load<br>' +
+        'Energy to deliver: <b>' + f(energy, 1) + ' kWh</b> at the inverter<br>' +
+        'Installed battery capacity: <b>' + f(installed, 1) + ' kWh</b> at ' + f(dod * 100) + '% usable<br>' +
+        'Battery replacements in ' + f(n('years')) + ' years: <b>' + swaps + '</b><br>' +
+        '<span class="sub">Relative installed cost of this chemistry, lithium-ion as 1.0: about ' + rel.toFixed(2) + ' per kWh, before the replacements above.</span>';
+    }
+    IDS.forEach(function (i) {
+      document.getElementById(i).addEventListener('input', calc);
+      document.getElementById(i).addEventListener('change', calc);
+    });
+    calc();
+  })();
+  </script>
+  <style>
+    .calc { border: 1px solid #e6e4de; border-radius: 10px; padding: 18px 20px; background: #fafaf6; margin: 1.4em 0; }
+    .calc label { display: block; margin: 0 0 12px; font-size: 14px; color: #26262b; }
+    .calc input, .calc select { display: block; margin-top: 4px; padding: 7px 9px; font-size: 15px;
+      border: 1px solid #cfcdc6; border-radius: 6px; width: 220px; max-width: 100%; }
+    .out { margin-top: 14px; padding-top: 14px; border-top: 1px solid #e6e4de; font-size: 16px; line-height: 1.7; }
+    .out b { color: #201868; }
+    .sub { color: #7A8A9E; font-size: 13.5px; }
+  </style>
+</Base>

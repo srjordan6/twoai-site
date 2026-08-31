@@ -1,0 +1,78 @@
+---
+import Base from '../../layouts/Base.astro';
+const desc = 'Free liquid cooling calculator for data centers: required flow rate in GPM and LPM for direct-to-chip or immersion loops, CDU sizing, and how coolant choice changes the answer.';
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org', '@type': 'WebApplication',
+  name: 'Liquid Cooling Flow Rate Calculator', applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  url: 'https://theworldofai.org/calculators/liquid-cooling/',
+});
+---
+<Base title="Liquid Cooling Flow Rate Calculator: GPM and CDU sizing — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
+  <h1>Liquid Cooling Flow Rate Calculator</h1>
+  <p class="answer">Water carries roughly 3,500 times more heat per unit volume than air, which is why dense AI racks move to liquid. Flow in gallons per minute is heat divided by the product of the fluid constant and the temperature rise across the loop: about 0.68 GPM per kW at a 10°F rise for water.</p>
+  <p class="meta-line">Formula and defaults last reviewed: 2026-08-31.</p>
+
+  <div class="calc">
+    <label>Heat to remove by liquid (kW) <input type="number" id="kw" value="120" step="5" min="0" /></label>
+    <label>Coolant temperature rise across the loop (°F) <input type="number" id="dt" value="10" step="1" min="2" /></label>
+    <label>Coolant
+      <select id="fluid">
+        <option value="500" selected>Water (constant 500)</option>
+        <option value="450">25% propylene glycol (about 450)</option>
+        <option value="430">40% propylene glycol (about 430)</option>
+      </select>
+    </label>
+    <label>CDU capacity each (kW) <input type="number" id="cdu" value="300" step="25" min="1" /></label>
+    <div class="out" id="out" aria-live="polite"></div>
+  </div>
+
+  <h2>How the math works</h2>
+  <p>GPM = BTU per hour ÷ (fluid constant × delta-T °F). The constant is 500 for water, derived
+    from its density and specific heat; glycol mixtures carry less heat per gallon, so the
+    constant falls and the flow required rises. A wider temperature rise across the loop cuts
+    the flow needed, which is why warm-water cooling designs are pumped less hard.</p>
+  <h2>What this does not tell you</h2>
+  <p>Flow is not the whole hydraulic problem. Pressure drop across cold plates, manifolds and
+    the secondary loop determines pump head and whether the flow can actually be delivered, and
+    that depends on pipe sizes and fittings this calculator does not model. Approach temperature
+    at the CDU heat exchanger sets how cold the secondary loop can get from a given facility
+    water temperature, and it is the figure that decides whether a design works in a warm
+    climate.</p>
+
+  <div class="cite-box">Cite this tool: <code>"Liquid Cooling Flow Rate Calculator." The World of AI,
+    theworldofai.org/calculators/liquid-cooling/.</code></div>
+
+  <script is:inline>
+  (function () {
+    function n(i) { return parseFloat(document.getElementById(i).value) || 0; }
+    function f(v, d) { return v.toLocaleString(undefined, { maximumFractionDigits: d === undefined ? 0 : d }); }
+    var IDS = ['kw','dt','fluid','cdu'];
+    function calc() {
+      var btu = n('kw') * 3412.142;
+      var gpm = btu / (n('fluid') * n('dt'));
+      var lpm = gpm * 3.78541;
+      var cdus = n('cdu') > 0 ? Math.ceil(n('kw') / n('cdu')) : 0;
+      document.getElementById('out').innerHTML =
+        'Required flow: <b>' + f(gpm, 1) + ' GPM</b> (' + f(lpm, 1) + ' L/min)<br>' +
+        'Heat rejected: ' + f(btu) + ' BTU/hr<br>' +
+        'CDUs at this capacity: <b>' + cdus + '</b> for N, ' + (cdus + 1) + ' for N+1<br>' +
+        '<span class="sub">' + f(gpm / (n('kw') || 1), 2) + ' GPM per kW at this temperature rise.</span>';
+    }
+    IDS.forEach(function (i) {
+      document.getElementById(i).addEventListener('input', calc);
+      document.getElementById(i).addEventListener('change', calc);
+    });
+    calc();
+  })();
+  </script>
+  <style>
+    .calc { border: 1px solid #e6e4de; border-radius: 10px; padding: 18px 20px; background: #fafaf6; margin: 1.4em 0; }
+    .calc label { display: block; margin: 0 0 12px; font-size: 14px; color: #26262b; }
+    .calc input, .calc select { display: block; margin-top: 4px; padding: 7px 9px; font-size: 15px;
+      border: 1px solid #cfcdc6; border-radius: 6px; width: 220px; max-width: 100%; }
+    .out { margin-top: 14px; padding-top: 14px; border-top: 1px solid #e6e4de; font-size: 16px; line-height: 1.7; }
+    .out b { color: #201868; }
+    .sub { color: #7A8A9E; font-size: 13.5px; }
+  </style>
+</Base>
