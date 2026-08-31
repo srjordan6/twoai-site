@@ -107,7 +107,7 @@ const SYSTEM = `You answer questions about artificial intelligence using ONLY th
 RULES, in order:
 1. Use only what is in the excerpts. If they do not answer the question, say plainly: "The World of AI does not cover that yet." Do not fill the gap from your own knowledge, and never guess a date, a number, a case outcome or a legal requirement.
 1b. There are two kinds of excerpt. Numbered [1] [2] are PAGES ON THIS SITE. Numbered [R1] [R2] are PAPERS from the research index, which are not pages here. Answer from the pages first and use the papers to support or extend the answer, saying when a claim comes from a paper rather than from this site.
-1c. Paper abstracts are the publishers' text, licensed to us for citation only. Summarise a paper in your own words and never quote or reproduce an abstract. Name the paper and its year so the reader can follow the link.
+1c. Paper abstracts are the publishers' text, licensed to us for citation only. Summarise a paper in your own words and never quote or reproduce an abstract. If you use a paper, you MUST write its title in full in your answer, because the source list under the answer is built from the titles you name: a paper you rely on without naming will not be shown to the reader, and a paper you name without using would be a false citation. If the site's own pages already answer the question, use them and ignore the papers entirely rather than adding papers you did not need.
 2. Cite the pages you used by their titles, naturally, in the sentence that uses them.
 3. Be brief. Two or three short paragraphs at most. Lead with the answer.
 4. Where the excerpts disagree or are dated, say so rather than smoothing it over.
@@ -478,12 +478,42 @@ export default {
       .filter((h) => (seen.has(h.url) ? false : (seen.add(h.url), true)))
       .map((h) => ({ title: h.title, url: h.url, score: h.score }));
 
+    // A SOURCE LIST MUST NAME WHAT THE ANSWER USED, AND NOTHING ELSE. The
+    // first live test retrieved five relevant papers, the model answered
+    // entirely from this site's own pages, and the box was about to render
+    // all five under "Research papers" as though they were sources. Listing
+    // a source an answer never used is the same failure as omitting one it
+    // did: this box is worth having only because its source list is true.
+    //
+    // So papers are filtered to those the answer actually names. The model is
+    // told to name them; this checks rather than trusts. Matching is on a
+    // punctuation-stripped leading clause, because a model writes
+    // "Faithful Logical Reasoning via Symbolic Chain-of-Thought" for a title
+    // that carries a subtitle after a colon, and on any five-word run of the
+    // title, which catches a shortened reference without matching on
+    // "language models" alone.
+    const flat = (t: string) => t.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+    const flatAnswer = flat(answer);
+    const namedInAnswer = (title: string): boolean => {
+      const ft = flat(title);
+      if (!ft) return false;
+      const lead = ft.split(" ").slice(0, 6).join(" ");
+      if (lead.length > 12 && flatAnswer.includes(lead)) return true;
+      const w = ft.split(" ");
+      for (let i = 0; i + 5 <= w.length; i++) {
+        const run = w.slice(i, i + 5).join(" ");
+        if (run.length > 18 && flatAnswer.includes(run)) return true;
+      }
+      return false;
+    };
+    const citedPapers = papers.filter((pp) => namedInAnswer(pp.title));
+
     // Diagnostic ride-alongs removed 2026-08-19 after doing their job twice:
     // first captured "2021: Invalid User Credentials" (partner routing had no
     // Anthropic billing path), then key_present exposed that five dashboard
     // attempts were writing BUILD variables, not runtime secrets. The working
     // path was `wrangler secret put ANTHROPIC_API_KEY`. Failures stay
     // queryable in answer_log.model_errors.
-    return json({ answered: true, answer, sources, papers, model: usedModel });
+    return json({ answered: true, answer, sources, papers: citedPapers, model: usedModel });
   },
 };
