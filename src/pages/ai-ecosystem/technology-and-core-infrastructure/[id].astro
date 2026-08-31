@@ -87,6 +87,27 @@ const ctx = (n) => (n >= 1000 ? `${Math.round(n / 1000)}k` : `${n}`);
 // missing name rather than trusting it.
 const secName = sec.name || sec.state || 'AI infrastructure';
 
+// The publisher of a facility page: the operator when OSM tagged one, else
+// the host the specifications were read from, which is a fact we hold.
+const facPublisher = sec.operator || sec.profile?.source?.publisher || '';
+
+// The lead sentence is assembled here rather than in the markup. Astro
+// inserts whitespace between expressions written on separate lines, which
+// printed "40,000 sq ft of technical space ." and "space , published by"
+// on the first facility pages. A sentence built as a string has the
+// punctuation where it belongs.
+const facSqft = Number(sec.profile?.technical_space_sqft || 0);
+const facLead = sec.mw
+  ? `${sec.mw} MW of IT capacity`
+  : facSqft > 0
+    ? `${facSqft.toLocaleString()} sq ft of technical space`
+    : sec.name;
+const facRest = [
+  sec.mw && facSqft > 0 ? ` across ${facSqft.toLocaleString()} sq ft of technical space` : '',
+  sec.profile?.campus ? `, campus ${sec.profile.campus}` : '',
+  facPublisher ? `, published by ${facPublisher} on its own facility page` : '',
+].join('') + '.';
+
 // The dc children carry no `name` field, and sec.name straight into the
 // <title> is what published "undefined — The World of AI" on every one of
 // those pages until 2026-08-30. Each shape knows its own headline.
@@ -625,17 +646,21 @@ const licLine = (sec.licences || [])
       )}
       {sec.shape === 'dc-facility' && (
         <>
-          <p class="answer"><b>{sec.mw ? `${sec.mw} MW of IT capacity` : sec.name}</b>
-            {sec.profile?.technical_space_sqft > 0 && <> across
-            {' '}{Number(sec.profile.technical_space_sqft).toLocaleString()} sq ft of technical
-            space</>}{sec.profile?.campus && <>, campus {sec.profile.campus}</>}, published by
-            {' '}{sec.operator} on its own facility page. Every figure here is the operator's
-            stated specification, read on {sec.profile?.source?.retrieved || sec.generated}.</p>
-          <p class="meta-line">Last verified: {sec.generated} · Operator: {sec.operator} ·
+          {/* Most OpenStreetMap rows carry no operator tag, so neither the
+              lead sentence nor the meta line may assume one: an early version
+              of this published "published by  on its own facility page" on
+              every unattributed facility. The publisher recorded with the
+              source is the fallback, and where even that is absent the clause
+              is dropped rather than left hanging. */}
+          <p class="answer"><b>{facLead}</b><Fragment set:html={facRest} /> Every figure here is
+            the operator's stated specification, read on
+            {' '}{sec.profile?.source?.retrieved || sec.generated}.</p>
+          <p class="meta-line">Last verified: {sec.generated}
+            {sec.operator && <> · Operator: {sec.operator}</>} ·
             {sec.state_page?.uid && <> Directory:
             {' '}<a href={`${BASE}/${sec.state_page.uid}/`}>data centers in {sec.state || sec.country}</a> ·</>}
             {' '}Source: <a href={sec.profile?.source?.page || sec.website} rel="noopener">
-            {sec.profile?.source?.publisher || sec.operator} facility page</a>.</p>
+            {facPublisher || 'operator'} facility page</a>.</p>
 
           {Array.isArray(sec.profile?.address) && sec.profile.address.length > 0 && (
             <section>
