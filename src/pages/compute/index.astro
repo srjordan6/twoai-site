@@ -1,0 +1,120 @@
+---
+/**
+ * GPU compute provider directory at /compute/.
+ *
+ * The site covers who BUILDS data centres and who SELLS the chips. This is the
+ * layer in between, and the one most readers actually touch: renting the
+ * hardware by the hour. Grouped by business model rather than alphabetically,
+ * because the model is what decides whether a provider suits the reader.
+ */
+import Base from '../../layouts/Base.astro';
+import { readFileSync, existsSync } from 'node:fs';
+
+const hub = existsSync('content/compute/index.json')
+  ? JSON.parse(readFileSync('content/compute/index.json', 'utf8'))
+  : { groups: [], total: 0, generated: '' };
+const groups = hub.groups || [];
+
+const desc = `GPU compute providers: ${hub.total || 0} companies that rent AI accelerators by the hour, ` +
+  'grouped by business model, with pricing pages and status pages linked. Every link checked.';
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: 'GPU Compute Providers',
+  numberOfItems: hub.total || 0,
+  itemListElement: groups.flatMap((g) => (g.providers || []).map((p, i) => ({
+    '@type': 'ListItem', position: i + 1,
+    item: { '@type': 'Organization', name: p.name, url: p.website },
+  }))),
+});
+---
+<Base title="GPU Compute Providers: who rents AI accelerators — The World of AI" description={desc} current="/compute/" jsonld={jsonld}>
+  <h1>GPU Compute Providers</h1>
+
+  <p class="answer">If you need GPUs for AI work and are not buying them, you rent
+    from one of these {hub.total} companies. They fall into four business models,
+    and the model matters more than the price list: it decides whether your
+    machine can be taken away mid-run, who is accountable when it is, and what
+    you can put on it.</p>
+
+  {hub.generated && <p class="meta-line">Last verified: {hub.generated}</p>}
+
+  {groups.length === 0 && (
+    <p>No providers are published yet. This page stays empty rather than listing
+      names we have not verified.</p>
+  )}
+
+  {groups.map((g) => (
+    <section>
+      <h2>{g.label}</h2>
+      <p>{g.reading}</p>
+      <table>
+        <thead>
+          <tr><th>Provider</th><th>What it is</th><th>Links</th></tr>
+        </thead>
+        <tbody>
+          {(g.providers || []).map((p) => (
+            <tr>
+              <td>
+                {p.website
+                  ? <a href={p.website} rel="nofollow noopener">{p.name}</a>
+                  : p.name}
+                {p.public_company && p.ticker && (
+                  <><br /><span class="tick">Public · {p.ticker}</span></>
+                )}
+              </td>
+              <td>{p.summary}</td>
+              <td>
+                {p.pricing_url && <a href={p.pricing_url} rel="nofollow noopener">Pricing</a>}
+                {p.pricing_url && p.docs_url && <> · </>}
+                {p.docs_url && <a href={p.docs_url} rel="nofollow noopener">Docs</a>}
+                {(p.pricing_url || p.docs_url) && p.status_url && <> · </>}
+                {p.status_url && <a href={p.status_url} rel="nofollow noopener">Status</a>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  ))}
+
+  <h2>How to choose between them</h2>
+  <p>Start with whether your job can be interrupted. A marketplace machine can be
+    reclaimed by its host, so a training run that cannot checkpoint and resume
+    does not belong there however cheap the hour looks. A specialist cloud sells
+    dedicated capacity with a contract behind it, which is what multi-node
+    training needs, and the interconnect between machines matters as much as the
+    GPUs in them.</p>
+  <p>Then look at what you are allowed to put on it. Regulated data usually rules
+    out everything except a hyperscaler or a specialist cloud that will sign the
+    paperwork. That constraint decides the list before price does.</p>
+
+  <h2>What this page does not tell you</h2>
+  <p>No prices. Rates move weekly, differ by contract length, region and
+    accelerator, and a number published here would be wrong within a month and
+    quoted as ours for longer. The pricing links go to each provider's own page,
+    which is the only figure that binds them.</p>
+  <p>Availability is not listed either. The chips a provider advertises and the
+    chips you can get this week are frequently different, and nobody publishes
+    that gap. Ask for the specific accelerator, in the specific region, for the
+    specific dates.</p>
+
+  <h2>Where this list came from</h2>
+  <p>Assembled and checked by hand, which is unusual here and worth saying. Most
+    directories on this site are built from an upstream register: companies from
+    SEC filings, facilities from OpenStreetMap, servers from a registry. No such
+    register exists for this category, so the alternative to hand-checking was
+    not covering it. Every homepage was checked for a live response and every
+    pricing link followed; two providers whose pricing pages returned 404 have
+    no pricing link rather than a guessed one.</p>
+
+  <div class="cite-box">Cite this page: <code>"GPU Compute Providers." The World of AI,
+    theworldofai.org/compute/.</code></div>
+</Base>
+
+<style>
+  .tick { font-size: 12px; color: #7A8A9E; }
+  section { margin: 0 0 2.2em; }
+  section > h2 { margin-bottom: .3em; }
+  section > p { margin-top: 0; }
+</style>
