@@ -37,6 +37,16 @@ const knowledge = (o.knowledge ?? []).slice().sort(byScore);
 const tasks = o.tasks ?? [];
 const related = o.related ?? [];
 
+// Same rule as the hub: link an occupation only where this site publishes a
+// page for it. O*NET's "related occupations" reach well past the 18 records
+// held here, and linking them all pointed readers at pages that do not
+// exist. Names without a page still render, because the fact that the role
+// is related is worth knowing even when there is nothing to click.
+const occMods = import.meta.glob('../../../content/skills/occupation-*.json', { eager: true });
+const socsWithPages = new Set(
+  Object.values(occMods).map((m: any) => m?.default?.soc).filter(Boolean),
+);
+
 const desc =
   `${o.title}: the skills and knowledge the role requires, what the work involves, ` +
   `${o.wage_median ? `median pay ${money(o.wage_median)}, ` : ''}and where it leads.`;
@@ -118,7 +128,11 @@ const jsonld = JSON.stringify({
       <h2>Where it leads</h2>
       <p>Occupations that share enough with this one to be a realistic move.</p>
       <ul class="rel">
-        {related.map((r: any) => <li><a href={`/skills/${r.code}/`}>{r.title}</a> <span class="sc2">{r.code}</span></li>)}
+        {related.map((r: any) => (
+          <li>{socsWithPages.has(r.code)
+            ? <a href={`/skills/${r.code}/`}>{r.title}</a>
+            : r.title} <span class="sc2">{r.code}</span></li>
+        ))}
       </ul>
     </>
   )}

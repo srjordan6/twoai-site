@@ -762,8 +762,13 @@ const jsonld = JSON.stringify(clc ? {
         </ol>
       </section>
 
+      {/* /industries/ is not a route on this site and never has been: the
+          industry hub is a section page under this same category, uid
+          996a6ce2. The link 404'd for every reader who followed it from the
+          case studies page. Linked by uid now, like every other section, so
+          it cannot drift from the route again. */}
       <p class="meta-line">Related on this site: <a href={`${BASE}/`}>enterprise applications and
-        governance</a> · <a href="/industries/">AI by industry</a> ·
+        governance</a> · <a href={`${BASE}/996a6ce2/`}>AI by industry</a> ·
         {' '}<a href="/ai-compliance/">the governance library</a>.</p>
 
       <div class="cite-box">Cite this page: <code>"AI Case Studies." The World of AI,

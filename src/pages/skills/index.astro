@@ -30,6 +30,15 @@ const hub = existsSync('content/skills/index.json')
 const occupations: any[] = hub?.occupations ?? [];
 const skills: any[] = hub?.skills ?? [];
 const shared = skills.filter((s) => (s.occupations?.length ?? 0) > 1);
+
+// A LINK ONLY WHERE A PAGE EXISTS. O*NET names every occupation that uses a
+// skill, and this site publishes a page for the 18 it holds a full record
+// for, so linking every name produced 47 internal 404s from this page alone:
+// /skills/15-1232.00/ and the rest were links to pages that were never
+// built. The occupation list is the set of pages that exist, so a name
+// outside it renders as text. Found 2026-08-31 in a crawl of the built site
+// after Stephen reported /industries/ 404ing from the case studies page.
+const hasPage = new Set(occupations.map((o: any) => o.soc));
 const withWage = occupations.filter((o) => o.wage_median > 0);
 const totalOpenings = occupations.reduce((n, o) => n + (o.openings || 0), 0);
 const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
@@ -114,7 +123,9 @@ const jsonld = JSON.stringify({
                     .sort((a: any, b: any) => (b.score || 0) - (a.score || 0))
                     .slice(0, 6)
                     .map((o: any, i: number) => (
-                      <>{i > 0 && ' · '}<a href={`/skills/${o.soc}/`}>{o.title}</a>{o.score ? <span class="sc"> {Math.round(o.score)}</span> : null}</>
+                      <>{i > 0 && ' · '}{hasPage.has(o.soc)
+                        ? <a href={`/skills/${o.soc}/`}>{o.title}</a>
+                        : o.title}{o.score ? <span class="sc"> {Math.round(o.score)}</span> : null}</>
                     ))}
                 </p>
               </li>
