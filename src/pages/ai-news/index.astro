@@ -26,6 +26,14 @@ const stories: Story[] = (news?.stories ?? []).map((s: any) => ({
 }));
 const top3 = stories.slice(0, 3);
 
+// The AI Incident Database section has rendered on /ai-news/daily/ since it
+// shipped, and this hub never mentioned it: the hub described itself as
+// "two sections" while the section it summarises had three. Stephen looked
+// for AIID here twice. Same news.json, same field the daily page reads.
+const incidents: any[] = news?.incidents ?? [];
+const top3Incidents = incidents.slice(0, 3);
+const incidentOutlets = new Set(incidents.map((i: any) => i.domain).filter(Boolean)).size;
+
 const vendMods = import.meta.glob('../../../content/news/vendor.json', { eager: true });
 const vn: any = Object.values(vendMods)[0]?.default ?? null;
 const vendors: any[] = (vn?.vendors ?? []).map((v: any) => ({ ...v, items: v.items ?? [] }));
@@ -40,8 +48,9 @@ const stamp = generated ? `${generated.toUTCString().slice(0, 22)} UTC` : null;
 
 const title = `AI News: Daily Briefing and Vendor Announcements`;
 const description =
-  `AI news in two sections: a daily briefing of the top stories ranked by breadth of coverage, ` +
-  `and announcements from the labs building AI, in their own words.`;
+  `AI news in three sections: a daily briefing of the top stories ranked by breadth of coverage, ` +
+  `announcements from the labs building AI in their own words, and the logged real-world harms ` +
+  `catalogued by the AI Incident Database.`;
 
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
@@ -70,6 +79,15 @@ const jsonld = JSON.stringify({
           url: 'https://theworldofai.org/ai-news/vendor/',
           description: 'Announcements from the companies, labs, and institutes building AI.',
         },
+        ...(incidents.length > 0
+          ? [{
+              '@type': 'ListItem',
+              position: 3,
+              name: 'When AI Goes Wrong',
+              url: 'https://theworldofai.org/ai-news/daily/#incidents',
+              description: 'Reports of real-world harm from deployed AI systems, catalogued by the AI Incident Database.',
+            }]
+          : []),
       ],
     },
   ],
@@ -86,7 +104,7 @@ const jsonld = JSON.stringify({
   )}
 
   <div class="answer-box">
-    <p class="answer-label">Two sections</p>
+    <p class="answer-label">{incidents.length > 0 ? "Three sections" : "Two sections"}</p>
     <p>
       <a href="/ai-news/daily/">Daily News</a> is what&rsquo;s happening in the world of AI: the
       day&rsquo;s top stories, discovered from worldwide press coverage and ranked by how many
@@ -94,6 +112,13 @@ const jsonld = JSON.stringify({
       the builders said themselves: announcements from the companies, labs, and institutes
       building and governing AI, drawn from their own feeds, every link to the original post.
     </p>
+    {incidents.length > 0 && (
+      <p>
+        <b><a href="/ai-news/daily/#incidents">When AI Goes Wrong</a></b> is what it cost:
+        reports of real-world harm from deployed AI systems, catalogued by the AI Incident
+        Database, each with its incident number and the outlet that reported it.
+      </p>
+    )}
   </div>
 
   <div class="sections">
@@ -143,6 +168,31 @@ const jsonld = JSON.stringify({
         archive</a> and the <a href="/ai-news/vendor/archive/1/">vendor announcement archive</a>
         list every page ever published here.</p>
     </section>
+
+    {incidents.length > 0 && (
+      <section class="sec">
+        <p class="sec-kicker">Section three</p>
+        <h2><a href="/ai-news/daily/#incidents">When AI Goes Wrong</a></h2>
+        <p class="sec-sub">The harms a deployed system actually caused</p>
+        <p class="sec-desc">
+          {`${incidents.length} logged harms from ${incidentOutlets} outlets, each catalogued by the AI Incident Database with its incident number.`}
+        </p>
+        <ol class="preview">
+          {top3Incidents.map((inc: any) => (
+            <li>
+              <a href={inc.url} rel="noopener nofollow" target="_blank">{inc.title}</a>
+              <span class="pmeta">{inc.domain}
+                {inc.published && <> &middot; {inc.published}</>} &middot; AIID #{inc.incident_id}</span>
+            </li>
+          ))}
+        </ol>
+        <a class="go" href="/ai-news/daily/#incidents">All logged harms &rarr;</a>
+        <p class="meta-line">Incident records from the <a href="https://incidentdatabase.ai/"
+          rel="noopener">AI Incident Database</a>, Responsible AI Collaborative, licensed
+          CC BY-SA 4.0. Headlines and articles belong to the publishers linked. Listing an
+          incident is not a finding of fault, it is a record that the harm was reported.</p>
+      </section>
+    )}
   </div>
 
   <p class="also">
