@@ -579,11 +579,11 @@ const jsonld = JSON.stringify(
         <section>
           <h2>Profile</h2>
           {profileText.body.split('\n\n').map((para) => <p>{para}</p>)}
-          <p class="meta-line">Written by {profileText.model} on {profileText.generated_on} from this
-            site's harvest of the company's own website and the facts held in this directory, and
-            nothing else. Self-descriptions are reported as such; figures are verified mechanically
-            against the source material before publication, and the text regenerates when the
-            company's site or our records change.</p>
+          <p class="meta-line">Written {profileText.generated_on} from this site's harvest of the
+            company's own website and the facts held in this directory, and nothing else.
+            Self-descriptions are reported as such; figures are verified mechanically against the
+            source material before publication, and the text is rewritten when the company's site or
+            our records change.</p>
         </section>
       )}
 

@@ -775,10 +775,10 @@ const licLine = (sec.licences || [])
             <section>
               <h2>What do these specifications mean for AI?</h2>
               {String(sec.reading.body).split(/\n\n+/).map((p) => <p>{p}</p>)}
-              <p class="meta-line">Reading written by {sec.reading.model} on {sec.reading.generated_on} from
-                the published specifications above and this site's own state registry, nothing else.
-                Rack and accelerator figures are arithmetic on a stated assumption, not the operator's
-                claim. It regenerates only when the operator's published facts change.</p>
+              <p class="meta-line">Written {sec.reading.generated_on} from the published
+                specifications above and this site's own state registry, nothing else. Rack and
+                accelerator figures are arithmetic on a stated assumption, not the operator's
+                claim. This section is rewritten whenever the operator's published facts change.</p>
             </section>
           )}
 
@@ -979,9 +979,8 @@ const licLine = (sec.licences || [])
               {sec.analysis.body.split('\n\n').map((para) => (
                 <p>{para}</p>
               ))}
-              <p class="meta-line">Interpretation written by {sec.analysis.model} on
-                {' '}{sec.analysis.generated_on}, from the harvested numbers above and
-                nothing else. It regenerates only when the data changes.</p>
+              <p class="meta-line">Written {sec.analysis.generated_on} from the harvested
+                numbers above and nothing else. It is rewritten whenever the data changes.</p>
             </div>
           )}
 
@@ -1034,9 +1033,9 @@ const licLine = (sec.licences || [])
         <section>
           <h2>What does this tell us about AI?</h2>
           {String(sec.reading.body).split(/\n\n+/).map((p) => <p>{p}</p>)}
-          <p class="meta-line">Reading written by {sec.reading.model} on {sec.reading.generated_on}
-            from the data on this page and nothing else. It regenerates only when that data
-            changes, so it never drifts from the figures above it.</p>
+          <p class="meta-line">Written {sec.reading.generated_on} from the data on this page and
+            nothing else. It is rewritten whenever that data changes, so it never drifts from the
+            figures above it.</p>
         </section>
       )}
       {dcFaqs.length > 0 && (

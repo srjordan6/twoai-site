@@ -167,9 +167,9 @@ const jsonld = JSON.stringify({
     <>
       <h2>What does {n} do?</h2>
       {paras.map((p) => <p>{p}</p>)}
-      <p class="meta-line">Written by {profileText.model} on {profileText.generated_on} from what {n} states on
-        its own site and the facts this site holds; regenerated when the site changes. Claims attributed
-        to the company are its own; the numbers in the table above are verified separately.</p>
+      <p class="meta-line">Written {profileText.generated_on} from what {n} states on its own site
+        and the facts this site holds, and rewritten when that site changes. Claims attributed to the
+        company are its own; the numbers in the table above are verified separately.</p>
     </>
   )}
 

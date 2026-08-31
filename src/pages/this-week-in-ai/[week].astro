@@ -68,10 +68,9 @@ const jsonld = JSON.stringify({
   {w.recap && (
     <div class="recap">
       {w.recap.split('\n').filter((p) => p.trim()).map((p) => <p>{p}</p>)}
-      <p class="meta-line recap-note">This recap is written by {w.recap_model || 'a language model'}
-        from the computed counts on this page only. It is not shown the individual bills or
-        cases, so it cannot characterise any single matter, and every figure in it appears in
-        the tables below.</p>
+      <p class="meta-line recap-note">This recap is written from the computed counts on this page
+        only. It is written without sight of the individual bills or cases, so it cannot
+        characterise any single matter, and every figure in it appears in the tables below.</p>
     </div>
   )}
   {w.generated && <p class="meta-line">Last verified: <time datetime={w.generated}>{w.generated}</time> · Sources: LegiScan, the Federal Register, CourtListener</p>}

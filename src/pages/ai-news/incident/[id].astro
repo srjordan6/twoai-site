@@ -73,8 +73,8 @@ const jsonld = JSON.stringify({
     <>
       <h2>What this incident shows</h2>
       {paras(inc.reading.body).map((p) => <p>{p}</p>)}
-      <p class="meta-line">Reading written by {inc.reading.model} on {inc.reading.generated_on}
-        from the facts above and nothing else. It regenerates only when the reporting changes.</p>
+      <p class="meta-line">Written {inc.reading.generated_on} from the facts above and nothing
+        else. It is rewritten whenever the reporting changes.</p>
     </>
   )}
 
