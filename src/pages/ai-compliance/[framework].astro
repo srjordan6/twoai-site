@@ -67,6 +67,13 @@ const jsonld = JSON.stringify({
   {d.short && <p class="answer">{d.short}</p>}
   {d.generated && <p class="meta-line">Last verified: <time datetime={d.generated}>{d.generated}</time></p>}
 
+  {/* AN UNCLOSED ANCHOR MUST NOT REPAINT THE PAGE. A single missing </a> in
+      the stored HTML left the anchor open for the rest of the document, and
+      every paragraph after it rendered in link orange: Stephen screenshotted
+      the DCAM page reading that way on 2026-08-31. The source was repaired in
+      SQL, but a body written elsewhere can break again, so the container also
+      pins its own text colour. A link inside still looks like a link; an
+      unclosed one can no longer take the page with it. */}
   <div class="body" set:html={d.body_html} />
 
   {steps.length > 0 && (
@@ -109,6 +116,15 @@ const jsonld = JSON.stringify({
 </Base>
 
 <style>
+  /* Text colour is pinned so a malformed link in the stored HTML cannot
+     inherit its colour onto everything that follows it. These need :global()
+     because the body is injected with set:html and carries none of Astro's
+     scoping attributes, which is why the first version of this rule compiled
+     to nothing at all. */
+  .body { color: var(--ink); }
+  .body :global(p), .body :global(li), .body :global(td), .body :global(th),
+  .body :global(h2), .body :global(h3), .body :global(h4), .body :global(strong) { color: var(--ink); }
+  .body :global(a) { color: var(--orange); }
   .lede { font-size: 1.08rem; color: #3d3d46; margin: 0 0 .6em; }
   .body :global(h2) { font-size: 1.2rem; margin-top: 1.6em; }
   .body :global(h3) { font-size: 1.03rem; margin-top: 1.3em; }
