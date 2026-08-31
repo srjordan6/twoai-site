@@ -83,6 +83,17 @@
       }
     ]
   },
+  // The research index. Hyperdrive holds the credential and pools the
+  // connection, so the Worker reaches srj_audit in Ohio without a secret in
+  // the bundle and without a cold TCP handshake on every question. Bound
+  // read-only: the role behind this can SELECT four tables and nothing else,
+  // which was verified against the live database before it was bound.
+  "hyperdrive": [
+    {
+      "binding": "AUDIT_DB",
+      "id": "de0bbffadff8402d9e67383e71e0d3ac"
+    }
+  ],
   "vectorize": [
     {
       "binding": "VECTORIZE",

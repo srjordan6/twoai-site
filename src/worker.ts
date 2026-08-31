@@ -26,11 +26,14 @@
  */
 
 import { handleTalent, talentWeeklyDigest, talentMailAnswer } from "./talent";
+import postgres from "postgres";
 
 interface Env {
   AI: any;
   VECTORIZE: any;
   ASSISTANT_DB: D1Database;
+  // Hyperdrive to srj_audit, read-only role, for the research index.
+  AUDIT_DB?: { connectionString: string };
   ASSETS: { fetch: (req: Request) => Promise<Response> };
   // Per-IP rate limiter (wrangler "unsafe" ratelimit binding, open beta).
   // Optional in the type because the Worker must keep answering if the
@@ -99,10 +102,12 @@ const TOP_K = 12;      // over-fetch, then cap per page
 const PER_PAGE = 2;    // at most two chunks from any one page
 const MAX_SOURCES = 6;
 
-const SYSTEM = `You answer questions about artificial intelligence using ONLY the excerpts provided from theworldofai.org.
+const SYSTEM = `You answer questions about artificial intelligence using ONLY the excerpts provided, which come from theworldofai.org and from its research index of academic papers.
 
 RULES, in order:
 1. Use only what is in the excerpts. If they do not answer the question, say plainly: "The World of AI does not cover that yet." Do not fill the gap from your own knowledge, and never guess a date, a number, a case outcome or a legal requirement.
+1b. There are two kinds of excerpt. Numbered [1] [2] are PAGES ON THIS SITE. Numbered [R1] [R2] are PAPERS from the research index, which are not pages here. Answer from the pages first and use the papers to support or extend the answer, saying when a claim comes from a paper rather than from this site.
+1c. Paper abstracts are the publishers' text, licensed to us for citation only. Summarise a paper in your own words and never quote or reproduce an abstract. Name the paper and its year so the reader can follow the link.
 2. Cite the pages you used by their titles, naturally, in the sentence that uses them.
 3. Be brief. Two or three short paragraphs at most. Lead with the answer.
 4. Where the excerpts disagree or are dated, say so rather than smoothing it over.
@@ -199,6 +204,7 @@ export default {
       messages: [{ role: "user", content: question }],
     }).then((r: any) => String(r?.response ?? "")).catch(() => "error");
 
+    const researchExcerpts: string[] = [];
     let hits: Array<{ score: number; url: string; title: string; body: string }> = [];
     try {
       const emb = await env.AI.run(EMBED_MODEL, { text: [question] });
@@ -224,6 +230,56 @@ export default {
       hits = hits.slice(0, MAX_SOURCES);
     } catch (e) {
       return json({ error: "Search is unavailable right now." }, 503);
+    }
+
+    // THE RESEARCH INDEX. Stephen, 2026-08-31: every piece of content in the
+    // website, in SQL, and in the OpenAlex mirror must be reachable here. The
+    // mirror holds over 700,000 works and none of it was reachable, because
+    // this endpoint only ever searched Vectorize, which is built from the
+    // site's own pages.
+    //
+    // Full text rather than embeddings: a GIN index over title and abstract
+    // answers in about 4ms across the whole corpus, where embedding 700,000
+    // works would cost days of compute to answer the same question worse. The
+    // mirror grows every night and the index updates on insert, so a work is
+    // searchable the day it arrives.
+    //
+    // LICENCE. Every row carries license_class 'metadata_cc0_abstract_cite_only'.
+    // The metadata is CC0 and ours to publish; the abstract is the publisher's
+    // and is passed to the model to READ, never to reproduce. The prompt says
+    // so, and the answer links out to the DOI so the reader goes to the source.
+    type Paper = { title: string; year: number | null; cited: number | null; url: string };
+    let papers: Paper[] = [];
+    if (env.AUDIT_DB) {
+      try {
+        const sql = postgres(env.AUDIT_DB.connectionString, {
+          max: 1, fetch_types: false, idle_timeout: 10,
+        });
+        const rows = await sql`
+          SELECT title, pub_year, cited_by, doi, oa_url, abstract
+          FROM twoai_works
+          WHERE to_tsvector('english', coalesce(title,'') || ' ' || coalesce(abstract,''))
+                @@ websearch_to_tsquery('english', ${question})
+          ORDER BY cited_by DESC NULLS LAST
+          LIMIT 5`;
+        for (const r of rows as any[]) {
+          const link = r.doi ? 'https://doi.org/' + String(r.doi) : String(r.oa_url ?? '');
+          if (!link) continue;
+          papers.push({
+            title: String(r.title ?? '').slice(0, 300),
+            year: r.pub_year ?? null,
+            cited: r.cited_by ?? null,
+            url: link,
+          });
+          researchExcerpts.push(
+            '[R' + papers.length + '] ' + String(r.title ?? '') +
+            (r.pub_year ? ' (' + r.pub_year + ')' : '') + ' ' + link + '\n' +
+            String(r.abstract ?? '').slice(0, 1200));
+        }
+        ctx.waitUntil(sql.end());
+      } catch {
+        // A research outage must degrade the box to site pages, never break it.
+      }
     }
 
     const best = hits.length ? hits[0].score : 0;
@@ -299,7 +355,11 @@ export default {
         });
     };
 
-    if (!hits.length || best < SCORE_FLOOR) {
+    // A question the site has not covered may still be answerable from the
+    // research index, so the refusal now requires BOTH retrievers to come back
+    // empty. Papers alone are a thinner answer and it says so, but refusing
+    // while holding a relevant paper would be the box lying about its reach.
+    if ((!hits.length || best < SCORE_FLOOR) && !papers.length) {
       ctx.waitUntil(log(false));
       return json({
         answered: false,
@@ -321,6 +381,7 @@ export default {
         answer:
           "The assistant has answered its limit of questions for today and is resting until tomorrow. Your question has been recorded. The pages it would have cited are still here to read and search.",
         sources: hits.map((h) => ({ title: h.title, url: h.url, score: h.score })),
+        papers: papers.map((p) => ({ title: p.title, url: p.url, year: p.year, cited: p.cited })),
       });
     }
 
@@ -328,7 +389,10 @@ export default {
       .map((h, i) => `[${i + 1}] ${h.title} (${h.url})\n${h.body}`)
       .join("\n\n");
 
-    const userContent = `Excerpts from theworldofai.org:\n\n${excerpts}\n\nQuestion: ${question}\n\nAnswer using only the excerpts above.`;
+    const research = researchExcerpts.length
+      ? `\n\nPapers from the research index (NOT pages on this site, cite by name and link, never reproduce an abstract):\n\n${researchExcerpts.join("\n\n")}`
+      : "";
+    const userContent = `Excerpts from theworldofai.org:\n\n${excerpts}${research}\n\nQuestion: ${question}\n\nAnswer using only the excerpts above.`;
 
     // Direct call to the Anthropic API. No Workers AI, no gateway, no partner
     // billing: just the key. Errors carry the HTTP status and the first slice
@@ -420,6 +484,6 @@ export default {
     // attempts were writing BUILD variables, not runtime secrets. The working
     // path was `wrangler secret put ANTHROPIC_API_KEY`. Failures stay
     // queryable in answer_log.model_errors.
-    return json({ answered: true, answer, sources, model: usedModel });
+    return json({ answered: true, answer, sources, papers, model: usedModel });
   },
 };

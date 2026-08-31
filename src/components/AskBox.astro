@@ -1,0 +1,181 @@
+---
+/* THE ASK BOX, IN ONE PLACE. Stephen, 2026-08-31: everything on this website
+   and in SQL should be accessible in Ask this site a question, and /sources/
+   should have this box too. It lived inline on the home page, markup, script
+   and stylesheet all in index.astro, so a second copy on another page would
+   have been a fork that drifts the first time either is touched.
+
+   Props let a page set its own heading and example question without changing
+   anything else. The ids stay fixed because the script binds to them, so this
+   component must appear at most once on a page. */
+interface Props { heading?: string; placeholder?: string; note?: string; }
+const {
+  heading = 'Ask this site a question',
+  placeholder = 'What are the AI laws in Texas?',
+  note = '',
+} = Astro.props;
+---
+  <!-- The ask box is front and centre on Stephen's instruction, above the map.
+       It answers from this site's pages and its research index, and says so in
+       the sub-line rather than hiding it: the limitation is the reason to trust
+       the answer, and a visitor who expects a general chatbot and gets a
+       refusal has been misled by us, not failed by the tool.
+
+       Progressive enhancement: without JavaScript the box is inert and the
+       ecosystem map directly below is unaffected. Nothing on this page depends
+       on the assistant being up. -->
+  <section class="ask" id="ask">
+    <h2 class="ask-h">{heading}</h2>
+    <div class="ask-row">
+      <input id="ask-q" type="text" autocomplete="off"
+        placeholder={placeholder}
+        aria-label="Ask a question about AI, answered from this site" maxlength="500" />
+      <button id="ask-go" type="button">Ask</button>
+    </div>
+    <p class="ask-note">Answered from this site's pages and its research index of academic papers,
+      with links to every source used. When we have not covered something, it says so rather than
+      guessing.{note ? ' ' + note : ''}</p>
+    <div id="ask-out" class="ask-out" hidden></div>
+  </section>
+
+  <script is:inline>
+    (function () {
+      var q = document.getElementById('ask-q');
+      var go = document.getElementById('ask-go');
+      var out = document.getElementById('ask-out');
+      if (!q || !go || !out) return;
+      var busy = false;
+      function esc(s) {
+        return String(s).replace(/[&<>"]/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+        });
+      }
+      // The model answers in Markdown. Until now the answer was escaped and
+      // then only split on blank lines, so every "#" and "**" printed as a
+      // literal character: the reader saw "# Texas AI Law" and "**HB 149**"
+      // and the whole box read like a debug view next to the polished header
+      // search. This turns the small subset of Markdown the assistant actually
+      // uses into HTML.
+      //
+      // ORDER MATTERS AND IS THE SECURITY PROPERTY: esc() runs FIRST on the
+      // raw answer, so any angle bracket in the model output is already inert
+      // before a single tag is introduced here. Everything below then operates
+      // on escaped text and can only produce the tags it writes itself.
+      function render(md) {
+        var lines = esc(md || '').split('\n');
+        var html = '', inList = false;
+        function inline(t) {
+          return t
+            .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+            .replace(/(^|[\s(])\*([^*\n]+)\*/g, '$1<em>$2</em>')
+            .replace(/`([^`]+)`/g, '<code>$1</code>');
+        }
+        for (var i = 0; i < lines.length; i++) {
+          var line = lines[i].trim();
+          var m;
+          if (!line) { if (inList) { html += '</ul>'; inList = false; } continue; }
+          if ((m = line.match(/^(#{1,4})\s+(.*)$/))) {
+            if (inList) { html += '</ul>'; inList = false; }
+            // Headings inside an answer start at h3: the page already has an
+            // h1 and the section carries the h2.
+            var level = Math.min(m[1].length + 2, 5);
+            html += '<h' + level + '>' + inline(m[2]) + '</h' + level + '>';
+            continue;
+          }
+          if ((m = line.match(/^[-*]\s+(.*)$/))) {
+            if (!inList) { html += '<ul>'; inList = true; }
+            html += '<li>' + inline(m[1]) + '</li>';
+            continue;
+          }
+          if (inList) { html += '</ul>'; inList = false; }
+          html += '<p>' + inline(line) + '</p>';
+        }
+        if (inList) html += '</ul>';
+        return html;
+      }
+      function ask() {
+        var text = q.value.trim();
+        if (!text || busy) return;
+        busy = true;
+        go.disabled = true;
+        go.textContent = 'Reading';
+        out.hidden = false;
+        out.innerHTML = '<p class="ask-wait">Searching this site\u2026</p>';
+        // The question travels through the hero. See Hero.astro.
+        if (window.__twoaiRipple) window.__twoaiRipple();
+        fetch('/api/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: text })
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          if (d.error) { out.innerHTML = '<p class="ask-wait">' + esc(d.error) + '</p>'; return; }
+          var html = '<div class="ask-answer">' + render(d.answer) + '</div>';
+          if (d.sources && d.sources.length) {
+            html += '<p class="ask-src-label">Sources on this site</p><ul class="ask-src">';
+            for (var i = 0; i < d.sources.length; i++) {
+              html += '<li><a href="' + esc(d.sources[i].url) + '">' + esc(d.sources[i].title) + '</a></li>';
+            }
+            html += '</ul>';
+          }
+          // Papers are listed SEPARATELY and labelled as not being pages here,
+          // because an answer that mixed them silently would be claiming the
+          // site covers work it has only indexed. Links go to the DOI.
+          if (d.papers && d.papers.length) {
+            html += '<p class="ask-src-label">Research papers (not pages on this site)</p><ul class="ask-src">';
+            for (var j = 0; j < d.papers.length; j++) {
+              var pp = d.papers[j];
+              html += '<li><a href="' + esc(pp.url) + '" rel="nofollow noopener">' + esc(pp.title) + '</a>' +
+                (pp.year ? ' <span class="ask-src-meta">' + esc(pp.year) + '</span>' : '') + '</li>';
+            }
+            html += '</ul>';
+          }
+          out.innerHTML = html;
+        }).catch(function () {
+          out.innerHTML = '<p class="ask-wait">The assistant is unavailable right now.</p>';
+        }).then(function () {
+          busy = false; go.disabled = false; go.textContent = 'Ask';
+        });
+      }
+      go.addEventListener('click', ask);
+      q.addEventListener('keydown', function (e) { if (e.key === 'Enter') ask(); });
+    })();
+  </script>
+
+<style>
+  .ask { max-width: 860px; margin: 0 auto 2.6em; padding: 26px 26px 22px; text-align: center;
+    background: #fcfbf7; border: 1px solid #e3e6ee; border-radius: 12px; }
+  .ask-h { font-size: 1.25rem; margin: 0 0 14px; }
+  .ask-row { display: flex; gap: 10px; max-width: 640px; margin: 0 auto; }
+  #ask-q { flex: 1; font-family: 'Poppins', system-ui, sans-serif; font-size: 15px;
+    padding: 12px 14px; border: 1px solid #cfd4e4; border-radius: 8px; color: #201868; background: #fff; }
+  #ask-q:focus { outline: 2px solid #F07800; outline-offset: 1px; border-color: #F07800; }
+  #ask-go { font-family: 'Poppins', system-ui, sans-serif; font-size: 15px; font-weight: 600;
+    color: #fff; background: #201868; border: 0; border-radius: 8px; padding: 12px 24px; cursor: pointer; }
+  #ask-go:hover { background: #F07800; }
+  #ask-go:disabled { background: #7A8A9E; cursor: default; }
+  .ask-note { font-size: 13px; color: #7A8A9E; margin: 12px auto 0; max-width: 600px; line-height: 1.6; }
+  .ask-out { margin: 20px auto 0; max-width: 640px; text-align: left; }
+  .ask-wait { font-size: 14px; color: #7A8A9E; font-style: italic; }
+  .ask-answer p { font-size: 15px; line-height: 1.7; margin: 0 0 .8em; }
+  /* The assistant answers in Markdown and it is now rendered as such. These
+     keep a heading inside an answer subordinate to the section it sits in:
+     an h3 here is a paragraph label, not a page division. */
+  .ask-answer h3, .ask-answer h4, .ask-answer h5 {
+    font-family: var(--font-body); font-size: 15px; font-weight: 600;
+    color: var(--navy, #201868); margin: 1.2em 0 .4em; line-height: 1.4;
+  }
+  .ask-answer h3:first-child, .ask-answer h4:first-child { margin-top: 0; }
+  .ask-answer ul { margin: 0 0 .8em; padding-left: 1.2em; }
+  .ask-answer li { font-size: 15px; line-height: 1.7; margin: 0 0 .3em; }
+  .ask-answer code {
+    font-size: 13px; background: rgba(32,24,104,.06);
+    padding: .1em .35em; border-radius: 3px;
+  }
+  .ask-src-label { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: #F07800; margin: 14px 0 6px; }
+  .ask-src { list-style: none; margin: 0; padding: 0; }
+  .ask-src li { padding: 5px 0; border-bottom: 1px solid #f0f0f5; font-size: 14.5px; }
+  .ask-src a { color: #201868; text-decoration: none; font-weight: 600; }
+  .ask-src a:hover { color: #F07800; }
+  .ask-src-meta { color: #7A8A9E; font-weight: 400; font-size: 13px; }
+</style>

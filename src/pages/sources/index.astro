@@ -13,6 +13,7 @@
  * summary of a source list and not one; then our own published titles.
  */
 import Base from '../../layouts/Base.astro';
+import AskBox from '../../components/AskBox.astro';
 import OnetAttribution from '../../components/OnetAttribution.astro';
 import { readFileSync, existsSync } from 'node:fs';
 
@@ -75,6 +76,16 @@ const jsonld = JSON.stringify({
     {' '}<b>{books.length} published titles</b>. Links go directly to the issuing
     authority wherever one exists.
   </p>
+
+  {/* Stephen, 2026-08-31: /sources/ should have the ask box too, and it belongs
+      here more than anywhere. This page is the index of what the site is built
+      from; the box is the way to interrogate it. A reader looking at a list of
+      2,000 citations usually has a question, not a browsing intention. */}
+  <AskBox
+    heading="Ask a question and see which sources answer it"
+    placeholder="What are the AI laws in Texas?"
+    note="Every answer names the pages it used, and those pages cite the sources listed below."
+  />
 
   {hub.generated && <p class="meta-line">Last verified: {hub.generated}</p>}
 

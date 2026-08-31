@@ -13,7 +13,8 @@
     "@fontsource/lora": "^5.1.0",
     "@fontsource/poppins": "^5.1.0",
     "astro": "^4.16.18",
-    "pagefind": "^1.3.0"
+    "pagefind": "^1.3.0",
+    "postgres": "^3.4.9"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260819.1"
