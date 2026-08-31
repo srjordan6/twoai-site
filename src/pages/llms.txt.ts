@@ -127,13 +127,21 @@ that built the pages, in the build dated ${generated}.
 - [arXiv Research Watch](https://theworldofai.org/research/watch/): recent
   cs.AI, cs.CL, and cs.LG preprints from a rolling 30-day window, labelled as
   not yet peer reviewed.
-- [AI News](https://theworldofai.org/ai-news/): the daily briefing of how the
-  field is being covered, plus
-  [AI Vendor News](https://theworldofai.org/ai-news/vendor/), announcements
-  from the organisations building and governing AI in their own words, drawn
-  from their own feeds rather than press aggregation. Each vendor post has its
-  own page carrying the vendor's published description and a link to the
-  original.
+- [AI News](https://theworldofai.org/ai-news/): three sections. The daily
+  briefing of how the field is being covered, ranked by how many independent
+  outlets carried each story, with the hub itself carrying a digest that gives
+  the day in a couple of minutes.
+  [AI Vendor News](https://theworldofai.org/ai-news/vendor/) is what the
+  organisations building and governing AI said themselves, drawn from their
+  own feeds rather than press aggregation; a post appears under a vendor's
+  name only when it sits on that vendor's own domain, so a third-party paper
+  about a lab is never published as the lab's announcement. And
+  [When AI Goes Wrong](https://theworldofai.org/ai-news/daily/#incidents) is
+  what it cost: real-world harms from deployed AI systems catalogued by the AI
+  Incident Database, each with its own page at
+  https://theworldofai.org/ai-news/incident/{AIID incident number}/ carrying an
+  account written here from the reporting, every outlet that covered it, and
+  what the incident shows, with the publishers' links at the foot of the page.
 - [AI Prompts](https://theworldofai.org/ai-prompts/): prompting techniques and
   domain prompt guides.
 - [AI Talent Network](https://theworldofai.org/talent/): profiles of
@@ -147,7 +155,13 @@ that built the pages, in the build dated ${generated}.
   physical layer of the AI boom, quarterly capital expenditure from hyperscalers
   and colocation operators read from SEC filings, material facility 8-Ks, ${fmt(dcMetrics)}
   operations and market metrics defined, and a directory of grid queues, market
-  researchers, and standards bodies.` : ''}
+  researchers, and standards bodies. Under it sits a facility registry: a
+  directory per US state and per harvested country, and a page for every
+  facility whose operator publishes specifications, carrying the IT megawatts,
+  technical floor area and compliance certifications the operator states, with
+  the source page and the date it was read. Crowd-mapped locations come from
+  OpenStreetMap contributors under ODbL and are labelled as such; operator
+  figures are labelled as the operator's own.` : ''}
 - [Sources and References](https://theworldofai.org/sources/): the primary
   sources behind every fact on the site, across EU and Council of Europe, US
   federal, US state and city, other jurisdictions, standards bodies and SROs,
@@ -250,12 +264,14 @@ authoritative record.
 - https://theworldofai.org/disclaimer/ (editorial and legal disclaimer)
 
 ## Update cadence
-All data refreshes once daily via an automated pipeline running at 11:00 UTC;
-the "generated" or "last verified" date on each page and in each API file is
-the verification date. Benchmark results refresh from structured official
-sources on the same daily run and fail closed to the last verified snapshot
-rather than publishing an unverified number. The arXiv watch and vendor news
-sections use a rolling 30-day window.
+The main pipeline runs every three hours; the "generated" or "last verified"
+date on each page and in each API file is the verification date. A second,
+separate run at 05:10 UTC reads publishers' own pages to fill facility
+specifications and company details, and audits every page on this site for
+thin content and every internal link for dead targets. Benchmark results
+refresh from structured official sources and fail closed to the last verified
+snapshot rather than publishing an unverified number. The arXiv watch and
+vendor news sections use a rolling 30-day window.
 
 ## Editorial policy
 Every fact on this site traces to a primary source cataloged on the
