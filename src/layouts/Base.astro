@@ -477,6 +477,14 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
     }
     body { margin: 0; font-family: 'Poppins', system-ui, sans-serif; font-size: 16px;
       line-height: 1.65; color: var(--ink); background: #fff; }
+    /* Selected text is brand navy, and the letters on it are pure white.
+       Without the explicit colour the browser keeps each element's own
+       colour, so a muted grey label, the metadata and table row headers all
+       over this site, stayed grey on navy and became hard to read the moment
+       a reader dragged over it. Caught 2026-08-30 on the Today's numbers
+       panel of the daily briefing. */
+    ::selection { background: var(--navy, #201868); color: #ffffff; }
+    ::-moz-selection { background: var(--navy, #201868); color: #ffffff; }
     body.locked { overflow: hidden; }
     .wrap { max-width: 1080px; margin: 0 auto; padding: 0 22px; }
     /* Two-column grid at desktop widths: the page content in column one, the
