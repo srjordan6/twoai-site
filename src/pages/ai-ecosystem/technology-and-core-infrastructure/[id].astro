@@ -604,8 +604,6 @@ const licLine = (sec.licences || [])
         ))}
       </section>
 
-      <div class="cite-box">Cite this page: <code>"{sec.name}." The World of AI,
-        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
     </>
   )}
 
@@ -627,8 +625,6 @@ const licLine = (sec.licences || [])
             {h.verify_note && <span class="vnote"> · {h.verify_note}</span>}</p>
         </div>
       ))}
-  <div class="cite-box">Cite this page: <code>"{sec.name}." The World of AI,
-        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
     </>
   )}
 
@@ -1051,8 +1047,11 @@ const licLine = (sec.licences || [])
           ))}
         </section>
       )}
-      <div class="cite"><b>Cite this page:</b> <code>The World of AI.
-        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
+      {/* No cite block here. Every page from this template already gets the
+          standard cite-box at the foot, and the DC branch was adding a second
+          one in a different format, so a facility page carried two: a plain
+          line without the page name, then the boxed, quoted one every other
+          page on the site uses. The site-wide one is the one that stays. */}
     </>
   )}
 
@@ -1074,8 +1073,6 @@ const licLine = (sec.licences || [])
             licence: {d.licence || 'undeclared'}</p>
         </div>
       ))}
-      <div class="cite-box">Cite this page: <code>"{sec.name}." The World of AI,
-        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
     </>
   )}
 
@@ -1094,8 +1091,6 @@ const licLine = (sec.licences || [])
           <p class="meta-line"><a href={f.source} rel="noopener">Source</a></p>
         </div>
       ))}
-      <div class="cite-box">Cite this page: <code>"Dataset Licensing and Provenance." The World
-        of AI, theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
     </>
   )}
 
@@ -1119,8 +1114,6 @@ const licLine = (sec.licences || [])
             {' '}verified {c.verified}</p>
         </div>
       ))}
-      <div class="cite-box">Cite this page: <code>"MCP Clients." The World of AI,
-        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
     </>
   )}
 
@@ -1169,8 +1162,6 @@ const licLine = (sec.licences || [])
           AI Agent Security and Agent and Non-Human Identity under AI Security and Risk.</p>
       </div>
 
-      <div class="cite-box">Cite this page: <code>"{sec.name}." The World of AI,
-        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
     </>
   )}
 
@@ -1193,8 +1184,6 @@ const licLine = (sec.licences || [])
           <p class="meta-line"><a href={f.source} rel="noopener">Specification source</a></p>
         </div>
       ))}
-      <div class="cite-box">Cite this page: <code>"MCP Security and Authentication." The World of
-        AI, theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
     </>
   )}
 
@@ -1219,8 +1208,6 @@ const licLine = (sec.licences || [])
       {sec.not_tracked.map((f) => (
         <div class="dom"><h3>{f.name}</h3><p>{f.why}</p></div>
       ))}
-      <div class="cite-box">Cite this page: <code>"Model Metadata Standard." The World of AI,
-        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
     </>
   )}
 
@@ -1246,8 +1233,6 @@ const licLine = (sec.licences || [])
             {a.has_status && <> · <a href={`${BASE}/5b57e70c/`}>status tracked</a></>}</p>
         </div>
       ))}
-      <div class="cite-box">Cite this page: <code>"API Directory." The World of AI,
-        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
     </>
   )}
 
@@ -1271,8 +1256,6 @@ const licLine = (sec.licences || [])
             {l.repos && l.repos.length > 0 && <> · Tracked repos: {l.repos.join(', ')}</>}</p>
         </div>
       ))}
-      <div class="cite-box">Cite this page: <code>"Programming Languages." The World of AI,
-        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
     </>
   )}
 
@@ -1579,7 +1562,11 @@ const licLine = (sec.licences || [])
     </>
   )}
 
-  <div class="cite-box">Cite this page: <code>"{sec.name}." The World of AI,
+  {/* The one cite block on this template. Ten branch-level copies were removed
+      2026-08-31 after a facility page rendered two, in two different formats.
+      It uses pageTitle, not sec.name, because the DC children carry no name
+      and cited themselves as "." until this was caught in the same pass. */}
+  <div class="cite-box">Cite this page: <code>"{pageTitle}." The World of AI,
     theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
 </Base>
 
