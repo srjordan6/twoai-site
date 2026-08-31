@@ -26,6 +26,32 @@ const stories: Story[] = (news?.stories ?? []).map((s: any) => ({
 }));
 const top3 = stories.slice(0, 3);
 
+// WHAT HAPPENED TODAY, ON THE HUB. Stephen, 2026-08-31: there is supposed to
+// be a box that tells me in a couple of minutes what happened. The hub was
+// previewing three headlines and sending the reader elsewhere for the rest,
+// which is navigation, not a briefing.
+//
+// Every story already carries a written summary, so the digest costs nothing
+// but rendering it: the first sentence of each is the day in one line, and
+// ten of them is the day. Counts come from the data rather than a claim, and
+// when the pipeline has not run yet the box does not render at all rather
+// than showing an empty frame.
+const firstSentence = (t: string) => {
+  const clean = String(t || '').split(/\s+/).join(' ').trim();
+  const cut = clean.indexOf('. ');
+  return cut > 40 ? clean.slice(0, cut + 1) : clean.slice(0, 220);
+};
+const digest = stories.map((s: any) => ({
+  slug: s.Slug,
+  headline: s.Headline,
+  line: firstSentence(s.Summary),
+  outlets: s.DomainCount,
+  category: categoryOf(s).name,
+}));
+const articleTotal = stories.reduce((n: number, s: any) => n + (s.ArticleCount || 0), 0);
+const outletTotal = new Set(stories.flatMap((s: any) => s.Domains)).size;
+const widest = stories[0];
+
 // The AI Incident Database section has rendered on /ai-news/daily/ since it
 // shipped, and this hub never mentioned it: the hub described itself as
 // "two sections" while the section it summarises had three. Stephen looked
@@ -121,6 +147,31 @@ const jsonld = JSON.stringify({
     )}
   </div>
 
+  {digest.length > 0 && (
+    <section class="today">
+      <p class="sec-kicker">What&rsquo;s happening in AI today</p>
+      <h2>{news.date}, in a couple of minutes</h2>
+      <p class="today-lede">
+        <b>{digest.length} {digest.length === 1 ? 'story' : 'stories'}</b> today, drawn from
+        {' '}{articleTotal} articles across {outletTotal} outlets worldwide
+        {widest && <>. The most widely carried is
+          {' '}<a href={`/ai-news/${widest.Slug}/`}>{widest.Headline}</a>, reported by
+          {' '}{widest.DomainCount} independent outlets</>}. Stories rank by how many outlets
+        carried them, which measures how far a story travelled rather than how much it matters.
+      </p>
+      <ol class="today-list">
+        {digest.map((d) => (
+          <li>
+            <a href={`/ai-news/${d.slug}/`}>{d.headline}</a>
+            <span class="pmeta">{d.category} &middot; {d.outlets} {d.outlets === 1 ? 'outlet' : 'outlets'}</span>
+            {d.line && <p>{d.line}</p>}
+          </li>
+        ))}
+      </ol>
+      <a class="go" href="/ai-news/daily/">The full briefing, with every source &rarr;</a>
+    </section>
+  )}
+
   <div class="sections">
     <section class="sec">
       <p class="sec-kicker">Section one</p>
@@ -169,25 +220,37 @@ const jsonld = JSON.stringify({
         list every page ever published here.</p>
     </section>
 
+    {/* Full width, below the two. A third card inside a two-column grid
+        takes one cell and leaves the other empty, which is what shipped:
+        the harms sat in a narrow column with a blank space beside them.
+        This one spans both columns and lays its own content out
+        horizontally, so it reads as the footing under the two sections
+        rather than a third of them. A comment cannot be the first child
+        inside the parentheses of an expression, which is what broke the
+        build the first time. */}
     {incidents.length > 0 && (
-      <section class="sec">
-        <p class="sec-kicker">Section three</p>
-        <h2><a href="/ai-news/daily/#incidents">When AI Goes Wrong</a></h2>
-        <p class="sec-sub">The harms a deployed system actually caused</p>
-        <p class="sec-desc">
-          {`${incidents.length} logged harms from ${incidentOutlets} outlets, each catalogued by the AI Incident Database with its incident number.`}
-        </p>
-        <ol class="preview">
-          {top3Incidents.map((inc: any) => (
-            <li>
-              <a href={inc.url} rel="noopener nofollow" target="_blank">{inc.title}</a>
-              <span class="pmeta">{inc.domain}
-                {inc.published && <> &middot; {inc.published}</>} &middot; AIID #{inc.incident_id}</span>
-            </li>
-          ))}
-        </ol>
-        <a class="go" href="/ai-news/daily/#incidents">All logged harms &rarr;</a>
-        <p class="meta-line">Incident records from the <a href="https://incidentdatabase.ai/"
+      <section class="sec sec-wide">
+        <div class="wide-intro">
+          <p class="sec-kicker">Section three</p>
+          <h2><a href="/ai-news/daily/#incidents">When AI Goes Wrong</a></h2>
+          <p class="sec-sub">The harms a deployed system actually caused</p>
+          <p class="sec-desc">
+            {`${incidents.length} logged harms from ${incidentOutlets} outlets, each catalogued by the AI Incident Database with its incident number.`}
+          </p>
+          <a class="go" href="/ai-news/daily/#incidents">All logged harms &rarr;</a>
+        </div>
+        <div class="wide-list">
+          <ol class="preview">
+            {top3Incidents.map((inc: any) => (
+              <li>
+                <a href={inc.url} rel="noopener nofollow" target="_blank">{inc.title}</a>
+                <span class="pmeta">{inc.domain}
+                  {inc.published && <> &middot; {inc.published}</>} &middot; AIID #{inc.incident_id}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+        <p class="meta-line wide-foot">Incident records from the <a href="https://incidentdatabase.ai/"
           rel="noopener">AI Incident Database</a>, Responsible AI Collaborative, licensed
           CC BY-SA 4.0. Headlines and articles belong to the publishers linked. Listing an
           incident is not a finding of fault, it is a record that the harm was reported.</p>
@@ -214,6 +277,31 @@ const jsonld = JSON.stringify({
   @media (max-width: 860px) { .sections { grid-template-columns: 1fr; } }
 
   .sec { border: 1px solid #e6e4de; border-top: 4px solid #F07800; border-radius: 10px; background: #fafaf6; padding: 24px 26px; }
+  /* WHAT HAPPENED TODAY. The panel a reader should be able to finish in a
+     couple of minutes and know the day: the lede states the shape of the
+     coverage, then every story with its first sentence. Wider line length
+     than the section cards because this is prose, not a preview. */
+  .today { border: 1px solid #e6e4de; border-top: 4px solid #201868; border-radius: 10px;
+    background: #fff; padding: 24px 26px; margin: 0 0 24px; }
+  .today h2 { font-size: 24px; margin: 0 0 10px; color: #201868; }
+  .today-lede { font-size: 16px; line-height: 1.6; margin: 0 0 16px; }
+  .today-list { margin: 0; padding-left: 22px; }
+  .today-list li { margin: 0 0 14px; }
+  .today-list li > a { font-weight: 600; color: #201868; text-decoration: none; }
+  .today-list li > a:hover { color: #F07800; text-decoration: underline; }
+  .today-list li p { margin: 3px 0 0; font-size: 14.5px; line-height: 1.55; color: #3a3a42; }
+  .today .pmeta { display: block; font-size: 12px; color: #7A8A9E; margin-top: 2px; }
+
+  /* The harms box spans the full width under the two section cards, and
+     splits internally: the framing on the left, the three most recent on the
+     right, the licence note across the bottom. */
+  .sec-wide { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    column-gap: 34px; row-gap: 10px; align-items: start; }
+  .sec-wide .wide-intro { min-width: 0; }
+  .sec-wide .wide-list { min-width: 0; }
+  .sec-wide .wide-list .preview { margin-top: 0; }
+  .sec-wide .wide-foot { grid-column: 1 / -1; margin-top: 4px; }
+  @media (max-width: 860px) { .sec-wide { grid-template-columns: 1fr; } }
   .sec-kicker { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #F07800; margin: 0 0 6px; }
   .sec h2 { font-size: 26px; margin: 0 0 2px; }
   .sec h2 a { color: #201868; text-decoration: none; }
