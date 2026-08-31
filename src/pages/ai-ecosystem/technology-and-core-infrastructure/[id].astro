@@ -919,6 +919,15 @@ const licLine = (sec.licences || [])
           </section>
         </>
       )}
+      {sec.shape !== 'dc-facility' && sec.reading?.body && (
+        <section>
+          <h2>What does this tell us about AI?</h2>
+          {String(sec.reading.body).split(/\n\n+/).map((p) => <p>{p}</p>)}
+          <p class="meta-line">Reading written by {sec.reading.model} on {sec.reading.generated_on}
+            from the data on this page and nothing else. It regenerates only when that data
+            changes, so it never drifts from the figures above it.</p>
+        </section>
+      )}
       {dcFaqs.length > 0 && (
         <section>
           <h2>Frequently asked questions</h2>
