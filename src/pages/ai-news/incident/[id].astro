@@ -1,0 +1,124 @@
+---
+/**
+ * One page per logged harm, at /ai-news/incident/{AIID number}/.
+ *
+ * Stephen, 2026-08-31: a full page describing the report, with the link to
+ * the publisher at the very bottom, so the reader is reading our content the
+ * whole way down. The briefing used to send a reader straight out on the
+ * headline, which is the opposite of that.
+ *
+ * Everything above the sources block is ours: the summary the pipeline
+ * writes in its own words from the reporting, and the reading Sonnet writes
+ * from those facts about what the incident shows. The publishers' headlines
+ * and links sit in one block at the foot, where they credit the reporting
+ * without being the reason to leave.
+ *
+ * The AIID incident number is the slug because it is stable, public and
+ * citable: /ai-news/incident/1661/ is incident 1661 forever.
+ */
+import Base from '../../../layouts/Base.astro';
+
+export function getStaticPaths() {
+  const mods = import.meta.glob('../../../../content/news/incident-*.json', { eager: true });
+  return Object.values(mods)
+    .map((m: any) => m?.default)
+    .filter((d: any) => d && d.incident_id && d.title)
+    .map((d: any) => ({ params: { id: String(d.incident_id) }, props: { inc: d } }));
+}
+const { inc } = Astro.props;
+const reports: any[] = inc.reports ?? [];
+const paras = (t: string) => String(t || '').split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+const dates = reports.map((r) => r.published).filter(Boolean).sort();
+const first = dates[0];
+const last = dates[dates.length - 1];
+
+const desc = `${inc.title}. A logged harm from a deployed AI system, catalogued by the AI Incident Database as incident ${inc.incident_id}, reported by ${inc.outlet_count || reports.length} ${(inc.outlet_count || reports.length) === 1 ? 'outlet' : 'outlets'}. What happened, what kind of failure it was, and what is not established.`;
+
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: inc.title,
+  description: desc.slice(0, 300),
+  datePublished: inc.published || inc.generated,
+  dateModified: inc.generated,
+  url: `https://theworldofai.org/ai-news/incident/${inc.incident_id}/`,
+  isPartOf: { '@type': 'CollectionPage', name: 'AI News', url: 'https://theworldofai.org/ai-news/' },
+  citation: reports.map((r) => ({ '@type': 'CreativeWork', name: r.title, url: r.url })),
+});
+---
+<Base title={`${inc.title} — logged harm — The World of AI`} description={desc.slice(0, 300)} current="/ai-news/" jsonld={jsonld}>
+  <p class="meta-line"><a href="/ai-news/">AI News</a> ·
+    <a href="/ai-news/daily/#incidents">When AI goes wrong</a></p>
+  <h1>{inc.title}</h1>
+
+  <p class="answer">A report of real-world harm from a deployed AI system, catalogued by the
+    AI Incident Database as <b>incident {inc.incident_id}</b> and carried by
+    {' '}<b>{inc.outlet_count || reports.length}</b>
+    {(inc.outlet_count || reports.length) === 1 ? ' outlet' : ' outlets'}
+    {first && <> between {first} and {last}</>}. Listing an incident is a record that the harm
+    was reported, not a finding of fault.</p>
+  <p class="meta-line">Last verified: <time datetime={inc.generated}>{inc.generated}</time></p>
+
+  {inc.summary && (
+    <>
+      <h2>What happened</h2>
+      {paras(inc.summary).map((p) => <p>{p}</p>)}
+      <p class="meta-line">Written here from the reporting listed at the foot of this page,
+        first published by {inc.summary_domain}. We publish the facts in our own words; the
+        articles and the database's own write-ups belong to their authors.</p>
+    </>
+  )}
+
+  {inc.reading?.body && (
+    <>
+      <h2>What this incident shows</h2>
+      {paras(inc.reading.body).map((p) => <p>{p}</p>)}
+      <p class="meta-line">Reading written by {inc.reading.model} on {inc.reading.generated_on}
+        from the facts above and nothing else. It regenerates only when the reporting changes.</p>
+    </>
+  )}
+
+  <h2>How widely was it reported?</h2>
+  <p>{reports.length} {reports.length === 1 ? 'report' : 'reports'} from
+    {' '}{inc.outlet_count || reports.length}
+    {(inc.outlet_count || reports.length) === 1 ? ' outlet' : ' outlets'}
+    {first && last && first !== last
+      ? <>, the first on {first} and the most recent on {last}</>
+      : first && <> on {first}</>}. Breadth of coverage measures how far a report travelled,
+    not how serious the harm was.</p>
+
+  <h2>Where this sits in the record</h2>
+  <p>An incident is one reported event. The recurring failure modes underneath incidents are
+    catalogued in <a href="/ai-ecosystem/enterprise-applications-governance-and-tools/0ff57218/#avid">AVID,
+    the AI Vulnerability Database</a>; the adversary behaviour behind deliberate ones is in
+    {' '}<a href="/ai-ecosystem/enterprise-applications-governance-and-tools/0ff57218/#atlas">MITRE ATLAS</a>;
+    and the risk classes a builder is expected to design against are the
+    {' '}<a href="/ai-ecosystem/enterprise-applications-governance-and-tools/0ff57218/#owasp">OWASP Top 10
+    for LLM Applications</a>. Where a harm has become litigation, it appears on the
+    {' '}<a href="/ai-lawsuits/">AI lawsuit tracker</a>.</p>
+
+  <div class="cite-box">Cite this page: <code>"{inc.title}." AI Incident {inc.incident_id},
+    The World of AI, theworldofai.org/ai-news/incident/{inc.incident_id}/. Retrieved {inc.generated}.</code></div>
+
+  <h2>Sources</h2>
+  <p class="meta-line">Everything above is written here. These are the records and the
+    reporting it was written from, and they open in a new tab.</p>
+  <ul class="sources">
+    <li><a href={inc.cite_url} rel="noopener" target="_blank">AI Incident Database, incident {inc.incident_id}</a>
+      <span class="src-meta">incidentdatabase.ai · Responsible AI Collaborative · CC BY-SA 4.0</span></li>
+    {reports.map((r) => (
+      <li><a href={r.url} rel="noopener nofollow" target="_blank">{r.title}</a>
+        <span class="src-meta">{r.domain}{r.published && <> · {r.published}</>}</span></li>
+    ))}
+  </ul>
+
+  <p><a href="/ai-news/daily/#incidents">← All logged harms</a></p>
+</Base>
+
+<style>
+  .sources { list-style: none; padding: 0; margin: 1em 0 1.6em; }
+  .sources li { padding: .5em 0; border-bottom: 1px solid #ececf2; }
+  .src-meta { display: block; font-size: 12.5px; color: #7A8A9E; margin-top: 2px; }
+  .cite-box { margin: 1.6em 0; padding: .9em 1em; background: #f7f7fb; border-left: 3px solid #201868; font-size: .9rem; }
+  .cite-box code { display: block; margin-top: .3em; }
+</style>

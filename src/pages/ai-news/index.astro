@@ -247,7 +247,7 @@ const jsonld = JSON.stringify({
           <ol class="preview">
             {top3Incidents.map((inc: any) => (
               <li>
-                <a href={inc.url} rel="noopener nofollow" target="_blank">{inc.title}</a>
+                <a href={`/ai-news/incident/${inc.incident_id}/`}>{inc.title}</a>
                 <span class="pmeta">{inc.domain}
                   {inc.published && <> &middot; {inc.published}</>} &middot; AIID #{inc.incident_id}</span>
               </li>
