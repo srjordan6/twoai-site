@@ -212,32 +212,28 @@ const jsonld = JSON.stringify(clc ? {
     <>
       <h1>{secu.name}</h1>
       <p class="answer">{secu.blurb}</p>
-      <p class="meta-line">Last verified: {secu.generated} · {secu.topic_count} topics, organized
-        under the six domains of a security program. The same risk reads differently to governance,
-        the SOC, the architects, the product team, vendor risk, and privacy, so each topic appears
-        under every domain it genuinely touches.</p>
-      {secu.domains.map((d) => (
-        <section id={d.slug} class="secdom-group">
-          <h2>{d.label}</h2>
-          <p>{d.blurb}</p>
-          <ul class="sections">
-            {d.topics.map((t) => (
-              <li>
-                {t.path ? <a href={t.path}>{t.name}</a> : t.name}
-                {t.blurb && <p>{t.blurb}</p>}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
+      <p class="meta-line">Last verified: {secu.generated} · The threat picture first, MITRE
+        ATLAS, the OWASP Top 10 for LLM Applications and AVID, then {secu.topic_count} topics
+        organized under the six domains of a security program. The same risk reads differently to
+        governance, the SOC, the architects, the product team, vendor risk, and privacy, so each
+        topic appears under every domain it genuinely touches.</p>
+      {/* THREATS FIRST, THEN DEFENCES. Stephen, 2026-08-30: put ATLAS, the
+          OWASP Top 10 and AVID at the top of this hub. He is right on the
+          reading order. The six domains below are how a security PROGRAM is
+          organised, which is the answer to "where does this belong"; ATLAS,
+          OWASP and AVID are what is actually being done to AI systems, which
+          is the answer to "what am I defending against". A reader needs the
+          second question answered before the first is useful, and these three
+          are also the names an auditor or a search engine arrives looking for. */}
       {secu.atlas && (
         <section id="atlas" class="secdom-group">
           <h2>MITRE ATLAS: how AI systems are actually attacked</h2>
-          <p>Everything above is the defensive picture. ATLAS is the offensive one:
-            MITRE's ATT&amp;CK-style knowledge base of real adversary behaviour against
-            AI systems, built from documented incidents rather than theory. We track
-            its releases so this page reflects the current matrix rather than whatever
-            was true when it was written.</p>
+          <p>Start with what is actually being done to AI systems. ATLAS is MITRE's
+            ATT&amp;CK-style knowledge base of real adversary behaviour against AI,
+            built from documented incidents rather than theory, and the six defensive
+            domains further down this page are the answer to it. We track its releases
+            so this page reflects the current matrix rather than whatever was true when
+            it was written.</p>
           <p class="answer"><b>Release {secu.atlas.release}</b>, published
             {' '}{secu.atlas.release_date}: {secu.atlas.techniques} techniques across
             {' '}{secu.atlas.tactics} tactics, {secu.atlas.mitigations} mitigations, and
@@ -332,6 +328,21 @@ const jsonld = JSON.stringify(clc ? {
             theirs and stay on their site.</p>
         </section>
       )}
+
+      {secu.domains.map((d) => (
+        <section id={d.slug} class="secdom-group">
+          <h2>{d.label}</h2>
+          <p>{d.blurb}</p>
+          <ul class="sections">
+            {d.topics.map((t) => (
+              <li>
+                {t.path ? <a href={t.path}>{t.name}</a> : t.name}
+                {t.blurb && <p>{t.blurb}</p>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
 
       <div class="cite-box">Cite this page: <code>"{secu.name}." The World of AI,
         theworldofai.org{BASE}/{secu.uid}/. Retrieved {secu.generated}.</code></div>
