@@ -1,6 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
-const desc = 'Free AI ROI calculator: compare the hours a deployment saves against licence, build, and running costs, with payback period and a break-even adoption rate.';
+const desc = 'Free AI ROI calculator: work out whether an AI rollout pays for itself. Answer eight plain questions and see the hours released, the year-one net, the payback period, and the adoption rate you have to hit.';
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org', '@type': 'WebApplication',
   name: 'AI ROI Calculator', applicationCategory: 'BusinessApplication',
@@ -8,40 +8,128 @@ const jsonld = JSON.stringify({
   url: 'https://theworldofai.org/calculators/roi/',
 });
 ---
-<Base title="AI ROI Calculator: payback period and break-even adoption — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
+<Base title="AI ROI Calculator: does the rollout pay for itself? — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
+  <p class="meta-line"><a href="/calculators/">AI Calculators</a></p>
   <h1>AI ROI Calculator</h1>
-  <p class="answer">An AI deployment pays for itself when <b>hours saved times the loaded cost of
-    an hour</b> exceeds licences, build, and running costs. The number most business cases get
-    wrong is not the saving per person, it is <b>adoption</b>: a tool that saves two hours a week
-    for the 30 percent of staff who actually use it returns less than a third of what the
-    proposal claimed. This calculator makes adoption explicit and tells you the rate at which
-    the project breaks even.</p>
-  <p class="meta-line">Formula and defaults last reviewed: 2026-08-10.</p>
+
+  <p class="answer">An AI rollout pays for itself when the value of the time it saves is worth
+    more than the licences, the build, and the running costs. Answer the eight questions below
+    and you will see whether it does, how long the build takes to pay back, and the one number
+    that decides it more than any other.</p>
+  <p>You do not need to know anything about AI to use this. Every question asks for something
+    you already know about your own organisation, and each one says where to find the number if
+    you are not sure.</p>
+  <p class="meta-line">Formula and defaults last reviewed: 2026-08-31.</p>
 
   <div class="calc">
-    <label>People with a licence <input type="number" id="seats" value="100" step="10" min="1" /></label>
-    <label>Adoption, share who use it regularly (%) <input type="number" id="adopt" value="40" step="5" min="1" max="100" /></label>
-    <label>Hours saved per active user per week <input type="number" id="hours" value="2" step="0.5" min="0" /></label>
-    <label>Loaded cost per hour (USD) <input type="number" id="rate" value="75" step="5" min="0" /></label>
-    <label>Share of saved time actually redeployed (%) <input type="number" id="realise" value="60" step="5" min="0" max="100" /></label>
-    <label>Licence cost per seat per month (USD) <input type="number" id="lic" value="30" step="5" min="0" /></label>
-    <label>One-off build and rollout cost (USD) <input type="number" id="build" value="120000" step="10000" min="0" /></label>
-    <label>Annual running cost: support, governance, infrastructure (USD) <input type="number" id="run" value="60000" step="10000" min="0" /></label>
-    <div class="out" id="out" aria-live="polite"></div>
+    <div class="calc-step">
+      <h3><span class="num">1</span>Who is going to use it?</h3>
+      <p>Start with the people, not the software. Two numbers: how many are given access, and
+        how many of those genuinely use it week to week. They are rarely the same, and the gap
+        is where most business cases go wrong.</p>
+      <div class="calc-fields">
+        <div class="calc-field">
+          <label for="seats">People given access</label>
+          <input type="number" id="seats" value="100" step="10" min="1" />
+          <span class="hint">Everyone who will hold a licence, whether or not they open it.</span>
+        </div>
+        <div class="calc-field">
+          <label for="adopt">Of those, the share who use it regularly (%)</label>
+          <input type="number" id="adopt" value="40" step="5" min="1" max="100" />
+          <span class="hint">Take this from usage reports, not the rollout plan. In most
+            organisations it settles well below half.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="calc-step">
+      <h3><span class="num">2</span>How much time does it actually save them?</h3>
+      <p>Per person, per week, for the people who really use it. Be conservative: a figure you
+        can defend to a finance director is worth more than an optimistic one.</p>
+      <div class="calc-fields">
+        <div class="calc-field">
+          <label for="hours">Hours saved per active user per week</label>
+          <input type="number" id="hours" value="2" step="0.5" min="0" />
+          <span class="hint">Measured from a pilot if you have one. One to three hours is the
+            common honest range for a drafting or search tool.</span>
+        </div>
+        <div class="calc-field">
+          <label for="realise">Share of that saved time actually put to other work (%)</label>
+          <input type="number" id="realise" value="60" step="5" min="0" max="100" />
+          <span class="hint">An hour saved only counts if it is spent on something else of
+            value. If the day just gets easier, the saving is real for the person and invisible
+            in the accounts. 50 to 70 is defensible; 100 almost never is.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="calc-step">
+      <h3><span class="num">3</span>What is an hour of their time worth?</h3>
+      <p>Use the loaded cost, meaning salary plus employer taxes, benefits and overhead. It is
+        usually 1.25 to 1.4 times base pay. Your finance team will have the figure.</p>
+      <div class="calc-fields">
+        <div class="calc-field">
+          <label for="rate">Loaded cost per hour (USD)</label>
+          <input type="number" id="rate" value="75" step="5" min="0" />
+          <span class="hint">A $110,000 salary is roughly $75 an hour once loaded, across a
+            1,840-hour working year.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="calc-step">
+      <h3><span class="num">4</span>What does it cost?</h3>
+      <p>Three costs, and people usually remember only the first. The build is what you spend
+        once to get it working; the running cost is what it takes to keep it working safely.</p>
+      <div class="calc-fields">
+        <div class="calc-field">
+          <label for="lic">Licence cost per person per month (USD)</label>
+          <input type="number" id="lic" value="30" step="5" min="0" />
+          <span class="hint">The per-seat price on the vendor's quote.</span>
+        </div>
+        <div class="calc-field">
+          <label for="build">One-off build and rollout cost (USD)</label>
+          <input type="number" id="build" value="120000" step="10000" min="0" />
+          <span class="hint">Integration, data work, security review, training, change
+            management. Paid once, in year one.</span>
+        </div>
+        <div class="calc-field">
+          <label for="run">Annual running cost (USD)</label>
+          <input type="number" id="run" value="60000" step="10000" min="0" />
+          <span class="hint">Support, monitoring, governance and audit, infrastructure, and the
+            people who own it. Every year, not just the first.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="calc-answer" id="out" aria-live="polite"></div>
   </div>
 
-  <h2>Why two of these inputs decide the answer</h2>
-  <p><b>Adoption.</b> Licences bought is not people using. Measure it from actual usage
-    telemetry rather than from the rollout plan, and revisit it quarterly, because adoption
-    curves flatten far below 100 percent in most organisations.</p>
-  <p><b>Realisation.</b> An hour saved is only a return if it is spent on something valuable.
-    If the work simply absorbs the slack, the saving is real for the person and invisible on the
-    financials. Setting realisation to 100 percent is the most common way a business case
-    overstates itself; 50 to 70 percent is a defensible planning assumption unless you can point
-    to headcount you did not hire or backlog you cleared.</p>
-  <p>Not modelled here: revenue gains, quality and error-rate changes, risk and compliance cost,
-    and the cost of a failed deployment. This is a labour-saving model, which is the easiest case
-    to defend and the least complete.</p>
+  <h2>How to read the answer</h2>
+  <p><b>Time released</b> is the money value of hours the rollout gives back, after both the
+    adoption and the redeployment discounts. It is the benefit side of the case.</p>
+  <p><b>Year-one net</b> subtracts everything, including the one-off build, so it is usually
+    negative even for a good project. <b>Steady-state net</b> is the year after that, with the
+    build behind you, and it is the number that tells you whether the thing is worth running at
+    all.</p>
+  <p><b>Break-even adoption</b> is the share of your people who must use it regularly for the
+    project to wash its face. If that number is higher than adoption you have ever achieved
+    with any tool, the case does not work, however good the software is.</p>
+
+  <h2>The two inputs that decide it</h2>
+  <p><b>Adoption.</b> Licences bought is not people using. A tool that saves two hours a week
+    for the 30 percent who actually use it returns less than a third of what the proposal
+    claimed. Measure it from usage telemetry, and revisit it quarterly, because adoption curves
+    flatten far below 100 percent in most organisations.</p>
+  <p><b>Redeployment.</b> Setting it to 100 percent is the commonest way a business case
+    overstates itself. Unless you can point to headcount you did not hire or a backlog you
+    cleared, hold it between 50 and 70.</p>
+
+  <h2>What this does not tell you</h2>
+  <p>This is a labour-saving model: the easiest case to defend and the least complete. It
+    excludes revenue gains, quality and error-rate changes, risk and compliance cost, the value
+    of decisions made faster, and the cost of a deployment that fails. Those can be larger than
+    everything modelled here, in either direction.</p>
 
   <div class="cite-box">Cite this tool: <code>"AI ROI Calculator." The World of AI,
     theworldofai.org/calculators/roi/.</code></div>
@@ -51,49 +139,59 @@ const jsonld = JSON.stringify({
 
   <script is:inline>
   (function () {
-    function usd(n) { return '$' + Math.round(n).toLocaleString(); }
+    var IDS = ['seats', 'adopt', 'hours', 'rate', 'realise', 'lic', 'build', 'run'];
+    function n(id) { return parseFloat(document.getElementById(id).value) || 0; }
+    function usd(v) { return '$' + Math.round(v).toLocaleString(); }
     function calc() {
-      var seats = parseFloat(document.getElementById('seats').value) || 0;
-      var adopt = (parseFloat(document.getElementById('adopt').value) || 0) / 100;
-      var hrs = parseFloat(document.getElementById('hours').value) || 0;
-      var rate = parseFloat(document.getElementById('rate').value) || 0;
-      var real = (parseFloat(document.getElementById('realise').value) || 0) / 100;
-      var lic = parseFloat(document.getElementById('lic').value) || 0;
-      var build = parseFloat(document.getElementById('build').value) || 0;
-      var run = parseFloat(document.getElementById('run').value) || 0;
+      var seats = n('seats'), adopt = n('adopt') / 100, hrs = n('hours');
+      var rate = n('rate'), real = n('realise') / 100;
+      var lic = n('lic'), build = n('build'), run = n('run');
 
       var active = seats * adopt;
       var benefit = active * hrs * 46 * rate * real; // 46 working weeks
       var annualCost = seats * lic * 12 + run;
-      var net = benefit - annualCost;
-      var firstYear = benefit - annualCost - build;
-      var roi = (annualCost + build) > 0 ? (firstYear / (annualCost + build)) * 100 : 0;
-      var payback = net > 0 ? build / (net / 12) : 0;
-
-      // Adoption at which year-one net is zero.
+      var steady = benefit - annualCost;
+      var firstYear = steady - build;
+      var payback = steady > 0 ? build / (steady / 12) : 0;
       var perPoint = seats * 0.01 * hrs * 46 * rate * real;
-      var beAdopt = perPoint > 0 ? ((annualCost + build) / perPoint) : 0;
+      var beAdopt = perPoint > 0 ? (annualCost + build) / perPoint : 0;
 
-      var verdict = firstYear > 0
-        ? 'Positive in year one.'
-        : net > 0
-          ? 'Negative in year one, positive thereafter once the build is behind you.'
-          : 'Does not pay back at these inputs. The saving never covers the running cost.';
+      var head, verdict;
+      if (firstYear > 0) {
+        head = 'It pays for itself in the first year';
+        verdict = 'Even carrying the whole build cost, this returns <b>' + usd(firstYear) +
+          '</b> in year one. Check the adoption figure is one you have actually measured before relying on it.';
+      } else if (steady > 0) {
+        head = 'It pays back in about ' + payback.toFixed(0) + ' months';
+        verdict = 'Year one is negative because the build is paid once and up front. From then on it releases <b>' +
+          usd(steady) + '</b> a year, so the build is recovered after roughly <b>' + payback.toFixed(0) +
+          ' months</b> of running.';
+      } else {
+        head = 'It does not pay back at these numbers';
+        verdict = 'The time released is worth less than the cost of running it, so the build never comes back. ' +
+          'The usual fix is adoption, not the software: you would need <b>' +
+          (beAdopt > 100 ? 'more than every person you have' : Math.round(beAdopt) + '% regular use') +
+          '</b> to break even.';
+      }
 
       document.getElementById('out').innerHTML =
-        '<b>' + usd(benefit) + '</b> of time released a year from ' + Math.round(active) +
-        ' active users<br>' +
-        usd(annualCost) + ' annual cost, ' + usd(build) + ' one-off<br>' +
-        'Year one net: <b>' + usd(firstYear) + '</b> (' + roi.toFixed(0) + '% return)<br>' +
-        (payback > 0 && payback < 60
-          ? 'Payback on the build in about ' + payback.toFixed(1) + ' months.<br>'
-          : '') +
-        'Break-even adoption: <b>' + (beAdopt > 100 ? 'above 100%, unreachable' : beAdopt.toFixed(0) + '%') +
-        '</b><br><span class="note">' + verdict + '</span>';
+        '<p class="headline">Your answer</p>' +
+        '<p class="big">' + head + '</p>' +
+        '<div class="rows">' +
+        '<div><span>People actually using it</span><span>' + Math.round(active) + ' of ' + Math.round(seats) + '</span></div>' +
+        '<div><span>Time released, in money, per year</span><span>' + usd(benefit) + '</span></div>' +
+        '<div><span>Cost every year</span><span>' + usd(annualCost) + '</span></div>' +
+        '<div><span>Cost once, to build and roll out</span><span>' + usd(build) + '</span></div>' +
+        '<div><span>Year one, after everything</span><span>' + usd(firstYear) + '</span></div>' +
+        '<div><span>Every year after that</span><span>' + usd(steady) + '</span></div>' +
+        '<div><span>Regular use needed to break even</span><span>' +
+          (beAdopt > 100 ? 'over 100%, unreachable' : Math.round(beAdopt) + '%') + '</span></div>' +
+        '</div>' +
+        '<p class="verdict">' + verdict + '</p>';
     }
-    ['seats', 'adopt', 'hours', 'rate', 'realise', 'lic', 'build', 'run'].forEach(function (id) {
-      document.getElementById(id).addEventListener('input', calc);
-      document.getElementById(id).addEventListener('change', calc);
+    IDS.forEach(function (i) {
+      document.getElementById(i).addEventListener('input', calc);
+      document.getElementById(i).addEventListener('change', calc);
     });
     calc();
   })();

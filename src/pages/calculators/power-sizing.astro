@@ -1,6 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
-const desc = 'Free data center power sizing calculator: turn rack count and per-rack draw into IT load, facility load at your PUE, and the utility capacity to reserve, with headroom for growth.';
+const desc = 'Free data center power sizing calculator: turn a rack count into the megawatts you must reserve from the utility. Four plain questions, with the arithmetic and the assumptions explained.';
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org', '@type': 'WebApplication',
   name: 'Data Center Power Sizing Calculator', applicationCategory: 'BusinessApplication',
@@ -9,69 +9,128 @@ const jsonld = JSON.stringify({
 });
 ---
 <Base title="Data Center Power Sizing Calculator: racks to megawatts — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
+  <p class="meta-line"><a href="/calculators/">AI Calculators</a></p>
   <h1>Power Sizing Calculator</h1>
-  <p class="answer">Facility power is IT load multiplied by PUE. IT load is rack count times
-    average draw per rack, reduced by diversity because racks rarely peak together, then raised
-    by whatever headroom you want for growth. An AI hall changes the arithmetic by changing one
-    number: a general-purpose rack draws 5 to 10 kW, a dense GPU rack draws 40 to 130 kW, so the
-    same floor can need ten times the utility service.</p>
+
+  <p class="answer">How much electricity does a data hall need? Answer four questions about the
+    equipment going into it and this works out the figure that actually matters: the capacity
+    you have to reserve from the utility, which is always larger than the power the computers
+    themselves draw.</p>
+  <p>Three words are worth knowing before you start. A <b>rack</b> is one cabinet of servers. A
+    <b>kilowatt</b> (kW) is a unit of electrical draw, and a thousand of them is a
+    <b>megawatt</b> (MW). Everything below is in those units.</p>
   <p class="meta-line">Formula and defaults last reviewed: 2026-08-31.</p>
 
   <div class="calc">
-    <label>Racks <input type="number" id="racks" value="200" min="1" step="1" /></label>
-    <label>Average draw per rack (kW) <input type="number" id="perRack" value="12" min="0.1" step="0.5" /></label>
-    <label>Diversity factor (%) <input type="number" id="div" value="85" min="10" max="100" step="5" /></label>
-    <label>Growth headroom (%) <input type="number" id="growth" value="20" min="0" max="200" step="5" /></label>
-    <label>PUE <input type="number" id="pue" value="1.3" min="1" max="3" step="0.01" /></label>
-    <div class="out" id="out" aria-live="polite"></div>
+    <div class="calc-step">
+      <h3><span class="num">1</span>How much equipment is going in?</h3>
+      <p>The number of cabinets, and how much electricity each one draws. Density is the number
+        that has changed most: a hall full of ordinary servers and a hall full of AI
+        accelerators can sit on the same floor and need ten times the electricity.</p>
+      <div class="calc-fields">
+        <div class="calc-field">
+          <label for="racks">Racks</label>
+          <input type="number" id="racks" value="200" min="1" step="1" />
+          <span class="hint">Cabinets of equipment, not individual servers.</span>
+        </div>
+        <div class="calc-field">
+          <label for="perRack">Average draw per rack (kW)</label>
+          <input type="number" id="perRack" value="12" min="0.1" step="0.5" />
+          <span class="hint">General-purpose servers: 5 to 10. Dense GPU racks for AI training:
+            40 to 130. If you do not know, use the vendor's per-rack figure.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="calc-step">
+      <h3><span class="num">2</span>Will every rack pull its full draw at once?</h3>
+      <p>Usually not, and designing as if it will costs money in equipment you never use. This
+        is called the diversity factor. The exception matters: a training cluster runs one job
+        across every machine, so it really can hit peak everywhere at the same moment.</p>
+      <div class="calc-fields">
+        <div class="calc-field">
+          <label for="div">Diversity factor (%)</label>
+          <input type="number" id="div" value="85" min="10" max="100" step="5" />
+          <span class="hint">80 to 90 for mixed workloads. Use 100 for an AI training hall,
+            where the whole floor peaks together.</span>
+        </div>
+        <div class="calc-field">
+          <label for="growth">Growth headroom (%)</label>
+          <input type="number" id="growth" value="20" min="0" max="200" step="5" />
+          <span class="hint">Spare capacity for what you add later. Reserving it now is far
+            cheaper than going back to the utility for more.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="calc-step">
+      <h3><span class="num">3</span>How much extra does the building itself use?</h3>
+      <p>Cooling, power conversion and lighting all draw electricity on top of the computers.
+        PUE is the multiplier: 1.0 would mean every watt reaches a server, and 1.3 means you
+        buy 1.3 watts for every 1 watt of computing.</p>
+      <div class="calc-fields">
+        <div class="calc-field">
+          <label for="pue">PUE</label>
+          <input type="number" id="pue" value="1.3" min="1" max="3" step="0.01" />
+          <span class="hint">Modern purpose-built halls run 1.1 to 1.3. Older or converted
+            buildings run 1.5 to 2.0. Unsure? Leave it at 1.3.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="calc-answer" id="out" aria-live="polite"></div>
   </div>
 
+  <h2>How to read the answer</h2>
+  <p><b>IT load</b> is what the computers draw. <b>Facility load</b> is that plus everything the
+    building spends to keep them running, and it is the number a utility interconnection request
+    and a generator specification are sized against. Quoting the IT figure to a utility will
+    leave you short.</p>
+
   <h2>How the math works</h2>
-  <p>IT load = racks × kW per rack × diversity. Design IT load adds growth headroom on top.
-    Facility load = design IT load × PUE, and that is the figure a utility interconnection
-    request and a generator or UPS specification are sized against, not the IT number.</p>
-  <p>Diversity below 100% reflects that nameplate draw and real draw differ. Training clusters
-    are the exception worth knowing: a synchronised job can push a whole hall to near-peak at
-    once, so for AI training capacity many operators design at or near 100% diversity.</p>
+  <p>IT load = racks × kW per rack × diversity. Design load adds the growth headroom. Facility
+    load = design load × PUE.</p>
 
   <h2>What this does not tell you</h2>
-  <p>Utility service is sized in kVA, not kW, so a power factor below unity raises the service
-    above the number here. Redundancy topology matters as much as load: 2N doubles the UPS and
-    distribution you buy without changing IT load at all. And the grid, not the building, is
-    usually the constraint on when capacity can actually be energised.</p>
+  <p>Utility service is sold in kVA rather than kW, so a power factor below 1.0 pushes the
+    service above the figure here. Redundancy is a separate multiplier on equipment, not on
+    load: a 2N design buys twice the UPS and distribution without changing a single watt of IT.
+    And the binding constraint is usually not the building at all but the grid, where a
+    connection can take years regardless of what you are willing to pay.</p>
 
   <div class="cite-box">Cite this tool: <code>"Power Sizing Calculator." The World of AI,
     theworldofai.org/calculators/power-sizing/.</code></div>
 
   <script is:inline>
   (function () {
-    var ids = ['racks', 'perRack', 'div', 'growth', 'pue'];
+    var IDS = ['racks', 'perRack', 'div', 'growth', 'pue'];
     function n(i) { return parseFloat(document.getElementById(i).value) || 0; }
+    function f(v, d) { return v.toLocaleString(undefined, { maximumFractionDigits: d === undefined ? 0 : d }); }
     function calc() {
       var it = n('racks') * n('perRack') * (n('div') / 100);
       var design = it * (1 + n('growth') / 100);
       var fac = design * n('pue');
-      function f(v, d) { return v.toLocaleString(undefined, { maximumFractionDigits: d || 0 }); }
+      var overhead = fac - design;
+      var dense = n('perRack') >= 30;
       document.getElementById('out').innerHTML =
-        'IT load today: <b>' + f(it) + ' kW</b> (' + f(it / 1000, 2) + ' MW)<br>' +
-        'Design IT load with headroom: <b>' + f(design) + ' kW</b><br>' +
-        'Facility load to reserve: <b>' + f(fac) + ' kW</b> (' + f(fac / 1000, 2) + ' MW)<br>' +
-        '<span class="sub">Cooling and losses account for ' + f(fac - design) + ' kW of that.</span>';
+        '<p class="headline">Reserve this much from the utility</p>' +
+        '<p class="big">' + f(fac / 1000, 2) + ' MW <small>(' + f(fac) + ' kW)</small></p>' +
+        '<div class="rows">' +
+        '<div><span>What the computers draw today</span><span>' + f(it) + ' kW</span></div>' +
+        '<div><span>With your growth headroom</span><span>' + f(design) + ' kW</span></div>' +
+        '<div><span>Cooling, conversion and building</span><span>' + f(overhead) + ' kW</span></div>' +
+        '<div><span>Total to reserve</span><span>' + f(fac) + ' kW</span></div>' +
+        '</div>' +
+        '<p class="verdict">' + (dense
+          ? 'At ' + f(n('perRack'), 1) + ' kW a rack this is <b>a high-density hall</b>. Air cooling alone rarely works above about 30 kW per rack, so budget for liquid cooling and check the <a href="/calculators/liquid-cooling/">flow rate</a> it needs.'
+          : 'Every 0.1 you can take off PUE saves about <b>' + f(design * 0.1) + ' kW</b> of continuous draw, which is the cheapest capacity you will ever find.') +
+        '</p>';
     }
-    ids.forEach(function (i) {
+    IDS.forEach(function (i) {
       document.getElementById(i).addEventListener('input', calc);
       document.getElementById(i).addEventListener('change', calc);
     });
     calc();
   })();
   </script>
-  <style>
-    .calc { border: 1px solid #e6e4de; border-radius: 10px; padding: 18px 20px; background: #fafaf6; margin: 1.4em 0; }
-    .calc label { display: block; margin: 0 0 12px; font-size: 14px; color: #26262b; }
-    .calc input, .calc select { display: block; margin-top: 4px; padding: 7px 9px; font-size: 15px;
-      border: 1px solid #cfcdc6; border-radius: 6px; width: 220px; max-width: 100%; }
-    .out { margin-top: 14px; padding-top: 14px; border-top: 1px solid #e6e4de; font-size: 16px; line-height: 1.7; }
-    .out b { color: #201868; }
-    .sub { color: #7A8A9E; font-size: 13.5px; }
-  </style>
 </Base>

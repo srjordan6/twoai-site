@@ -659,6 +659,62 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
     .badge { display: inline-block; background: var(--cream); color: var(--navy);
       border: 1px solid var(--orange); font-size: 12.5px; font-weight: 600; padding: 2px 10px;
       border-radius: 20px; }
+    /* CALCULATORS. Stephen, 2026-08-31: the styling and formatting are
+       terrible, walk the viewer through it, assume they know nothing. The
+       old markup was a stack of bare labels, so the page read as one run-on
+       line of jargon: "People with a licence Adoption, share who use it
+       regularly (%) Hours saved per active user per week". Nothing told a
+       reader what to type or why it mattered.
+
+       The shape here is a form that teaches. Numbered steps, one question
+       each, a plain-English hint under every field saying where the number
+       comes from, and an answer panel that leads with the single figure the
+       reader came for before showing the workings. These live in the layout
+       so every calculator gets them without nineteen copies of the same CSS
+       drifting apart. */
+    .calc { border: 1px solid #e6e4de; border-radius: 12px; background: #fafaf6;
+      padding: 4px 0 0; margin: 1.6em 0; overflow: hidden; }
+    .calc-step { padding: 20px 24px; border-bottom: 1px solid #eceae4; }
+    .calc-step:last-of-type { border-bottom: none; }
+    .calc-step > h3 { margin: 0 0 4px; font-size: 15.5px; color: var(--navy);
+      font-family: 'Poppins', system-ui, sans-serif; font-weight: 700; }
+    .calc-step > h3 .num { display: inline-flex; align-items: center; justify-content: center;
+      width: 22px; height: 22px; margin-right: 9px; border-radius: 50%;
+      background: var(--navy); color: #fff; font-size: 12px; vertical-align: 1px; }
+    .calc-step > p { margin: 0 0 14px 31px; font-size: 14px; color: #55555f; line-height: 1.55; }
+    .calc-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 16px 22px; margin-left: 31px; }
+    @media (max-width: 600px) { .calc-fields, .calc-step > p { margin-left: 0; } }
+    .calc-field label { display: block; font-size: 13.5px; font-weight: 600; color: #26262b;
+      margin: 0 0 3px; }
+    .calc-field input, .calc-field select { display: block; width: 100%; padding: 9px 11px;
+      font-size: 16px; font-family: inherit; color: var(--ink); background: #fff;
+      border: 1px solid #cfcdc6; border-radius: 7px; }
+    .calc-field input:focus, .calc-field select:focus { outline: 2px solid var(--orange);
+      outline-offset: 1px; border-color: var(--orange); }
+    .calc-field .hint { display: block; margin: 5px 0 0; font-size: 12.5px; color: #7A8A9E;
+      line-height: 1.5; }
+
+    /* The answer. One number first, at a size that says it is the point of
+       the page, then the arithmetic behind it, then a sentence in plain
+       words. A reader who stops after the first line still has their answer. */
+    .calc-answer { background: var(--navy); color: #fff; padding: 22px 24px; }
+    .calc-answer .headline { color: #c9c8e0; margin: 0 0 2px;
+      text-transform: uppercase; letter-spacing: .1em; font-size: 11.5px; font-weight: 700; }
+    .calc-answer .big { font-size: 30px; line-height: 1.2; font-weight: 700; color: #fff;
+      margin: 0 0 4px; font-family: 'Lora', Georgia, serif; }
+    .calc-answer .big small { font-size: 17px; font-weight: 400; color: #c9c8e0; }
+    .calc-answer .rows { margin: 14px 0 0; border-top: 1px solid rgba(255,255,255,.22); }
+    .calc-answer .rows div { display: flex; justify-content: space-between; gap: 18px;
+      padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,.12); font-size: 14.5px; }
+    .calc-answer .rows div:last-child { border-bottom: none; }
+    .calc-answer .rows span:first-child { color: #c9c8e0; }
+    .calc-answer .rows span:last-child { font-weight: 600; text-align: right; }
+    .calc-answer .verdict { margin: 14px 0 0; padding: 11px 13px; border-radius: 7px;
+      background: rgba(255,255,255,.1); font-size: 14.5px; line-height: 1.6; }
+    .calc-answer .verdict b { color: var(--orange); }
+    .calc-answer a { color: #fff; }
+
     .cite-box { border: 1px dashed var(--gray); padding: 14px 18px; margin: 30px 0 0;
       font-size: 13.5px; color: var(--gray); }
     .cite-box code { color: var(--ink); font-size: 13px; }
