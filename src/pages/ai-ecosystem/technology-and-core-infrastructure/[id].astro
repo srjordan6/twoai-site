@@ -89,7 +89,11 @@ const secName = sec.name || sec.state || 'AI infrastructure';
 
 // The publisher of a facility page: the operator when OSM tagged one, else
 // the host the specifications were read from, which is a fact we hold.
-const facPublisher = sec.operator || sec.profile?.source?.publisher || '';
+// WHO PUBLISHED THE FACTS, which is not always the operator. The source
+// publisher is asked first and the operator is only the fallback, because a
+// facility recorded from a state announcement and a county compliance
+// release must not be described as the operator's own spec sheet.
+const facPublisher = sec.profile?.source?.publisher || sec.operator || '';
 
 // The lead sentence is assembled here rather than in the markup. Astro
 // inserts whitespace between expressions written on separate lines, which
@@ -102,11 +106,32 @@ const facLead = sec.mw
   : facSqft > 0
     ? `${facSqft.toLocaleString()} sq ft of technical space`
     : sec.name;
+// A facility read from a government record is not the operator speaking. The
+// Atlas Power page is built from the North Dakota governor's announcement and
+// Williams County's own compliance release, and saying "published by Atlas
+// Power on its own facility page" would put words in the operator's mouth.
+// The sentence follows the source: same-party when the publisher IS the
+// operator, third-party when it is not.
+const facSelfPublished = !!sec.operator && !!facPublisher
+  && facPublisher.toLowerCase().startsWith(sec.operator.toLowerCase().split(' ')[0].toLowerCase());
+const facLede = sec.profile?.planned_phases?.length && !sec.mw
+  ? `${sec.name} is an announced build in ${sec.city || sec.state}`
+  : facLead;
 const facRest = [
   sec.mw && facSqft > 0 ? ` across ${facSqft.toLocaleString()} sq ft of technical space` : '',
   sec.profile?.campus ? `, campus ${sec.profile.campus}` : '',
-  facPublisher ? `, published by ${facPublisher} on its own facility page` : '',
+  facPublisher
+    ? (facSelfPublished
+        ? `, published by ${facPublisher} on its own facility page`
+        : `, recorded here from ${facPublisher}`)
+    : '',
 ].join('') + '.';
+// What the reader should trust the numbers as. An operator spec sheet and a
+// county compliance release are different kinds of fact and must not be
+// described with the same sentence.
+const facBasis = facSelfPublished
+  ? "Every figure here is the operator's stated specification"
+  : 'Every figure here comes from the public records named at the foot of this page';
 
 // The dc children carry no `name` field, and sec.name straight into the
 // <title> is what published "undefined — The World of AI" on every one of
@@ -652,15 +677,14 @@ const licLine = (sec.licences || [])
               every unattributed facility. The publisher recorded with the
               source is the fallback, and where even that is absent the clause
               is dropped rather than left hanging. */}
-          <p class="answer"><b>{facLead}</b><Fragment set:html={facRest} /> Every figure here is
-            the operator's stated specification, read on
+          <p class="answer"><b>{facLede}</b><Fragment set:html={facRest} /> {facBasis}, read on
             {' '}{sec.profile?.source?.retrieved || sec.generated}.</p>
           <p class="meta-line">Last verified: {sec.generated}
             {sec.operator && <> · Operator: {sec.operator}</>} ·
             {sec.state_page?.uid && <> Directory:
             {' '}<a href={`${BASE}/${sec.state_page.uid}/`}>data centers in {sec.state || sec.country}</a> ·</>}
-            {' '}Source: <a href={sec.profile?.source?.page || sec.website} rel="noopener">
-            {facPublisher || 'operator'} facility page</a>.</p>
+            {' '}Source: <a href={sec.profile?.source?.page || sec.website} rel="noopener" target="_blank">
+            {facPublisher || 'operator'}</a>.</p>
 
           {Array.isArray(sec.profile?.address) && sec.profile.address.length > 0 && (
             <section>
@@ -671,6 +695,59 @@ const licLine = (sec.licences || [])
             </section>
           )}
 
+          {(sec.profile?.developer || sec.profile?.power_supplier || sec.profile?.investment_usd
+            || sec.profile?.site_acres || sec.profile?.workload) && (
+            <section>
+              <h2>The project</h2>
+              <table>
+                <tbody>
+                  {sec.profile.workload && <tr><td>What it runs</td><td>{sec.profile.workload}</td></tr>}
+                  {sec.profile.developer && <tr><td>Built by</td><td>{sec.profile.developer}</td></tr>}
+                  {sec.profile.site_acres && <tr><td>Site</td><td>{sec.profile.site_acres} acres</td></tr>}
+                  {sec.profile.power_supplier && <tr><td>Power supplied by</td><td>{sec.profile.power_supplier}</td></tr>}
+                  {sec.profile.investment_usd && (
+                    <tr><td>Announced investment</td>
+                      <td class="num">${(Number(sec.profile.investment_usd) / 1e9).toFixed(1)}B</td></tr>
+                  )}
+                  {sec.profile.announced && <tr><td>Announced</td><td>{sec.profile.announced}</td></tr>}
+                  {sec.profile.jobs?.construction && <tr><td>Construction jobs</td><td>{sec.profile.jobs.construction}</td></tr>}
+                  {sec.profile.jobs?.permanent && <tr><td>Permanent jobs</td><td>{sec.profile.jobs.permanent}</td></tr>}
+                </tbody>
+              </table>
+            </section>
+          )}
+
+          {Array.isArray(sec.profile?.planned_phases) && sec.profile.planned_phases.length > 0 && (
+            <section>
+              <h2>What is planned, and what is built</h2>
+              <div class="tbl-scroll"><table>
+                <thead><tr><th>Phase</th><th class="num">Electrical capacity</th><th>What it comprises</th></tr></thead>
+                <tbody>
+                  {sec.profile.planned_phases.map((ph) => (
+                    <tr><td>{ph.phase}</td><td class="num">{ph.mw} MW</td><td>{ph.detail}</td></tr>
+                  ))}
+                </tbody>
+              </table></div>
+              {sec.profile.capacity_note && <p class="vnote">{sec.profile.capacity_note}</p>}
+            </section>
+          )}
+
+          {Array.isArray(sec.profile?.compliance_history) && sec.profile.compliance_history.length > 0 && (
+            <section>
+              <h2>The regulatory and community record</h2>
+              <p>What the county itself has published about this site, in order. A compliance
+                dispute is part of what a data center costs the place it sits in, and this
+                registry records it from the county's own releases rather than from coverage
+                of them.</p>
+              <ol class="events">
+                {sec.profile.compliance_history.map((e) => (
+                  <li><b>{e.date}</b> — {e.event}</li>
+                ))}
+              </ol>
+            </section>
+          )}
+
+          {(sec.mw > 0 || facSqft > 0 || sec.profile?.facility_codes?.length > 0) && (
           <section>
             <h2>Published specifications</h2>
             <table>
@@ -689,6 +766,7 @@ const licLine = (sec.licences || [])
               </tbody>
             </table>
           </section>
+          )}
 
           {Array.isArray(sec.profile?.certifications) && sec.profile.certifications.length > 0 && (
             <section>
@@ -705,6 +783,18 @@ const licLine = (sec.licences || [])
                 the published specifications above and this site's own state registry, nothing else.
                 Rack and accelerator figures are arithmetic on a stated assumption, not the operator's
                 claim. It regenerates only when the operator's published facts change.</p>
+            </section>
+          )}
+
+          {Array.isArray(sec.profile?.sources) && sec.profile.sources.length > 0 && (
+            <section>
+              <h2>Sources</h2>
+              <ul class="sources">
+                {sec.profile.sources.map((sr) => (
+                  <li><a href={sr.url} rel="noopener" target="_blank">{sr.title}</a>
+                    <span class="src-meta">{sr.publisher}{sr.published && <> · {sr.published}</>}</span></li>
+                ))}
+              </ul>
             </section>
           )}
 
@@ -1528,6 +1618,11 @@ const licLine = (sec.licences || [])
   /* A verified date that has stopped moving needs to say why. Italic and grey
      so it reads as a footnote on the claim rather than a warning about it. */
   .vnote { font-style: italic; color: #7A8A9E; }
+  .events { margin: .6em 0; padding-left: 20px; }
+  .events li { margin: 0 0 .6em; }
+  .sources { list-style: none; padding: 0; margin: .6em 0; }
+  .sources li { padding: .45em 0; border-bottom: 1px solid #ececf2; }
+  .src-meta { display: block; font-size: 12.5px; color: #7A8A9E; margin-top: 2px; }
   .faq h3 { margin: 1.1em 0 .3em; font-size: 1.05rem; }
   .faq p { margin: 0 0 .6em; }
   .vc-block { margin: 2em 0 0; max-width: 760px; }
