@@ -255,13 +255,49 @@ export default {
         const sql = postgres(env.AUDIT_DB.connectionString, {
           max: 1, fetch_types: false, idle_timeout: 10,
         });
-        const rows = await sql`
-          SELECT title, pub_year, cited_by, doi, oa_url, abstract
-          FROM twoai_works
-          WHERE to_tsvector('english', coalesce(title,'') || ' ' || coalesce(abstract,''))
-                @@ websearch_to_tsquery('english', ${question})
-          ORDER BY cited_by DESC NULLS LAST
-          LIMIT 5`;
+        // THE QUESTION IS NOT THE QUERY. websearch_to_tsquery ANDs every word
+        // it is given, so "What does academic research say about symbolic
+        // chain of thought for faithful logical reasoning?" demanded that an
+        // abstract contain "academic", "say" and "research" as well as the
+        // real terms, and matched nothing. Measured against the corpus: that
+        // sentence returns 0 rows, the same question stripped to its content
+        // words returns the paper it was asking for. The box was refusing
+        // questions while holding their answers, and the prompt got blamed
+        // for it first.
+        //
+        // So the question is reduced to content words before it becomes a
+        // query, and an OR pass with relevance ranking runs when the AND pass
+        // finds nothing, because a long question should degrade to its best
+        // matches rather than to silence.
+        const STOP = new Set(("a an the what which who whom whose when where why how is are was were be been being do does did " +
+          "of for to in on at by with from about into over after before between and or but if then than that this these those " +
+          "say says said tell explain describe show give me my our your it its as can could should would will may might " +
+          "research paper papers study studies academic literature evidence any some there their his her they we you i").split(" "));
+        const terms = question.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").split(/\s+/)
+          .filter((w) => w.length > 2 && !STOP.has(w)).slice(0, 12);
+        const andQuery = terms.join(" ");
+        const orQuery = terms.join(" | ");
+        let rows: any[] = [];
+        if (terms.length) {
+          rows = await sql`
+            SELECT title, pub_year, cited_by, doi, oa_url, abstract
+            FROM twoai_works
+            WHERE to_tsvector('english', coalesce(title,'') || ' ' || coalesce(abstract,''))
+                  @@ websearch_to_tsquery('english', ${andQuery})
+            ORDER BY cited_by DESC NULLS LAST
+            LIMIT 5`;
+          if (!rows.length && terms.length > 2) {
+            rows = await sql`
+              SELECT title, pub_year, cited_by, doi, oa_url, abstract,
+                     ts_rank_cd(to_tsvector('english', coalesce(title,'') || ' ' || coalesce(abstract,'')),
+                                to_tsquery('english', ${orQuery})) AS rank
+              FROM twoai_works
+              WHERE to_tsvector('english', coalesce(title,'') || ' ' || coalesce(abstract,''))
+                    @@ to_tsquery('english', ${orQuery})
+              ORDER BY rank DESC, cited_by DESC NULLS LAST
+              LIMIT 5`;
+          }
+        }
         for (const r of rows as any[]) {
           const link = r.doi ? 'https://doi.org/' + String(r.doi) : String(r.oa_url ?? '');
           if (!link) continue;
