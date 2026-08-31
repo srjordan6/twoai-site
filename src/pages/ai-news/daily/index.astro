@@ -272,10 +272,12 @@ const jsonld = JSON.stringify({
             system, catalogued by the <a href="https://incidentdatabase.ai/"
             rel="noopener">AI Incident Database</a>, with the incident number and a
             link to the outlet that reported it. We publish the facts and the links,
-            never the database's own write-ups or the publishers' text.</p>
+            never the database's own write-ups or the publishers' text.
+            An incident is one reported event; the recurring failure modes underneath them are
+            catalogued in <a href="/ai-ecosystem/enterprise-applications-governance-and-tools/0ff57218/#avid">AVID, the AI Vulnerability Database</a>.</p>
           {incidents.map((inc) => (
             <article class="incident">
-              <h3><a href={inc.url} rel="noopener nofollow">{inc.title}</a></h3>
+              <h3><a href={inc.url} rel="noopener nofollow" target="_blank">{inc.title}</a></h3>
               <p class="inc-meta">{inc.domain}
                 {inc.published && <> &middot; {inc.published}</>} &middot;
                 {' '}<a href={inc.cite_url} rel="noopener">AIID incident #{inc.incident_id}</a>
@@ -285,7 +287,7 @@ const jsonld = JSON.stringify({
                 <>
                   {String(inc.summary).split(/\n\n+/).map((p) => <p>{p}</p>)}
                   <p class="inc-meta">Summarized from reporting first published by
-                    {' '}{inc.summary_domain}. <a href={inc.summary_url} rel="noopener nofollow">Read
+                    {' '}{inc.summary_domain}. <a href={inc.summary_url} rel="noopener nofollow" target="_blank">Read
                     the original coverage.</a></p>
                 </>
               )}
@@ -294,7 +296,7 @@ const jsonld = JSON.stringify({
                   <summary>Every outlet that reported it ({inc.reports.length})</summary>
                   <ul>
                     {inc.reports.map((r) => (
-                      <li><a href={r.url} rel="noopener nofollow">{r.title}</a>
+                      <li><a href={r.url} rel="noopener nofollow" target="_blank">{r.title}</a>
                         <span class="inc-meta">{r.domain}{r.published && <> &middot; {r.published}</>}</span></li>
                     ))}
                   </ul>
