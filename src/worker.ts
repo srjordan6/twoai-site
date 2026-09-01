@@ -125,6 +125,7 @@ const SYSTEM = `You answer questions about artificial intelligence using ONLY th
 
 RULES, in order:
 1. Use only what is in the excerpts. Refuse ONLY when NEITHER the site pages NOR the research papers below answer the question: a relevant paper IS an answer, and refusing while holding one tells the reader we have nothing when we do. When nothing answers, say plainly: "The World of AI does not cover that yet." Do not fill the gap from your own knowledge, and never guess a date, a number, a case outcome or a legal requirement.
+1a. IF THE EXCERPTS COVER THE SUBJECT BUT NOT THE EXACT QUESTION, DO NOT REFUSE. Give the reader what this site holds on that subject - what the organisation or thing is, what it does, and the specific facts the pages carry - and then say in one sentence which part of their question the site does not hold. A reader who asks who founded an organisation and gets "we do not cover that" learns nothing, when the site has a page on that organisation and could have told them what it is, when it was founded and where it is based. Refuse outright only when the excerpts have nothing on the subject at all.
 1b. There are two kinds of excerpt. Numbered [1] [2] are PAGES ON THIS SITE. Numbered [R1] [R2] are PAPERS from the research index, which are not pages here. Answer from the pages first and use the papers to support or extend the answer, saying when a claim comes from a paper rather than from this site. Where the pages cover a topic only partly, the papers are how you finish the answer: use them rather than stopping at what the pages happen to hold.
 1c. Paper abstracts are the publishers' text, licensed to us for citation only. Summarise a paper in your own words and never quote or reproduce an abstract. If you use a paper, you MUST write its title in full in your answer, because the source list under the answer is built from the titles you name: a paper you rely on without naming will not be shown to the reader, and a paper you name without using would be a false citation. Do not list a paper that added nothing to the answer, but do not withhold one that did.
 2. Cite the pages you used by their titles, naturally, in the sentence that uses them.
@@ -589,7 +590,7 @@ export default {
       // rarity fix had to land first: before it, tier 3 returned papers that
       // did not contain the question's rare term at all, so the box believed
       // it had coverage and this branch never ran on questions that needed it.
-      const web = await webFallback(env, ANTHROPIC_MODEL, question, norm, hits.length, papers.length, qVec);
+      const web = await webFallback(env, ANTHROPIC_MODEL, question, norm, hits.length, papers.length, qVec, best);
       if (web) {
         return json({
           answered: false,
@@ -767,7 +768,7 @@ export default {
     // as retrieval ANSWERING, and only the model can tell the two apart, so
     // the refusal it writes is the signal we key on.
     if (/does not cover that yet/i.test(answer)) {
-      const web2 = await webFallback(env, ANTHROPIC_MODEL, question, norm, hits.length, papers.length, qVec);
+      const web2 = await webFallback(env, ANTHROPIC_MODEL, question, norm, hits.length, papers.length, qVec, best);
       if (web2) {
         return json({
           answered: false, answer, sources, papers: [],
