@@ -25,6 +25,10 @@
 import { readFileSync, existsSync } from 'node:fs';
 
 const LIVE_INDEX = 'https://theworldofai.org/sitemap-index.xml';
+// The unlisted layer: pages that serve 200 and are linked but are kept out of
+// the sitemap. The site publishes this set itself, so the guard can protect it
+// without any new plumbing.
+const LIVE_UNLISTED = 'https://theworldofai.org/unlisted-urls.json';
 const MIN_LIVE = 500;
 
 function pathsFromSitemapXML(xml) {
@@ -48,6 +52,27 @@ async function fetchLivePaths() {
     paths.push(...pathsFromSitemapXML(await (await fetch(s)).text()));
   }
   return paths;
+}
+
+// THE WHOLE SITE, NOT JUST THE ADVERTISED PART. Until 2026-09-01 this guard
+// compared sitemaps, which protected the 2,101 URLs Google is invited to and
+// left the 7,500-odd unlisted pages with no deploy-time protection at all.
+// That is how 43 vendor-news posts published on 2026-08-11 went to 404 on
+// 2026-08-30 with nothing standing in the way: a gate that deletes rows ran,
+// the next build simply had fewer pages, and the guard could not see the
+// difference because none of them had ever been in a sitemap. Stephen's rule
+// is that a published page is never removed, sitemap or not - it may be
+// changed or retired, but it serves forever - so the guard now reads the
+// unlisted set the site already publishes and holds every URL to the same
+// standard. Failure to fetch the unlisted list falls back to sitemap-only
+// with a loud warning rather than blocking every deploy.
+async function fetchLiveUnlistedPaths() {
+  const j = await (await fetch(LIVE_UNLISTED)).json();
+  const out = [];
+  for (const u of j?.urls ?? []) {
+    try { out.push(new URL(u).pathname); } catch { /* skip malformed */ }
+  }
+  return out;
 }
 
 function localPaths() {
@@ -102,6 +127,14 @@ if (live.length < MIN_LIVE) {
   process.exit(0);
 }
 
+let liveUnlisted = [];
+try {
+  liveUnlisted = await fetchLiveUnlistedPaths();
+  console.log(`url-guard: guarding ${live.length} sitemap + ${liveUnlisted.length} unlisted live URLs`);
+} catch (e) {
+  console.error(`url-guard: WARNING could not fetch ${LIVE_UNLISTED} (${e.message}); guarding the sitemap layer only this run. Unlisted pages are unprotected until this is fixed.`);
+}
+
 const next = new Set(localPaths());
 const isRedirected = redirectCovered();
 const isRetired = retired();
@@ -133,10 +166,14 @@ if (delisted.length) {
 }
 
 const dropped = live.filter((p) => !next.has(p) && !isRedirected(p) && !isRetired.has(p) && !stillServed(p) && !isTransient(p));
-const uniq = [...new Set(dropped)].sort();
+// Unlisted pages are judged purely on whether they still build: they were
+// never in a sitemap, so "left the sitemap" is meaningless for them, and the
+// only question is whether the file still exists in dist.
+const unlistedDropped = liveUnlisted.filter((p) => !isRedirected(p) && !isRetired.has(p) && !stillServed(p) && !isTransient(p));
+const uniq = [...new Set([...dropped, ...unlistedDropped])].sort();
 
 if (uniq.length === 0) {
-  console.log(`url-guard: ok. live=${live.length} next=${next.size} dropped=0`);
+  console.log(`url-guard: ok. live=${live.length} unlisted=${liveUnlisted.length} next=${next.size} dropped=0`);
   process.exit(0);
 }
 
