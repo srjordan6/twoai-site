@@ -70,14 +70,14 @@
 # Already-flat governance paths, which map one to one.
 /ai-governance/   /ai-compliance/          301
 /ai-governance    /ai-compliance/          301
-/ai-governance/*  /ai-compliance/:splat    301
+# (moved to the bottom of this file, see SPLAT RULES below)
 
 # Prompt pages ship at /ai-prompts/, matching the /ai-* convention the rest of
 # the site uses. /prompts/ was never published but is the obvious guess, and a
 # guessed URL that resolves costs nothing.
 /prompts/   /ai-prompts/        301
 /prompts    /ai-prompts/        301
-/prompts/*  /ai-prompts/:splat  301
+# (moved to the bottom of this file, see SPLAT RULES below)
 
 # Tim O'Reilly published under two entity identifiers for a week, because an
 # earlier naming rule dropped the apostrophe where the entity normalizer turns
@@ -173,9 +173,9 @@
 # here because no catch-all precedes them (the /ai-governance/ history above
 # was an ordering problem, not a splat problem).
 /books/  https://srjconsultingservices.com/books/  301
-/books/*  https://srjconsultingservices.com/books/:splat  301
+# (moved to the bottom of this file, see SPLAT RULES below)
 /services/  https://srjconsultingservices.com/services/  301
-/services/*  https://srjconsultingservices.com/services/:splat  301
+# (moved to the bottom of this file, see SPLAT RULES below)
 
 # ACCIDENTAL CATEGORY-ROUTE DUPLICATES, 2026-08-17. concept-taxonomy.json and
 # knowledge-graph.json live in content/ecosystem/ for the uid-addressed pages
@@ -430,3 +430,23 @@
 /ai-ecosystem/ecosystem-entities-market-and-operations/077f6f45/  /ai-ecosystem/ecosystem-entities-market-and-operations/07ae7a34/#077f6f45  301
 # Vern Childers -> Technology Leaders
 /ai-ecosystem/ecosystem-entities-market-and-operations/4aebcddd/  /ai-ecosystem/ecosystem-entities-market-and-operations/07ae7a34/#4aebcddd  301
+
+# ---------------------------------------------------------------------------
+# SPLAT RULES. These four must stay last.
+#
+# Cloudflare splits a _redirects file into two lists with separate caps: 2,000
+# static rules and 100 dynamic rules. The split is positional, not per rule.
+# Every rule from the first splat or placeholder onward is counted as dynamic,
+# so that first-match ordering is preserved. On 2026-09-01 the splat at what
+# was line 73 turned all 138 rules below it into dynamic rules and the deploy
+# was rejected at the 101st with code 100324, after the build had passed.
+#
+# Keeping the splats at the very bottom leaves four dynamic rules and puts
+# everything else in the static list. Nothing above matches these prefixes,
+# so moving them down changes no redirect: a splat only ever fires for a path
+# no earlier rule claimed.
+# ---------------------------------------------------------------------------
+/ai-governance/*  /ai-compliance/:splat    301
+/prompts/*  /ai-prompts/:splat  301
+/books/*  https://srjconsultingservices.com/books/:splat  301
+/services/*  https://srjconsultingservices.com/services/:splat  301
