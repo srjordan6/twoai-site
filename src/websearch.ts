@@ -43,6 +43,60 @@ export type WebAnswer = {
   fetchedAt?: string;
 };
 
+// THE SWITCH. Stephen, 2026-09-01: "if we have say so if we dont we dont -
+// just no internet search". Off. The box answers from this site's pages and
+// its research index, and when it holds nothing it says so - which is what it
+// did before today and what the promise line under the box still says.
+//
+// Everything below is left intact and one boolean away from returning, because
+// the recording half is worth keeping regardless: with this false, an
+// unanswered question STILL writes its row to twoai_web_answers with its
+// embedding, its retrieval scores and its ask count. The gap report keeps
+// filling. It simply never spends and never shows the reader an open-web
+// block. Flip to true to restore the fallback.
+const WEB_SEARCH_ENABLED = false;
+
+// VOCABULARY GATE. Stephen's request: only spend a search when the question
+// is actually about something this site covers, using the published glossary
+// as the vocabulary. Terms are stored as "Artificial Intelligence (AI)", so
+// both halves count - the base term and the parenthesised acronym - which is
+// why a naive substring match against the raw term found nothing on any of the
+// five live test questions and this one matched all five.
+//
+// A WHITELIST BLOCKS THE THING YOU MOST WANT TO FIND. The questions worth
+// researching are disproportionately the ones using vocabulary the site has no
+// term for yet - a technique named last month is exactly the gap this table
+// exists to surface. So the gate NEVER runs before the row is written: an
+// off-vocabulary question still records its ask, still counts toward
+// times_asked, and still appears in the gap report. It just does not spend.
+const VOCAB_SQL = `
+  WITH t AS (
+    SELECT btrim(regexp_replace(term, '\\s*\\([^)]*\\)', '', 'g')) AS base,
+           substring(term from '\\(([^)]+)\\)') AS acro
+      FROM synced_glossary_terms)
+  SELECT 1 FROM t
+   WHERE (length(t.base) > 3 AND $1 ~* ('\\m' || t.base || '\\M'))
+      OR (t.acro IS NOT NULL AND length(t.acro) > 1 AND $1 ~* ('\\m' || t.acro || '\\M'))
+   LIMIT 1`;
+
+// SEARCH GATES. Not every unanswered question is a gap worth paying for.
+//
+// SHAPE: fewer than three words is not a question, it is a keyword. "ai",
+// "test", "hello" and mashed input all get the ordinary not-covered answer
+// with no search behind it.
+//
+// RELEVANCE: the Vectorize score of the best-matching page is a free measure
+// of whether a question is even in this site's neighbourhood. An AI reference
+// site being asked the population of Reykjavik has no gap to research - it has
+// a visitor on the wrong website. But I do NOT yet know where that floor
+// belongs: the only measurement in hand is 0.52 for a question that WAS worth
+// searching, and I set the cache similarity floor from intuition earlier today
+// and had it contradicted by the first measurement. So the score is RECORDED
+// on every row now and the floor stays at zero until a week of real questions
+// says where the separation is. Instrument first, then gate.
+const MIN_QUESTION_WORDS = 3;
+const RELEVANCE_FLOOR = 0;
+
 // How close two questions must be, by embedding cosine similarity, to count
 // as the same question for cache purposes. Exact-string matching was wrong and
 // a live test proved it: "how did einsteins theory of realtivity influence ai"
@@ -79,8 +133,17 @@ export async function webFallback(
   norm: string,
   siteHits: number,
   paperHits: number,
-  qVec?: number[]
+  qVec?: number[],
+  bestScore?: number
 ): Promise<WebAnswer | null> {
+  if (question.trim().split(/\s+/).length < MIN_QUESTION_WORDS) {
+    lastWebError = "gate: fewer than " + MIN_QUESTION_WORDS + " words";
+    return null;
+  }
+  if (RELEVANCE_FLOOR > 0 && (bestScore ?? 0) < RELEVANCE_FLOOR) {
+    lastWebError = "gate: best score " + (bestScore ?? 0).toFixed(3) + " below floor";
+    return null;
+  }
   if (!env.ANTHROPIC_API_KEY || !env.AUDIT_DB) {
     lastWebError = !env.ANTHROPIC_API_KEY ? "no ANTHROPIC_API_KEY" : "no AUDIT_DB";
     return null;
@@ -114,14 +177,38 @@ export async function webFallback(
            WHERE question_norm = ${norm} AND superseded_at IS NULL`;
 
     await sql`
-      INSERT INTO twoai_web_answers (question_norm, question_raw, site_hit_count, paper_hit_count, q_vec)
-      VALUES (${norm}, ${question}, ${siteHits}, ${paperHits}, ${vecLit}::vector)
+      INSERT INTO twoai_web_answers (question_norm, question_raw, site_hit_count, paper_hit_count, q_vec, best_score)
+      VALUES (${norm}, ${question}, ${siteHits}, ${paperHits}, ${vecLit}::vector, ${bestScore ?? null})
       ON CONFLICT (question_norm) DO UPDATE
         SET times_asked = twoai_web_answers.times_asked + 1,
             last_asked_at = now(),
             site_hit_count = ${siteHits},
             paper_hit_count = ${paperHits},
+            best_score = ${bestScore ?? null},
             q_vec = COALESCE(twoai_web_answers.q_vec, ${vecLit}::vector)`;
+
+    // SEARCH DISABLED. The row above is already written, so the gap is
+    // recorded and rankable; we simply stop before spending. Returning null
+    // gives the reader the ordinary not-covered answer.
+    if (!WEB_SEARCH_ENABLED) {
+      lastWebError = "web search disabled";
+      return null;
+    }
+
+    // VOCABULARY CHECK, deliberately AFTER the row above so the demand signal
+    // survives a question the gate declines to spend on.
+    try {
+      const vocab: any[] = await sql.unsafe(VOCAB_SQL, [question]);
+      if (!vocab.length) {
+        lastWebError = "gate: no glossary vocabulary in question";
+        return null;
+      }
+    } catch (e: any) {
+      // A gate that cannot run must not block the feature; it fails OPEN,
+      // unlike the budget counter, because the daily cap is the real ceiling
+      // and this is only a relevance filter.
+      lastWebError = "vocab gate error (ignored): " + String(e?.message ?? e).slice(0, 120);
+    }
 
     const hit = prior.length && prior[0].results && prior[0].results.text
       && Number(prior[0].sim) >= CACHE_SIM_FLOOR;
