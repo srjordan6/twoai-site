@@ -753,6 +753,26 @@ export default {
     };
     const citedPapers = papers.filter((pp) => namedInAnswer(pp.title));
 
+    // THE SECOND REFUSAL PATH. Measured live 2026-09-01: the Einstein question
+    // retrieved seven site pages and a quantum computing paper, so the
+    // retrieval-empty branch above never ran - and then the MODEL refused,
+    // correctly, because none of it answers the question. That is still a gap,
+    // and a reader who is told "we do not cover that" while the box quietly
+    // holds a web answer it declined to fetch is the exact failure this
+    // fallback exists to prevent. Retrieval finding SOMETHING is not the same
+    // as retrieval ANSWERING, and only the model can tell the two apart, so
+    // the refusal it writes is the signal we key on.
+    if (/does not cover that yet/i.test(answer)) {
+      const web2 = await webFallback(env, ANTHROPIC_MODEL, question, norm, hits.length, papers.length);
+      if (web2) {
+        return json({
+          answered: false, answer, sources, papers: [],
+          web: web2.text, webSources: web2.sources, webCached: web2.cached || undefined,
+        });
+      }
+      return json({ answered: false, answer, sources, papers: [] });
+    }
+
     // Diagnostic ride-alongs removed 2026-08-19 after doing their job twice:
     // first captured "2021: Invalid User Credentials" (partner routing had no
     // Anthropic billing path), then key_present exposed that five dashboard
