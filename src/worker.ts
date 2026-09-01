@@ -35,7 +35,7 @@
  */
 
 import { handleTalent, talentWeeklyDigest, talentMailAnswer } from "./talent";
-import { webFallback } from "./websearch";
+import { webFallback, lastWebError } from "./websearch";
 import postgres from "postgres";
 
 interface Env {
@@ -595,7 +595,7 @@ export default {
           webCached: web.cached || undefined,
         });
       }
-      return json({ answered: false, answer: notCovered, sources: [] });
+      return json({ answered: false, answer: notCovered, sources: [], webError: lastWebError || undefined });
     }
 
     // Retrieval succeeded and we are about to spend on a model call. Check the
@@ -770,7 +770,7 @@ export default {
           web: web2.text, webSources: web2.sources, webCached: web2.cached || undefined,
         });
       }
-      return json({ answered: false, answer, sources, papers: [] });
+      return json({ answered: false, answer, sources, papers: [], webError: lastWebError || undefined });
     }
 
     // Diagnostic ride-alongs removed 2026-08-19 after doing their job twice:

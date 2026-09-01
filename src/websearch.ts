@@ -42,6 +42,14 @@ export type WebAnswer = {
   cached: boolean;
 };
 
+// TEMPORARY DIAGNOSTIC, 2026-09-01. The fallback returned null on every live
+// attempt and twoai_web_answers stayed empty, which means it threw before its
+// first write - and a catch that returns null tells you nothing about where.
+// This is the same ride-along that caught "2021: Invalid User Credentials"
+// for the Haiku routing failure and the build-versus-runtime secret mix-up.
+// Remove it once the fallback is confirmed writing rows.
+export let lastWebError = "";
+
 export async function webFallback(
   env: any,
   model: string,
@@ -50,7 +58,11 @@ export async function webFallback(
   siteHits: number,
   paperHits: number
 ): Promise<WebAnswer | null> {
-  if (!env.ANTHROPIC_API_KEY || !env.AUDIT_DB) return null;
+  if (!env.ANTHROPIC_API_KEY || !env.AUDIT_DB) {
+    lastWebError = !env.ANTHROPIC_API_KEY ? "no ANTHROPIC_API_KEY" : "no AUDIT_DB";
+    return null;
+  }
+  lastWebError = "";
 
   const sql = postgres(env.AUDIT_DB.connectionString, {
     max: 1,
@@ -97,8 +109,12 @@ export async function webFallback(
       )
         .bind(day)
         .first();
-      if (row && Number(row.searched) >= DAILY_SEARCH_CAP) return null;
-    } catch {
+      if (row && Number(row.searched) >= DAILY_SEARCH_CAP) {
+        lastWebError = "daily search cap reached";
+        return null;
+      }
+    } catch (e: any) {
+      lastWebError = "budget: " + String(e?.message ?? e).slice(0, 200);
       return null;
     }
 
@@ -118,7 +134,10 @@ export async function webFallback(
         tools: [{ type: "web_search_20250305", name: "web_search" }],
       }),
     });
-    if (!r.ok) return null;
+    if (!r.ok) {
+      lastWebError = `anthropic HTTP ${r.status}: ${(await r.text()).slice(0, 300)}`;
+      return null;
+    }
     const out: any = await r.json();
 
     // Pull prose and citation URLs out of the block list. Citations ride on
@@ -140,7 +159,10 @@ export async function webFallback(
     };
     walk(out?.content ?? []);
     text = text.trim();
-    if (!text) return null;
+    if (!text) {
+      lastWebError = "empty text from search call";
+      return null;
+    }
 
     const sources = [...srcMap].map(([url, title]) => ({ url, title })).slice(0, 6);
 
@@ -162,9 +184,10 @@ export async function webFallback(
        WHERE question_norm = ${norm}`;
 
     return { text, sources, cached: false };
-  } catch {
+  } catch (e: any) {
     // The fallback is additive. Its failure returns the reader to the same
     // honest not-covered answer they would have had before it existed.
+    lastWebError = String(e?.message ?? e).slice(0, 300);
     return null;
   } finally {
     try {
