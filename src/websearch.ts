@@ -43,6 +43,19 @@ export type WebAnswer = {
   fetchedAt?: string;
 };
 
+// How close two questions must be, by embedding cosine similarity, to count
+// as the same question for cache purposes. Exact-string matching was wrong and
+// a live test proved it: "how did einsteins theory of realtivity influence ai"
+// and "How did Einstein theory of relativity influence artificial
+// intelligence?" are the same question to any reader, and the box searched
+// twice. Trigram similarity scored those two at 0.59 against 0.23 for two
+// unrelated questions - real separation, but too thin a margin to spend money
+// on. The embedding the Worker already computes for page retrieval handles
+// both wording and spelling, at no extra cost. 0.93 is deliberately strict:
+// a false cache hit serves the wrong answer, which is worse than a wasted
+// search, so this errs toward searching again.
+const CACHE_SIM_FLOOR = 0.93;
+
 // How long a stored web answer is served before we search again. A cache with
 // no expiry is how a reference site starts serving confidently stale facts:
 // "how did relativity influence AI" never changes, but "who runs OpenAI" and
@@ -65,7 +78,8 @@ export async function webFallback(
   question: string,
   norm: string,
   siteHits: number,
-  paperHits: number
+  paperHits: number,
+  qVec?: number[]
 ): Promise<WebAnswer | null> {
   if (!env.ANTHROPIC_API_KEY || !env.AUDIT_DB) {
     lastWebError = !env.ANTHROPIC_API_KEY ? "no ANTHROPIC_API_KEY" : "no AUDIT_DB";
@@ -80,24 +94,38 @@ export async function webFallback(
   });
 
   try {
-    // CACHE FIRST, and count the ask either way. times_asked is the demand
-    // signal, so it increments whether or not a search actually happens.
-    const prior: any[] = await sql`
-      SELECT results, fetched_at,
-             (fetched_at > now() - ${CACHE_TTL_DAYS + " days"}::interval) AS fresh
-        FROM twoai_web_answers
-       WHERE question_norm = ${norm} AND superseded_at IS NULL`;
+    // CACHE LOOKUP. Nearest question by meaning, not by string. Falls back to
+    // the exact key when no embedding was passed, so the fallback still works
+    // if the embed call failed upstream.
+    const vecLit = qVec && qVec.length ? "[" + qVec.join(",") + "]" : null;
+    const prior: any[] = vecLit
+      ? await sql`
+          SELECT results, fetched_at, question_raw, question_norm,
+                 1 - (q_vec <=> ${vecLit}::vector) AS sim,
+                 (fetched_at > now() - ${CACHE_TTL_DAYS + " days"}::interval) AS fresh
+            FROM twoai_web_answers
+           WHERE superseded_at IS NULL AND q_vec IS NOT NULL AND results IS NOT NULL
+           ORDER BY q_vec <=> ${vecLit}::vector
+           LIMIT 1`
+      : await sql`
+          SELECT results, fetched_at, question_raw, question_norm, 1.0 AS sim,
+                 (fetched_at > now() - ${CACHE_TTL_DAYS + " days"}::interval) AS fresh
+            FROM twoai_web_answers
+           WHERE question_norm = ${norm} AND superseded_at IS NULL`;
 
     await sql`
-      INSERT INTO twoai_web_answers (question_norm, question_raw, site_hit_count, paper_hit_count)
-      VALUES (${norm}, ${question}, ${siteHits}, ${paperHits})
+      INSERT INTO twoai_web_answers (question_norm, question_raw, site_hit_count, paper_hit_count, q_vec)
+      VALUES (${norm}, ${question}, ${siteHits}, ${paperHits}, ${vecLit}::vector)
       ON CONFLICT (question_norm) DO UPDATE
         SET times_asked = twoai_web_answers.times_asked + 1,
             last_asked_at = now(),
             site_hit_count = ${siteHits},
-            paper_hit_count = ${paperHits}`;
+            paper_hit_count = ${paperHits},
+            q_vec = COALESCE(twoai_web_answers.q_vec, ${vecLit}::vector)`;
 
-    if (prior.length && prior[0].results && prior[0].results.text) {
+    const hit = prior.length && prior[0].results && prior[0].results.text
+      && Number(prior[0].sim) >= CACHE_SIM_FLOOR;
+    if (hit) {
       if (prior[0].fresh) {
         return {
           text: String(prior[0].results.text),
@@ -109,15 +137,15 @@ export async function webFallback(
       // EXPIRED. The old answer is marked superseded with its reason rather
       // than overwritten, because the standing rule is that nothing is ever
       // deleted from an SRJ database - a row that recorded what the web said
-      // in September is evidence, even once it stops being current. The unique
-      // key is question_norm, so the stale row is retired under a suffixed key
-      // and the live key is freed for the new answer.
+      // in September is evidence, even once it stops being current. Note the
+      // key retired here is the MATCHED row's own question_norm, which under
+      // vector matching is often a different phrasing than the one just asked.
       await sql`
         UPDATE twoai_web_answers
-           SET question_norm = ${norm + " #superseded " + new Date().toISOString()},
+           SET question_norm = ${prior[0].question_norm + " #superseded " + new Date().toISOString()},
                superseded_at = now(),
                superseded_reason = ${"cache expired after " + CACHE_TTL_DAYS + " days"}
-         WHERE question_norm = ${norm} AND superseded_at IS NULL`;
+         WHERE question_norm = ${prior[0].question_norm} AND superseded_at IS NULL`;
       // The supersede above renamed the live key away, so a fresh row must be
       // opened under it or the search result written at the end of this
       // function would target a row that no longer exists and silently store

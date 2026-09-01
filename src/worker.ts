@@ -225,10 +225,15 @@ export default {
     }).then((r: any) => String(r?.response ?? "")).catch(() => "error");
 
     const researchExcerpts: string[] = [];
+    // The question embedding is hoisted out of the retrieval block so the web
+    // cache can match on meaning instead of exact text. It costs nothing extra
+    // - it is already computed for page retrieval.
+    let qVec: number[] | undefined;
     let hits: Array<{ score: number; url: string; title: string; body: string }> = [];
     try {
       const emb = await env.AI.run(EMBED_MODEL, { text: [question] });
       const vector = emb.data[0];
+      qVec = vector;
       const res = await env.VECTORIZE.query(vector, {
         topK: TOP_K,
         returnMetadata: "all",
@@ -584,7 +589,7 @@ export default {
       // rarity fix had to land first: before it, tier 3 returned papers that
       // did not contain the question's rare term at all, so the box believed
       // it had coverage and this branch never ran on questions that needed it.
-      const web = await webFallback(env, ANTHROPIC_MODEL, question, norm, hits.length, papers.length);
+      const web = await webFallback(env, ANTHROPIC_MODEL, question, norm, hits.length, papers.length, qVec);
       if (web) {
         return json({
           answered: false,
@@ -762,7 +767,7 @@ export default {
     // as retrieval ANSWERING, and only the model can tell the two apart, so
     // the refusal it writes is the signal we key on.
     if (/does not cover that yet/i.test(answer)) {
-      const web2 = await webFallback(env, ANTHROPIC_MODEL, question, norm, hits.length, papers.length);
+      const web2 = await webFallback(env, ANTHROPIC_MODEL, question, norm, hits.length, papers.length, qVec);
       if (web2) {
         return json({
           answered: false, answer, sources, papers: [],
