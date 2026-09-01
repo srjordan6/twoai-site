@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Faq from '../../components/Faq.astro';
 const desc = 'Free PUE calculator: Power Usage Effectiveness and DCiE from facility and IT power, the overhead in kilowatts and dollars, and what the number does not capture.';
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org', '@type': 'WebApplication',
@@ -7,6 +8,19 @@ const jsonld = JSON.stringify({
   operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   url: 'https://theworldofai.org/calculators/pue/',
 });
+
+const faqs = [
+  { q: 'What is a good PUE?',
+    a: 'The Uptime Institute 2025 Global Data Center Survey put the global average annual PUE at 1.54, where it has sat since 2019. Large purpose-built facilities run well below that, and hyperscale operators publish fleet figures in the 1.1 range. A number under 1.2 is very good, 1.5 is average, and above 2.0 usually indicates a converted or partly loaded space.' },
+  { q: 'Is PUE a standard or an industry habit?',
+    a: 'Both. The Green Grid defined it and it is now standardised as ISO/IEC 30134-2, which specifies where power is measured and over what period. A figure quoted without saying which measurement category it belongs to, and whether it is annual or a spot reading, is not comparable to one that does.' },
+  { q: 'Why does PUE improve when I add servers?',
+    a: 'Because IT power is the denominator. Fixed overhead, lighting, transformer losses and the base cooling plant, is spread across more IT load, so the ratio falls without the facility becoming more efficient in any useful sense. It is why a partly filled hall reports a poor PUE and why a dense AI hall reports a flattering one.' },
+  { q: 'Can PUE be below 1.0?',
+    a: 'Not honestly. A value under 1.0 means total facility power was measured as less than IT power, which is physically impossible and almost always a metering boundary error, usually IT measured at the wall while facility is measured downstream of something. Sites that reuse waste heat sometimes quote ERE, a different metric that can go below 1.0 by design.' },
+  { q: 'What should I look at instead, or as well?',
+    a: 'Water and carbon, which PUE says nothing about. A 1.1 facility on coal emits more than a 1.4 on hydro, and an evaporatively cooled site can hit a low PUE precisely by spending water. Water Usage Effectiveness and Carbon Usage Effectiveness exist for that gap and are on the WUE and CUE calculator.' },
+];
 ---
 <Base title="PUE Calculator: Power Usage Effectiveness and DCiE — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>PUE Calculator</h1>
@@ -33,6 +47,26 @@ const jsonld = JSON.stringify({
     of the electricity. A site with a 1.1 PUE on coal is worse for emissions than a 1.4 on
     hydro. Water Usage Effectiveness and Carbon Usage Effectiveness exist because of exactly
     this gap.</p>
+
+  <h2>What do the default numbers work out to?</h2>
+  <p>1,400 kW total facility power against 1,000 kW of IT is a PUE of 1.4, and a DCiE of 71.4
+    percent. Overhead is the difference, 400 kW, running continuously: 400 × 8,760 hours is
+    3,504,000 kWh, or 3,504 MWh a year. At $0.08 per kWh that overhead costs $280,320 annually.</p>
+  <p>The useful sensitivity is per tenth of PUE. On a 1,000 kW IT load, 0.1 of PUE is 100 kW, which
+    is 876,000 kWh, or $70,080 a year. Moving from 1.4 to 1.2 is therefore about $140,000 a year on
+    this one hall, which is the number that justifies a containment or airflow project.</p>
+
+  <h2>Why does an AI hall report a better PUE than it deserves?</h2>
+  <p>Because the metric rewards the denominator growing. Fixed overhead does not scale with rack
+    density: the lights, the transformer losses and the base cooling plant cost roughly the same
+    whether the hall draws 500 kW or 1,500 kW. Tripling IT load therefore divides that fixed
+    overhead by three and the ratio falls, with no change to how well anything is engineered.</p>
+  <p>This is the specific reason PUE cannot be used to compare an AI facility with a conventional
+    one, and why it is a poor target to manage against on its own. It measures overhead per watt
+    delivered, not work done per watt consumed. A hall running idle accelerators at 40 kW a rack
+    will post an excellent PUE while wasting most of the energy it draws.</p>
+
+  <Faq items={faqs} />
 
   <div class="cite-box">Cite this tool: <code>"PUE Calculator." The World of AI,
     theworldofai.org/calculators/pue/.</code></div>

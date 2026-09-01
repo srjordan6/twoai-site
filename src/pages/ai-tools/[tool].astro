@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Reading from '../../components/Reading.astro';
 import KeepReading from '../../components/KeepReading.astro';
 import { matchTerms, companyFor, vendorPostsNaming, companiesNamedIn } from '../../lib/related';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
@@ -156,6 +157,7 @@ const jsonld = JSON.stringify({
     </>
   )}
 
+  <Reading reading={t.reading} heading={`Where does ${t.name} fit?`} />
   <div class="cite-box">Cite this profile: <code>"{t.name}." The World of AI Tools Directory,
     theworldofai.org/ai-tools/{t.slug}/.{t.generated ? ` Verified ${t.generated}.` : ''}</code></div>
 

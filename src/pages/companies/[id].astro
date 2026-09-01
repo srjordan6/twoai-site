@@ -18,6 +18,7 @@
  * now, and every section is a question with its answer under it.
  */
 import Base from '../../layouts/Base.astro';
+import Reading from '../../components/Reading.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { ownedServers } from '../../lib/mcpAttribution';
 
@@ -29,10 +30,10 @@ export function getStaticPaths() {
     .filter((d) => d && d.company && d.company.uid)
     .map((d) => ({
       params: { id: d.company.uid },
-      props: { company: d.company, generated: d.generated, profileText: d.profile_text || null, siteUrl: d.website || '' },
+      props: { company: d.company, generated: d.generated, profileText: d.profile_text || null, siteUrl: d.website || '', reading: d.reading || null },
     }));
 }
-const { company, generated, profileText, siteUrl } = Astro.props;
+const { company, generated, profileText, siteUrl, reading } = Astro.props;
 const profile = company.profile || {};
 const products = company.products || [];
 const cases = company.cases || [];
@@ -259,6 +260,23 @@ const jsonld = JSON.stringify({
     </div>
   ))}
 
+  <h2>Where does the information on this page come from?</h2>
+  <p>Each block above has one source and only one, which is why the page can be thin in places
+    rather than filled in. Products come from this site's tool catalog, where an entry exists
+    because the tool was catalogued, not because {n} was researched. Lawsuits come from the case
+    tracker and name {n} only where a filing does. MCP servers come from the official Model
+    Context Protocol registry, matched on an exact publisher namespace rather than a name
+    resemblance, because substring matching once produced 101 false attributions here. Financial
+    and filing details, where present, come from SEC EDGAR against a registrant identifier.</p>
+  <p>Silence therefore means one specific thing on each line. No lawsuits listed means no tracked
+    case names {n}, not that none exists. No MCP servers means none published under a namespace we
+    can prove belongs to {n}. An absent headquarters or founding date means the company has not
+    declared it in a machine-readable form we read, not that it is unknown. Nothing on this page
+    was inferred to fill a gap, and a gap that has not been filled is left visible.</p>
+  <p>If something here is wrong or missing, that is an editorial gap rather than a judgement, and
+    it is worth telling us: <a href="/contact/">contact</a>.</p>
+
+  <Reading reading={reading} heading={`What does the record on ${n} show?`} />
   <div class="cite-box">Cite this page: <code>"{n}." AI Company Directory,
     The World of AI, theworldofai.org/companies/{company.uid}/.{generated ? ` Verified ${generated}.` : ''}</code></div>
 

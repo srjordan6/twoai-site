@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Faq from '../../components/Faq.astro';
 const desc = 'Free data center heat load calculator: convert IT kilowatts to BTU per hour and tons of refrigeration to size chillers and CRAH units, with redundancy and non-IT gains.';
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org', '@type': 'WebApplication',
@@ -7,6 +8,19 @@ const jsonld = JSON.stringify({
   operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   url: 'https://theworldofai.org/calculators/heat-load/',
 });
+
+const faqs = [
+  { q: 'How many tons of cooling does a megawatt of IT need?',
+    a: 'About 284 tons for the IT alone, and roughly 291 once lighting, people and building envelope gains are added. A ton of refrigeration is 12,000 BTU per hour and a kilowatt is 3,412 BTU per hour, so the conversion is a shade under 0.285 tons per kilowatt. Redundancy is on top of that.' },
+  { q: 'Why is IT power treated as equal to heat output?',
+    a: 'Because essentially all the electricity entering a server is converted to heat. Some leaves as light on an indicator, some as fan noise, some as signal down a fibre, and at data hall scale none of it is material. A kilowatt in is a kilowatt of heat to reject, which is what makes cooling sizing arithmetic rather than estimation.' },
+  { q: 'Does this cover humidity?',
+    a: 'No. This is sensible heat, the part that changes air temperature. Latent load, the energy involved in removing or adding moisture, is a separate calculation and matters in humid climates and in facilities using evaporative cooling. A dry-climate site can often ignore it; a coastal one cannot.' },
+  { q: 'What does the redundancy uplift represent?',
+    a: 'A simple percentage of headroom, which is not the same thing as an N+1 plant. Real redundant design sizes the plant so that the full design load is met with one unit out of service, which depends on unit count: N+1 with two units is 100 percent spare, with six units it is about 17 percent. Use the percentage for early planning and the unit arithmetic for procurement.' },
+  { q: 'Does more tonnage let me run denser racks?',
+    a: 'Not past a point. Total capacity and per-cabinet delivery are different constraints, and above roughly 30 kW a rack the binding limit is how much air can physically move through one cabinet, not how much cooling the plant can make. That is the threshold where liquid cooling stops being an option and becomes the requirement.' },
+];
 ---
 <Base title="Data Center Heat Load Calculator: kW to BTU and tons of cooling — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>Heat Load Calculator</h1>
@@ -37,6 +51,26 @@ const jsonld = JSON.stringify({
     plant is sized so that the design load is met with a unit out of service, which is a
     different calculation. Air-cooled racks above roughly 30 kW usually cannot be cooled by
     air alone regardless of total tonnage, which is where liquid cooling starts.</p>
+
+  <h2>What does a megawatt hall need?</h2>
+  <p>One megawatt of IT plus 25 kW of lighting, people and envelope gain is 1,025 kW of heat. In
+    BTU that is 1,025 × 3,412.142, or about 3,497,000 BTU per hour. Divided by 12,000 that is 291
+    tons of refrigeration. With the default 25 percent redundancy uplift, 364 tons.</p>
+  <p>The rule of thumb the tool prints, about 291 tons per megawatt of IT, is worth carrying
+    around: it converts an IT capacity figure into a mechanical plant size in one step, which is
+    usually the first sanity check on whether a proposed load fits an existing building.</p>
+
+  <h2>Where does the compressor allowance come from?</h2>
+  <p>The second unit option divides by 12,660 rather than 12,000. The difference is the work the
+    compressor itself adds to the load it is removing: a vapour-compression chiller rejects the
+    heat from the space plus the energy it consumed doing so, and the condenser has to be sized
+    for both. The roughly 5.5 percent uplift is the conventional allowance for that.</p>
+  <p>Which figure to use depends on where in the system you are sizing. Evaporator and air-side
+    equipment are sized on the space load, so 12,000 is right. Condensers, cooling towers and heat
+    rejection to outside are sized on total heat rejected, so the allowance belongs there. Using
+    the same number for both either undersizes the tower or overspends on the coils.</p>
+
+  <Faq items={faqs} />
 
   <div class="cite-box">Cite this tool: <code>"Heat Load Calculator." The World of AI,
     theworldofai.org/calculators/heat-load/.</code></div>

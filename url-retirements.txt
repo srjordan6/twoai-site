@@ -5,3 +5,18 @@
 # successor page exists; retirement is for URLs that should genuinely 404.
 #
 # Format: /path/  reason (free text)
+
+# Six people removed from the AI People Directory on 2026-09-01 at Stephen's
+# instruction. They entered through people/roster.json and were never profiled:
+# four are bylines on AI coverage rather than figures in AI (TIME, Fortune, CNN,
+# the BBC), one is an NBA guard, one a CIO whose only tie was a quoted comment.
+# Every one rendered as a tracked-only stub, which means noindex and absent from
+# the sitemap, so none was ever indexed and a 404 costs nothing. A redirect
+# would have been the dishonest option: there is no successor page, because the
+# claim that these are people this site profiles is the thing being withdrawn.
+/ai-ecosystem/ecosystem-entities-market-and-operations/4d9cc572/  Alice Park, removed from the people roster 2026-09-01, never profiled
+/ai-ecosystem/ecosystem-entities-market-and-operations/82078a17/  Kristin Stoller, removed from the people roster 2026-09-01, never profiled
+/ai-ecosystem/ecosystem-entities-market-and-operations/4539b6b5/  Matt Egan, removed from the people roster 2026-09-01, never profiled
+/ai-ecosystem/ecosystem-entities-market-and-operations/83fc6d2d/  Thomas Germain, removed from the people roster 2026-09-01, never profiled
+/ai-ecosystem/ecosystem-entities-market-and-operations/6063a29f/  Saral Jain, removed from the people roster 2026-09-01, never profiled
+/ai-ecosystem/ecosystem-entities-market-and-operations/546eba6e/  Russell Westbrook, removed from the people roster 2026-09-01, never profiled

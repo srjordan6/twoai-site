@@ -288,3 +288,81 @@
 # real.
 /ai-ecosystem/technology-and-core-infrastructure/c765b3c2/  /ai-ecosystem/technology-and-core-infrastructure/7f1d5827/  301
 /ai-ecosystem/technology-and-core-infrastructure/910155f0/ /ai-ecosystem/technology-and-core-infrastructure/b441a27b/ 301
+
+# ---------------------------------------------------------------------------
+# PROFILES FOLDED INTO THEIR SECTION PAGE, 2026-09-01.
+#
+# Stephen's rule that day: a human entity is found in the AI People Directory
+# or in one of its sub categories, and nowhere else. So the 58 per-person pages
+# at /ai-ecosystem/ecosystem-entities-market-and-operations/{uid}/ stopped being
+# published and each profile now renders inside the page for the person's
+# PRIMARY category, anchored on that same uid.
+#
+# The uid did not change. That is exactly what the 2026-08-03 identifier rule
+# was for: /.../{catUid}/#{uid} survives a rename the way /.../{uid}/ did,
+# because neither address is derived from the name. Every citation of the old
+# form lands on the same profile, at the anchor, in one hop.
+#
+# Primary category comes from twoai_person_category.is_primary, which was
+# already set and already unique per person. It is stored data, not a rule
+# invented at render time, because it is now an address and a rule that
+# reshuffled between runs would move published URLs.
+# ---------------------------------------------------------------------------
+/ai-ecosystem/ecosystem-entities-market-and-operations/9aba19cf/  /ai-ecosystem/ecosystem-entities-market-and-operations/8df0db22/#9aba19cf  301   # John Whyte -> Advocates and Public Voices
+/ai-ecosystem/ecosystem-entities-market-and-operations/b6beaa7f/  /ai-ecosystem/ecosystem-entities-market-and-operations/8df0db22/#b6beaa7f  301   # Karrie G. Dixon -> Advocates and Public Voices
+/ai-ecosystem/ecosystem-entities-market-and-operations/5a7a0ca7/  /ai-ecosystem/ecosystem-entities-market-and-operations/8df0db22/#5a7a0ca7  301   # Melva Wallace -> Advocates and Public Voices
+/ai-ecosystem/ecosystem-entities-market-and-operations/76bed71a/  /ai-ecosystem/ecosystem-entities-market-and-operations/8df0db22/#76bed71a  301   # Noland Arbaugh -> Advocates and Public Voices
+/ai-ecosystem/ecosystem-entities-market-and-operations/24d80f66/  /ai-ecosystem/ecosystem-entities-market-and-operations/b55390b8/#24d80f66  301   # Tim O'Reilly -> Authors and Communicators
+/ai-ecosystem/ecosystem-entities-market-and-operations/fd7619d8/  /ai-ecosystem/ecosystem-entities-market-and-operations/f0d97a5a/#fd7619d8  301   # Erik Brynjolfsson -> Economists and Labor
+/ai-ecosystem/ecosystem-entities-market-and-operations/d2e0adb1/  /ai-ecosystem/ecosystem-entities-market-and-operations/34600fa3/#d2e0adb1  301   # Anastasis Germanidis -> Founders and Executives
+/ai-ecosystem/ecosystem-entities-market-and-operations/6cbc8576/  /ai-ecosystem/ecosystem-entities-market-and-operations/34600fa3/#6cbc8576  301   # Andrea Gilman -> Founders and Executives
+/ai-ecosystem/ecosystem-entities-market-and-operations/b1ab49cb/  /ai-ecosystem/ecosystem-entities-market-and-operations/34600fa3/#b1ab49cb  301   # Bruce Smith -> Founders and Executives
+/ai-ecosystem/ecosystem-entities-market-and-operations/24d3de09/  /ai-ecosystem/ecosystem-entities-market-and-operations/34600fa3/#24d3de09  301   # Eric Nguyen -> Founders and Executives
+/ai-ecosystem/ecosystem-entities-market-and-operations/8621211f/  /ai-ecosystem/ecosystem-entities-market-and-operations/34600fa3/#8621211f  301   # Inhi Cho Suh -> Founders and Executives
+/ai-ecosystem/ecosystem-entities-market-and-operations/ec2df8b8/  /ai-ecosystem/ecosystem-entities-market-and-operations/34600fa3/#ec2df8b8  301   # Jeetu Patel -> Founders and Executives
+/ai-ecosystem/ecosystem-entities-market-and-operations/bf61bc39/  /ai-ecosystem/ecosystem-entities-market-and-operations/34600fa3/#bf61bc39  301   # Kelleigh Shankel -> Founders and Executives
+/ai-ecosystem/ecosystem-entities-market-and-operations/b4326951/  /ai-ecosystem/ecosystem-entities-market-and-operations/34600fa3/#b4326951  301   # Pat Gelsinger -> Founders and Executives
+/ai-ecosystem/ecosystem-entities-market-and-operations/7a7dde20/  /ai-ecosystem/ecosystem-entities-market-and-operations/34600fa3/#7a7dde20  301   # Reena Solomon -> Founders and Executives
+/ai-ecosystem/ecosystem-entities-market-and-operations/00fe2483/  /ai-ecosystem/ecosystem-entities-market-and-operations/34600fa3/#00fe2483  301   # Sam Altman -> Founders and Executives
+/ai-ecosystem/ecosystem-entities-market-and-operations/8ff4e02f/  /ai-ecosystem/ecosystem-entities-market-and-operations/34600fa3/#8ff4e02f  301   # Tim Latimer -> Founders and Executives
+/ai-ecosystem/ecosystem-entities-market-and-operations/bd76158d/  /ai-ecosystem/ecosystem-entities-market-and-operations/b8a9ba1f/#bd76158d  301   # Lasherelle Morgan -> Governance, Risk, and Privacy
+/ai-ecosystem/ecosystem-entities-market-and-operations/cd89dddb/  /ai-ecosystem/ecosystem-entities-market-and-operations/b8a9ba1f/#cd89dddb  301   # Ron Whitworth -> Governance, Risk, and Privacy
+/ai-ecosystem/ecosystem-entities-market-and-operations/805f4772/  /ai-ecosystem/ecosystem-entities-market-and-operations/7dbf270b/#805f4772  301   # Amy Ritualo -> Government and Policy Leaders
+/ai-ecosystem/ecosystem-entities-market-and-operations/d6d81af4/  /ai-ecosystem/ecosystem-entities-market-and-operations/7dbf270b/#d6d81af4  301   # Andrew Yang -> Government and Policy Leaders
+/ai-ecosystem/ecosystem-entities-market-and-operations/932db267/  /ai-ecosystem/ecosystem-entities-market-and-operations/7dbf270b/#932db267  301   # Deepak Sachdeva -> Government and Policy Leaders
+/ai-ecosystem/ecosystem-entities-market-and-operations/9726384c/  /ai-ecosystem/ecosystem-entities-market-and-operations/7dbf270b/#9726384c  301   # Micky Tripathi -> Government and Policy Leaders
+/ai-ecosystem/ecosystem-entities-market-and-operations/d9d32501/  /ai-ecosystem/ecosystem-entities-market-and-operations/7dbf270b/#d9d32501  301   # Steve Preston -> Government and Policy Leaders
+/ai-ecosystem/ecosystem-entities-market-and-operations/036ef836/  /ai-ecosystem/ecosystem-entities-market-and-operations/5d3cc6cd/#036ef836  301   # Alex Zhavoronkov -> Health and Life Sciences
+/ai-ecosystem/ecosystem-entities-market-and-operations/1e51267a/  /ai-ecosystem/ecosystem-entities-market-and-operations/5d3cc6cd/#1e51267a  301   # Jorge Reis-Filho -> Health and Life Sciences
+/ai-ecosystem/ecosystem-entities-market-and-operations/328df026/  /ai-ecosystem/ecosystem-entities-market-and-operations/5d3cc6cd/#328df026  301   # Roberta Schwartz -> Health and Life Sciences
+/ai-ecosystem/ecosystem-entities-market-and-operations/e2c07b78/  /ai-ecosystem/ecosystem-entities-market-and-operations/f18cd22d/#e2c07b78  301   # Ada Lovelace -> Pioneers and Historical Figures
+/ai-ecosystem/ecosystem-entities-market-and-operations/b2f5f7c6/  /ai-ecosystem/ecosystem-entities-market-and-operations/f18cd22d/#b2f5f7c6  301   # Alan Turing -> Pioneers and Historical Figures
+/ai-ecosystem/ecosystem-entities-market-and-operations/5a50c057/  /ai-ecosystem/ecosystem-entities-market-and-operations/04d2beb8/#5a50c057  301   # Andrew Ng -> Professors and Academics
+/ai-ecosystem/ecosystem-entities-market-and-operations/38710ac1/  /ai-ecosystem/ecosystem-entities-market-and-operations/c7055671/#38710ac1  301   # Fei-Fei Li -> Researchers
+/ai-ecosystem/ecosystem-entities-market-and-operations/bd753d08/  /ai-ecosystem/ecosystem-entities-market-and-operations/c7055671/#bd753d08  301   # Geoffrey Hinton -> Researchers
+/ai-ecosystem/ecosystem-entities-market-and-operations/0fe19018/  /ai-ecosystem/ecosystem-entities-market-and-operations/c7055671/#0fe19018  301   # Tom Gruber -> Researchers
+/ai-ecosystem/ecosystem-entities-market-and-operations/f467030d/  /ai-ecosystem/ecosystem-entities-market-and-operations/c7055671/#f467030d  301   # Vijay Badrinarayanan -> Researchers
+/ai-ecosystem/ecosystem-entities-market-and-operations/60f59794/  /ai-ecosystem/ecosystem-entities-market-and-operations/c7055671/#60f59794  301   # Will Ellsworth -> Researchers
+/ai-ecosystem/ecosystem-entities-market-and-operations/37403083/  /ai-ecosystem/ecosystem-entities-market-and-operations/809c02d0/#37403083  301   # Dmitri Dolgov -> Robotics and Autonomy
+/ai-ecosystem/ecosystem-entities-market-and-operations/328884e5/  /ai-ecosystem/ecosystem-entities-market-and-operations/809c02d0/#328884e5  301   # Sebastian Thrun -> Robotics and Autonomy
+/ai-ecosystem/ecosystem-entities-market-and-operations/4e8ee70c/  /ai-ecosystem/ecosystem-entities-market-and-operations/c5b5daf5/#4e8ee70c  301   # Chloé Bakalar -> Safety and Alignment
+/ai-ecosystem/ecosystem-entities-market-and-operations/dece6aef/  /ai-ecosystem/ecosystem-entities-market-and-operations/89eb4e00/#dece6aef  301   # Anthony Moisant -> Security Leaders
+/ai-ecosystem/ecosystem-entities-market-and-operations/2f8ea234/  /ai-ecosystem/ecosystem-entities-market-and-operations/07ae7a34/#2f8ea234  301   # Ali Dasdan -> Technology Leaders
+/ai-ecosystem/ecosystem-entities-market-and-operations/812f7743/  /ai-ecosystem/ecosystem-entities-market-and-operations/07ae7a34/#812f7743  301   # Andrew Rabinovich -> Technology Leaders
+/ai-ecosystem/ecosystem-entities-market-and-operations/90ce15bf/  /ai-ecosystem/ecosystem-entities-market-and-operations/07ae7a34/#90ce15bf  301   # Biswa Sengupta -> Technology Leaders
+/ai-ecosystem/ecosystem-entities-market-and-operations/bd60c8f2/  /ai-ecosystem/ecosystem-entities-market-and-operations/07ae7a34/#bd60c8f2  301   # Christy Borrowman -> Technology Leaders
+/ai-ecosystem/ecosystem-entities-market-and-operations/de5905e3/  /ai-ecosystem/ecosystem-entities-market-and-operations/07ae7a34/#de5905e3  301   # Claudia Cosoreanu -> Technology Leaders
+/ai-ecosystem/ecosystem-entities-market-and-operations/751bc061/  /ai-ecosystem/ecosystem-entities-market-and-operations/07ae7a34/#751bc061  301   # Franziska Bell -> Technology Leaders
+/ai-ecosystem/ecosystem-entities-market-and-operations/1343085b/  /ai-ecosystem/ecosystem-entities-market-and-operations/07ae7a34/#1343085b  301   # Jaime Mineart -> Technology Leaders
+/ai-ecosystem/ecosystem-entities-market-and-operations/4d0a085b/  /ai-ecosystem/ecosystem-entities-market-and-operations/07ae7a34/#4d0a085b  301   # Jim Fowler -> Technology Leaders
+/ai-ecosystem/ecosystem-entities-market-and-operations/d81135b3/  /ai-ecosystem/ecosystem-entities-market-and-operations/07ae7a34/#d81135b3  301   # Kristin Milchanowski -> Technology Leaders
+/ai-ecosystem/ecosystem-entities-market-and-operations/bdc0011c/  /ai-ecosystem/ecosystem-entities-market-and-operations/07ae7a34/#bdc0011c  301   # Lutz Beck -> Technology Leaders
+/ai-ecosystem/ecosystem-entities-market-and-operations/0c98ccde/  /ai-ecosystem/ecosystem-entities-market-and-operations/07ae7a34/#0c98ccde  301   # Prashant Mehrotra -> Technology Leaders
+/ai-ecosystem/ecosystem-entities-market-and-operations/6199634a/  /ai-ecosystem/ecosystem-entities-market-and-operations/07ae7a34/#6199634a  301   # Praveen Neppalli Naga -> Technology Leaders
+/ai-ecosystem/ecosystem-entities-market-and-operations/3bd65a73/  /ai-ecosystem/ecosystem-entities-market-and-operations/07ae7a34/#3bd65a73  301   # Ravi Chandu Ummadisetti -> Technology Leaders
+/ai-ecosystem/ecosystem-entities-market-and-operations/1ebae706/  /ai-ecosystem/ecosystem-entities-market-and-operations/07ae7a34/#1ebae706  301   # Sachin Katti -> Technology Leaders
+/ai-ecosystem/ecosystem-entities-market-and-operations/c5925b23/  /ai-ecosystem/ecosystem-entities-market-and-operations/07ae7a34/#c5925b23  301   # Sagnik Nandy -> Technology Leaders
+/ai-ecosystem/ecosystem-entities-market-and-operations/365e84b2/  /ai-ecosystem/ecosystem-entities-market-and-operations/07ae7a34/#365e84b2  301   # Srini Venkatesan -> Technology Leaders
+/ai-ecosystem/ecosystem-entities-market-and-operations/a02ffeb4/  /ai-ecosystem/ecosystem-entities-market-and-operations/07ae7a34/#a02ffeb4  301   # Stian Kirkeberg -> Technology Leaders
+/ai-ecosystem/ecosystem-entities-market-and-operations/077f6f45/  /ai-ecosystem/ecosystem-entities-market-and-operations/07ae7a34/#077f6f45  301   # Tony Ambrozie -> Technology Leaders
+/ai-ecosystem/ecosystem-entities-market-and-operations/4aebcddd/  /ai-ecosystem/ecosystem-entities-market-and-operations/07ae7a34/#4aebcddd  301   # Vern Childers -> Technology Leaders

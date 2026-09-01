@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Faq from '../../components/Faq.astro';
 const desc = 'Free data center airflow calculator: required CFM from IT load and delta-T, per rack and per hall, with the point at which air cooling stops being practical.';
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org', '@type': 'WebApplication',
@@ -7,6 +8,19 @@ const jsonld = JSON.stringify({
   operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   url: 'https://theworldofai.org/calculators/airflow-cfm/',
 });
+
+const faqs = [
+  { q: 'How much airflow does a rack need per kilowatt?',
+    a: 'About 158 cubic feet per minute per kilowatt at a 20 degree Fahrenheit rise from supply to exhaust. Widen the rise to 30 degrees and it falls to about 105 CFM per kilowatt; narrow it to 15 and it rises to about 211. The delta-T is the design decision, and it moves the answer more than anything else on the page.' },
+  { q: 'At what density does air cooling stop working?',
+    a: 'Practically, most halls struggle above roughly 30 kW a rack, and the limit is not the total tonnage of cooling but the volume of air a cabinet can physically move through itself. A 60 kW rack needs close to 9,500 CFM at a 20 degree rise, which is more than perimeter cooling and a raised floor can deliver into one cabinet without unacceptable velocities.' },
+  { q: 'Why does hot-aisle containment reduce fan energy?',
+    a: 'It widens the achievable delta-T by stopping hot exhaust from mixing with cold supply before it returns. A higher rise means the same heat is carried by less air, and fan power scales steeply with airflow, so the saving is larger than the airflow reduction alone suggests.' },
+  { q: 'Does altitude change the calculation?',
+    a: 'Yes. The constant 1.08 is derived from the density and specific heat of air at standard sea-level conditions. Air is less dense at altitude, carries less heat per cubic foot, and a site in Denver or Mexico City needs measurably more CFM for the same load. Correct the constant for site elevation before sizing equipment.' },
+  { q: 'Is this the airflow I need or the airflow I have?',
+    a: 'What the load demands. The room delivers something different, and the gap is where most thermal problems live: bypass air that returns to the cooling unit without passing through a server, and recirculation where exhaust is drawn back into an intake. Blanking panels, sealed floor cutouts and containment address the gap; no amount of extra tonnage does.' },
+];
 ---
 <Base title="Data Center Airflow Calculator: CFM from kW and delta-T — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>Airflow (CFM) Calculator</h1>
@@ -30,6 +44,28 @@ const jsonld = JSON.stringify({
     is required for the same heat. This is the airflow the load demands, not the airflow the
     room delivers, and the gap between them, bypass air and recirculation, is where most
     thermal problems actually live.</p>
+
+  <h2>What does a 10 kW rack need?</h2>
+  <p>Ten kilowatts is 10 × 3,412.142, or 34,121 BTU per hour. Divide by 1.08 × 20 degrees and the
+    answer is about 1,580 CFM for that one cabinet.</p>
+  <p>The scaling is what matters. A 60 kW AI rack at the same 20 degree rise needs about 9,500 CFM,
+    six times the air through the same cabinet footprint. Widening the rise to 30 degrees brings it
+    down to about 6,300, which is why raising supply temperature and containing the hot aisle are
+    the first two moves in any high-density retrofit, and why they are worth doing before buying
+    more cooling capacity.</p>
+
+  <h2>How do I know whether the room can actually deliver it?</h2>
+  <p>Compare the demand this calculator produces with the air the floor can supply into that
+    cabinet position, not with the total capacity of the cooling plant. A perforated tile passes a
+    bounded amount of air at a given underfloor pressure, so a cabinet needing 9,500 CFM cannot be
+    fed by tiles rated at a few hundred each without unacceptable velocities and noise.</p>
+  <p>Two symptoms tell you the gap is real before the temperatures do. Server fans ramping at the
+    top of a rack while the bottom runs cool indicates recirculation over the top of the cabinet.
+    A cooling unit returning air barely warmer than it supplies indicates bypass, air taking a
+    short circuit back without doing any work. Both waste fan energy while the plant reports plenty
+    of spare capacity.</p>
+
+  <Faq items={faqs} />
 
   <div class="cite-box">Cite this tool: <code>"Airflow (CFM) Calculator." The World of AI,
     theworldofai.org/calculators/airflow-cfm/.</code></div>

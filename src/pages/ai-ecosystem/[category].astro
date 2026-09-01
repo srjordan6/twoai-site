@@ -7,6 +7,7 @@
  * what is coming and what is missing, and so can we.
  */
 import Base from '../../layouts/Base.astro';
+import Reading from '../../components/Reading.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
 export function getStaticPaths() {
@@ -138,6 +139,8 @@ const jsonld = JSON.stringify({
       ))}
     </>
   )}
+
+  <Reading reading={c.reading} heading={`What does the ${c.name.toLowerCase()} category cover?`} />
 </Base>
 
 <style>

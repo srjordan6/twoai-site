@@ -7,6 +7,7 @@
  * the page says less rather than inventing case studies.
  */
 import Base from '../../../layouts/Base.astro';
+import Reading from '../../../components/Reading.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
 const CATEGORY = 'enterprise-applications-governance-and-tools';
@@ -597,6 +598,7 @@ const jsonld = JSON.stringify(clc ? {
         tracker</a> · <a href="/ai-laws/">AI laws by state</a> ·
         {' '}<a href="/ai-compliance/">the governance library</a>.</p>
 
+      <Reading reading={clx.reading} heading="What does this body of case law establish?" />
       <div class="cite-box">Cite this page: <code>"{clx.name}." The World of AI,
         theworldofai.org{BASE}/{clx.uid}/. Retrieved {clx.generated}.</code></div>
     </>
@@ -707,6 +709,7 @@ const jsonld = JSON.stringify(clc ? {
         {' '}precedents in AI Case Law</a> · <a href="/ai-lawsuits/">the AI lawsuit tracker</a> ·
         {' '}<a href="/ai-compliance/">the governance library</a>.</p>
 
+      <Reading reading={clc.reading} heading={`What does ${dcase.case_name} decide?`} />
       <div class="cite-box">Cite this page: <code>"{dcase.case_name}: AI Case Law." The World of
         AI, theworldofai.org{BASE}/{dcase.uid}/. Retrieved {clc.generated}.</code></div>
     </>

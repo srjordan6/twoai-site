@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Reading from '../../components/Reading.astro';
 import KeepReading from '../../components/KeepReading.astro';
 import { matchTerms } from '../../lib/related';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
@@ -76,6 +77,7 @@ const jsonld = JSON.stringify({
   <h2>Frequently asked questions</h2>
   {faq.map((f) => (<><h3 style="font-family:Poppins;font-size:16.5px;">{f.q}</h3><p>{f.a}</p></>))}
 
+  <Reading reading={d.reading} heading={`What does ${d.name}’s AI legislation add up to?`} />
   <div class="cite-box">Cite this page: <code>"{d.name} AI Laws." The World of AI,
     theworldofai.org/ai-laws/{d.slug}/. Verified {d.generated}.</code></div>
   <KeepReading blocks={[

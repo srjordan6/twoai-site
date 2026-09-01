@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Faq from '../../components/Faq.astro';
 const desc = 'Free WUE and CUE calculator for data centers: water usage effectiveness in litres per kWh and carbon usage effectiveness in kg CO2 per kWh, with annual totals in context.';
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org', '@type': 'WebApplication',
@@ -7,6 +8,19 @@ const jsonld = JSON.stringify({
   operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   url: 'https://theworldofai.org/calculators/wue-cue/',
 });
+
+const faqs = [
+  { q: 'What is a good WUE?',
+    a: 'Air-cooled sites with no evaporative cooling can approach 0 litres per kilowatt-hour. Sites using evaporative or adiabatic cooling commonly land between 1 and 2. The tradeoff is direct: evaporative cooling lowers PUE by spending water, so a site with an excellent PUE and a poor WUE has chosen one over the other rather than achieved both.' },
+  { q: 'Are WUE and CUE actual standards?',
+    a: 'Yes. Both originate with The Green Grid and are standardised in the ISO/IEC 30134 series, WUE as part 9 and CUE as part 8. Both are defined against IT energy rather than facility energy, which is deliberate: a site cannot improve either figure by making its IT less efficient.' },
+  { q: 'Why is CUE just PUE times grid carbon intensity?',
+    a: 'Because CUE is facility energy times carbon intensity divided by IT energy, and facility energy divided by IT energy is the definition of PUE. The algebra collapses. It follows that the two ways to lower CUE are lowering PUE and buying cleaner electricity, and the second usually moves further than the first.' },
+  { q: 'Does the water used to generate the electricity count?',
+    a: 'Not in WUE as defined, which counts water used on site. Thermoelectric generation consumes water for cooling, and for a site drawing from a thermal-heavy grid that indirect figure can exceed on-site use. Some operators publish it separately as source water; a WUE quoted without saying which basis it uses is ambiguous.' },
+  { q: 'Does an annual average carbon intensity overstate how clean a load is?',
+    a: 'It can, badly. Grid intensity swings by hour: solar-heavy grids are cleanest at midday and dirtiest at the evening peak. A continuously running training job is exposed to that whole curve, so an annual average is the right figure for it, but a load that could shift into clean hours and does not is dirtier than any annual number suggests. Hourly matched procurement exists to close that gap.' },
+];
 ---
 <Base title="WUE and CUE Calculator: data center water and carbon — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>WUE and CUE Calculator</h1>
@@ -39,6 +53,31 @@ const jsonld = JSON.stringify({
     facility is a large share of lifetime emissions. Annual average grid intensity also hides
     the hourly picture: a load running through the evening peak is dirtier than the average
     suggests.</p>
+
+  <h2>What do the defaults produce?</h2>
+  <p>One megawatt of IT at a PUE of 1.3, 15 million litres of site water a year, on a grid at 380
+    grams of CO2 per kilowatt-hour.</p>
+  <p>IT energy is 1,000 kW × 8,760 hours, which is 8,760 MWh, or 8.76 million kWh. Facility energy
+    is that times 1.3, or 11,388 MWh. WUE is 15,000,000 ÷ 8,760,000, which is 1.71 litres per
+    kilowatt-hour, in the normal band for an evaporatively cooled site. CUE is 1.3 × 0.380, which
+    is 0.494 kilograms of CO2 per kilowatt-hour of IT, and total annual emissions are 11,388 MWh ×
+    380 g, or 4,327 tonnes.</p>
+  <p>The water figure is worth stating in a second unit. Fifteen million litres is roughly the
+    annual household consumption of 50 US homes, which is the comparison a planning board will
+    make whether or not the operator offers it.</p>
+
+  <h2>Which lever actually moves the carbon number?</h2>
+  <p>Cleaner supply, by a wide margin. Cutting PUE from 1.3 to 1.2, a serious engineering
+    programme, lowers CUE by about 8 percent. Moving from a 380 gram grid to a 100 gram one cuts it
+    by 74 percent, and to contracted carbon-free supply cuts the operational figure to zero. The
+    calculator has a toggle for that second case precisely because the gap between the two levers
+    is so large.</p>
+  <p>What neither lever touches is embodied carbon: the emissions in the concrete, the steel, the
+    servers and the accelerators. For a modern AI facility that is a large share of lifetime
+    emissions and it is spent before the first watt is drawn, which is why a site can reach an
+    operational CUE of zero and still have a substantial footprint.</p>
+
+  <Faq items={faqs} />
 
   <div class="cite-box">Cite this tool: <code>"WUE and CUE Calculator." The World of AI,
     theworldofai.org/calculators/wue-cue/.</code></div>

@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Faq from '../../components/Faq.astro';
 const desc = 'Free training and fine-tuning cost estimator: work out GPU hours and dollars from parameter count and training tokens, or price a run you have already scoped.';
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org', '@type': 'WebApplication',
@@ -7,6 +8,19 @@ const jsonld = JSON.stringify({
   operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   url: 'https://theworldofai.org/calculators/training-cost/',
 });
+
+const faqs = [
+  { q: 'Where does the 6 FLOPs per parameter per token rule come from?',
+    a: 'It counts the multiply-accumulate work of a transformer forward and backward pass: roughly 2 FLOPs per parameter per token forward, and about twice that again backward, giving 6. It ignores attention over long sequences, which adds a term that grows with sequence length, so it understates cost for very long context training.' },
+  { q: 'What is model FLOPs utilisation and why is 40 percent the default?',
+    a: 'MFU is the fraction of a GPU theoretical peak that a real training run achieves once communication between GPUs, memory movement and pipeline stalls are counted. Published large runs commonly report figures in the 35 to 55 percent range, so 40 is a defensible planning number. Anything above 60 should be treated as optimistic until measured on your own stack.' },
+  { q: 'Why does fine-tuning use a smaller constant?',
+    a: 'A full-weight fine-tune still runs the backward pass but over far fewer tokens, and the constant here is lowered to reflect the shorter schedules and frozen components typical of the workload. Parameter-efficient methods such as LoRA train a small set of added weights and skip gradient computation for the frozen base, which is why the constant falls further again.' },
+  { q: 'Is the dollar figure the real cost of a training run?',
+    a: 'No, it is the floor. It counts GPU time and nothing else. Data collection and cleaning, failed runs and restarts, evaluation, checkpoint storage and egress, and the salaries of the people running it are all excluded, and on real projects those frequently exceed the compute line.' },
+  { q: 'Does more GPUs make it cheaper?',
+    a: 'It makes it faster, not cheaper, and past a point it makes it more expensive. Total GPU hours are fixed by the compute required, so adding accelerators divides wall-clock time without changing the bill. Scaling also lowers MFU, because more devices mean more communication, so a very large cluster can burn more GPU hours for the same run.' },
+];
 ---
 <Base title="Training Cost Estimator: GPU hours and dollars for a model run — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>Training Cost Estimator</h1>
@@ -50,6 +64,27 @@ const jsonld = JSON.stringify({
     checkpoint storage, and the salaries of the people doing it. On real projects those are
     frequently larger than the compute line. Treat the output as the floor of a budget, not the
     budget.</p>
+
+  <h2>What does a 7B run on 64 H100s cost?</h2>
+  <p>The defaults describe a modest pre-training run: 7 billion parameters, 140 billion tokens,
+    the 6 FLOPs rule, H100 SXM at 989 BF16 TFLOP/s, 40 percent MFU, 64 GPUs at $2.50 an hour.</p>
+  <p>Total compute is 6 × 7e9 × 140e9, which is 5.88 zettaFLOPs. Each GPU delivers 989 × 0.40, or
+    396 realised TFLOP/s. Dividing gives about 14.9 million GPU seconds, which is 4,129 GPU hours,
+    or $10,321 at $2.50. Spread across 64 GPUs that is 64.5 hours of wall-clock time, about 2.7
+    days.</p>
+  <p>Change one input to see where the leverage is. Halving MFU to 20 percent doubles both the
+    hours and the bill. Doubling the token count does the same. Doubling the GPU count halves the
+    wall clock and leaves the bill where it was.</p>
+
+  <h2>Why is the token count the expensive decision?</h2>
+  <p>Compute is linear in parameters and linear in tokens, so the two trade off against each other
+    at fixed budget, and how to spend that budget is the compute-optimal scaling question. The
+    practical asymmetry is that parameters are paid for again at every inference, while tokens are
+    paid for once during training. A smaller model trained on more tokens costs the same to train
+    and less to serve, which is why production models are routinely trained well past the
+    compute-optimal token count for their size.</p>
+
+  <Faq items={faqs} />
 
   <div class="cite-box">Cite this tool: <code>"Training Cost Estimator." The World of AI,
     theworldofai.org/calculators/training-cost/.</code></div>

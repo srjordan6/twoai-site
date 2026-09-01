@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Faq from '../../components/Faq.astro';
 import { readFileSync, existsSync } from 'node:fs';
 
 // The public directory is rendered from content/talent/profiles.json once the
@@ -21,6 +22,18 @@ const jsonld = JSON.stringify({
   isPartOf: { '@type': 'WebSite', name: 'The World of AI', url: 'https://theworldofai.org/' },
 });
 const gen = dir.generated || new Date().toISOString().slice(0, 10);
+const faqs = [
+  { q: 'What does a listing actually show about me?',
+    a: 'A first name, a profile identifier such as TAI-7K3M2F, an optional headline and location, an availability badge if you set one, and the tools and frameworks you selected. No surname, no photograph, no employer, no email address and no phone number. There is nothing on the page for a scraper to collect.' },
+  { q: 'How do employers contact someone with no contact details on the page?',
+    a: 'They email theworldofai@inkboxmail.com with the profile identifier in the subject line and the message is relayed to that person, who decides whether to reply. The requester never learns the address unless the listed person chooses to answer, which puts the first move with the candidate rather than the recruiter.' },
+  { q: 'What does verified mean here?',
+    a: 'It means every skill on a profile is chosen from this site catalogs of models, frameworks, vector stores, observability tools and governance frameworks, rather than typed as free text. That makes listings comparable and searchable, and it stops the keyword inflation that makes most skills fields useless. It does not mean anyone tested the claim; the profile is self-reported and says so.' },
+  { q: 'What happens to my data if I stop using it?',
+    a: 'A listing is reconfirmed by email every 30 days. Unanswered reminders remove the listing and erase the personal data behind it, so an abandoned profile disappears by default rather than sitting online indefinitely. An uploaded resume is never published at all, at any point.' },
+  { q: 'Is it free, and what is the catch?',
+    a: 'Free to join and free to browse, with no premium tier for either side. The site is funded by its publisher, SRJ Consulting and Services, and by affiliate arrangements disclosed on the disclosure page, none of which touch this directory. Nobody pays for placement and there is no ranking to buy.' },
+];
 ---
 <Base title="The AI Talent Network: AI skills, verified and listed — The World of AI" description={desc} current="/talent/" jsonld={jsonld}>
   <p class="crumb"><a href="/ai-ecosystem/">AI Ecosystem</a> ›
@@ -67,6 +80,30 @@ const gen = dir.generated || new Date().toISOString().slice(0, 10);
     </>
   )}
 
+  <h2>Who is this for?</h2>
+  <p>Two groups, with a mismatch between them that this directory exists to close. On one side,
+    people who have actually run these systems: the engineer who has taken a retrieval pipeline to
+    production and knows which vector store fought them, the analyst who has written an AI policy a
+    regulator has read, the practitioner who has evaluated a model rather than only prompted one.
+    On the other, employers who cannot tell that person apart from a resume carrying the same
+    words.</p>
+  <p>A conventional job board cannot help, because it takes skills as free text. Everyone writes
+    the same nouns, so the field carries no information and is ignored. Here the tools come from
+    this site own catalogs, the same records behind the tools directory and the model and framework
+    pages, so a listing states which specific systems someone has used and two listings can be
+    compared without reading a paragraph of prose.</p>
+
+  <h2>Why is privacy the default rather than a setting?</h2>
+  <p>Because a directory of people who work with AI is exactly the sort of page that gets scraped,
+    and a page with nothing on it cannot be harvested. Listings carry no surname, no photograph, no
+    employer and no contact address, which removes the reason to scrape rather than asking scrapers
+    politely not to. Nobody has to find a privacy setting, and nobody loses by not knowing it was
+    there.</p>
+  <p>It also inverts who starts the conversation. Contact runs through a relay keyed to the profile
+    identifier, so a message reaches the person and the sender learns nothing until that person
+    chooses to answer. A listed person is discoverable without being reachable, which is the
+    combination most experienced practitioners actually want and almost no directory offers.</p>
+
   <h2>The rules of the network</h2>
   <ul>
     <li><b>Free.</b> Listing costs nothing, for people and for employers browsing.</li>
@@ -78,6 +115,8 @@ const gen = dir.generated || new Date().toISOString().slice(0, 10);
       unanswered reminders remove it and erase the personal data behind it.</li>
     <li><b>18 and over.</b></li>
   </ul>
+
+  <Faq items={faqs} />
 
   <style>
     .crumb { font-size: .9em; color: #667085; }

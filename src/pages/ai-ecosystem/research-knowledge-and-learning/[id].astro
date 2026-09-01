@@ -22,6 +22,7 @@
  * tracker already applies to bare registry entries.
  */
 import Base from '../../../layouts/Base.astro';
+import Reading from '../../../components/Reading.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
 const CATEGORY = 'research-knowledge-and-learning';
@@ -191,6 +192,7 @@ const jsonld = JSON.stringify(
           <p class="meta-line">Identifier: {n.scheme}</p>
         </div>
       ))}
+      <Reading reading={learn.reading} heading="What does this graph show?" />
       <div class="cite-box">Cite this page: <code>"Entity Graph." The World of AI,
         theworldofai.org{BASE}/{learn.uid}/. Retrieved {learn.generated}.</code></div>
     </>
@@ -212,6 +214,7 @@ const jsonld = JSON.stringify(
           <p class="meta-line">Method: {e.method}</p>
         </div>
       ))}
+      <Reading reading={learn.reading} heading="What does this graph show?" />
       <div class="cite-box">Cite this page: <code>"Relationships." The World of AI,
         theworldofai.org{BASE}/{learn.uid}/. Retrieved {learn.generated}.</code></div>
     </>
@@ -231,6 +234,7 @@ const jsonld = JSON.stringify(
           <p class="meta-line">{m.creator} · {m.extra} · verified {m.verified}</p>
         </div>
       ))}
+      <Reading reading={learn.reading} heading={`What does this ${learn.name.toLowerCase()} catalogue show?`} />
       <div class="cite-box">Cite this page: <code>"{learn.name}." The World of AI,
         theworldofai.org{BASE}/{learn.uid}/. Retrieved {learn.generated}.</code></div>
     </>
@@ -291,6 +295,7 @@ const jsonld = JSON.stringify(
             are reproduced as such; no description or review text is copied.</p>
         </>
       )}
+      <Reading reading={learn.reading} heading={`What does this ${learn.name.toLowerCase()} catalogue show?`} />
       <div class="cite-box">Cite this page: <code>"{learn.name}." The World of AI,
         theworldofai.org{BASE}/{learn.uid}/. Retrieved {learn.generated}.</code></div>
     </>
@@ -460,9 +465,13 @@ const jsonld = JSON.stringify(
           </li>
         ))}
       </ol>
+      <Reading reading={topic.reading} heading={`What does the ${topic.name.toLowerCase()} literature say?`} />
+
       <p class="back"><a href={`${BASE}/${hubUid}/`}>All research topics</a></p>
     </>
   )}
+
+  <Reading reading={hub?.reading} heading="What does this library cover?" />
 </Base>
 
 <style>

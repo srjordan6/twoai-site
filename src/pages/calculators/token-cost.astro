@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Faq from '../../components/Faq.astro';
 const desc = 'Free LLM token cost calculator: enter input and output price per million tokens and your usage to get cost per request and per month. Works for any model or provider.';
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org', '@type': 'WebApplication',
@@ -7,6 +8,19 @@ const jsonld = JSON.stringify({
   operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   url: 'https://theworldofai.org/calculators/token-cost/',
 });
+
+const faqs = [
+  { q: 'Why does output cost five times what input costs?',
+    a: 'They are different computations. Input is processed in one parallel pass over the whole prompt, which uses the hardware efficiently. Output is produced one token at a time, and each token requires reading the model weights and the growing cache from memory again, so it is bound by memory bandwidth rather than arithmetic. Providers price the two separately because they cost differently to serve.' },
+  { q: 'How many tokens is a page of text?',
+    a: 'For ordinary English prose, about 0.75 tokens per word or four characters per token, so a 500 word page is roughly 375 tokens. Code, names, numbers and languages that do not separate words with spaces all tokenize higher. Confirm against your model tokenizer before committing to a budget.' },
+  { q: 'Does prompt caching change this arithmetic?',
+    a: 'Substantially, when a long prefix repeats across requests. Providers that offer it charge a reduced rate for cached input tokens, so a workload with a large fixed system prompt and a small variable question can see its input line fall sharply. Enter the cached rate as your input price to model it.' },
+  { q: 'Should I use the cheaper model?',
+    a: 'Compare cost per completed task, not cost per token. A cheaper model that needs two attempts, a longer prompt or a larger retrieval context can cost more per successful answer than an expensive one that gets it right first time. Measure both on the same task set before switching.' },
+  { q: 'What is not in this number?',
+    a: 'Embedding calls, retrieval infrastructure, vector storage, egress, and any tokens spent on retries, evaluation runs and guardrail checks. On production systems the retry and evaluation traffic is routinely a double-digit percentage of the bill, and none of it appears in a per-request estimate.' },
+];
 ---
 <Base title="LLM Token Cost Calculator: price any model's API usage — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>LLM Token Cost Calculator</h1>
@@ -31,6 +45,24 @@ const jsonld = JSON.stringify({
     token is about four characters, so 1,000 tokens is roughly 750 words.</p>
   <p>Prices change often, which is exactly why this page does not hardcode any provider's
     numbers: copy them from the provider's own pricing page and they are current by definition.</p>
+
+  <h2>What does the default workload cost?</h2>
+  <p>The defaults describe a common shape: a 2,000 token prompt, an 800 token reply, a thousand
+    requests a day, at $3 per million input tokens and $15 per million output.</p>
+  <p>Input is 2,000 ÷ 1,000,000 × $3, which is $0.006. Output is 800 ÷ 1,000,000 × $15, which is
+    $0.012. Cost per request is $0.018, a day is $18, and a 30 day month is $540. Output is 29
+    percent of the tokens and 67 percent of the cost, which is the ratio worth remembering: a
+    change that shortens replies saves twice what the same change to prompts saves.</p>
+
+  <h2>Where does the bill actually grow?</h2>
+  <p>Three multipliers, in the order they usually bite. Requests per day scales everything
+    linearly and is the one that moves when a feature ships. Prompt length creeps upward on its
+    own as retrieval returns more context and few-shot examples accumulate, which is drift rather
+    than a decision, and it is why average prompt length is worth monitoring as a metric in its
+    own right. Output length is under your control through instructions and stop conditions, and
+    it is the most expensive token you buy.</p>
+
+  <Faq items={faqs} />
 
   <div class="cite-box">Cite this tool: <code>"LLM Token Cost Calculator." The World of AI,
     theworldofai.org/calculators/token-cost/.</code></div>

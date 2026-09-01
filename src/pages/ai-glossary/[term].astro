@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Reading from '../../components/Reading.astro';
 import KeepReading from '../../components/KeepReading.astro';
 import { companiesNamedIn } from '../../lib/related';
 
@@ -27,12 +28,15 @@ export function getStaticPaths() {
     params: { term: t.slug },
     props: {
       t,
+      // One glossary.json becomes 552 pages, so a reading belongs to the term
+      // and arrives keyed by the term's own URL. See main.go's publish merge.
+      reading: g.readings?.[`/ai-glossary/${t.slug}/`] ?? null,
       generated: g.generated ?? '',
       related: terms.filter((o) => o.category === t.category && o.slug !== t.slug).slice(0, 6),
     },
   }));
 }
-const { t, generated, related } = Astro.props;
+const { t, generated, related, reading } = Astro.props;
 // Definitions and examples name real companies; those were dead text.
 const krCompanies = companiesNamedIn(`${t.definition ?? ''} ${t.example ?? ''} ${t.origin ?? ''}`, { limit: 4 });
 const desc = t.definition.length > 152 ? t.definition.slice(0, 149) + '...' : t.definition;
@@ -131,6 +135,8 @@ const jsonld = JSON.stringify({
       ))}
     </>
   )}
+
+  <Reading reading={reading} heading={`Why does ${t.term} matter?`} />
 
   <div class="cite-box">Cite this definition: <code>"{t.term}." The World of AI Glossary,
     theworldofai.org/ai-glossary/{t.slug}/.{generated ? ` Verified ${generated}.` : ''}</code></div>

@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Faq from '../../components/Faq.astro';
 const desc = 'Free GPU VRAM estimator for local LLMs: enter parameter count and quantization to see how much memory a model needs, with KV-cache headroom.';
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org', '@type': 'WebApplication',
@@ -7,6 +8,22 @@ const jsonld = JSON.stringify({
   operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   url: 'https://theworldofai.org/calculators/vram/',
 });
+
+// Answers to the questions the calculator itself cannot answer, marked up as
+// FAQPage so an assistant quoting one can attribute it. Plain text, no HTML:
+// the visible answer and the answer in the markup are the same string.
+const faqs = [
+  { q: 'Can I run a 70B model on a single 80 GB GPU?',
+    a: 'At 4-bit quantization, yes, with room to spare: 70 billion parameters at about 0.55 bytes each is 38.5 GB of weights, and 20 percent working overhead brings it to roughly 46 GB. At FP16 the same model needs about 140 GB of weights and will not fit on one 80 GB card at all.' },
+  { q: 'Why is 4-bit about 0.55 bytes per parameter rather than 0.5?',
+    a: 'Practical quantization formats do not store every value at 4 bits. Scaling factors are kept per group of weights, and formats commonly leave some tensors, often embeddings and the output layer, at higher precision. The excess over 0.5 bytes is that bookkeeping.' },
+  { q: 'Does the KV cache scale with context length or with model size?',
+    a: 'Both, but context length is what moves during a session. The cache holds a key and a value vector for every token generated so far, in every layer, so it grows linearly with sequence length and with batch size while the weights stay fixed. A long conversation can end up needing more memory for its cache than a small model needs for its weights.' },
+  { q: 'How much overhead should I actually allow?',
+    a: 'Twenty percent is a reasonable default for short prompts and single-user use. Raise it toward 50 percent or more for long context, and much higher for batched serving, where every concurrent request carries its own cache. If you are sizing a serving fleet rather than a laptop, compute the cache explicitly rather than using a percentage.' },
+  { q: 'Does this estimate cover training?',
+    a: 'No. This is inference. Training additionally holds gradients and optimizer state, and Adam-style optimizers keep two moments per parameter, so a full fine-tune commonly needs several times the memory of inference at the same precision. Parameter-efficient methods such as LoRA avoid most of that by training a small number of added weights.' },
+];
 ---
 <Base title="GPU VRAM Estimator: memory needed to run any LLM locally — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>GPU VRAM Estimator</h1>
@@ -35,6 +52,28 @@ const jsonld = JSON.stringify({
     because practical quantization formats keep some values at higher precision. Overhead covers
     the KV cache, which grows with context length, so long-context work deserves a higher
     percentage. The result is an estimate for inference; training takes several times more.</p>
+
+  <h2>What does a 70B model need in practice?</h2>
+  <p>Take a 70 billion parameter model at 4-bit with the default 20 percent overhead. Weights are
+    70 × 0.55, which is 38.5 GB. Overhead multiplies that by 1.2, giving about 46 GB. That fits on
+    a single 80 GB accelerator with roughly 34 GB left for a longer cache or a second workload.</p>
+  <p>The same model at FP16 is 70 × 2, or 140 GB of weights, and 168 GB with overhead. No single
+    current card holds it, so the run needs at least three 80 GB GPUs and the weights must be
+    sharded across them. That difference, one card against three, is the entire practical
+    argument for quantization.</p>
+
+  <h2>How do I size the KV cache exactly?</h2>
+  <p>Per token, the cache holds one key and one value vector in every layer. Bytes = 2 × layers ×
+    key-value heads × head dimension × bytes per element, multiplied by the number of tokens and
+    by the batch size. The factor of 2 is the key and the value; it is not the precision, which is
+    the bytes-per-element term.</p>
+  <p>Grouped-query attention is why this is no longer the dominant cost it once was. Sharing key
+    and value heads across query heads cuts the key-value head count, often by a factor of four or
+    eight, and the cache shrinks in proportion. Check the model's config for the key-value head
+    count rather than the attention head count, because using the larger number overstates the
+    cache by exactly that factor.</p>
+
+  <Faq items={faqs} />
 
   <div class="cite-box">Cite this tool: <code>"GPU VRAM Estimator." The World of AI,
     theworldofai.org/calculators/vram/.</code></div>

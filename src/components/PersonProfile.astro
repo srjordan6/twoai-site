@@ -1,0 +1,197 @@
+---
+/**
+ * ONE PERSON'S FULL PROFILE, RENDERED INSIDE THEIR SECTION PAGE.
+ *
+ * Until 2026-09-01 a profile was its own page at
+ * /ai-ecosystem/ecosystem-entities-market-and-operations/{uid}/. Stephen's rule
+ * that day: a human entity is found in the AI People Directory or in one of its
+ * sub categories, and nowhere else. So the profile moved onto the page for the
+ * person's primary category and the old URL 301s to this section's anchor.
+ *
+ * The uid did not change and is still the address. That is what the 2026-08-03
+ * identifier rule bought: /.../{catUid}/#{uid} survives a rename exactly as
+ * /.../{uid}/ did, because neither is derived from the name.
+ *
+ * Headings are H3 here. The section page owns H1 and the H2 per person, so a
+ * profile nested inside it must not restart the outline, or a page carrying
+ * nineteen profiles emits nineteen H2 "Timeline" headings that mean nothing on
+ * their own.
+ *
+ * NORMALISERS, AND WHY THEY EXIST. site_people stores `quote` as
+ * {text, context}, `quick_facts` as an array of sentences, `achievements` as
+ * {title, impact}, `sources` as {primary, secondary} and timeline rows as
+ * {year, event, impact}. The page template read a bare string, an object of
+ * labelled pairs, {text|name}, a flat array and {year, event}. None of those
+ * mismatches is a type error in JSX, so nothing failed loudly and all 58
+ * profiles were damaged at once: on 2026-09-01 the live Biswa Sengupta page
+ * printed the literal text "[object Object]" for its pull quote, labelled Quick
+ * facts 0, 1, 2, 3, rendered "Known for" as five empty bullets, and declared
+ * "no published sources attached yet" while a Forbes and a CNBC citation sat in
+ * the record. Each normaliser therefore accepts the shape the data uses AND the
+ * shape the template used to assume, so a record written by hand tomorrow does
+ * not have to know which of the two it is.
+ */
+interface Props {
+  person: any;
+  base: string;
+  orgUid?: string | null;
+}
+const { person, base, orgUid = null } = Astro.props as Props;
+
+const quote = person?.quote
+  ? (typeof person.quote === 'string'
+      ? { text: person.quote, context: '' }
+      : { text: person.quote.text || '', context: person.quote.context || '' })
+  : null;
+// An array of sentences renders as a list; an object of labelled pairs still
+// renders as the labelled table it was built to be.
+const factList = Array.isArray(person?.quick_facts) ? person.quick_facts.filter(Boolean) : [];
+const factPairs = person?.quick_facts && !Array.isArray(person.quick_facts)
+  ? Object.entries(person.quick_facts)
+  : [];
+const achievements = (person?.achievements ?? [])
+  .map((a) => (typeof a === 'string'
+    ? { title: a, impact: '' }
+    : { title: a.title || a.text || a.name || '', impact: a.impact || a.detail || '' }))
+  .filter((a) => a.title || a.impact);
+// {primary, secondary} flattens into one list that keeps which is which, so a
+// reader can tell a subject's own filing from a newspaper writing about them.
+const sources = Array.isArray(person?.sources)
+  ? person.sources.map((s) => (typeof s === 'string'
+      ? { name: s, url: '', rank: '', publisher: '' }
+      : { name: s.name || s.title || s.url || '', url: s.url || '', rank: '', publisher: s.publisher || '' }))
+  : Object.entries(person?.sources ?? {}).flatMap(([rank, list]) => (
+      (Array.isArray(list) ? list : []).map((s) => (typeof s === 'string'
+        ? { name: s, url: '', rank, publisher: '' }
+        : { name: s.name || s.title || s.url || '', url: s.url || '', rank, publisher: s.publisher || '' }))
+    ));
+const timeline = person?.timeline ?? [];
+const timelineHasImpact = timeline.some((t) => t.impact);
+const readingParas = String(person?.reading?.body ?? '')
+  .split(/\n\s*\n+/).map((p) => p.trim()).filter(Boolean);
+// Cross references to the person's other categories. The section they are
+// profiled in is this one, so it is dropped rather than linked back to itself.
+const otherCats = (person?.cats ?? []).filter((c) => c.uid && c.uid !== person?.home_uid);
+---
+<section class="person" id={person.uid}>
+  <h2>{person.name}</h2>
+  {person.moniker && <p class="lede">{person.moniker}</p>}
+  {person.hook && <p class="answer">{person.hook}</p>}
+  <p class="meta-line">
+    {person.nationality && <>{person.nationality} · </>}
+    {person.born && <>Born {person.born}{person.died && <> · Died {person.died}</>} · </>}
+    {person.org && <>{orgUid ? <a href={`/companies/${orgUid}/`}>{person.org}</a> : person.org} · </>}
+    {person.generated && <>Last verified: {person.generated}</>}
+  </p>
+
+  {quote?.text && (
+    <blockquote class="pq">
+      <p>{quote.text}</p>
+      {quote.context && <cite>{quote.context}</cite>}
+    </blockquote>
+  )}
+
+  {person.fields?.length > 0 && (
+    <p class="meta-line"><b>Fields:</b> {person.fields.join(' · ')}</p>
+  )}
+
+  {otherCats.length > 0 && (
+    <p class="meta-line"><b>Also listed under:</b>{' '}
+      {otherCats.map((c, i) => (
+        <>{i > 0 && ' · '}<a href={`${base}/${c.uid}/`}>{c.name}</a></>
+      ))}
+    </p>
+  )}
+
+  {(factList.length > 0 || factPairs.length > 0) && (
+    <>
+      <h3>Who is {person.name}?</h3>
+      {factList.length > 0 && <ul class="qfacts">{factList.map((f) => <li>{f}</li>)}</ul>}
+      {factPairs.length > 0 && (
+        <table>
+          <tbody>
+            {factPairs.map(([k, v]) => (
+              <tr><th>{k.replace(/_/g, ' ')}</th><td>{Array.isArray(v) ? v.join(', ') : v}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </>
+  )}
+
+  {achievements.length > 0 && (
+    <>
+      <h3>What is {person.name} known for?</h3>
+      <dl class="ach">
+        {achievements.map((a) => (
+          <>
+            <dt>{a.title}</dt>
+            {a.impact && <dd>{a.impact}</dd>}
+          </>
+        ))}
+      </dl>
+    </>
+  )}
+
+  {timeline.length > 0 && (
+    <>
+      <h3>What is {person.name}&rsquo;s career timeline?</h3>
+      <table>
+        <thead><tr><th>Year</th><th>Event</th>{timelineHasImpact && <th>Why it mattered</th>}</tr></thead>
+        <tbody>
+          {timeline.map((t) => (
+            <tr>
+              <td>{t.year || t.date}</td>
+              <td>{t.event || t.text}</td>
+              {timelineHasImpact && <td>{t.impact || ''}</td>}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  )}
+
+  {readingParas.length > 0 && (
+    <>
+      <h3>What does {person.name}&rsquo;s record show?</h3>
+      {readingParas.map((p) => <p>{p}</p>)}
+      <p class="meta-line">Written {person.reading.generated_on} from this profile and the sources
+        below, and nothing else. It is our reading rather than a sourced fact.</p>
+    </>
+  )}
+
+  {sources.length > 0 ? (
+    <>
+      <h3>Where does this come from?</h3>
+      <ul class="cites">
+        {sources.map((s) => (
+          <li>
+            {s.url ? <a href={s.url} rel="noopener">{s.name || s.url}</a> : s.name}
+            {s.publisher && <> · {s.publisher}</>}
+            {s.rank === 'secondary' && <> · secondary</>}
+          </li>
+        ))}
+      </ul>
+    </>
+  ) : (
+    <p class="meta-line">This profile has no published sources attached yet. Treat the detail
+      above as unverified until it does, and tell us if any of it is wrong:
+      <a href="/contact/">contact</a>.</p>
+  )}
+
+  <div class="cite-box">Cite this profile: <code>"{person.name}." AI People Directory,
+    The World of AI, theworldofai.org{base}/{person.home_uid}/#{person.uid}.
+    {person.generated ? ` Verified ${person.generated}.` : ''}</code></div>
+</section>
+
+<style>
+  .person { padding: 1.6em 0 0; border-top: 2px solid #ececf2; margin-top: 2.2em; }
+  .person:first-of-type { border-top: 0; margin-top: 1em; }
+  .person h2 { margin: 0 0 .2em; }
+  .person h3 { font-size: 1.02rem; margin: 1.3em 0 .4em; }
+  .qfacts { margin: 0 0 1.2em; padding-left: 1.15em; }
+  .qfacts li { margin: 0 0 .5em; }
+  .ach dt { font-weight: 600; color: var(--navy, #201868); margin: 0 0 .25em; }
+  .ach dd { margin: 0 0 1em; }
+  .pq cite { display: block; margin-top: .6em; font-size: 14px; font-style: normal; opacity: .75; }
+</style>

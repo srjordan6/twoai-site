@@ -52,12 +52,20 @@ function redirectedPaths() {
   return out;
 }
 
+// Retained as a no-op guard rather than deleted. Per-person pages stopped being
+// published on 2026-09-01, when profiles folded into their primary category's
+// section page, so there is no tracked-only person page left to exclude and
+// this returns an empty set. It stays because the situation it guards against,
+// a page that renders noindex while being advertised in the sitemap, is exactly
+// the contradiction the comment at the top of this file exists to prevent, and
+// the day a tracked-only shape returns it should be caught here rather than
+// rediscovered in Search Console.
 function noindexPeoplePaths() {
   const out = new Set();
   const dir = 'content/people';
   if (!existsSync(dir)) return out;
   for (const f of readdirSync(dir)) {
-    if (!f.endsWith('.json') || f === 'index.json') continue;
+    if (!f.endsWith('.json') || f === 'index.json' || f.startsWith('cat-')) continue;
     try {
       const p = JSON.parse(readFileSync(`${dir}/${f}`, 'utf8'));
       if (p.uid && p.tracked_only) out.add(`/ai-ecosystem/ecosystem-entities-market-and-operations/${p.uid}/`);

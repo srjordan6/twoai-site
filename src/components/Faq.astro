@@ -1,0 +1,53 @@
+---
+/**
+ * A question block with the FAQPage markup that goes with it.
+ *
+ * twoai_page_standard has carried a `faq-section` rule since 2026-08-30 ("a
+ * clean FAQ block at the bottom of the page answers the related sub-questions,
+ * with FAQPage schema", measured by twoai_page_audit.faq_schema) and the
+ * calculators shipped without one. Putting the visible questions and the markup
+ * in the same component is the point: a page cannot answer a question to a
+ * reader and stay silent to a parser, or the other way round, because both come
+ * from the same array.
+ *
+ * The answer text is plain, not HTML. Schema.org's acceptedAnswer wants the
+ * answer a person would read, and stripping tags out of a rich string to build
+ * it is how the two versions drift apart.
+ */
+interface Props {
+  items?: { q: string; a: string }[];
+  heading?: string;
+}
+const { items = [], heading = 'Frequently asked questions' } = Astro.props as Props;
+const ld = items.length
+  ? JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: items.map((f) => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    })
+  : '';
+---
+{items.length > 0 && (
+  <section class="faqs">
+    <h2>{heading}</h2>
+    {items.map((f) => (
+      <div class="faq">
+        <h3>{f.q}</h3>
+        <p>{f.a}</p>
+      </div>
+    ))}
+    <script type="application/ld+json" set:html={ld} />
+  </section>
+)}
+
+<style>
+  .faqs { margin: 2em 0 1.2em; }
+  .faq { padding: .9em 0; border-bottom: 1px solid #e6e4de; }
+  .faq:last-of-type { border-bottom: 0; }
+  .faq h3 { margin: 0 0 .35em; font-size: 1.02rem; color: var(--navy, #201868); }
+  .faq p { margin: 0; color: #3d3d46; }
+</style>

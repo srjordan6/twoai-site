@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Faq from '../../components/Faq.astro';
 const desc = 'Free colocation cost calculator: monthly and annual cost of cabinets, committed power, overage and cross-connects, with an effective cost per kW and per rack.';
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org', '@type': 'WebApplication',
@@ -7,6 +8,19 @@ const jsonld = JSON.stringify({
   operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   url: 'https://theworldofai.org/calculators/colocation-cost/',
 });
+
+const faqs = [
+  { q: 'Is colocation billed on space or on power?',
+    a: 'On power, in every high-density deal and most conventional ones. A cabinet rate buys a footprint and a small power allowance, typically a few kilowatts, and everything above that allowance is billed per kilowatt. At AI densities the power line dwarfs the space line.' },
+  { q: 'What is the difference between committed and metered power?',
+    a: 'Committed power is billed on the capacity reserved, whether or not it is drawn. Metered is billed on actual consumption. Commitment is the more common structure for high density because the provider has to build and hold the capacity either way. Which one a contract uses changes the arithmetic completely, and it is worth confirming before comparing two quotes.' },
+  { q: 'Why are cross-connects so expensive for what they are?',
+    a: 'A cross-connect is a physical cable between two cabinets in the same building, and it is priced on the value of the interconnection rather than the cost of the cable. In carrier-dense facilities it is what customers are paying for, and recurring cross-connect revenue is a significant share of a colocation operator margin.' },
+  { q: 'What is not in this calculator that will be on the invoice?',
+    a: 'Annual escalators, commonly around 3 percent compounding over a multi-year term. Remote hands, billed hourly. Power circuit installation fees per circuit. Bandwidth or IP transit if bought from the provider. Cancellation and early-termination terms. Over a five-year deal the escalator alone can add more than a tenth of the total.' },
+  { q: 'Can I get AI racks on a standard rate card?',
+    a: 'Usually not. Standard cabinet products assume 5 to 10 kW; racks at 40 kW and above need dedicated power distribution, containment or liquid cooling, and often a different part of the building. Those deals are quoted individually, priced per kilowatt rather than per cabinet, and the lead time on capacity is frequently the binding constraint rather than the price.' },
+];
 ---
 <Base title="Colocation Cost Calculator: monthly space, power and cross-connects — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>Colocation Cost Calculator</h1>
@@ -37,6 +51,31 @@ const jsonld = JSON.stringify({
     and what the escalator is: a 3% annual uplift over a five-year term is a real cost this
     calculator does not model. High-density AI cabinets are also frequently quoted outside
     standard rate cards altogether.</p>
+
+  <h2>What does a twenty cabinet footprint cost?</h2>
+  <p>Twenty cabinets at $900 a month, 5 kW included each, drawing 8 kW each, committed power at
+    $150 per kW per month, eight cross-connects at $300, and $25,000 of one-off install.</p>
+  <p>Space is 20 × $900, or $18,000. Power above allowance is 3 kW per cabinet across 20 cabinets,
+    which is 60 kW, at $150, or $9,000. Cross-connects are $2,400. The month is $29,400 and the
+    year is $352,800; with setup, year one is $377,800. Across 160 kW total draw that is $184 per
+    kW per month, or $1,470 per cabinet.</p>
+  <p>Space is 61 percent of that monthly bill at 8 kW a cabinet. Raise the draw to 15 kW and power
+    becomes $30,000 against $18,000 of space, and the deal is a power contract with some floor
+    attached.</p>
+
+  <h2>Colocation or build?</h2>
+  <p>The comparison people get wrong is against the energy calculator's output rather than against
+    the whole cost of ownership. At $184 per kW per month, this deal is about $2,200 per kW a year.
+    Powering the same load in an owned facility, on the energy calculator's defaults, is about $962
+    per kW a year, so colocation looks like double.</p>
+  <p>It is not, because that $962 is electricity alone. The owned case also carries the building,
+    the electrical and mechanical plant, redundancy, maintenance, staffing and the capital tied up
+    in all of it, none of which appears in an energy figure. The honest comparison is total cost of
+    ownership per kilowatt over the asset life, and the answer usually turns on scale and on how
+    certain the demand forecast is: colocation buys optionality, and a build buys unit economics
+    that only pay back if the capacity is actually filled.</p>
+
+  <Faq items={faqs} />
 
   <div class="cite-box">Cite this tool: <code>"Colocation Cost Calculator." The World of AI,
     theworldofai.org/calculators/colocation-cost/.</code></div>

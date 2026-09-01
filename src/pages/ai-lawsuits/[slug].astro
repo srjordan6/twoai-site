@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Reading from '../../components/Reading.astro';
 import KeepReading from '../../components/KeepReading.astro';
 import { matchTerms, companiesNamedIn } from '../../lib/related';
 import { readFileSync, existsSync } from 'node:fs';
@@ -31,10 +32,14 @@ export function getStaticPaths() {
     const seen = new Set([c.slug, ...sameDefendant.map((o) => o.slug)]);
     const sameCategory = cases.filter((o) => !seen.has(o.slug) && o.category === c.category);
     const related = [...sameDefendant, ...sameCategory].slice(0, 6);
-    return { params: { slug: c.slug }, props: { c, generated: s.generated ?? '', related } };
+    // Bundle readings arrive keyed by the URL the item publishes at, because
+    // one lawsuits.json becomes 100+ pages and a reading belongs to the case,
+    // not to the file. See the second lateral in main.go's publish merge.
+    const reading = s.readings?.[`/ai-lawsuits/${c.slug}/`] ?? null;
+    return { params: { slug: c.slug }, props: { c, generated: s.generated ?? '', related, reading } };
   });
 }
-const { c, generated, related } = Astro.props;
+const { c, generated, related, reading } = Astro.props;
 // The parties, claims and docket text name companies we hold profiles on. A
 // reader who lands here from a search for one of them had no route to it.
 const krText = `${c.case_name ?? ''} ${c.plaintiffs ?? ''} ${c.defendants ?? ''} ${c.significance ?? ''} ${c.summary ?? ''}`;
@@ -177,6 +182,8 @@ const jsonld = JSON.stringify({
       ))}
     </>
   )}
+
+  <Reading reading={reading} heading={`Why does ${c.case_name} matter?`} />
 
   <div class="cite-box">Cite this page: <code>"{c.case_name}." The World of AI Lawsuit Tracker,
     theworldofai.org/ai-lawsuits/{c.slug}/.{generated ? ` Verified ${generated}.` : ''}</code></div>

@@ -1,0 +1,54 @@
+---
+/**
+ * THE SITE'S OWN READING OF A PAGE'S OWN DATA.
+ *
+ * `pipeline thinpages` has been writing these since 2026-08-30
+ * (twoai_thinsense.go): Sonnet is handed one page's JSON and nothing else, told
+ * to name no company, number, date or event that is not in it, and asked for the
+ * paragraph the facts cannot write themselves. The result is cached on a hash of
+ * that data, so it is rewritten when and only when the facts change, and both
+ * publishers merge it onto the page as `reading` at publish time.
+ *
+ * On 2026-09-01 there were 271 of them in twoai_industry_analysis and three
+ * templates in this repo that read the field, so 240 pages carried a reading in
+ * their JSON and rendered none of it. That is what this component is for: one
+ * place that knows how a reading looks, so wiring a new page kind up to it is
+ * one import and one line rather than a copied block that drifts.
+ *
+ * Props:
+ *   reading  the merged { model, body, generated_on } object, or undefined
+ *   heading  the H2. Phrase it as the question the reader is asking, per the
+ *            question-headings rule in twoai_page_standard; the default is the
+ *            generic form and most callers should pass something specific.
+ *   note     an extra clause naming what the reading was written from, when the
+ *            page's own sources deserve saying out loud.
+ *
+ * It renders nothing at all when there is no reading, which is the normal state
+ * for a page whose facts have not changed enough to earn one yet.
+ */
+interface Props {
+  reading?: { model?: string; body?: string; generated_on?: string } | null;
+  heading?: string;
+  note?: string;
+}
+const { reading, heading = 'What does this tell us?', note } = Astro.props as Props;
+
+// Paragraph splitting is defensive on purpose. The model is asked for blank-line
+// separated paragraphs and gives them, but a single stray run of whitespace
+// should degrade to one paragraph rather than to an empty section.
+const paras = String(reading?.body ?? '')
+  .split(/\n\s*\n+/)
+  .map((p) => p.trim())
+  .filter(Boolean);
+---
+{paras.length > 0 && (
+  <section class="reading">
+    <h2>{heading}</h2>
+    {paras.map((p) => <p>{p}</p>)}
+    <p class="meta-line">
+      Written {reading?.generated_on} from the data on this page{note ? `, ${note}` : ''}, and
+      nothing else. It is our reading rather than a sourced fact, and it is rewritten whenever
+      those facts change.
+    </p>
+  </section>
+)}

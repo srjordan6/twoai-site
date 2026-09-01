@@ -15,6 +15,8 @@
 import Base from '../../../layouts/Base.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { ownedServers } from '../../../lib/mcpAttribution';
+import Reading from '../../../components/Reading.astro';
+import PersonProfile from '../../../components/PersonProfile.astro';
 
 const CATEGORY = 'ecosystem-entities-market-and-operations';
 const CATEGORY_NAME = 'Ecosystem Entities, Market and Operations';
@@ -26,17 +28,29 @@ export function getStaticPaths() {
   if (existsSync('content/people/index.json')) {
     const idx = JSON.parse(readFileSync('content/people/index.json', 'utf8'));
     paths.push({ params: { id: idx.uid }, props: { hub: idx } });
+    // From 2026-09-01 a person is published inside their primary category's
+    // section, anchored on their uid, and the pipeline stops writing
+    // people/{uid}.json. The 58 retired URLs 301 to their new anchor, listed in
+    // public/_redirects.
+    //
+    // THE PER-PERSON BRANCH SURVIVES ONE MORE CYCLE ON PURPOSE. This repo and
+    // the pipeline deploy independently: pushing here fires a Cloudflare build
+    // immediately, while the content bundle only changes when the pipeline next
+    // runs. If this build shipped first and refused to render a person file
+    // that is still in the bundle, 58 live URLs would 404 into redirects
+    // pointing at anchors that did not exist yet. So while people/{uid}.json is
+    // present it still builds, and the moment the pipeline stops writing them
+    // the files vanish from the bundle and this loop stops finding them. No
+    // flag day, no ordering requirement, and the branch below deletes itself.
     for (const f of readdirSync('content/people')) {
       if (!f.endsWith('.json') || f === 'index.json') continue;
       const p = JSON.parse(readFileSync(`content/people/${f}`, 'utf8'));
       if (!p.uid) continue;
-      // cat-*.json are the category section hubs (Researchers, Investors, ...),
-      // not people; they render as member listings below the same route.
       if (f.startsWith('cat-')) {
         paths.push({ params: { id: p.uid }, props: { pcat: p, hubUid: idx.uid } });
-        continue;
+      } else {
+        paths.push({ params: { id: p.uid }, props: { legacyPerson: p, hubUid: idx.uid } });
       }
-      paths.push({ params: { id: p.uid }, props: { person: p, hubUid: idx.uid } });
     }
   }
 
@@ -72,7 +86,7 @@ export function getStaticPaths() {
         paths.push({ params: { id: d.uid }, props: { corg: d, chubUid: cidx.uid } });
         continue;
       }
-      paths.push({ params: { id: d.company.uid }, props: { company: d.company, generated: d.generated, chubUid: cidx.uid, website: d.website, profileText: d.profile_text } });
+      paths.push({ params: { id: d.company.uid }, props: { company: d.company, generated: d.generated, chubUid: cidx.uid, website: d.website, profileText: d.profile_text, companyReading: d.reading } });
     }
   }
 
@@ -90,7 +104,7 @@ export function getStaticPaths() {
 
   return paths;
 }
-const { hub, person, hubUid, chub, company, generated, chubUid, jhub, pcat, csec, cpat, cpriv, corg, cfund, obs, cma, website, profileText } = Astro.props;
+const { hub, hubUid, chub, company, generated, chubUid, jhub, pcat, csec, cpat, cpriv, corg, cfund, obs, cma, website, profileText, companyReading, legacyPerson } = Astro.props;
 // MCP servers we are willing to say this company published. Exact namespace
 // match only; see src/lib/mcpAttribution.ts for why a substring test is not
 // safe here.
@@ -115,10 +129,9 @@ if (!g2.__twoaiCompanyByName) {
   } catch { /* absent: the link simply does not render */ }
   g2.__twoaiCompanyByName = byName;
 }
-const personOrgUid = person?.org
-  ? g2.__twoaiCompanyByName[String(person.org).toLowerCase().replace(/[^a-z0-9]/g, '')] || null
-  : null;
-
+// Organisation lookup for a profile, done here because the map is built once
+// per build in globalThis above. PersonProfile takes the uid rather than
+// rebuilding the map for each of the nineteen people on a section page.
 const obsDescs = obs ? {
   'obs-release-cadence': `Release cadence of the ${obs.models} open models this site tracks, by month, from each model's own Hub record.`,
   'obs-github-activity': `${obs.repos} tracked AI repositories: ${obs.pushed_7d} pushed in the last 7 days, ${Number(obs.stars_total).toLocaleString()} stars combined.`,
@@ -158,9 +171,9 @@ const desc = clampDesc(cma
   ? `${chub.total} companies building AI, with what each one ships, whether it is a defendant in a tracked lawsuit, and whether it publishes to the Model Context Protocol registry.`
   : company
   ? `${company.name}: ${company.products.length} AI product${company.products.length === 1 ? '' : 's'} we track${company.cases?.length ? `, ${company.cases.length} tracked lawsuit${company.cases.length === 1 ? '' : 's'}` : ''}${ownedMcp.length ? `, ${ownedMcp.length} MCP server${ownedMcp.length === 1 ? '' : 's'}` : ''}. A profile in the AI Company Directory, with funding, filings, and patents where on record.`
-  : person?.tracked_only
-  ? `${person.name}, ${person.title} at ${person.org}. Tracked in the AI People Directory; a full profile has not been written yet.`
-  : `${person.name}${person.moniker ? `, ${person.moniker}` : ''}. ${person.hook || ''}`.slice(0, 300));
+  : legacyPerson
+  ? `${legacyPerson.name}${legacyPerson.moniker ? `, ${legacyPerson.moniker}` : ''}. ${legacyPerson.hook || ''}`.slice(0, 300)
+  : '');
 const title = cma
   ? 'AI Acquisitions and Partnerships: SEC 8-K Filings — The World of AI'
   : obs
@@ -185,7 +198,9 @@ const title = cma
   ? 'AI Company Directory — The World of AI'
   : company
   ? `${company.name}: AI products, lawsuits, and MCP servers`
-  : `${person.name} — AI People Directory`;
+  : legacyPerson
+  ? `${legacyPerson.name} — AI People Directory`
+  : 'The World of AI';
 
 // Alphabetical grouping for the company hub, with a jump index. Anything not
 // starting A-Z lands under # so nothing is silently dropped from the list.
@@ -314,24 +329,25 @@ const jsonld = JSON.stringify(
         identifier: company.uid,
         url: `https://theworldofai.org${BASE}/${company.uid}/`,
       }
-    : {
-        '@context': 'https://schema.org',
-        '@type': 'Person',
-        name: person.name,
-        description: person.hook,
-        nationality: person.nationality,
-        identifier: person.uid,
-        url: `https://theworldofai.org${BASE}/${person.uid}/`,
-        ...(person.fields?.length ? { knowsAbout: person.fields } : {}),
-      }
+    : {}
 );
 ---
 <Base title={title}
-  description={desc} current={`${BASE}/`} jsonld={jsonld} noindex={!!person?.tracked_only}>
+  description={desc} current={`${BASE}/`} jsonld={jsonld}
+  canonicalOverride={company ? `https://theworldofai.org/companies/${company.uid}/` : undefined}>
+  {/* EVERY COMPANY WAS PUBLISHED AT TWO SELF-CANONICAL URLS. This route builds a
+      company page under the ecosystem path and src/pages/companies/[id].astro
+      builds the same company under /companies/, both declared canonical to
+      themselves and both listed in the sitemap: 269 companies, 538 URLs, each
+      pair competing with the other. The /companies/ copy is the richer of the
+      two, 706 words against 299 for Lumen5 on 2026-09-01, and it is the
+      directory's own namespace, so it wins. This copy stays reachable and
+      linked, and points at it. scripts/sitemap-noindex-prune.mjs then keeps a
+      page whose canonical is elsewhere out of the sitemap, so the two signals
+      agree rather than contradicting each other. */}
 
   <p class="meta-line"><a href="/">AI Ecosystem</a> ·
     <a href={`${BASE}/`}>{CATEGORY_NAME}</a>
-    {person && <> · <a href={`${BASE}/${hubUid}/`}>AI People</a></>}
     {pcat && <> · <a href={`${BASE}/${hubUid}/`}>AI People</a></>}
     {secHub && <> · <a href={`${BASE}/${chubUid}/`}>AI Companies</a></>}
     {company && <> · <a href={`${BASE}/${chubUid}/`}>AI Companies</a></>}</p>
@@ -523,6 +539,7 @@ const jsonld = JSON.stringify(
         ))}
       </ul>
 
+      <Reading reading={jhub.reading} heading="What does the hiring data show?" />
       <div class="cite-box">Cite this page: <code>"AI Jobs and Market Dynamics." The World of AI,
         theworldofai.org{BASE}/{jhub.uid}/. Verified {jhub.generated}.</code></div>
     </>
@@ -623,6 +640,7 @@ const jsonld = JSON.stringify(
         </>
       )}
 
+      <Reading reading={companyReading} heading={`What does the record on ${company.name} show?`} />
       <div class="cite-box">Cite this page: <code>"{company.name}." AI Company Directory,
         The World of AI, theworldofai.org{BASE}/{company.uid}/.
         {generated ? ` Verified ${generated}.` : ''}</code></div>
@@ -722,16 +740,20 @@ const jsonld = JSON.stringify(
         {hub.tracked_only > 0 && <> The other {hub.tracked_only} are listed with their role and no
         page yet, because a name and a job title is not a profile.</>}</p>
       {hub.generated && <p class="meta-line">Last verified: {hub.generated}</p>}
+      {/* p.path is the anchor on the person's primary section page, written by
+          the pipeline. A profile no longer has a page of its own, so linking
+          `${BASE}/${p.uid}/` here would point every name at a 301. */}
       <ul class="grid">
         {hub.people.map((p) => (
           <li class="card">
-            {p.uid ? <a href={`${BASE}/${p.uid}/`}>{p.name}</a> : <b>{p.name}</b>}
+            {p.path ? <a href={p.path}>{p.name}</a>
+              : p.uid ? <a href={`${BASE}/${p.uid}/`}>{p.name}</a> : <b>{p.name}</b>}
             {p.moniker && <p class="mon">{p.moniker}</p>}
             {p.hook && <p>{p.hook}</p>}
-            {!p.uid && (p.title || p.org) && (
+            {!p.path && !p.uid && (p.title || p.org) && (
               <p class="mon">{p.title}{p.title && p.org ? ' · ' : ''}{p.org}</p>
             )}
-            {!p.uid && <p class="mon">Tracked, profile not yet written.</p>}
+            {!p.path && !p.uid && <p class="mon">Tracked, profile not yet written.</p>}
           </li>
         ))}
       </ul>
@@ -741,24 +763,72 @@ const jsonld = JSON.stringify(
   {pcat && (
     <>
       <h1>{pcat.name}</h1>
-      <p class="answer"><b>{pcat.total} {pcat.total === 1 ? 'person' : 'people'}</b> in the
-        AI People Directory {pcat.total === 1 ? 'is' : 'are'} categorised as
-        {' '}{pcat.name.toLowerCase()}. {pcat.blurb} Each profile carries a timeline,
-        achievements, and sources. A person can appear in more than one category.</p>
+      <p class="answer"><b>{pcat.profiled ?? pcat.total} full {(pcat.profiled ?? pcat.total) === 1 ? 'profile' : 'profiles'}</b>
+        {' '}of {pcat.total} {pcat.total === 1 ? 'person' : 'people'} in the AI People Directory
+        categorised as {pcat.name.toLowerCase()}. {pcat.blurb} Each profile below carries a
+        timeline, what the person is known for, and a source for every claim. A person can hold
+        several categories; the full record is published once, under the primary one, and the
+        others cross reference it.</p>
       {pcat.generated && <p class="meta-line">Last verified: {pcat.generated}</p>}
-      <ul class="grid">
-        {pcat.members.map((p) => (
-          <li class="card">
-            <a href={`${BASE}/${p.uid}/`}>{p.name}</a>
-            {p.moniker && <p class="mon">{p.moniker}</p>}
-            {p.hook && <p>{p.hook}</p>}
-          </li>
-        ))}
-      </ul>
-      <p>Only profiled people carry a category. People tracked in the directory without a
-        written profile are not listed here, because an unverified categorisation is a claim
-        this site will not make. See the <a href={`${BASE}/${hubUid}/`}>full directory</a> for
-        everyone we track.</p>
+
+      {/* `members` is the pre-fold shape: name, moniker, hook and a link to a
+          page of their own. Rendered when a bundle predating the fold is still
+          being served, for the same reason the legacy branch above exists. */}
+      {!pcat.profiles && pcat.members?.length > 0 && (
+        <ul class="grid">
+          {pcat.members.map((p) => (
+            <li class="card">
+              <a href={`${BASE}/${p.uid}/`}>{p.name}</a>
+              {p.moniker && <p class="mon">{p.moniker}</p>}
+              {p.hook && <p>{p.hook}</p>}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {pcat.profiles?.length > 0 && (
+        <nav class="jump" aria-label="People on this page">
+          {pcat.profiles.map((p, i) => (
+            <>{i > 0 && ' · '}<a href={`#${p.uid}`}>{p.name}</a></>
+          ))}
+        </nav>
+      )}
+
+      <Reading reading={pcat.reading}
+        heading={`What do the ${pcat.name.toLowerCase()} in this directory have in common?`} />
+
+      {pcat.profiles?.map((p) => (
+        <PersonProfile person={{ ...p, home_uid: pcat.uid }} base={BASE}
+          orgUid={p.org
+            ? g2.__twoaiCompanyByName[String(p.org).toLowerCase().replace(/[^a-z0-9]/g, '')] || null
+            : null} />
+      ))}
+
+      {pcat.also?.length > 0 && (
+        <section class="alsohere">
+          <h2>Who else belongs in {pcat.name.toLowerCase()}?</h2>
+          <p>These people hold this category too. Their full record is published under a
+            different primary category, so it is linked rather than repeated: one human, one
+            canonical profile, no two pages competing to be the account of the same person.</p>
+          <ul class="grid">
+            {pcat.also.map((p) => (
+              <li class="card">
+                {p.path ? <a href={p.path}>{p.name}</a> : p.name}
+                {p.moniker && <p class="mon">{p.moniker}</p>}
+                {p.hook && <p>{p.hook}</p>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {(pcat.profiles?.length ?? 0) === 0 && (pcat.also?.length ?? 0) === 0 && (
+        <p>Nobody in the directory currently holds this category. The section stays published
+          because the category is part of the taxonomy, and a page that says it is empty is a
+          better answer than a URL that disappears.</p>
+      )}
+
+      <p><a href={`${BASE}/${hubUid}/`}>All people in the directory</a></p>
       <div class="cite-box">Cite this page: <code>"{pcat.name}." AI People Directory,
         The World of AI, theworldofai.org{BASE}/{pcat.uid}/. Retrieved {pcat.generated}.</code></div>
     </>
@@ -791,6 +861,7 @@ const jsonld = JSON.stringify(
           )}
         </div>
       ))}
+      <Reading reading={csec.reading} heading="What does the public-company set show?" />
       <div class="cite-box">Cite this page: <code>"Public AI Companies." The World of AI,
         theworldofai.org{BASE}/{csec.uid}/. Retrieved {csec.generated}.</code></div>
     </>
@@ -823,6 +894,7 @@ const jsonld = JSON.stringify(
           )}
         </div>
       ))}
+      <Reading reading={cpat.reading} heading="What do these patent portfolios show?" />
       <div class="cite-box">Cite this page: <code>"AI Patents by Company." The World of AI,
         theworldofai.org{BASE}/{cpat.uid}/. Retrieved {cpat.generated}.</code></div>
     </>
@@ -952,6 +1024,7 @@ const jsonld = JSON.stringify(
         </div>
       )}
 
+      <Reading reading={obs.reading} heading="What does this measurement show?" />
       <div class="cite-box">Cite this page: <code>"{obs.name}." The World of AI Observatory,
         theworldofai.org/ai-ecosystem/ecosystem-entities-market-and-operations/{obs.uid}/.
         Retrieved {obs.generated}.</code></div>
@@ -986,6 +1059,7 @@ const jsonld = JSON.stringify(
             {' '}<a href={f.url} rel="noopener">filing</a></p>
         ))}
       </div>
+      <Reading reading={cma.reading} heading="What do these filings show about AI consolidation?" />
       <div class="cite-box">Cite this page: <code>"Acquisitions and Partnerships." The World of AI,
         theworldofai.org/ai-ecosystem/ecosystem-entities-market-and-operations/{cma.uid}/.
         Retrieved {cma.generated}.</code></div>
@@ -1027,6 +1101,7 @@ const jsonld = JSON.stringify(
       <p class="chip-list">{cpriv.companies.filter((c) => !c.formd).map((c, i) => (
         <>{i > 0 && ' · '}<a href={`${BASE}/${c.uid}/`}>{c.name}</a></>
       ))}</p>
+      <Reading reading={cpriv.reading} heading="What does the private-company set show?" />
       <div class="cite-box">Cite this page: <code>"Private AI Companies." The World of AI,
         theworldofai.org{BASE}/{cpriv.uid}/. Retrieved {cpriv.generated}.</code></div>
     </>
@@ -1042,6 +1117,18 @@ const jsonld = JSON.stringify(
       <p class="meta-line">Last verified: {corg.generated} · This list is curated and grows as
         classifications are verified; a missing organisation is an editorial gap, not a
         judgement — <a href="/contact/">tell us</a>.</p>
+
+      <h2>How is an organisation classified?</h2>
+      <p>One at a time, against a document the organisation published about itself, with the
+        document recorded. Every entry below carries the source that decided it and the date that
+        source was last read. Nothing on this page was assigned by keyword, by a model, or by
+        inheritance from a parent company, because a classification that keeps no evidence cannot
+        be audited and a wrong one survives quietly.</p>
+      <p>The consequence is that this list is shorter than a scraped one would be. An organisation
+        whose own materials do not settle the question is left out rather than guessed at, and a
+        corporate research division is filed under the company that funds it rather than counted
+        twice. Where the source URL has moved since it was verified, the date is the honest signal:
+        it says when we last saw the evidence, not that the evidence is still there today.</p>
       {corg.orgs.map((o) => (
         <div class="dom">
           <h3><a href={`${BASE}/${o.uid}/`}>{o.name}</a></h3>
@@ -1049,6 +1136,7 @@ const jsonld = JSON.stringify(
           <p class="meta-line"><a href={o.source_url} rel="noopener">Source</a> · verified {o.verified}</p>
         </div>
       ))}
+      <Reading reading={corg.reading} heading={`What does this set of ${corg.name.toLowerCase()} show?`} />
       <div class="cite-box">Cite this page: <code>"{corg.name}." The World of AI,
         theworldofai.org{BASE}/{corg.uid}/. Retrieved {corg.generated}.</code></div>
     </>
@@ -1083,121 +1171,44 @@ const jsonld = JSON.stringify(
           ))}
         </tbody>
       </table>
+      <Reading reading={cfund.reading} heading="What does this funding record show?" />
       <div class="cite-box">Cite this page: <code>"AI Funding: SEC Form D Disclosures." The World
         of AI, theworldofai.org{BASE}/{cfund.uid}/. Retrieved {cfund.generated}.</code></div>
     </>
   )}
 
-  {person && (
+  {legacyPerson && (
     <>
-      <h1>{person.name}</h1>
-      {person.tracked_only ? (
-        <>
-          <p class="lede">{person.title}{person.org && <>, {personOrgUid ? <a href={`/companies/${personOrgUid}/`}>{person.org}</a> : person.org}</>}</p>
-          <p class="answer">
-            {person.name} is tracked in the AI People Directory as {person.title} at
-            {' '}{person.org}. <b>A full profile has not been written yet.</b> This page
-            carries only what we have verified — the name, the role, and the organisation —
-            rather than filling the gap with material we cannot source.
-          </p>
-          <p class="meta-line">Last verified: {person.generated}</p>
-          <p>
-            Profiles in this directory carry a timeline, achievements, and a source for every
-            claim. When this one is written it will appear at this same address; the URL does
-            not change. See the <a href={`${BASE}/${hubUid}/`}>full directory</a> for people
-            who are already profiled.
-          </p>
-        </>
-      ) : (
-        <>
-      {person.moniker && <p class="lede">{person.moniker}</p>}
-      {person.hook && <p class="answer">{person.hook}</p>}
-      <p class="meta-line">
-        {person.nationality && <>{person.nationality} · </>}
-        {person.born && <>Born {person.born}{person.died && <> · Died {person.died}</>} · </>}
-        {person.generated && <>Last verified: {person.generated}</>}
-      </p>
-
-      {person.quote && <blockquote class="pq">{person.quote}</blockquote>}
-
-      {person.fields?.length > 0 && (
-        <p class="meta-line"><b>Fields:</b> {person.fields.join(' · ')}</p>
-      )}
-
-      {person.cats?.length > 0 && (
-        <p class="meta-line"><b>Categories:</b>{' '}
-          {person.cats.map((c, i) => (
-            <>{i > 0 && ' · '}{c.uid
-              ? <a href={`${BASE}/${c.uid}/`}>{c.name}</a>
-              : c.name}</>
-          ))}
-        </p>
-      )}
-
-      {person.quick_facts && (
-        <>
-          <h2>Quick facts</h2>
-          <table>
-            <tbody>
-              {Object.entries(person.quick_facts).map(([k, v]) => (
-                <tr><th>{k.replace(/_/g, ' ')}</th><td>{Array.isArray(v) ? v.join(', ') : v}</td></tr>
-              ))}
-            </tbody>
-          </table>
-        </>
-      )}
-
-      {person.achievements?.length > 0 && (
-        <>
-          <h2>Known for</h2>
-          <ul>{person.achievements.map((a) => <li>{typeof a === 'string' ? a : a.text || a.name}</li>)}</ul>
-        </>
-      )}
-
-      {person.timeline?.length > 0 && (
-        <>
-          <h2>Timeline</h2>
-          <table>
-            <thead><tr><th>Year</th><th>Event</th></tr></thead>
-            <tbody>
-              {person.timeline.map((t) => (
-                <tr><td>{t.year || t.date}</td><td>{t.event || t.text}</td></tr>
-              ))}
-            </tbody>
-          </table>
-        </>
-      )}
-
-      {person.sources?.length > 0 ? (
-        <>
-          <h2>Sources</h2>
-          <ul class="cites">
-            {person.sources.map((s) => (
-              <li>{typeof s === 'string'
-                ? s
-                : (s.url ? <a href={s.url} rel="noopener">{s.title || s.url}</a> : (s.title || ''))}
-                {typeof s !== 'string' && s.publisher && <> · {s.publisher}</>}</li>
-            ))}
-          </ul>
-        </>
-      ) : (
-        <p class="meta-line">This profile has no published sources attached yet. Treat the detail
-          above as unverified until it does, and tell us if any of it is wrong:
-          <a href="/contact/">contact</a>.</p>
-      )}
-        </>
-      )}
-
-      <div class="cite-box">Cite this profile: <code>"{person.name}." AI People Directory,
-        The World of AI, theworldofai.org{BASE}/{person.uid}/.
-        {person.generated ? ` Verified ${person.generated}.` : ''}</code></div>
-
+      <h1>{legacyPerson.name}</h1>
+      <PersonProfile person={{ ...legacyPerson, home_uid: legacyPerson.uid }} base={BASE}
+        orgUid={legacyPerson.org
+          ? g2.__twoaiCompanyByName[String(legacyPerson.org).toLowerCase().replace(/[^a-z0-9]/g, '')] || null
+          : null} />
       <p><a href={`${BASE}/${hubUid}/`}>All people</a></p>
     </>
   )}
 </Base>
 
 <style>
+  /* The transitional person page renders one profile, so its own H1 duplicates
+     the component's H2. Hidden rather than removed: the H1 is what the page
+     needs for its outline and the H2 is what a section page needs for its. */
+  .person:only-of-type > h2:first-child { position: absolute; width: 1px; height: 1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  /* Jump index for a section page carrying up to nineteen profiles: a reader
+     landing on an anchor from a redirect needs to see the rest exist. */
+  .jump { margin: 1.2em 0 1.8em; padding: .9em 1.1em; background: var(--cream, #FFF6EC);
+    border-left: 3px solid #F07800; font-size: .93rem; line-height: 1.9; }
+  .alsohere { margin-top: 2.4em; padding-top: 1.6em; border-top: 2px solid #ececf2; }
+
+  /* Quick facts read as sentences, not as a two-column table of numbered rows. */
+  .qfacts { margin: 0 0 1.4em; padding-left: 1.15em; }
+  .qfacts li { margin: 0 0 .5em; }
+  /* Known for: the claim, then what it changed, which is the half that was
+     being dropped entirely before the shape fix. */
+  .ach dt { font-weight: 600; color: var(--navy); margin: 0 0 .25em; }
+  .ach dd { margin: 0 0 1em; }
+  .pq cite { display: block; margin-top: .6em; font-size: 14px; font-style: normal; opacity: .75; }
   .alphabet { display: flex; flex-wrap: wrap; gap: 6px; margin: 1.1em 0 1.6em;
     padding: .7em .8em; background: var(--cream); border-radius: 6px; }
   .alphabet a { display: inline-block; min-width: 1.6em; padding: 2px 6px; text-align: center;

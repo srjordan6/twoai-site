@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Faq from '../../components/Faq.astro';
 const desc = 'Free context window calculator: convert words, pages, or characters into tokens and see whether your document fits in a model context window, with room left for the answer.';
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org', '@type': 'WebApplication',
@@ -7,6 +8,19 @@ const jsonld = JSON.stringify({
   operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   url: 'https://theworldofai.org/calculators/context-window/',
 });
+
+const faqs = [
+  { q: 'How many words fit in a 128K context window?',
+    a: 'About 170,000 words at 0.75 tokens per word, which is roughly 340 pages of ordinary prose. Reserve space for the answer and the usable figure is lower: with 4,000 tokens held back you have 124,000 to spend, or about 165,000 words.' },
+  { q: 'Do input and output share the same limit?',
+    a: 'On many APIs, yes: the context window covers the prompt and the generated reply together, so a prompt that fills the window leaves nothing to answer with. Some providers publish separate input and output maximums. Check which model you are using before filling the window to the brim.' },
+  { q: 'Why does my code count more tokens than this estimates?',
+    a: 'Tokenizers are trained on text, and code is denser in punctuation, indentation and unusual identifiers, all of which split into more tokens than English words do. The same is true of names, numbers, URLs and languages that do not use spaces between words. Treat 0.75 tokens per word as a prose figure and expect code to run higher.' },
+  { q: 'Does a bigger window always give a better answer?',
+    a: 'No. Retrieval quality usually matters more than capacity, and models can attend less reliably to material buried in the middle of a very long input than to the same material placed near the start or the end. Filling a window because it is available is not the same as giving the model what it needs.' },
+  { q: 'What does a longer context cost?',
+    a: 'Money and latency. Input tokens are billed, so a long prompt is charged on every request that carries it. Long inputs also enlarge the key-value cache, which raises memory use during generation and can slow the response. Prompt caching reduces the money side when the long part repeats.' },
+];
 ---
 <Base title="Context Window Calculator: will your document fit? — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>Context Window Calculator</h1>
@@ -49,6 +63,29 @@ const jsonld = JSON.stringify({
     against your model's own tokenizer before you rely on it.</p>
   <p>The reserve matters more than people expect. Filling a window to the brim leaves nothing
     for the response, and many APIs count input and output against the same limit.</p>
+
+  <h2>What happens with the default document?</h2>
+  <p>Ten thousand words, a 128K window, 4,000 tokens reserved for the reply. Ten thousand words at
+    0.75 tokens each is 7,500 tokens. The reserve leaves 124,000 usable, so the document occupies
+    6 percent of what is available. It fits comfortably, and the remaining 116,500 tokens are the
+    real budget for retrieved context, conversation history and examples.</p>
+  <p>The same document against an 8K window is a different answer: 7,500 tokens into 4,192 usable
+    is an overrun of 3,308 tokens, and the input has to be split or the model changed.</p>
+
+  <h2>Should I fill the window or retrieve into it?</h2>
+  <p>Putting the whole corpus in the prompt is the simplest thing that works and it stops working
+    for three reasons at once. Every request pays for every token, so cost scales with corpus size
+    rather than with question difficulty. Latency rises with input length. And attention over a
+    very long input is not uniform, so material in the middle is used less reliably than the same
+    material would be if it were the only thing in the prompt.</p>
+  <p>Retrieval inverts all three: cost and latency scale with what was selected rather than what
+    exists, and the model sees a short input where every passage is relevant. The tradeoff is that
+    a retrieval step can miss, which the
+    <a href="/ai-glossary/context-recall/">context recall</a> metric exists to measure. A large
+    window is most useful as headroom for a retrieval system that occasionally needs to return a
+    lot, not as a substitute for having one.</p>
+
+  <Faq items={faqs} />
 
   <div class="cite-box">Cite this tool: <code>"Context Window Calculator." The World of AI,
     theworldofai.org/calculators/context-window/.</code></div>

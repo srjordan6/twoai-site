@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Faq from '../../components/Faq.astro';
 const desc = 'Free LLM inference throughput calculator: tokens per second required from concurrent users, accelerators needed, and the latency each user sees at your batch size.';
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org', '@type': 'WebApplication',
@@ -7,6 +8,19 @@ const jsonld = JSON.stringify({
   operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   url: 'https://theworldofai.org/calculators/inference-throughput/',
 });
+
+const faqs = [
+  { q: 'How many GPUs do I need to serve 500 concurrent users?',
+    a: 'It depends entirely on response length and latency target, not on the user count alone. At 400 output tokens delivered in 8 seconds, 500 concurrent requests demand 25,000 tokens a second from the fleet. At 2,500 tokens a second per accelerator and 70 percent usable utilisation, that is 15 accelerators.' },
+  { q: 'Why does batching raise throughput but hurt latency?',
+    a: 'Decode is bound by memory bandwidth: generating one token requires reading the model weights regardless of how many requests are in flight. Batching amortises that single read across many requests, so total tokens a second rises sharply. Each individual request waits for the batch to form and to step together, so its own time to completion gets worse.' },
+  { q: 'Should I size on average load or peak load?',
+    a: 'Peak concurrency. A fleet sized to the mean queues through every busy hour, and queueing delay compounds because slower responses hold sessions open longer, which raises concurrency further. Size on peak, then decide separately whether to autoscale down off-peak.' },
+  { q: 'Why is usable utilisation set below 100 percent?',
+    a: 'Because a real fleet never converts every accelerator-second into output tokens. Scheduling gaps between batches, model loading after a restart, cancelled and failed requests, health checks and rolling deploys all consume capacity. Seventy percent is a reasonable planning figure; measure your own before committing.' },
+  { q: 'Where do I get a per-accelerator throughput number?',
+    a: 'From your own benchmark, on your own model, at your own batch size and sequence length, on your own serving stack. It is not a property of the hardware: quantization, attention implementation, batch policy and context length all move it, often by more than a hardware generation does.' },
+];
 ---
 <Base title="LLM Inference Throughput Calculator: tokens per second and GPUs needed — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>Inference Throughput Calculator</h1>
@@ -39,6 +53,29 @@ const jsonld = JSON.stringify({
     own benchmark on your own model rather than a vendor sheet. Memory is a separate limit that
     can bind before throughput does, which the
     <a href="/calculators/vram/">VRAM estimator</a> covers.</p>
+
+  <h2>What does the default fleet look like?</h2>
+  <p>Five hundred concurrent requests, 400 output tokens each, an 8 second target, 2,500 tokens a
+    second per accelerator, 70 percent usable.</p>
+  <p>Required throughput is 500 × 400 ÷ 8, which is 25,000 tokens a second. Effective throughput
+    per accelerator is 2,500 × 0.70, or 1,750. Twenty-five thousand divided by 1,750 is 14.3, so
+    15 accelerators. Each user sees 400 ÷ 8, or 50 tokens a second, roughly 37 words a second,
+    which is comfortably faster than reading speed.</p>
+  <p>Relaxing the latency target to 16 seconds halves the fleet to 8 accelerators for the same
+    number of users. That single tradeoff, perceived speed against hardware, is usually the
+    largest cost lever in a serving budget.</p>
+
+  <h2>Does streaming change what latency target I need?</h2>
+  <p>It changes which number the user experiences. Without streaming they wait for the whole
+    response, so time to completion is the metric. With streaming they see the first token quickly
+    and then read along, so the two figures that matter are time to first token, set by prefill
+    over the prompt, and the per-token rate during decode.</p>
+  <p>Anything above about 20 tokens a second exceeds comfortable reading speed, so a streaming
+    interface can often accept a longer total completion time than a blocking one without feeling
+    slower. Sizing against time to completion when the product streams overbuys hardware; sizing
+    against the per-token rate when it does not underbuys it.</p>
+
+  <Faq items={faqs} />
 
   <div class="cite-box">Cite this tool: <code>"Inference Throughput Calculator." The World of AI,
     theworldofai.org/calculators/inference-throughput/.</code></div>

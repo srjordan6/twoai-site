@@ -4,6 +4,7 @@
 // pipeline into twoai-content/static/, and is only read here. Nothing on this
 // page is authored in the template.
 import Base from '../layouts/Base.astro';
+import Reading from '../components/Reading.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
 export function getStaticPaths() {
@@ -43,6 +44,7 @@ const jsonld = JSON.stringify({
         <div set:html={s.body} />
       </section>
     ))}
+    <Reading reading={d.reading} heading={`What does this ${d.title.toLowerCase()} page commit us to?`} />
     <p class="doc-foot">
       Questions or a correction for this page? Email
       <a href="mailto:theworldofai@inkboxmail.com">theworldofai@inkboxmail.com</a>.

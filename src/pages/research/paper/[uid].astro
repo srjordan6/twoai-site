@@ -21,6 +21,7 @@
  * page indexes again automatically on the next build.
  */
 import Base from '../../../layouts/Base.astro';
+import Reading from '../../../components/Reading.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
 export function getStaticPaths() {
@@ -157,6 +158,8 @@ const jsonld = JSON.stringify({
       <p>{p.note}</p>
     </>
   )}
+
+  <Reading reading={p.reading} heading="Why does this paper matter?" />
 
   <div class="cite-box">
     Cite this paper on The World of AI: <code>{authors || 'Author(s)'}{p.year ? `. (${p.year}).` : '.'} {p.title}.{p.journal ? ` ${p.journal}` : ''}{p.volume ? `, ${p.volume}` : ''}.{p.doi ? ` https://doi.org/${p.doi}` : ''} Cataloged at theworldofai.org/research/paper/{p.uid}/.{p.generated ? ` Verified ${p.generated}.` : ''}</code>

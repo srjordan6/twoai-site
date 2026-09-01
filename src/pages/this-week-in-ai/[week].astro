@@ -10,6 +10,7 @@
  * computed from the items below it, so the two can never disagree.
  */
 import Base from '../../layouts/Base.astro';
+import Reading from '../../components/Reading.astro';
 import KeepReading from '../../components/KeepReading.astro';
 import { companiesNamedIn } from '../../lib/related';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
@@ -151,6 +152,7 @@ const jsonld = JSON.stringify({
       were not, which is only useful if the quiet ones are reported honestly.</p>
   )}
 
+  <Reading reading={w.reading} heading="What was the pattern this week?" />
   <div class="cite-box">Cite this week: <code>"AI policy and litigation, {w.start} to {w.end}."
     The World of AI, theworldofai.org/this-week-in-ai/{w.slug}/.
     {w.generated ? ` Verified ${w.generated}.` : ''}</code></div>

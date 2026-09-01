@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Faq from '../../components/Faq.astro';
 const desc = 'Free three-phase amperage calculator for data center racks: current draw at 208V, 415V and 480V, breaker size at the 80% continuous rule, and how many racks a circuit supports.';
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org', '@type': 'WebApplication',
@@ -7,6 +8,19 @@ const jsonld = JSON.stringify({
   operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   url: 'https://theworldofai.org/calculators/three-phase/',
 });
+
+const faqs = [
+  { q: 'How many amps does a 12 kW rack draw at 208V three-phase?',
+    a: 'About 33.6 amps. The arithmetic is 12,000 watts divided by 208 volts times the square root of three times a power factor of 0.99, which is 12,000 divided by about 357. On a 60 amp breaker, derated to 48 amps for continuous load, that is one rack per circuit with 14 amps to spare.' },
+  { q: 'Why is a breaker only good for 80 percent of its rating?',
+    a: 'Because a load running three hours or more is treated as continuous, and continuous loads are limited to 80 percent of the overcurrent device rating under US electrical code convention. A data center rack is continuous by definition, so a 60 amp circuit is a 48 amp circuit for planning purposes.' },
+  { q: 'Where does the square root of three come from?',
+    a: 'From the geometry of a balanced three-phase system. The three phases are 120 degrees apart, so line-to-line voltage is the square root of three times line-to-neutral voltage, and the total power relationship carries the same factor. It is why three-phase delivers more power over the same conductors than single phase.' },
+  { q: 'Why are dense racks moving to 415V?',
+    a: 'Because current falls as voltage rises for the same power, and current is what sizes conductors, breakers and busway. The same 12 kW that draws 33.6 amps at 208V draws about 16.8 at 415V, which halves the copper and roughly quarters the resistive loss in distribution. It is the cheapest available efficiency gain in a high-density design.' },
+  { q: 'Should I plan A and B feeds at half load each?',
+    a: 'No, and this is the common and expensive error. In a dual-corded 2N design each feed must be able to carry the entire rack load, because the whole point is that either one can fail. Sizing each at half means the survivor trips during the event the redundancy existed for. Design each feed for full load and expect each to run near half in normal operation.' },
+];
 ---
 <Base title="Three-Phase Amperage Calculator for Data Center Racks — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>Three-Phase Amperage Calculator</h1>
@@ -38,6 +52,29 @@ const jsonld = JSON.stringify({
     the most current is the one that trips, so per-phase metering matters more than the average
     this produces. Voltage drop over long runs, harmonic content and derating for ambient
     temperature or conduit fill are all real and none of them are modelled here.</p>
+
+  <h2>What does a 12 kW rack need at 208V?</h2>
+  <p>Amps are 12,000 divided by the product of 208 volts, the square root of three, and a power
+    factor of 0.99. That product is about 357, so the draw is about 33.6 amps.</p>
+  <p>Now apply the continuous-load rule. A 60 amp breaker is good for 48 amps continuously, so one
+    12 kW rack fits with 14 amps unused, and a second would need 67 amps and does not fit. The
+    circuit supports one rack, and the 26 percent of the breaker left idle is the cost of the
+    safety margin, not spare capacity to plan against.</p>
+  <p>At 415V the same rack draws about 16.8 amps, so two fit on the same 48 amp usable budget with
+    room left. That is the whole argument for higher distribution voltage in one comparison.</p>
+
+  <h2>What actually limits racks per circuit?</h2>
+  <p>Three things in sequence, and the first to bind wins. The 80 percent rule caps usable current
+    below the breaker rating. Whole racks do not divide evenly into what remains, so a circuit
+    frequently strands capacity that cannot be given to anything: 48 usable amps against a 33.6
+    amp rack strands 14 amps, or 29 percent, and no amount of arithmetic recovers it. Then
+    redundancy doubles the installed circuit count, because A and B feeds each carry full load.</p>
+  <p>The consequence for planning is that installed electrical capacity always exceeds the sum of
+    rack nameplates by a wide margin, and that the gap is structural rather than wasteful. A
+    facility quoting critical IT capacity and one quoting installed switchgear capacity are not
+    describing the same number, and the ratio between them is set here.</p>
+
+  <Faq items={faqs} />
 
   <div class="cite-box">Cite this tool: <code>"Three-Phase Amperage Calculator." The World of AI,
     theworldofai.org/calculators/three-phase/.</code></div>

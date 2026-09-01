@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Faq from '../../components/Faq.astro';
 const desc = 'Free liquid cooling calculator for data centers: required flow rate in GPM and LPM for direct-to-chip or immersion loops, CDU sizing, and how coolant choice changes the answer.';
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org', '@type': 'WebApplication',
@@ -7,6 +8,19 @@ const jsonld = JSON.stringify({
   operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   url: 'https://theworldofai.org/calculators/liquid-cooling/',
 });
+
+const faqs = [
+  { q: 'How much flow does a liquid-cooled rack need?',
+    a: 'About 0.68 gallons per minute per kilowatt with water at a 10 degree Fahrenheit rise across the loop. A 120 kW rack therefore needs roughly 82 GPM, about 310 litres a minute. Widening the rise to 20 degrees halves the flow to about 41 GPM for the same heat.' },
+  { q: 'Why does the fluid constant change with glycol?',
+    a: 'The constant 500 for water comes from its density and specific heat in the units used. Propylene glycol has both a lower specific heat and different density, so a gallon of a glycol mixture carries less heat than a gallon of water and the flow required rises in proportion. A 40 percent mixture needs about 16 percent more flow for the same duty.' },
+  { q: 'Why use glycol at all if it needs more pumping?',
+    a: 'Freeze protection on any part of the loop exposed to outdoor temperatures, and corrosion inhibition. The penalty is real, in flow, pump power and heat transfer, so designs typically keep glycol in the outdoor facility loop and clean treated water in the indoor technology loop, separated at the CDU heat exchanger.' },
+  { q: 'What is approach temperature and why does it decide a design?',
+    a: 'It is the difference between the facility water entering a coolant distribution unit and the technology water leaving it, set by the heat exchanger. It determines how cold the secondary loop can get from a given facility supply. In a warm climate where facility water runs hot, approach temperature is what decides whether the cold plates can hold silicon within specification at all.' },
+  { q: 'Is flow the whole hydraulic problem?',
+    a: 'No. Pressure drop across cold plates, manifolds, hoses and quick disconnects sets the pump head required, and it depends on pipe sizing and fitting count that this calculator does not model. A loop can be specified with correct flow and still fail because the pump cannot deliver it against the resistance in the path.' },
+];
 ---
 <Base title="Liquid Cooling Flow Rate Calculator: GPM and CDU sizing — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>Liquid Cooling Flow Rate Calculator</h1>
@@ -39,6 +53,27 @@ const jsonld = JSON.stringify({
     at the CDU heat exchanger sets how cold the secondary loop can get from a given facility
     water temperature, and it is the figure that decides whether a design works in a warm
     climate.</p>
+
+  <h2>What does a 120 kW rack need?</h2>
+  <p>One hundred and twenty kilowatts is 409,457 BTU per hour. Divide by the water constant of 500
+    times a 10 degree rise, and the required flow is about 82 gallons per minute, which is 310
+    litres a minute. At 300 kW per coolant distribution unit that is one CDU for N, and two for
+    N+1.</p>
+  <p>The per-kilowatt figure the tool prints, 0.68 GPM per kW at this rise, is the number to carry
+    into a room-level estimate: a 1.2 MW liquid-cooled hall needs on the order of 820 GPM through
+    its technology loop, which is a pipe sizing problem long before it is a chiller problem.</p>
+
+  <h2>Why does liquid change the density ceiling rather than just the efficiency?</h2>
+  <p>Water carries roughly 3,500 times more heat per unit volume than air, so the volume that has
+    to be moved through a cabinet collapses. The airflow calculator puts a 60 kW rack at close to
+    9,500 CFM, which is at or past what a cabinet can physically pass. The same 60 kW in water is
+    about 41 GPM through hoses a few tens of millimetres across.</p>
+  <p>That is why the move to liquid is a capability change rather than an efficiency one. Above
+    roughly 30 kW a rack, air is not expensive, it is unavailable, and no increase in plant tonnage
+    fixes it. The tradeoff bought in exchange is a fluid path inside the hall, with the leak
+    detection, quick disconnects, water treatment and service procedures that go with it.</p>
+
+  <Faq items={faqs} />
 
   <div class="cite-box">Cite this tool: <code>"Liquid Cooling Flow Rate Calculator." The World of AI,
     theworldofai.org/calculators/liquid-cooling/.</code></div>

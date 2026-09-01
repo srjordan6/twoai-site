@@ -5,7 +5,7 @@
   "scripts": {
     "prebuild": "node scripts/audit-check.mjs && node scripts/gen-icons.mjs && node scripts/fit-covers.mjs && node scripts/fetch-content.mjs",
     "build": "astro build",
-    "postbuild": "pagefind --site dist && node scripts/url-guard.mjs",
+    "postbuild": "pagefind --site dist && node scripts/url-guard.mjs && node scripts/sitemap-noindex-prune.mjs",
     "dev": "astro dev"
   },
   "dependencies": {

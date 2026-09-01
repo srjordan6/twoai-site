@@ -11,6 +11,7 @@
  * source, the refresh cadence, and a cite box.
  */
 import Base from '../../../layouts/Base.astro';
+import Reading from '../../../components/Reading.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
 const CATEGORY = 'technology-and-core-infrastructure';
@@ -663,6 +664,23 @@ const licLine = (sec.licences || [])
               ))}
             </tbody>
           </table></div>
+
+          <h2>What is this registry counting, and what is it not?</h2>
+          <p>A row here is a building that OpenStreetMap contributors have tagged as a data
+            center in {sec.state}. That is a mapping record, not a licence, a filing or an
+            operator disclosure, so the count is a floor in both directions: a facility nobody has
+            mapped is absent, and a mapped building may be a small network node rather than a
+            campus. The registry says what is documented, which is the only claim a crowd-built
+            source supports.</p>
+          <p>The IT megawatt column is stricter still. A figure appears only where the operator
+            published it on its own specification page, so a dash means unpublished rather than
+            zero, and a state total assembled from this column is the published subset rather than
+            the state's capacity. Colocation providers publish spec sheets far more often than
+            hyperscalers do, which biases what is visible toward the wholesale market and away
+            from the largest single sites.</p>
+          <p>Where a facility name links onward, that profile carries the specifications read from
+            the operator's own page with the source and the retrieval date attached. Where it does
+            not, the row is what the map holds and nothing more.</p>
         </>
       )}
       {sec.shape === 'dc-facility' && (
@@ -1565,6 +1583,14 @@ const licLine = (sec.licences || [])
       2026-08-31 after a facility page rendered two, in two different formats.
       It uses pageTitle, not sec.name, because the DC children carry no name
       and cited themselves as "." until this was caught in the same pass. */}
+  {/* The reading was rendered only inside the data center branch, so the
+      hardware, dataset, model, status and repository sections carried one in
+      their JSON and showed none of it: 16 of them were still under 300 words
+      on 2026-09-01 with a 1,200 to 1,600 character reading already written and
+      merged. The DC branch keeps its own placement above, which is why this is
+      guarded rather than unconditional. */}
+  <Reading reading={isDCChild ? null : sec.reading} heading="What does this tell us about AI?" />
+
   <div class="cite-box">Cite this page: <code>"{pageTitle}." The World of AI,
     theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
 </Base>

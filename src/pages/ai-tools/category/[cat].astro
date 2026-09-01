@@ -1,5 +1,6 @@
 ---
 import Base from '../../../layouts/Base.astro';
+import Reading from '../../../components/Reading.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
 export function getStaticPaths() {
@@ -53,6 +54,8 @@ const jsonld = JSON.stringify({
       })}
     </tbody>
   </table>
+
+  <Reading reading={c.reading} heading={`What should a buyer know about ${c.name.toLowerCase()}?`} />
 
   <p><a href="/ai-tools/">All AI tool categories</a></p>
   <p class="meta-line">How this directory is funded, and what that never changes:

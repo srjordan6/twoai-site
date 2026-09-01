@@ -95,6 +95,34 @@ const known4 = [...knownOrgs, ...knownPersons].slice(0, 4);
 
 const timeline = coverageByDay(story.Articles);
 const stamp = generated ? `${new Date(generated).toUTCString().slice(0, 22)} UTC` : null;
+
+// ENACTED-LAW ROWS ARE A DIFFERENT ANIMAL FROM A COVERAGE CLUSTER, and the page
+// was treating them the same. A cluster is many outlets writing about an event;
+// an enactment row is one legislative record with a bill number, a state and a
+// LegiScan URL, and no outlets at all. That is why these pages rendered barely
+// 235 words: every coverage-shaped section on the page had nothing to show.
+//
+// The two sections below are the parts a legislative record can actually
+// support, and both are routing rather than commentary: this site already
+// publishes every tracked bill for that state and a compliance reference
+// verified against primary sources, and neither was linked from here.
+const enacted = (story.kind ?? story.Kind) === 'enacted-law';
+const billNo = story.bill ?? story.Bill ?? '';
+const stateCode = String(story.state ?? story.State ?? '').toUpperCase();
+const STATE_SLUG = {
+  AL: 'alabama', AK: 'alaska', AZ: 'arizona', AR: 'arkansas', CA: 'california', CO: 'colorado',
+  CT: 'connecticut', DE: 'delaware', DC: 'district-of-columbia', FL: 'florida', GA: 'georgia',
+  HI: 'hawaii', ID: 'idaho', IL: 'illinois', IN: 'indiana', IA: 'iowa', KS: 'kansas',
+  KY: 'kentucky', LA: 'louisiana', ME: 'maine', MD: 'maryland', MA: 'massachusetts',
+  MI: 'michigan', MN: 'minnesota', MS: 'mississippi', MO: 'missouri', MT: 'montana',
+  NE: 'nebraska', NV: 'nevada', NH: 'new-hampshire', NJ: 'new-jersey', NM: 'new-mexico',
+  NY: 'new-york', NC: 'north-carolina', ND: 'north-dakota', OH: 'ohio', OK: 'oklahoma',
+  OR: 'oregon', PA: 'pennsylvania', PR: 'puerto-rico', RI: 'rhode-island', SC: 'south-carolina',
+  SD: 'south-dakota', TN: 'tennessee', TX: 'texas', UT: 'utah', VT: 'vermont', VA: 'virginia',
+  WA: 'washington', WV: 'west-virginia', WI: 'wisconsin', WY: 'wyoming',
+};
+const stateSlug = STATE_SLUG[stateCode] ?? '';
+const stateName = stateSlug ? stateSlug.split('-').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ') : stateCode;
 const minutes = readingMinutes(story.Headline, ...story.Articles.map((a) => a.Title));
 
 // 58 + " | AI News" (10) keeps the whole title tag at or under 68 characters.
@@ -253,6 +281,71 @@ const jsonld = JSON.stringify({
           <p class="tl-note">
             Grouped by day. The pipeline records publication dates, not times, so
             hour-level sequencing is not shown rather than estimated.
+          </p>
+        </section>
+      )}
+
+      {enacted && (
+        <section>
+          <h2>What is this record, and what is it not?</h2>
+          <p>
+            This page reports that {billNo ? <b>{billNo}</b> : <>a bill</>}
+            {stateName ? <> was enacted in {stateName}</> : <> was enacted</>}, and it links to the
+            legislative record that says so. The record is the authority: bill text, version
+            history, sponsors and roll-call votes all live at the source, and the summary above is
+            drawn from the bill's own title and status rather than from anyone's reading of it.
+          </p>
+          <p>
+            What this page is not is an interpretation. Enactment is a date, not a compliance
+            obligation: most statutes carry an effective date later than the signing, many apply
+            only to defined entities, and the operative requirements sit in sections the title does
+            not name. Nothing here tells you whether the law reaches your organisation. For that,
+            start from the text and then the reference pages below, which are verified against
+            primary sources rather than assembled from coverage.
+          </p>
+          <p>
+            Legislative tracking is also incomplete by nature. A bill that passed under a title
+            with no artificial intelligence language in it can still regulate an automated system,
+            and a bill whose title mentions AI can turn out to be a study committee. Treat the
+            tracker as a floor on what a state has done, never as the whole of it.
+          </p>
+
+          <h2>Where does {stateName || 'this state'} stand overall?</h2>
+          <p>
+            One enactment is a data point, not a position.
+            {stateSlug ? (
+              <> Every bill this site tracks for the state is on the
+                {' '}<a href={`/ai-laws/${stateSlug}/`}>{stateName} AI laws page</a>, most recent
+                first, each linked to its own record, which is the view that shows whether this is
+                a first move or one of a series.</>
+            ) : (
+              <> The <a href="/ai-laws/">state AI law tracker</a> carries every bill this site
+                tracks, by state.</>
+            )}
+            {' '}The <a href="/ai-laws/">fifty-state tracker</a> puts it beside everyone else, and
+            the <a href="/ai-compliance/">compliance reference</a> covers the frameworks and
+            obligations that sit above the state layer.
+          </p>
+        </section>
+      )}
+
+      {!enacted && (
+        <section>
+          <h2>How was this story assembled?</h2>
+          <p>
+            By clustering, not by editing. The pipeline reads worldwide coverage, groups articles
+            reporting the same event, and ranks the result by how many distinct outlets carried it.
+            No article is reproduced here: every headline above links to its publisher, and the
+            page holds titles, domains and dates only.
+          </p>
+          <p>
+            Outlet breadth is a measure of how widely something was reported, which is not the same
+            as how much it matters. A syndicated wire story reaches dozens of domains from one
+            newsroom, and a significant technical development can surface in two publications and
+            nowhere else. Named organisations and people are extracted mechanically from the
+            coverage, which is why they appear in lower case and why a name occasionally belongs to
+            the wrong entity. Where a name matches something this site actually tracks, it is
+            linked; where it does not, it is left as text rather than guessed at.
           </p>
         </section>
       )}
