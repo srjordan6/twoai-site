@@ -125,9 +125,19 @@ const {
                   (s.title || s.url) + '</a></li>';
               }).join('') + '</ul>';
             }
+            var wnote = 'We have not verified or published this. Your question was recorded; topics asked often get researched and added.';
+            if (d.webFetchedAt) {
+              // Every page on this site shows when its data was gathered, and
+              // a retrieved-from-the-web block needs it more than most: a
+              // cached answer can be up to 30 days old and the reader is
+              // entitled to know that before relying on it.
+              var wd = new Date(d.webFetchedAt);
+              wnote = 'Retrieved ' + wd.toISOString().slice(0, 10) +
+                (d.webCached ? ' and served from our record since.' : '.') + ' ' + wnote;
+            }
             html += '<div class="ask-web"><p class="ask-web-label">From the open web, not this site</p>' +
               render(d.web) + wsrc +
-              '<p class="ask-web-note">We have not verified or published this. Your question was recorded; topics asked often get researched and added.</p></div>';
+              '<p class="ask-web-note">' + wnote + '</p></div>';
           }
           if (d.beyond) {
             html += '<div class="ask-beyond"><p class="ask-beyond-label">Not from our sources</p>' +

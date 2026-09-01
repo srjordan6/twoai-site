@@ -590,9 +590,8 @@ export default {
           answered: false,
           answer: notCovered,
           sources: [],
-          web: web.text,
-          webSources: web.sources,
-          webCached: web.cached || undefined,
+          web: web.text, webSources: web.sources, webCached: web.cached || undefined,
+          webFetchedAt: web.fetchedAt,
         });
       }
       return json({ answered: false, answer: notCovered, sources: [], webError: lastWebError || undefined });
@@ -768,6 +767,7 @@ export default {
         return json({
           answered: false, answer, sources, papers: [],
           web: web2.text, webSources: web2.sources, webCached: web2.cached || undefined,
+          webFetchedAt: web2.fetchedAt,
         });
       }
       return json({ answered: false, answer, sources, papers: [], webError: lastWebError || undefined });

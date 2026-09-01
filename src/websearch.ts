@@ -40,7 +40,16 @@ export type WebAnswer = {
   text: string;
   sources: Array<{ title: string; url: string }>;
   cached: boolean;
+  fetchedAt?: string;
 };
+
+// How long a stored web answer is served before we search again. A cache with
+// no expiry is how a reference site starts serving confidently stale facts:
+// "how did relativity influence AI" never changes, but "who runs OpenAI" and
+// "when does the EU AI Act apply" do, and this table cannot tell those apart.
+// Thirty days is short enough to catch drift and long enough that the cache
+// still carries most of the load against a 15-a-day search cap.
+const CACHE_TTL_DAYS = 30;
 
 // TEMPORARY DIAGNOSTIC, 2026-09-01. The fallback returned null on every live
 // attempt and twoai_web_answers stayed empty, which means it threw before its
@@ -74,8 +83,10 @@ export async function webFallback(
     // CACHE FIRST, and count the ask either way. times_asked is the demand
     // signal, so it increments whether or not a search actually happens.
     const prior: any[] = await sql`
-      SELECT results FROM twoai_web_answers
-      WHERE question_norm = ${norm} AND superseded_at IS NULL`;
+      SELECT results, fetched_at,
+             (fetched_at > now() - ${CACHE_TTL_DAYS + " days"}::interval) AS fresh
+        FROM twoai_web_answers
+       WHERE question_norm = ${norm} AND superseded_at IS NULL`;
 
     await sql`
       INSERT INTO twoai_web_answers (question_norm, question_raw, site_hit_count, paper_hit_count)
@@ -87,11 +98,35 @@ export async function webFallback(
             paper_hit_count = ${paperHits}`;
 
     if (prior.length && prior[0].results && prior[0].results.text) {
-      return {
-        text: String(prior[0].results.text),
-        sources: prior[0].results.sources ?? [],
-        cached: true,
-      };
+      if (prior[0].fresh) {
+        return {
+          text: String(prior[0].results.text),
+          sources: prior[0].results.sources ?? [],
+          cached: true,
+          fetchedAt: prior[0].fetched_at ? new Date(prior[0].fetched_at).toISOString() : undefined,
+        };
+      }
+      // EXPIRED. The old answer is marked superseded with its reason rather
+      // than overwritten, because the standing rule is that nothing is ever
+      // deleted from an SRJ database - a row that recorded what the web said
+      // in September is evidence, even once it stops being current. The unique
+      // key is question_norm, so the stale row is retired under a suffixed key
+      // and the live key is freed for the new answer.
+      await sql`
+        UPDATE twoai_web_answers
+           SET question_norm = ${norm + " #superseded " + new Date().toISOString()},
+               superseded_at = now(),
+               superseded_reason = ${"cache expired after " + CACHE_TTL_DAYS + " days"}
+         WHERE question_norm = ${norm} AND superseded_at IS NULL`;
+      // The supersede above renamed the live key away, so a fresh row must be
+      // opened under it or the search result written at the end of this
+      // function would target a row that no longer exists and silently store
+      // nothing. times_asked carries over so the demand signal is not reset by
+      // an expiry the reader never sees.
+      await sql`
+        INSERT INTO twoai_web_answers (question_norm, question_raw, site_hit_count, paper_hit_count)
+        VALUES (${norm}, ${question}, ${siteHits}, ${paperHits})
+        ON CONFLICT (question_norm) DO NOTHING`;
     }
 
     // DAILY CAP. Over it we return null and the caller degrades to the plain
@@ -129,7 +164,7 @@ export async function webFallback(
         model,
         max_tokens: 600,
         system:
-          "You are answering a question that theworldofai.org does not cover. Search the web and give a brief factual answer in at most 120 words. Name the sources you used. Do not claim this site covers the topic and do not mention theworldofai.org. If the search finds nothing solid, say so plainly rather than guessing.",
+          "You are answering a question that theworldofai.org does not cover. Search the web and give a brief factual answer in at most 120 words. Begin immediately with the answer: never narrate what you are about to do, and never write a sentence like 'I will search for that'. Name the sources you used. Do not claim this site covers the topic and do not mention theworldofai.org. If the search finds nothing solid, say so plainly rather than guessing.",
         messages: [{ role: "user", content: question }],
         tools: [{ type: "web_search_20250305", name: "web_search" }],
       }),
@@ -158,6 +193,12 @@ export async function webFallback(
       }
     };
     walk(out?.content ?? []);
+    // Strip tool-use narration. Verified live 2026-09-01: the first working
+    // answer opened "I'll search for information on how Einstein's theory of
+    // relativity influenced artificial intelligence." before the substance.
+    // The prompt now forbids it, and this catches the model that does it
+    // anyway, because a reader wants the answer, not the process.
+    text = text.replace(/^\s*(i(?:'|\u2019)?ll|i will|let me|i'm going to|i am going to)\b[^.!?\n]*[.!?\n]\s*/i, "");
     text = text.trim();
     if (!text) {
       lastWebError = "empty text from search call";
@@ -183,7 +224,7 @@ export async function webFallback(
              provenance = 'cite_only'
        WHERE question_norm = ${norm}`;
 
-    return { text, sources, cached: false };
+    return { text, sources, cached: false, fetchedAt: new Date().toISOString() };
   } catch (e: any) {
     // The fallback is additive. Its failure returns the reader to the same
     // honest not-covered answer they would have had before it existed.
