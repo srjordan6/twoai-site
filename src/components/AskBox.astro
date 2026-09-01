@@ -126,13 +126,19 @@ const {
             label: 'From Wikidata, not this site', title: d.wikidata.title,
             description: d.wikidata.description, facts: d.wikidata.facts,
             url: d.wikidata.url, linkText: d.wikidata.qid + ' on Wikidata',
-            note: 'Public domain (CC0) structured data, retrieved just now. '
+            note: 'Public domain (CC0) structured data' +
+              (d.lookupCached && d.lookupFetchedAt
+                ? ', retrieved ' + new Date(d.lookupFetchedAt).toISOString().slice(0, 10) + ' and served from our record since. '
+                : ', retrieved just now. ')
           });
           if (d.lookup) structured.push({
             label: 'From ' + d.lookup.sourceLabel + ', not this site', title: d.lookup.title,
             description: d.lookup.description, facts: d.lookup.facts,
             url: d.lookup.url, linkText: 'View on ' + d.lookup.sourceLabel,
-            note: 'Retrieved just now from ' + d.lookup.sourceLabel + '. Not verified or published by us. '
+            note: (d.lookupCached && d.lookupFetchedAt
+              ? 'Retrieved ' + new Date(d.lookupFetchedAt).toISOString().slice(0, 10) + ' from ' + d.lookup.sourceLabel + ' and served from our record since. '
+              : 'Retrieved just now from ' + d.lookup.sourceLabel + '. ') +
+              'Not verified or published by us. '
           });
           structured.forEach(function (s) {
             var rows = s.facts.map(function (f) {

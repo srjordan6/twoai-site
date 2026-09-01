@@ -41,6 +41,67 @@ export type LookupAnswer = {
 
 export let lastLookupError = "";
 
+// A stored structured answer is served for this long before we ask the source
+// again. Same 30 days as the web cache: long enough that a question asked
+// twice in a week comes out of our own database, short enough that a founder
+// count or an employee figure cannot sit wrong for a year.
+const LOOKUP_TTL_DAYS = 30;
+
+/**
+ * Serve a previously stored structured answer instead of calling out again.
+ *
+ * WHY THIS WAS MISSING AND WHY IT MATTERED. The paid web tier had a cache from
+ * the start because a search costs money. The free tiers had none, so "who
+ * founded DeepMind" asked twice hit Wikidata twice - and Stephen's point is
+ * the right one regardless of cost: once we have looked something up and kept
+ * it, the answer should come from our own database. Free does not mean the
+ * lookup is free of consequence. It is a network round trip on the reader's
+ * request path, a second chance to get a different answer than we showed
+ * yesterday, and a load we put on somebody else's public service every time
+ * the same question is asked.
+ */
+export async function cachedLookup(
+  env: any,
+  norm: string,
+  qVec?: number[]
+): Promise<{ wikidata?: any; lookup?: any; fetchedAt?: string } | null> {
+  if (!env.AUDIT_DB) return null;
+  const sql = postgres(env.AUDIT_DB.connectionString, { max: 1, fetch_types: false, idle_timeout: 10 });
+  try {
+    const vecLit = qVec && qVec.length ? "[" + qVec.join(",") + "]" : null;
+    const rows: any[] = vecLit
+      ? await sql`
+          SELECT results, fetched_at, 1 - (q_vec <=> ${vecLit}::vector) AS sim
+            FROM twoai_web_answers
+           WHERE superseded_at IS NULL AND q_vec IS NOT NULL
+             AND results ? 'lookupKind'
+             AND fetched_at > now() - ${LOOKUP_TTL_DAYS + " days"}::interval
+           ORDER BY q_vec <=> ${vecLit}::vector
+           LIMIT 1`
+      : await sql`
+          SELECT results, fetched_at, 1.0 AS sim
+            FROM twoai_web_answers
+           WHERE question_norm = ${norm} AND superseded_at IS NULL
+             AND results ? 'lookupKind'
+             AND fetched_at > now() - ${LOOKUP_TTL_DAYS + " days"}::interval`;
+    const r = rows[0];
+    // Same strict 0.93 floor the web cache uses. Measured on real questions,
+    // a reworded question and a genuinely different one sit 0.013 apart, so
+    // anything looser would serve one entity's facts for another's - which on
+    // a fact table is far worse than a redundant free API call.
+    if (!r || Number(r.sim) < 0.93 || !r.results) return null;
+    return {
+      wikidata: r.results.wikidata ?? undefined,
+      lookup: r.results.lookup ?? undefined,
+      fetchedAt: r.fetched_at ? new Date(r.fetched_at).toISOString() : undefined,
+    };
+  } catch {
+    return null;
+  } finally {
+    try { await sql.end(); } catch {}
+  }
+}
+
 /**
  * Record a free-tier answer and the facts it carried.
  *
@@ -66,21 +127,31 @@ export async function recordLookup(
   paperHits: number,
   qVec: number[] | undefined,
   bestScore: number | undefined,
-  answers: Array<{ sourceLabel: string; title: string; url: string; facts: LookupFact[] }>
+  answers: Array<{ sourceLabel: string; title: string; url: string; facts: LookupFact[] }>,
+  payload?: { wikidata?: any; lookup?: any }
 ): Promise<void> {
   if (!env.AUDIT_DB) return;
   const sql = postgres(env.AUDIT_DB.connectionString, { max: 1, fetch_types: false, idle_timeout: 10 });
   try {
     const vecLit = qVec && qVec.length ? "[" + qVec.join(",") + "]" : null;
+    // results carries a lookupKind marker so the cache read can tell a stored
+    // structured answer apart from a stored web-search answer in the same
+    // column, and fetched_at is set so the TTL applies to both alike.
+    const stored = payload
+      ? sql.json({ lookupKind: "structured", ...payload } as any)
+      : null;
     await sql`
-      INSERT INTO twoai_web_answers (question_norm, question_raw, site_hit_count, paper_hit_count, q_vec, best_score)
-      VALUES (${norm}, ${question}, ${siteHits}, ${paperHits}, ${vecLit}::vector, ${bestScore ?? null})
+      INSERT INTO twoai_web_answers (question_norm, question_raw, site_hit_count, paper_hit_count, q_vec, best_score, results, provider, fetched_at)
+      VALUES (${norm}, ${question}, ${siteHits}, ${paperHits}, ${vecLit}::vector, ${bestScore ?? null}, ${stored}, 'structured-lookup', now())
       ON CONFLICT (question_norm) DO UPDATE
         SET times_asked = twoai_web_answers.times_asked + 1,
             last_asked_at = now(),
             site_hit_count = ${siteHits},
             paper_hit_count = ${paperHits},
             best_score = ${bestScore ?? null},
+            results = COALESCE(${stored}, twoai_web_answers.results),
+            provider = COALESCE(twoai_web_answers.provider, 'structured-lookup'),
+            fetched_at = COALESCE(twoai_web_answers.fetched_at, now()),
             q_vec = COALESCE(twoai_web_answers.q_vec, ${vecLit}::vector)`;
 
     for (const a of answers) {
