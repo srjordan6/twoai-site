@@ -36,6 +36,7 @@
 
 import { handleTalent, talentWeeklyDigest, talentMailAnswer } from "./talent";
 import { webFallback, lastWebError } from "./websearch";
+import { wikidataLookup, lastWikidataError } from "./wikidata";
 import postgres from "postgres";
 
 interface Env {
@@ -768,6 +769,19 @@ export default {
     // as retrieval ANSWERING, and only the model can tell the two apart, so
     // the refusal it writes is the signal we key on.
     if (/does not cover that yet/i.test(answer)) {
+      // TIER 2: WIKIDATA, ahead of any web search. Free, so no cap and no
+      // budget counter, and CC0, so unlike a publisher's prose these claims
+      // can eventually be published on our own pages rather than only cited.
+      // Verified live against Q15733006: "who founded DeepMind" resolves to
+      // Google DeepMind and returns Demis Hassabis and Shane Legg with the
+      // founding year, headquarters, parent and employee count.
+      const wd = await wikidataLookup(question);
+      if (wd) {
+        return json({
+          answered: false, answer, sources, papers: [],
+          wikidata: wd, webError: lastWikidataError || undefined,
+        });
+      }
       const web2 = await webFallback(env, ANTHROPIC_MODEL, question, norm, hits.length, papers.length, qVec, best);
       if (web2) {
         return json({
