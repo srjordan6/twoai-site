@@ -110,6 +110,14 @@ const {
         }).then(function (r) { return r.json(); }).then(function (d) {
           if (d.error) { out.innerHTML = '<p class="ask-wait">' + esc(d.error) + '</p>'; return; }
           var html = '<div class="ask-answer">' + render(d.answer) + '</div>';
+          // General-knowledge context, when the model offers it, renders in
+          // its own labelled block. It is not from our sources and the label
+          // says so; keeping it visually separate is the condition under
+          // which it is allowed to exist at all.
+          if (d.beyond) {
+            html += '<div class="ask-beyond"><p class="ask-beyond-label">Not from our sources</p>' +
+              render(d.beyond) + '</div>';
+          }
           if (d.sources && d.sources.length) {
             html += '<p class="ask-src-label">Sources on this site</p><ul class="ask-src">';
             for (var i = 0; i < d.sources.length; i++) {
@@ -171,6 +179,12 @@ const {
     font-size: 13px; background: rgba(32,24,104,.06);
     padding: .1em .35em; border-radius: 3px;
   }
+  .ask-beyond { margin: 14px 0 0; padding: 10px 14px; border-left: 3px solid #cfd4e4;
+    background: rgba(122,138,158,.07); border-radius: 0 6px 6px 0; }
+  .ask-beyond p { font-size: 14px; line-height: 1.65; color: #4a5568; margin: 0 0 .6em; }
+  .ask-beyond p:last-child { margin-bottom: 0; }
+  .ask-beyond-label { font-size: 11px; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: #7A8A9E !important; margin: 0 0 6px !important; }
   .ask-src-label { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
     color: #F07800; margin: 14px 0 6px; }
   .ask-src { list-style: none; margin: 0; padding: 0; }

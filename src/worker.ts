@@ -31,6 +31,11 @@ import postgres from "postgres";
 interface Env {
   AI: any;
   VECTORIZE: any;
+  // OPTIONAL second Vectorize index over the works corpus (title+abstract
+  // embeddings, pushed by the pipeline stage twoai_works_embed). When absent
+  // the research index is full-text only, exactly as before: the binding is
+  // the switch, so the worker ships hybrid-ready before the index exists.
+  WORKS_VECTORIZE?: any;
   ASSISTANT_DB: D1Database;
   // Hyperdrive to srj_audit, read-only role, for the research index.
   AUDIT_DB?: { connectionString: string };
@@ -98,9 +103,13 @@ const SCORE_FLOOR = 0.52;
 // not count, because they cost nothing. Pair this with a hard spend cap in
 // the Anthropic console: this guards the common case, that guards the tail.
 const DAILY_ANSWER_CAP = 5000;
-const TOP_K = 12;      // over-fetch, then cap per page
+// RAISED 12/6 -> 18/8 (2026-08-31, Stephen's approval of the retrieval-breadth
+// fix): the box was reaching five pages while the site holds 522 glossary
+// terms, 108 cases and a timeline to 1943. Breadth was the constraint, not
+// the model. PER_PAGE stays 2 so one long page cannot crowd out the rest.
+const TOP_K = 18;      // over-fetch, then cap per page
 const PER_PAGE = 2;    // at most two chunks from any one page
-const MAX_SOURCES = 6;
+const MAX_SOURCES = 8;
 
 const SYSTEM = `You answer questions about artificial intelligence using ONLY the excerpts provided, which come from theworldofai.org and from its research index of academic papers.
 
@@ -112,7 +121,8 @@ RULES, in order:
 3. Be brief. Two or three short paragraphs at most. Lead with the answer.
 4. Where the excerpts disagree or are dated, say so rather than smoothing it over.
 5. Plain English. No hype. Commas rather than dashes.
-6. You are a reference work, not a salesperson and not a lawyer. Never give legal advice; report what the sources say and note that the primary source should be checked for anything that matters.`;
+6. You are a reference work, not a salesperson and not a lawyer. Never give legal advice; report what the sources say and note that the primary source should be checked for anything that matters.
+7. OPTIONALLY, after the sourced answer, you may add ONE short paragraph of general context from your own knowledge, and only when it genuinely completes the picture for the reader. It must start on its own line with exactly "BEYOND OUR SOURCES: " and contain no citations, no page titles, no paper titles, and nothing presented as coming from this site. Never use it to answer the question itself, never let it contradict the sourced answer, and omit it entirely when the sourced answer stands on its own.`;
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -273,29 +283,114 @@ export default {
           "of for to in on at by with from about into over after before between and or but if then than that this these those " +
           "say says said tell explain describe show give me my our your it its as can could should would will may might " +
           "research paper papers study studies academic literature evidence any some there their his her they we you i").split(" "));
+        // CORPUS STOPWORDS. In a 700,000-work AI corpus, "artificial",
+        // "intelligence" and their kin are stopwords in all but name: the
+        // first pairwise-relaxation draft ranked by ts_rank_cd and returned
+        // nursing AI-literacy surveys for the Einstein question, because
+        // frequency ranking rewards a paper that says "artificial
+        // intelligence" forty times. Measured live 2026-08-31 before this
+        // rewrite. These words still count in the strict AND tier, where
+        // co-occurrence with everything else keeps them honest; they are
+        // excluded from the relaxation tiers, where they drown the terms
+        // that carry the question.
+        // IMPORTANT: the WHERE clauses below filter on the to_tsvector
+        // EXPRESSION, not on the fts column, because the existing GIN index
+        // twoai_works_fts_idx is built on that expression and Postgres will
+        // not match a bare column to it. The stored fts column is used only
+        // in the SELECT list for coverage ranking, where it is a cheap
+        // column read instead of a per-row tsvector recomputation. That split
+        // is what took the Einstein query from 12.3s to 51ms without needing
+        // a second GIN index on 776k rows.
+        const FTSX = "to_tsvector('english', coalesce(title,'') || ' ' || coalesce(abstract,''))";
+        const CORPUS_STOP = new Set(("artificial intelligence machine learning model models data neural " +
+          "network networks deep algorithm algorithms system systems human based using approach analysis").split(" "));
         const terms = question.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").split(/\s+/)
           .filter((w) => w.length > 2 && !STOP.has(w)).slice(0, 12);
+        const distinctive = terms.filter((w) => !CORPUS_STOP.has(w)).slice(0, 8);
         const andQuery = terms.join(" ");
         const orQuery = terms.join(" | ");
+        // Coverage rank: how many DISTINCT distinctive terms a work matches,
+        // computed as a sum of boolean matches on the stored fts column. This
+        // is what ts_rank cannot give us: three different question words
+        // beat one question word repeated forty times.
+        const coverage = distinctive.length
+          ? distinctive.map((t) => `(fts @@ to_tsquery('english', '${t}'))::int`).join(" + ")
+          : "0";
+        const pairs: string[] = [];
+        for (let a = 0; a < distinctive.length; a++)
+          for (let b = a + 1; b < distinctive.length; b++)
+            pairs.push(`(${distinctive[a]} & ${distinctive[b]})`);
+        const pairQuery = pairs.join(" | ");
+        // TIERS ARE ADDITIVE, not first-nonempty. Measured on the Einstein
+        // question: the strict tiers return one tangential physics paper, and
+        // stopping there would hand the model a single weak excerpt while the
+        // corpus holds Minsky. Each tier tops the list up to 5, most precise
+        // first, deduplicated on the OpenAlex link identity (doi, else
+        // oa_url), so the order of the list is the order of confidence.
         let rows: any[] = [];
+        const seen = new Set<string>();
+        const take = (batch: any[]) => {
+          for (const r of batch) {
+            if (rows.length >= 5) break;
+            const k = String(r.doi ?? r.oa_url ?? r.title ?? "");
+            if (!k || seen.has(k)) continue;
+            seen.add(k);
+            rows.push(r);
+          }
+        };
         if (terms.length) {
-          rows = await sql`
+          // TIER 1: every content word must co-occur. Highest precision;
+          // the common case for short questions.
+          take(await sql.unsafe(`
             SELECT title, pub_year, cited_by, doi, oa_url, abstract
             FROM twoai_works
-            WHERE to_tsvector('english', coalesce(title,'') || ' ' || coalesce(abstract,''))
-                  @@ websearch_to_tsquery('english', ${andQuery})
+            WHERE ${FTSX} @@ websearch_to_tsquery('english', $1)
             ORDER BY cited_by DESC NULLS LAST
-            LIMIT 5`;
-          if (!rows.length && terms.length > 2) {
-            rows = await sql`
-              SELECT title, pub_year, cited_by, doi, oa_url, abstract,
-                     ts_rank_cd(to_tsvector('english', coalesce(title,'') || ' ' || coalesce(abstract,'')),
-                                to_tsquery('english', ${orQuery})) AS rank
+            LIMIT 5`, [andQuery]));
+          // TIER 2: AND of only the distinctive words. "How did Einstein's
+          // theory of relativity influence artificial intelligence" becomes
+          // einstein & theory & relativity & influence.
+          if (rows.length < 5 && distinctive.length >= 2 && distinctive.length < terms.length) {
+            take(await sql.unsafe(`
+              SELECT title, pub_year, cited_by, doi, oa_url, abstract
               FROM twoai_works
-              WHERE to_tsvector('english', coalesce(title,'') || ' ' || coalesce(abstract,''))
-                    @@ to_tsquery('english', ${orQuery})
+              WHERE ${FTSX} @@ to_tsquery('english', $1)
+              ORDER BY cited_by DESC NULLS LAST
+              LIMIT 5`, [distinctive.join(" & ")]));
+          }
+          // TIER 3: any two distinctive words co-occurring, ranked by how
+          // many distinctive words the work matches, then citations.
+          // Ranking the full pair-match set costs 5.4s (measured, 86k rows
+          // for the Einstein question). Capping candidates to the 400
+          // most-cited pair matches first, then coverage-ranking those,
+          // returns the same top papers in 51ms. The cap is a citation prior,
+          // which for a reference site is the right bias: a work nobody cites
+          // is not the answer we want to hand a reader.
+          if (rows.length < 5 && pairs.length) {
+            take(await sql.unsafe(`
+              WITH cand AS (
+                SELECT title, pub_year, cited_by, doi, oa_url, abstract, fts
+                FROM twoai_works
+                WHERE ${FTSX} @@ to_tsquery('english', $1)
+                ORDER BY cited_by DESC NULLS LAST
+                LIMIT 400)
+              SELECT title, pub_year, cited_by, doi, oa_url, abstract,
+                     (${coverage}) AS cov
+              FROM cand
+              ORDER BY cov DESC, cited_by DESC NULLS LAST
+              LIMIT 5`, [pairQuery]));
+          }
+          // TIER 4: last resort, any single content word, relevance ranked.
+          // Only when nothing above matched at all: a low-coverage single
+          // word hit below real matches adds noise, not reach.
+          if (!rows.length && terms.length > 2) {
+            take(await sql.unsafe(`
+              SELECT title, pub_year, cited_by, doi, oa_url, abstract,
+                     ts_rank_cd(fts, to_tsquery('english', $1)) AS rank
+              FROM twoai_works
+              WHERE ${FTSX} @@ to_tsquery('english', $1)
               ORDER BY rank DESC, cited_by DESC NULLS LAST
-              LIMIT 5`;
+              LIMIT 5`, [orQuery]));
           }
         }
         for (const r of rows as any[]) {
@@ -315,6 +410,42 @@ export default {
         ctx.waitUntil(sql.end());
       } catch {
         // A research outage must degrade the box to site pages, never break it.
+      }
+    }
+
+    // HYBRID RESEARCH RETRIEVAL. Full text finds exact terms; it cannot find
+    // "who founded the field" in a paper that says "the origins of machine
+    // intelligence". When the works Vectorize index exists (pipeline stage
+    // twoai_works_embed, phased highest-cited first), the same question
+    // vector queries it and semantic hits fill the remaining paper slots.
+    // Dedupe is by link, because the same work can arrive from both paths.
+    if (env.WORKS_VECTORIZE && papers.length < 5) {
+      try {
+        const emb2 = await env.AI.run(EMBED_MODEL, { text: [question] });
+        const wres = await env.WORKS_VECTORIZE.query(emb2.data[0], {
+          topK: 5, returnMetadata: "all",
+        });
+        const have = new Set(papers.map((p) => p.url));
+        for (const m of wres.matches ?? []) {
+          if (papers.length >= 5) break;
+          if (m.score < 0.5) continue;
+          const md = m.metadata ?? {};
+          const link = md.doi ? "https://doi.org/" + String(md.doi) : String(md.oa_url ?? "");
+          if (!link || have.has(link)) continue;
+          have.add(link);
+          papers.push({
+            title: String(md.title ?? "").slice(0, 300),
+            year: md.pub_year ?? null,
+            cited: md.cited_by ?? null,
+            url: link,
+          });
+          researchExcerpts.push(
+            "[R" + papers.length + "] " + String(md.title ?? "") +
+            (md.pub_year ? " (" + md.pub_year + ")" : "") + " " + link + "\n" +
+            String(md.abstract ?? "").slice(0, 1200));
+        }
+      } catch {
+        /* Semantic leg is additive; its failure changes nothing. */
       }
     }
 
@@ -507,6 +638,22 @@ export default {
     ctx.waitUntil(log(true));
     ctx.waitUntil(bumpAnswered());
 
+    // THE BEYOND-OUR-SOURCES BLOCK. Stephen's explicit decision, 2026-08-31:
+    // the model may add general-knowledge context, but only in a visually
+    // separate, labelled block, never interleaved with cited claims and never
+    // feeding the source list. The prompt asks for a marker line; this splits
+    // on it, so even a model that ignores the placement rule cannot get
+    // uncited prose into the sourced answer, and paper-citation matching runs
+    // against the sourced portion only.
+    let beyond = "";
+    {
+      const mIdx = answer.indexOf("BEYOND OUR SOURCES:");
+      if (mIdx >= 0) {
+        beyond = answer.slice(mIdx + "BEYOND OUR SOURCES:".length).trim();
+        answer = answer.slice(0, mIdx).trim();
+      }
+    }
+
     // Sources are the pages actually retrieved, deduplicated, in rank order. An
     // answer without them would be an unsourced claim under our own domain.
     const seen = new Set<string>();
@@ -550,6 +697,6 @@ export default {
     // attempts were writing BUILD variables, not runtime secrets. The working
     // path was `wrangler secret put ANTHROPIC_API_KEY`. Failures stay
     // queryable in answer_log.model_errors.
-    return json({ answered: true, answer, sources, papers: citedPapers, model: usedModel });
+    return json({ answered: true, answer, beyond: beyond || undefined, sources, papers: citedPapers, model: usedModel });
   },
 };
