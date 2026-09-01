@@ -37,7 +37,7 @@
 import { handleTalent, talentWeeklyDigest, talentMailAnswer } from "./talent";
 import { webFallback, lastWebError } from "./websearch";
 import { wikidataLookup, lastWikidataError, subjectOf } from "./wikidata";
-import { openAlexAuthor, huggingFaceModel, recordLookup, cachedLookup } from "./lookups";
+import { openAlexAuthor, huggingFaceModel, recordLookup, cachedLookup, promoteFacts } from "./lookups";
 import postgres from "postgres";
 
 interface Env {
@@ -822,6 +822,13 @@ export default {
         if (alt) recorded.push({ sourceLabel: alt.sourceLabel, title: alt.title, url: alt.url, facts: alt.facts });
         ctx.waitUntil(recordLookup(env, question, norm, hits.length, papers.length, qVec, best, recorded,
           { wikidata: wd ?? undefined, lookup: alt ?? undefined }));
+        // PROMOTE. Stephen's instruction: after a lookup, the information goes
+        // onto the company's page. Only Wikidata promotes - it is CC0, so its
+        // claims can be published rather than merely cited, which is not true
+        // of the web-search tier or of a model card. Runs in waitUntil so the
+        // reader is not held up, and the page itself changes on the next
+        // pipeline build, not instantly, because pages are rendered from SQL.
+        if (wd) ctx.waitUntil(promoteFacts(env, wd).then((r) => console.log("promote:", r)));
         return json({
           answered: false, answer, sources: shownSources, papers: [],
           wikidata: wd ?? undefined, lookup: alt ?? undefined,

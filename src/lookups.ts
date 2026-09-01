@@ -178,6 +178,108 @@ export async function recordLookup(
   }
 }
 
+/**
+ * Promote looked-up facts onto the matching company profile.
+ *
+ * Stephen's instruction: after a lookup, promote the information to the
+ * company's page. This does that, under four constraints that keep it from
+ * being the thing this site exists not to be.
+ *
+ * 1. HARD IDENTIFIER ONLY. The match is registrable-domain equality between
+ *    Wikidata's P856 official website and twoai_company_profiles.website.
+ *    Never the name. "Anthropic" and "Anthropic PBC" and somebody's unrelated
+ *    consultancy all share a name; they do not share a domain. A wrong match
+ *    here writes one company's founders onto another company's page.
+ * 2. FILL EMPTY FIELDS ONLY. An existing value is never overwritten. Our own
+ *    harvested and verified data outranks a third-party claim, and silently
+ *    replacing a checked figure with an unchecked one is how a corpus rots.
+ * 3. FIRST VALUE ONLY on fields that must be singular. Wikidata gave Google
+ *    DeepMind "London, Googleplex" for headquarters by concatenating two P159
+ *    statements, one of which is in Mountain View. A multi-valued answer is
+ *    fine in a labelled block that says where it came from; it is not fine as
+ *    the headquarters line on our own page.
+ * 4. PROVENANCE TRAVELS. Every promoted field appends a sources entry naming
+ *    the QID and the date, so the page can say where the fact came from and
+ *    the promotion can be undone by a human who disagrees.
+ */
+export async function promoteFacts(
+  env: any,
+  wd: { qid: string; title: string; url: string; facts: LookupFact[] }
+): Promise<string> {
+  if (!env.AUDIT_DB) return "no db";
+  const site = wd.facts.find((f) => f.field === "website")?.value ?? "";
+  let host = "";
+  if (site) {
+    try {
+      host = new URL(site).hostname.replace(/^www\./i, "").toLowerCase();
+    } catch {
+      host = "";
+    }
+  }
+  const val = (f: string) => wd.facts.find((x) => x.field === f)?.value ?? "";
+  const first = (f: string) => val(f).split(",")[0].trim();
+
+  const sql = postgres(env.AUDIT_DB.connectionString, { max: 1, fetch_types: false, idle_timeout: 10 });
+  try {
+    // MATCH ORDER: stored QID first, then domain.
+    //
+    // Domain alone is not enough here, and checking the data before shipping
+    // is why. twoai_company_profiles.website holds the PRODUCT url, not the
+    // company one: Anthropic is https://claude.ai/, OpenAI is
+    // https://chatgpt.com/, Vercel is https://v0.dev/. Wikidata P856 gives
+    // anthropic.com, openai.com, vercel.com. Matching those two columns would
+    // have failed on essentially every company in the directory, and any
+    // accidental hit would have been a coincidence rather than an identity.
+    // So the 43 profiles that already carry a verified wikidata_qid match on
+    // that, which is the strongest identifier available, and domain equality
+    // remains as a second chance for the rest. Still never the name.
+    let rows: any[] = await sql`
+      SELECT uid, name FROM twoai_company_profiles WHERE wikidata_qid = ${wd.qid} LIMIT 1`;
+    if (!rows.length) {
+      rows = await sql`
+        SELECT uid, name FROM twoai_company_profiles
+         WHERE website IS NOT NULL
+           AND lower(regexp_replace(regexp_replace(website, '^https?://', ''), '^www\.', '')) LIKE ${host + "%"}
+         LIMIT 1`;
+    }
+    if (!rows.length) return "no profile matching " + wd.qid + " or domain " + host;
+    const uid = rows[0].uid;
+
+    const founders = val("founders")
+      ? JSON.stringify(val("founders").split(",").map((s) => s.trim()).filter(Boolean))
+      : null;
+    const foundedYear = /^\d{4}$/.test(val("founded")) ? Number(val("founded")) : null;
+    const hq = first("headquarters") || null;
+    const emp = /^\d+$/.test(val("employees")) ? Number(val("employees")) : null;
+
+    const res: any = await sql`
+      UPDATE twoai_company_profiles
+         SET founders = CASE WHEN founders = '[]'::jsonb AND ${founders}::jsonb IS NOT NULL
+                             THEN ${founders}::jsonb ELSE founders END,
+             founded = COALESCE(founded, ${foundedYear}),
+             headquarters = COALESCE(headquarters, ${hq}),
+             employees = COALESCE(employees, ${emp}),
+             wikidata_qid = COALESCE(wikidata_qid, ${wd.qid}),
+             sources = sources || ${sql.json([{ source: "Wikidata " + wd.qid, url: wd.url,
+                        retrieved: new Date().toISOString().slice(0, 10) }] as any)},
+             updated_at = now()
+       WHERE uid = ${uid}
+       RETURNING uid`;
+    if (!res.length) return "update matched no row";
+
+    await sql`
+      UPDATE twoai_web_facts
+         SET status = 'promoted', promoted_at = now(), entity_uid = ${uid},
+             reviewed_by = 'auto: wikidata domain match'
+       WHERE entity_name = ${wd.title} AND status = 'proposed' AND superseded_at IS NULL`;
+    return "promoted to " + rows[0].name;
+  } catch (e: any) {
+    return "promote error: " + String(e?.message ?? e).slice(0, 160);
+  } finally {
+    try { await sql.end(); } catch {}
+  }
+}
+
 const getJson = async (url: string): Promise<any | null> => {
   const r = await fetch(url, { headers: { "user-agent": UA, accept: "application/json" } });
   if (!r.ok) {

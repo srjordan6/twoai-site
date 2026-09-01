@@ -36,6 +36,11 @@ const PROPS: Array<{ pid: string; field: string; label: string; isEntity: boolea
   { pid: "P169", field: "ceo", label: "Chief executive", isEntity: true },
   { pid: "P749", field: "parent", label: "Parent organisation", isEntity: true },
   { pid: "P1128", field: "employees", label: "Employees", isEntity: false },
+  // P856 is not shown to the reader - it is the HARD IDENTIFIER. The standing
+  // rule is that an external knowledge base is never matched to our records on
+  // name alone; domain equality is the check. Carrying the official website
+  // back from Wikidata is what makes safe promotion possible at all.
+  { pid: "P856", field: "website", label: "Official website", isEntity: false },
 ];
 
 export type WikidataFact = { field: string; label: string; value: string };
