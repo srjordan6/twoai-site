@@ -760,6 +760,24 @@ export default {
     };
     const citedPapers = papers.filter((pp) => namedInAnswer(pp.title));
 
+    // THE SAME RULE, NOW APPLIED TO PAGES. Papers were filtered to those the
+    // answer actually names; site pages were not, so every page retrieval
+    // returned got listed as a source whether the answer leaned on it or not.
+    // The visible symptom was three pages - Alan Turing, Fei-Fei Li, Eric
+    // Nguyen - appearing under almost every question. They are not a bug in
+    // the index: they are long, well-written, broad AI prose, so they sit near
+    // the centre of the embedding space and are genuinely close to most AI
+    // questions. Hub documents. Retrieving them is correct; CITING them when
+    // the answer never used them is not, and it makes the source list look
+    // padded, which is the one thing this box cannot afford.
+    //
+    // Rule 2 of the system prompt already tells the model to name the pages it
+    // uses, so this checks rather than trusts. If the filter would empty the
+    // list entirely the top-scoring page is kept, because an answer that came
+    // from somewhere must show somewhere.
+    const namedSources = sources.filter((s) => namedInAnswer(s.title));
+    const shownSources = namedSources.length ? namedSources : sources.slice(0, 1);
+
     // THE SECOND REFUSAL PATH. Measured live 2026-09-01: the Einstein question
     // retrieved seven site pages and a quantum computing paper, so the
     // retrieval-empty branch above never ran - and then the MODEL refused,
@@ -792,19 +810,19 @@ export default {
         if (alt) recorded.push({ sourceLabel: alt.sourceLabel, title: alt.title, url: alt.url, facts: alt.facts });
         ctx.waitUntil(recordLookup(env, question, norm, hits.length, papers.length, qVec, best, recorded));
         return json({
-          answered: false, answer, sources, papers: [],
+          answered: false, answer, sources: shownSources, papers: [],
           wikidata: wd ?? undefined, lookup: alt ?? undefined,
         });
       }
       const web2 = await webFallback(env, ANTHROPIC_MODEL, question, norm, hits.length, papers.length, qVec, best);
       if (web2) {
         return json({
-          answered: false, answer, sources, papers: [],
+          answered: false, answer, sources: shownSources, papers: [],
           web: web2.text, webSources: web2.sources, webCached: web2.cached || undefined,
           webFetchedAt: web2.fetchedAt,
         });
       }
-      return json({ answered: false, answer, sources, papers: [], webError: lastWebError || undefined });
+      return json({ answered: false, answer, sources: shownSources, papers: [], webError: lastWebError || undefined });
     }
 
     // Diagnostic ride-alongs removed 2026-08-19 after doing their job twice:
@@ -813,6 +831,6 @@ export default {
     // attempts were writing BUILD variables, not runtime secrets. The working
     // path was `wrangler secret put ANTHROPIC_API_KEY`. Failures stay
     // queryable in answer_log.model_errors.
-    return json({ answered: true, answer, beyond: beyond || undefined, sources, papers: citedPapers, model: usedModel });
+    return json({ answered: true, answer, beyond: beyond || undefined, sources: shownSources, papers: citedPapers, model: usedModel });
   },
 };
