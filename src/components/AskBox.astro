@@ -114,6 +114,21 @@ const {
           // its own labelled block. It is not from our sources and the label
           // says so; keeping it visually separate is the condition under
           // which it is allowed to exist at all.
+          // The open web, when this site has nothing. Its own block, its own
+          // label, its own link list. It must never merge into "Sources on
+          // this site" - that list is the reason the box is worth trusting.
+          if (d.web) {
+            var wsrc = '';
+            if (d.webSources && d.webSources.length) {
+              wsrc = '<ul class="ask-web-src">' + d.webSources.map(function (s) {
+                return '<li><a href="' + s.url + '" rel="nofollow noopener" target="_blank">' +
+                  (s.title || s.url) + '</a></li>';
+              }).join('') + '</ul>';
+            }
+            html += '<div class="ask-web"><p class="ask-web-label">From the open web, not this site</p>' +
+              render(d.web) + wsrc +
+              '<p class="ask-web-note">We have not verified or published this. Your question was recorded; topics asked often get researched and added.</p></div>';
+          }
           if (d.beyond) {
             html += '<div class="ask-beyond"><p class="ask-beyond-label">Not from our sources</p>' +
               render(d.beyond) + '</div>';
@@ -179,6 +194,15 @@ const {
     font-size: 13px; background: rgba(32,24,104,.06);
     padding: .1em .35em; border-radius: 3px;
   }
+  .ask-web { margin: 14px 0 0; padding: 12px 14px; border: 1px solid #e2c9a8;
+    border-left: 3px solid #F07800; background: rgba(240,120,0,.05); border-radius: 0 6px 6px 0; }
+  .ask-web p { font-size: 14px; line-height: 1.65; color: #33404f; margin: 0 0 .6em; }
+  .ask-web-label { font-size: 11px; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: #F07800 !important; margin: 0 0 6px !important; }
+  .ask-web-src { margin: 8px 0 0; padding-left: 18px; }
+  .ask-web-src li { font-size: 13px; line-height: 1.5; margin-bottom: 3px; }
+  .ask-web-src a { color: #201868; }
+  .ask-web-note { font-size: 12px !important; color: #7A8A9E !important; margin: 8px 0 0 !important; }
   .ask-beyond { margin: 14px 0 0; padding: 10px 14px; border-left: 3px solid #cfd4e4;
     background: rgba(122,138,158,.07); border-radius: 0 6px 6px 0; }
   .ask-beyond p { font-size: 14px; line-height: 1.65; color: #4a5568; margin: 0 0 .6em; }

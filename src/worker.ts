@@ -18,14 +18,24 @@
  *
  * WHAT THIS ENDPOINT WILL NOT DO:
  *  - It never answers from the model's own knowledge. Only retrieved chunks.
- *  - It never reaches the web. When the site does not cover something it says
- *    so and logs the question, because a logged gap gets researched and
+ *  - It never presents the web as this site. Until 2026-09-01 this endpoint
+ *    did not reach the web at all: when the site did not cover something it
+ *    said so and logged the question, because a logged gap gets researched and
  *    published once for everyone, while a guess helps one person unverifiably
- *    and puts an unsourced claim under our own domain name.
+ *    and puts an unsourced claim under our own domain name. Stephen decided to
+ *    add a web fallback, and the original reasoning is preserved by CONFINING
+ *    it rather than removing it: the search fires ONLY when site pages and the
+ *    research index both come back empty, its result renders in a separate
+ *    labelled block, it never enters "Sources on this site", and it is stored
+ *    cite_only so it never becomes site content. The gap is still logged. What
+ *    changed is that the reader also gets a pointer while they wait for us to
+ *    cover it properly - which is what twoai_thindiscover.go already argues
+ *    search should be: a pointer, not a source.
  *  - It never returns an answer without the pages it came from.
  */
 
 import { handleTalent, talentWeeklyDigest, talentMailAnswer } from "./talent";
+import { webFallback } from "./websearch";
 import postgres from "postgres";
 
 interface Env {
@@ -307,6 +317,35 @@ export default {
         const terms = question.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").split(/\s+/)
           .filter((w) => w.length > 2 && !STOP.has(w)).slice(0, 12);
         const distinctive = terms.filter((w) => !CORPUS_STOP.has(w)).slice(0, 8);
+        // TERM RARITY. Coverage ranking that treats every word alike returns
+        // geology papers for an Einstein question: measured 2026-09-01 on the
+        // live site, tier 3 returned five works, NONE containing "einstein",
+        // including The Mechanics of Oblique Slip Faulting. Two causes. First,
+        // "theory" and "influence" are near-universal in an academic corpus
+        // while "einstein" appears in ~350 works, yet each counted 1. Second,
+        // the Postgres english stemmer collapses relativity and relative to
+        // one stem, so any abstract using "relative" scored a match on
+        // "relativity". Counting is capped at 5000 rows per term so a common
+        // word costs no more than a rare one; a term at the cap is common
+        // enough that its exact frequency does not matter.
+        let anchor = "";
+        if (distinctive.length) {
+          try {
+            const counts = await sql.unsafe(
+              distinctive.map((t, i) =>
+                `SELECT ${i} AS i, count(*) AS n FROM (SELECT 1 FROM twoai_works
+                 WHERE ${FTSX} @@ to_tsquery('english', '${t}') LIMIT 5000) x${i}`
+              ).join(" UNION ALL "));
+            let best = -1, bestN = Number.MAX_SAFE_INTEGER;
+            for (const r of counts as any[]) {
+              const n = Number(r.n);
+              if (n > 0 && n < bestN) { bestN = n; best = Number(r.i); }
+            }
+            if (best >= 0) anchor = distinctive[best];
+          } catch {
+            /* Rarity is an improvement, not a dependency. */
+          }
+        }
         const andQuery = terms.join(" ");
         const orQuery = terms.join(" | ");
         // Coverage rank: how many DISTINCT distinctive terms a work matches,
@@ -316,10 +355,20 @@ export default {
         const coverage = distinctive.length
           ? distinctive.map((t) => `(fts @@ to_tsquery('english', '${t}'))::int`).join(" + ")
           : "0";
+        // The pair set is now ANCHORED: every clause requires the rarest
+        // term. "einstein & theory | einstein & relativity | ..." rather than
+        // any two words at all. A work that never mentions Einstein cannot
+        // be an answer to a question about Einstein, however many generic
+        // words it shares. When no anchor was determined we fall back to the
+        // old unanchored pairs rather than returning nothing.
         const pairs: string[] = [];
-        for (let a = 0; a < distinctive.length; a++)
-          for (let b = a + 1; b < distinctive.length; b++)
-            pairs.push(`(${distinctive[a]} & ${distinctive[b]})`);
+        if (anchor) {
+          for (const t of distinctive) if (t !== anchor) pairs.push(`(${anchor} & ${t})`);
+        } else {
+          for (let a = 0; a < distinctive.length; a++)
+            for (let b = a + 1; b < distinctive.length; b++)
+              pairs.push(`(${distinctive[a]} & ${distinctive[b]})`);
+        }
         const pairQuery = pairs.join(" | ");
         // TIERS ARE ADDITIVE, not first-nonempty. Measured on the Einstein
         // question: the strict tiers return one tangential physics paper, and
@@ -528,12 +577,25 @@ export default {
     // while holding a relevant paper would be the box lying about its reach.
     if ((!hits.length || best < SCORE_FLOOR) && !papers.length) {
       ctx.waitUntil(log(false));
-      return json({
-        answered: false,
-        answer:
-          "The World of AI does not cover that yet. The question has been recorded, and topics that come up repeatedly get researched and published.",
-        sources: [],
-      });
+      const notCovered =
+        "The World of AI does not cover that yet. The question has been recorded, and topics that come up repeatedly get researched and published.";
+      // WEB FALLBACK, added 2026-09-01 on Stephen's decision. It fires ONLY
+      // here, on a genuine empty from both retrievers, which is why the tier-3
+      // rarity fix had to land first: before it, tier 3 returned papers that
+      // did not contain the question's rare term at all, so the box believed
+      // it had coverage and this branch never ran on questions that needed it.
+      const web = await webFallback(env, ANTHROPIC_MODEL, question, norm, hits.length, papers.length);
+      if (web) {
+        return json({
+          answered: false,
+          answer: notCovered,
+          sources: [],
+          web: web.text,
+          webSources: web.sources,
+          webCached: web.cached || undefined,
+        });
+      }
+      return json({ answered: false, answer: notCovered, sources: [] });
     }
 
     // Retrieval succeeded and we are about to spend on a model call. Check the
