@@ -43,18 +43,19 @@ export type WebAnswer = {
   fetchedAt?: string;
 };
 
-// THE SWITCH. Stephen, 2026-09-01: "if we have say so if we dont we dont -
-// just no internet search". Off. The box answers from this site's pages and
-// its research index, and when it holds nothing it says so - which is what it
-// did before today and what the promise line under the box still says.
+// THE SWITCH. Stephen's final policy, 2026-09-01: our own pages and SQL, then
+// Wikidata, then Hugging Face, then OpenAlex, and only if none of those hold
+// the answer does a web search fire - and then only when the question's words
+// appear in the published glossary.
 //
-// Everything below is left intact and one boolean away from returning, because
-// the recording half is worth keeping regardless: with this false, an
-// unanswered question STILL writes its row to twoai_web_answers with its
-// embedding, its retrieval scores and its ask count. The gap report keeps
-// filling. It simply never spends and never shows the reader an open-web
-// block. Flip to true to restore the fallback.
-const WEB_SEARCH_ENABLED = false;
+// ON, therefore, but last and gated. The three free structured tiers run
+// ahead of this in worker.ts and each returns before spending a cent, so by
+// the time this function is reached the question has already failed our own
+// retrieval, failed the research index, and found no CC0 structured answer.
+// The glossary vocabulary gate below is the second condition; the 15-a-day
+// cap is the ceiling. Set false to switch web search off entirely without
+// disturbing the gap recording, which runs either way.
+const WEB_SEARCH_ENABLED = true;
 
 // VOCABULARY GATE. Stephen's request: only spend a search when the question
 // is actually about something this site covers, using the published glossary
