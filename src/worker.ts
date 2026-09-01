@@ -36,7 +36,8 @@
 
 import { handleTalent, talentWeeklyDigest, talentMailAnswer } from "./talent";
 import { webFallback, lastWebError } from "./websearch";
-import { wikidataLookup, lastWikidataError } from "./wikidata";
+import { wikidataLookup, lastWikidataError, subjectOf } from "./wikidata";
+import { openAlexAuthor, huggingFaceModel } from "./lookups";
 import postgres from "postgres";
 
 interface Env {
@@ -775,11 +776,17 @@ export default {
       // Verified live against Q15733006: "who founded DeepMind" resolves to
       // Google DeepMind and returns Demis Hassabis and Shane Legg with the
       // founding year, headquarters, parent and employee count.
+      // FREE STRUCTURED TIERS, in order, before anything that costs money.
+      // Each returns null unless the question is its shape, so a model
+      // question never gets an author profile and vice versa - a confident
+      // profile of the wrong subject is worse than no answer.
+      const subject = subjectOf(question);
       const wd = await wikidataLookup(question);
-      if (wd) {
+      const alt = wd ? null : (await huggingFaceModel(subject, question)) ?? (await openAlexAuthor(subject, question));
+      if (wd || alt) {
         return json({
           answered: false, answer, sources, papers: [],
-          wikidata: wd, webError: lastWikidataError || undefined,
+          wikidata: wd ?? undefined, lookup: alt ?? undefined,
         });
       }
       const web2 = await webFallback(env, ANTHROPIC_MODEL, question, norm, hits.length, papers.length, qVec, best);

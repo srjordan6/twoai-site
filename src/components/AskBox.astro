@@ -117,23 +117,35 @@ const {
           // The open web, when this site has nothing. Its own block, its own
           // label, its own link list. It must never merge into "Sources on
           // this site" - that list is the reason the box is worth trusting.
-          // Wikidata is CC0 and structured, so it renders as facts with a
-          // QID link rather than as prose: label, value, and the entity page
-          // anyone can check. It is still not this site's own research, so it
-          // keeps its own labelled block and stays out of "Sources on this
-          // site".
-          if (d.wikidata) {
-            var wf = d.wikidata.facts.map(function (f) {
+          // Wikidata and the other free structured tiers share one renderer:
+          // a label/value table with the source named and linked. Same shape,
+          // different source line, so a reader always knows which outside
+          // service a fact came from and can go check it.
+          var structured = [];
+          if (d.wikidata) structured.push({
+            label: 'From Wikidata, not this site', title: d.wikidata.title,
+            description: d.wikidata.description, facts: d.wikidata.facts,
+            url: d.wikidata.url, linkText: d.wikidata.qid + ' on Wikidata',
+            note: 'Public domain (CC0) structured data, retrieved just now. '
+          });
+          if (d.lookup) structured.push({
+            label: 'From ' + d.lookup.sourceLabel + ', not this site', title: d.lookup.title,
+            description: d.lookup.description, facts: d.lookup.facts,
+            url: d.lookup.url, linkText: 'View on ' + d.lookup.sourceLabel,
+            note: 'Retrieved just now from ' + d.lookup.sourceLabel + '. Not verified or published by us. '
+          });
+          structured.forEach(function (s) {
+            var rows = s.facts.map(function (f) {
               return '<tr><th>' + f.label + '</th><td>' + f.value + '</td></tr>';
             }).join('');
-            html += '<div class="ask-wd"><p class="ask-wd-label">From Wikidata, not this site</p>' +
-              '<p class="ask-wd-title">' + d.wikidata.title +
-              (d.wikidata.description ? ' \u2014 ' + d.wikidata.description : '') + '</p>' +
-              '<table class="ask-wd-facts">' + wf + '</table>' +
-              '<p class="ask-wd-note">Public domain (CC0) structured data, retrieved just now. ' +
-              '<a href="' + d.wikidata.url + '" rel="nofollow noopener" target="_blank">' +
-              d.wikidata.qid + ' on Wikidata</a></p></div>';
-          }
+            html += '<div class="ask-wd"><p class="ask-wd-label">' + s.label + '</p>' +
+              '<p class="ask-wd-title">' + s.title +
+              (s.description ? ' \u2014 ' + s.description : '') + '</p>' +
+              '<table class="ask-wd-facts">' + rows + '</table>' +
+              '<p class="ask-wd-note">' + s.note +
+              '<a href="' + s.url + '" rel="nofollow noopener" target="_blank">' +
+              s.linkText + '</a></p></div>';
+          });
           if (d.web) {
             var wsrc = '';
             if (d.webSources && d.webSources.length) {
