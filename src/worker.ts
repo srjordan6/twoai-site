@@ -37,7 +37,7 @@
 import { handleTalent, talentWeeklyDigest, talentMailAnswer } from "./talent";
 import { webFallback, lastWebError } from "./websearch";
 import { wikidataLookup, lastWikidataError, subjectOf } from "./wikidata";
-import { openAlexAuthor, huggingFaceModel } from "./lookups";
+import { openAlexAuthor, huggingFaceModel, recordLookup } from "./lookups";
 import postgres from "postgres";
 
 interface Env {
@@ -784,6 +784,13 @@ export default {
       const wd = await wikidataLookup(question);
       const alt = wd ? null : (await huggingFaceModel(subject, question)) ?? (await openAlexAuthor(subject, question));
       if (wd || alt) {
+        // Retain what we looked up. Runs in waitUntil so the reader is not
+        // waiting on bookkeeping, and every fact lands as `proposed` for
+        // review rather than on a page.
+        const recorded: Array<{ sourceLabel: string; title: string; url: string; facts: any[] }> = [];
+        if (wd) recorded.push({ sourceLabel: "Wikidata " + wd.qid, title: wd.title, url: wd.url, facts: wd.facts });
+        if (alt) recorded.push({ sourceLabel: alt.sourceLabel, title: alt.title, url: alt.url, facts: alt.facts });
+        ctx.waitUntil(recordLookup(env, question, norm, hits.length, papers.length, qVec, best, recorded));
         return json({
           answered: false, answer, sources, papers: [],
           wikidata: wd ?? undefined, lookup: alt ?? undefined,

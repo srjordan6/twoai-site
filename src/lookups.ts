@@ -27,6 +27,8 @@
 
 const UA = "theworldofai.org (https://theworldofai.org; srj@srjconsultingservices.com)";
 
+import postgres from "postgres";
+
 export type LookupFact = { field: string; label: string; value: string };
 export type LookupAnswer = {
   source: "openalex" | "huggingface";
@@ -38,6 +40,72 @@ export type LookupAnswer = {
 };
 
 export let lastLookupError = "";
+
+/**
+ * Record a free-tier answer and the facts it carried.
+ *
+ * WHY THIS EXISTS SEPARATELY FROM webFallback. The free tiers return before
+ * the web fallback is ever called, so until now they answered the reader and
+ * remembered nothing: "who founded DeepMind" was answered from Wikidata and
+ * left no row anywhere, which contradicts the standing rule that we retain
+ * everything we look up. This gives them the same memory the paid tier has.
+ *
+ * FACTS LAND AS `proposed`, NEVER STRAIGHT ONTO A PAGE. Wikidata is CC0 and
+ * structured, but it is not uniformly clean: the very first live answer gave
+ * Google DeepMind's headquarters as "London, Googleplex", concatenating two
+ * P159 values one of which is in Mountain View, and reported 10,000 employees
+ * with no date attached. Sound enough to show a reader in a labelled block
+ * that names its source; not sound enough to publish as our own fact without
+ * someone looking at it.
+ */
+export async function recordLookup(
+  env: any,
+  question: string,
+  norm: string,
+  siteHits: number,
+  paperHits: number,
+  qVec: number[] | undefined,
+  bestScore: number | undefined,
+  answers: Array<{ sourceLabel: string; title: string; url: string; facts: LookupFact[] }>
+): Promise<void> {
+  if (!env.AUDIT_DB) return;
+  const sql = postgres(env.AUDIT_DB.connectionString, { max: 1, fetch_types: false, idle_timeout: 10 });
+  try {
+    const vecLit = qVec && qVec.length ? "[" + qVec.join(",") + "]" : null;
+    await sql`
+      INSERT INTO twoai_web_answers (question_norm, question_raw, site_hit_count, paper_hit_count, q_vec, best_score)
+      VALUES (${norm}, ${question}, ${siteHits}, ${paperHits}, ${vecLit}::vector, ${bestScore ?? null})
+      ON CONFLICT (question_norm) DO UPDATE
+        SET times_asked = twoai_web_answers.times_asked + 1,
+            last_asked_at = now(),
+            site_hit_count = ${siteHits},
+            paper_hit_count = ${paperHits},
+            best_score = ${bestScore ?? null},
+            q_vec = COALESCE(twoai_web_answers.q_vec, ${vecLit}::vector)`;
+
+    for (const a of answers) {
+      for (const f of a.facts) {
+        // Deduplicated on the natural key rather than blindly appended: the
+        // same question asked twice must not double the proposal list. An
+        // existing row is left alone, including any review already done on it.
+        await sql`
+          INSERT INTO twoai_web_facts
+            (question_norm, entity_name, field, value, source_url, source_title)
+          SELECT ${norm}, ${a.title}, ${f.field}, ${f.value}, ${a.url}, ${a.sourceLabel}
+           WHERE NOT EXISTS (
+             SELECT 1 FROM twoai_web_facts
+              WHERE entity_name = ${a.title} AND field = ${f.field}
+                AND value = ${f.value} AND superseded_at IS NULL)`;
+      }
+    }
+  } catch (e: any) {
+    // Recording is bookkeeping. Its failure must never cost the reader the
+    // answer they already have in hand.
+    lastLookupError = "record: " + String(e?.message ?? e).slice(0, 200);
+  } finally {
+    try { await sql.end(); } catch {}
+  }
+}
 
 const getJson = async (url: string): Promise<any | null> => {
   const r = await fetch(url, { headers: { "user-agent": UA, accept: "application/json" } });
