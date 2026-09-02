@@ -52,7 +52,7 @@ const isDSLic = sec.shape === 'ds-licensing';
 const isVibe = sec.shape === 'vibe-coding';
 const isProv = sec.shape === 'serving-providers';
 const isDC = sec.shape === 'datacenters';
-const isDCChild = ['dc-state', 'dc-metric', 'dc-builder', 'dc-smr', 'dc-grid', 'dc-facility'].includes(sec.shape);
+const isDCChild = ['dc-state', 'dc-metric', 'dc-builder', 'dc-smr', 'dc-grid', 'dc-facility', 'dc-operator'].includes(sec.shape);
 const metricUID = isDC ? Object.fromEntries((sec.metric_pages || []).map((m) => [m.label, m.uid])) : {};
 const builderUID = isDC ? Object.fromEntries((sec.builder_pages || []).map((b) => [b.label, b.uid])) : {};
 const dcOps = isDC ? (sec.metrics || []).filter((m) => m.track === 'operations') : [];
@@ -140,6 +140,7 @@ const facBasis = facSelfPublished
 const pageTitle =
   sec.shape === 'dc-state' ? `Data centers in ${sec.state}` :
   sec.shape === 'dc-facility' ? sec.name :
+  sec.shape === 'dc-operator' ? `${sec.name}: every data center it operates` :
   sec.shape === 'dc-metric' ? (sec.metric?.metric || secName) :
   sec.shape === 'dc-builder' ? `${sec.builder?.name || secName} data center capex` :
   sec.shape === 'dc-smr' ? 'SMR programs powering data centers' :
@@ -149,6 +150,8 @@ const pageTitle =
 const _descRaw = isDCChild
   ? (sec.shape === 'dc-facility'
       ? `${sec.name}: ${sec.mw ? `${sec.mw} MW IT capacity, ` : ''}operator-published facility specifications with source and retrieval date, in the ${sec.state || sec.country} directory of the data center registry.`
+      : sec.shape === 'dc-operator'
+      ? `${sec.name} operates ${sec.facility_count} mapped data centers${sec.known_mw ? ` with ${Math.round(sec.known_mw)} MW of published IT capacity` : ''}, listed here by state with address, capacity and campus where the operator or a public record states them, and one link at the end.`
       : sec.shape === 'dc-state'
       ? `${sec.count} mapped data centers in ${sec.state}, with operator and locality where OpenStreetMap contributors have tagged them. Part of the data center facility registry.`
       : sec.shape === 'dc-grid'
@@ -471,6 +474,17 @@ const licLine = (sec.licences || [])
               <>{i > 0 && ' · '}<a href={`${BASE}/${st.uid}/`}>{st.code}&nbsp;({st.count})</a></>
             ))}</p>
           </div>
+          {sec.operator_pages && sec.operator_pages.length > 0 && (
+            <div class="dom">
+              <h3>By operator</h3>
+              <p>One page per company that runs data centers in this registry, every facility it
+                controls grouped by state, with address, capacity and campus where a public record
+                states them. {sec.operator_pages.length} operators.</p>
+              <p>{sec.operator_pages.map((op, i) => (
+                <>{i > 0 && ' · '}<a href={`${BASE}/${op.uid}/`}>{op.name}&nbsp;({op.facilities})</a></>
+              ))}</p>
+            </div>
+          )}
           {sec.intl_pages && sec.intl_pages.length > 0 && (
             <div class="dom">
               <h3>Beyond America: China and Europe</h3>
@@ -708,6 +722,15 @@ const licLine = (sec.licences || [])
                 {sec.profile.postal_code && <> {sec.profile.postal_code}</>}</p>
             </section>
           )}
+          {/* The research pass stores address as a plain string, the earlier
+              scraper as an array. Both are addresses; both render. */}
+          {typeof sec.profile?.address === 'string' && sec.profile.address && (
+            <section>
+              <h2>Location</h2>
+              <p>{sec.profile.address}</p>
+              <p class="meta-line">{sec.city}{sec.state && <>, {sec.state}</>}</p>
+            </section>
+          )}
 
           {(sec.profile?.developer || sec.profile?.power_supplier || sec.profile?.investment_usd
             || sec.profile?.site_acres || sec.profile?.workload) && (
@@ -799,6 +822,25 @@ const licLine = (sec.licences || [])
                 claim. This section is rewritten whenever the operator's published facts change.</p>
             </section>
           )}
+          {/* The research pass writes its reading as a string on the profile
+              itself, plus facility and regional notes. Rendered when the
+              cron reading above is absent, so a page never carries two. */}
+          {!sec.reading?.body && typeof sec.profile?.reading === 'string' && sec.profile.reading.length > 80 && (
+            <section>
+              <h2>What is known about this facility</h2>
+              {String(sec.profile.reading).split(/\n\n+/).map((p) => <p>{p}</p>)}
+              {sec.profile.facility_note && <p>{sec.profile.facility_note}</p>}
+              {sec.profile.capacity_note && <p class="vnote">{sec.profile.capacity_note}</p>}
+              {sec.profile.regional_context && (
+                <>
+                  <h3>The region</h3>
+                  <p>{sec.profile.regional_context}</p>
+                </>
+              )}
+              <p class="meta-line">Compiled from the sources listed below and nothing else. Where a
+                figure is absent, it was not published by the operator or a public record.</p>
+            </section>
+          )}
 
           {Array.isArray(sec.profile?.sources) && sec.profile.sources.length > 0 && (
             <section>
@@ -819,6 +861,84 @@ const licLine = (sec.licences || [])
               absent here rather than estimated: this registry states what the operator states,
               with the source, and stops. The crowd-mapped baseline for the rest of the state is
               in the <a href={`${BASE}/${sec.state_page?.uid || sec.parent.uid}/`}>directory</a>.</p>
+          </section>
+        </>
+      )}
+      {sec.shape === 'dc-operator' && (
+        <>
+          {/* Stephen's rule for this page, 2026-09-01: everything the site holds
+              on the operator and every facility it controls, with as much
+              technical data as can be sourced, NO links in the body, and one
+              link at the end. Sources are listed by title and publisher without
+              anchors; the single outbound link is the last thing on the page. */}
+          <p class="answer"><b>{sec.name}</b> operates <b>{sec.facility_count}</b> mapped data
+            center{sec.facility_count === 1 ? '' : 's'} in this registry
+            {sec.known_mw ? <> with <b>{Math.round(sec.known_mw)} MW</b> of published IT capacity</> : null}
+            {sec.headquarters ? <>, headquartered in {sec.headquarters}</> : null}.
+            {sec.operator_type && <> Operator type: {sec.operator_type}.</>}</p>
+          <p class="meta-line">Last verified: {sec.generated} · {sec.groups?.length || 0} state
+            {(sec.groups?.length || 0) === 1 ? '' : 's'} · Registry:
+            {' '}<a href={`${BASE}/${sec.parent.uid}/`}>data centers</a>.</p>
+
+          {sec.reading && sec.reading.length > 80 && (
+            <section>
+              <h2>About {sec.name}</h2>
+              {String(sec.reading).split(/\n\n+/).map((p) => <p>{p}</p>)}
+            </section>
+          )}
+
+          {sec.profile?.note && !sec.reading && (
+            <section><h2>About {sec.name}</h2><p>{sec.profile.note}</p></section>
+          )}
+
+          {Array.isArray(sec.groups) && sec.groups.map((g) => (
+            <section>
+              <h2>{g.state === 'Unlocated' ? 'Facilities not yet located to a state' : `${g.count} in ${g.state}`}</h2>
+              <div class="tbl-scroll"><table class="op-facs">
+                <thead><tr><th>Facility</th><th>Location</th><th>Address</th><th class="num">IT MW</th><th>Campus / codes</th></tr></thead>
+                <tbody>
+                  {g.facilities.map((f) => {
+                    const p = f.profile || {};
+                    const addr = Array.isArray(p.address) ? p.address.join(', ') : (p.address || '');
+                    const mw = f.mw || p.it_capacity_mw || (p.planned_it_capacity_mw ? `${p.planned_it_capacity_mw} planned` : '');
+                    const codes = [p.campus, ...(Array.isArray(p.facility_codes) ? p.facility_codes : [])].filter(Boolean).join(' · ');
+                    return (
+                      <tr>
+                        <td>{f.uid ? <a href={`${BASE}/${f.uid}/`}>{f.name}</a> : f.name}</td>
+                        <td>{[f.city, f.state].filter(Boolean).join(', ') || f.country}</td>
+                        <td>{addr || <span class="muted">not published</span>}</td>
+                        <td class="num">{mw || <span class="muted">—</span>}</td>
+                        <td>{codes || <span class="muted">—</span>}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table></div>
+            </section>
+          ))}
+
+          {Array.isArray(sec.sources) && sec.sources.length > 0 && (
+            <section>
+              <h2>Sources</h2>
+              <ul class="sources">
+                {sec.sources.map((sr) => (
+                  <li>{sr.title}<span class="src-meta">{sr.publisher}{sr.date && <> · {sr.date}</>}</span></li>
+                ))}
+              </ul>
+              <p class="meta-line">Titles and publishers only. This page carries one outbound link,
+                below, by design.</p>
+            </section>
+          )}
+
+          <section>
+            <h2>What this page is, and is not</h2>
+            <p>Every facility listed is mapped in OpenStreetMap or recorded from an operator
+              publication or a public filing. Where an address, capacity or campus is shown, the
+              operator or a public record states it; where it is absent, it was not published.
+              Nothing here is estimated.</p>
+            {sec.website && (
+              <p class="op-outlink">Operator: <a href={sec.website} rel="noopener nofollow" target="_blank">{sec.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}</a></p>
+            )}
           </section>
         </>
       )}
@@ -1635,6 +1755,9 @@ const licLine = (sec.licences || [])
   .sources { list-style: none; padding: 0; margin: .6em 0; }
   .sources li { padding: .45em 0; border-bottom: 1px solid #ececf2; }
   .src-meta { display: block; font-size: 12.5px; color: #7A8A9E; margin-top: 2px; }
+  .op-facs td, .op-facs th { vertical-align: top; }
+  .op-facs .muted { color: #7A8A9E; }
+  .op-outlink { margin-top: 1.2em; padding-top: .8em; border-top: 1px solid #ececf2; font-weight: 600; }
   .faq h3 { margin: 1.1em 0 .3em; font-size: 1.05rem; }
   .faq p { margin: 0 0 .6em; }
   .vc-block { margin: 2em 0 0; max-width: 760px; }
