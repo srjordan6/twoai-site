@@ -52,7 +52,7 @@ const isDSLic = sec.shape === 'ds-licensing';
 const isVibe = sec.shape === 'vibe-coding';
 const isProv = sec.shape === 'serving-providers';
 const isDC = sec.shape === 'datacenters';
-const isDCChild = ['dc-state', 'dc-metric', 'dc-builder', 'dc-smr', 'dc-grid', 'dc-facility', 'dc-operator'].includes(sec.shape);
+const isDCChild = ['dc-state', 'dc-metric', 'dc-builder', 'dc-smr', 'dc-grid', 'dc-facility', 'dc-operator', 'dc-operators-index', 'dc-states-index'].includes(sec.shape);
 const metricUID = isDC ? Object.fromEntries((sec.metric_pages || []).map((m) => [m.label, m.uid])) : {};
 const builderUID = isDC ? Object.fromEntries((sec.builder_pages || []).map((b) => [b.label, b.uid])) : {};
 const dcOps = isDC ? (sec.metrics || []).filter((m) => m.track === 'operations') : [];
@@ -94,7 +94,14 @@ const secName = sec.name || sec.state || 'AI infrastructure';
 // publisher is asked first and the operator is only the fallback, because a
 // facility recorded from a state announcement and a county compliance
 // release must not be described as the operator's own spec sheet.
-const facPublisher = sec.profile?.source?.publisher || sec.operator || '';
+// The publisher is whoever the SOURCE names, and nothing else. This used to
+// fall back to sec.operator, so every row carrying an operator string claimed
+// "published by <operator> on its own facility page" - printed on CITIGROUP
+// TECHNOLOGY INC on 2026-09-02 for a facility Citigroup has never published a
+// word about. The comment below records an early version printing the same
+// line on every unattributed facility; the operator fallback brought it back
+// one step later. No source, no publisher, no claim.
+const facPublisher = sec.profile?.source?.publisher || '';
 
 // The lead sentence is assembled here rather than in the markup. Astro
 // inserts whitespace between expressions written on separate lines, which
@@ -130,9 +137,13 @@ const facRest = [
 // What the reader should trust the numbers as. An operator spec sheet and a
 // county compliance release are different kinds of fact and must not be
 // described with the same sentence.
+const facHasSources = Array.isArray(sec.profile?.sources)
+  && sec.profile.sources.some((s) => s && (s.title || s.url));
 const facBasis = facSelfPublished
   ? "Every figure here is the operator's stated specification"
-  : 'Every figure here comes from the public records named at the foot of this page';
+  : facHasSources
+    ? 'Every figure here comes from the public records named at the foot of this page'
+    : 'This facility is mapped in OpenStreetMap; its operator has published no specifications for it, and none are inferred here';
 
 // The dc children carry no `name` field, and sec.name straight into the
 // <title> is what published "undefined — The World of AI" on every one of
@@ -141,6 +152,8 @@ const pageTitle =
   sec.shape === 'dc-state' ? `Data centers in ${sec.state}` :
   sec.shape === 'dc-facility' ? sec.name :
   sec.shape === 'dc-operator' ? `${sec.name}: every data center it operates` :
+  sec.shape === 'dc-operators-index' ? 'Data centers by operator' :
+  sec.shape === 'dc-states-index' ? 'Data centers by state' :
   sec.shape === 'dc-metric' ? (sec.metric?.metric || secName) :
   sec.shape === 'dc-builder' ? `${sec.builder?.name || secName} data center capex` :
   sec.shape === 'dc-smr' ? 'SMR programs powering data centers' :
@@ -150,6 +163,10 @@ const pageTitle =
 const _descRaw = isDCChild
   ? (sec.shape === 'dc-facility'
       ? `${sec.name}: ${sec.mw ? `${sec.mw} MW IT capacity, ` : ''}operator-published facility specifications with source and retrieval date, in the ${sec.state || sec.country} directory of the data center registry.`
+      : sec.shape === 'dc-operators-index'
+      ? `Every company operating data centers in this registry, ${sec.operator_count} operators across ${sec.facility_count} mapped facilities, grouped by what kind of operator they are, each with its own page listing every facility it controls.`
+      : sec.shape === 'dc-states-index'
+      ? `Directory pages for data centers in every US state, ${sec.facility_count} mapped facilities, built from OpenStreetMap and grown from operator publications and public records.`
       : sec.shape === 'dc-operator'
       ? `${sec.name} operates ${sec.facility_count} mapped data centers${sec.known_mw ? ` with ${Math.round(sec.known_mw)} MW of published IT capacity` : ''}, listed here by state with address, capacity and campus where the operator or a public record states them, and one link at the end.`
       : sec.shape === 'dc-state'
@@ -247,9 +264,29 @@ const jsonld = JSON.stringify(dcFaqs.length ? {
 const licLine = (sec.licences || [])
   .map((l) => `${l.licence} (${l.count})`)
   .join(', ');
+// A FACILITY PAGE WITH NOTHING ON IT IS NOT ADVERTISED. Stephen, 2026-09-02,
+// after seeing 881 pages that held a name, coordinates and boilerplate: this
+// site's reputation is the thing at stake, and a search engine must not be
+// invited to a page that cannot answer a question yet. The page still
+// builds, still serves, still sits in its state directory - the never-removed
+// rule is untouched - but it declares noindex, and sitemap-noindex-prune.mjs
+// reads that from the built HTML and drops it from the sitemap. The moment
+// the facility gains a reading, an address, a capacity or a campus, the next
+// build indexes it again on its own. Same containment the research paper
+// pages use.
+const facBare = sec.shape === 'dc-facility' && !(
+  (sec.reading && sec.reading.body)
+  || (typeof sec.profile?.reading === 'string' && sec.profile.reading.length > 80)
+  || sec.profile?.address
+  || sec.profile?.campus
+  || (Array.isArray(sec.profile?.facility_codes) && sec.profile.facility_codes.length)
+  || sec.profile?.it_capacity_mw
+  || sec.profile?.planned_it_capacity_mw
+  || (sec.mw && sec.mw > 0)
+);
 ---
 <Base title={`${pageTitle} — The World of AI`} description={desc.slice(0, 300)}
-  current={`${BASE}/`} jsonld={jsonld}>
+  current={`${BASE}/`} jsonld={jsonld} noindex={facBare}>
   {isVibe && (
     <>
       {sec.blocks.map((b: any) => (
@@ -711,8 +748,9 @@ const licLine = (sec.licences || [])
             {sec.operator && <> · Operator: {sec.operator}</>} ·
             {sec.state_page?.uid && <> Directory:
             {' '}<a href={`${BASE}/${sec.state_page.uid}/`}>data centers in {sec.state || sec.country}</a> ·</>}
+            {(sec.profile?.source?.page || sec.website) && <>
             {' '}Source: <a href={sec.profile?.source?.page || sec.website} rel="noopener" target="_blank">
-            {facPublisher || 'operator'}</a>.</p>
+            {facPublisher || sec.operator || 'operator'}</a>.</>}</p>
 
           {Array.isArray(sec.profile?.address) && sec.profile.address.length > 0 && (
             <section>
@@ -842,13 +880,13 @@ const licLine = (sec.licences || [])
             </section>
           )}
 
-          {Array.isArray(sec.profile?.sources) && sec.profile.sources.length > 0 && (
+          {facHasSources && (
             <section>
               <h2>Sources</h2>
               <ul class="sources">
-                {sec.profile.sources.map((sr) => (
-                  <li><a href={sr.url} rel="noopener" target="_blank">{sr.title}</a>
-                    <span class="src-meta">{sr.publisher}{sr.published && <> · {sr.published}</>}</span></li>
+                {sec.profile.sources.filter((sr) => sr && (sr.title || sr.url)).map((sr) => (
+                  <li>{sr.url ? <a href={sr.url} rel="noopener" target="_blank">{sr.title || sr.url}</a> : sr.title}
+                    <span class="src-meta">{sr.publisher}{(sr.published || sr.date) && <> · {sr.published || sr.date}</>}</span></li>
                 ))}
               </ul>
             </section>
@@ -856,7 +894,10 @@ const licLine = (sec.licences || [])
 
           <section>
             <h2>What this page is, and is not</h2>
-            <p>{sec.profile?.source?.basis || 'Operator-published structured facts only.'} Fields
+            <p>{sec.profile?.source?.basis
+                || (facSelfPublished || facHasSources
+                    ? 'Operator-published structured facts only.'
+                    : 'A mapped location, not a specification.')} Fields
               the operator does not publish, rack density, PUE, redundancy topology, tenancy, are
               absent here rather than estimated: this registry states what the operator states,
               with the source, and stops. The crowd-mapped baseline for the rest of the state is
