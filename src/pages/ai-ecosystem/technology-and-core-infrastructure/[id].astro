@@ -150,7 +150,10 @@ const facBasis = facSelfPublished
 // those pages until 2026-08-30. Each shape knows its own headline.
 const pageTitle =
   sec.shape === 'dc-state' ? `Data centers in ${sec.state}` :
-  sec.shape === 'dc-facility' ? sec.name :
+  sec.shape === 'dc-facility'
+    ? (sec.profile?.campus_buildings > 1
+        ? `${sec.name}, building ${sec.profile.campus_building} of ${sec.profile.campus_buildings}`
+        : sec.name) :
   sec.shape === 'dc-operator' ? `${sec.name}: every data center it operates` :
   sec.shape === 'dc-operators-index' ? 'Data centers by operator' :
   sec.shape === 'dc-states-index' ? 'Data centers by state' :
@@ -707,17 +710,46 @@ const facBare = sec.shape === 'dc-facility' && !(
           <div class="tbl-scroll"><table>
             <thead><tr><th>Facility</th><th>Operator</th><th>Locality</th><th class="num">IT MW</th><th>Map</th></tr></thead>
             <tbody>
-              {(sec.facilities || []).map((f) => (
-                <tr>
-                  <td>{f.uid ? <a href={`${BASE}/${f.uid}/`}>{f.name}</a>
-                    : f.website ? <a href={f.website} rel="noopener">{f.name}</a> : f.name}</td>
-                  <td>{f.operator || '—'}</td>
-                  <td>{f.city || '—'}</td>
-                  <td class="num">{f.mw ? f.mw : '—'}</td>
-                  <td>{f.lat ? <a href={`https://www.openstreetmap.org/?mlat=${f.lat}&mlon=${f.lon}#map=16/${f.lat}/${f.lon}`}
-                    rel="noopener">view</a> : '—'}</td>
-                </tr>
-              ))}
+              {(() => {
+                // ONE ROW PER CAMPUS. OpenStreetMap maps a campus as one building
+                // polygon per building, each tagged with the operator's name -
+                // AWS in Madison County, MS is four consecutive ways all named
+                // "Amazon Web Services". Listed one per line they read as a
+                // duplication; they are four buildings. Rows sharing name,
+                // operator and locality collapse to one line that says how many
+                // buildings it stands for and links each one.
+                const groups = [];
+                const idx = new Map();
+                for (const f of sec.facilities || []) {
+                  const k = `${f.name}|${f.operator || ''}|${f.city || ''}`;
+                  if (!idx.has(k)) { idx.set(k, groups.length); groups.push({ key: k, rows: [] }); }
+                  groups[idx.get(k)].rows.push(f);
+                }
+                return groups.map((g) => {
+                  const f = g.rows[0];
+                  const many = g.rows.length > 1;
+                  const mw = g.rows.reduce((s, r) => s + (Number(r.mw) || 0), 0);
+                  const bl = many ? [...g.rows].sort((a, b) => (a.lon || 0) - (b.lon || 0)) : g.rows;
+                  return (
+                    <tr>
+                      <td>
+                        {many
+                          ? <>{f.name} <span class="muted">· {g.rows.length} buildings:</span>{' '}
+                              {bl.map((r, i) => (
+                                <>{i > 0 && ' '}{r.uid ? <a href={`${BASE}/${r.uid}/`}>{i + 1}</a> : <span>{i + 1}</span>}</>
+                              ))}</>
+                          : f.uid ? <a href={`${BASE}/${f.uid}/`}>{f.name}</a>
+                          : f.website ? <a href={f.website} rel="noopener">{f.name}</a> : f.name}
+                      </td>
+                      <td>{f.operator || '—'}</td>
+                      <td>{f.city || '—'}</td>
+                      <td class="num">{mw ? mw : '—'}</td>
+                      <td>{f.lat ? <a href={`https://www.openstreetmap.org/?mlat=${f.lat}&mlon=${f.lon}#map=${many ? 15 : 16}/${f.lat}/${f.lon}`}
+                        rel="noopener">view</a> : '—'}</td>
+                    </tr>
+                  );
+                });
+              })()}
             </tbody>
           </table></div>
 
