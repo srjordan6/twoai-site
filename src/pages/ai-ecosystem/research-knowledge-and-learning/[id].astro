@@ -240,7 +240,84 @@ const jsonld = JSON.stringify(
     </>
   )}
 
-  {learn && learn.shape === 'learning' && (
+  {learn && learn.shape === 'learning' && learn.tax === 'books' && bookCatalog && (() => {
+    // ONE SHELF, NOT TWO. Stephen, 2026-09-03: the curated eleven and the
+    // ninety-one catalogued books sat as two lists on one page. Merged here
+    // by subject: the curated titles lead each subject as Recommended, with
+    // their level, audience, cost and companion code; the catalogued titles
+    // follow with their access status. Subjects come from the catalogue;
+    // curated titles are placed by what they are about.
+    const SUBJECT = (name) => {
+      const n = String(name).toLowerCase();
+      if (/language|speech|nlp/.test(n)) return 'Language and speech';
+      if (/deep learning|neural|large language model|llm|gpt/.test(n)) return 'Neural networks and deep learning';
+      if (/reinforcement/.test(n)) return 'Machine learning';
+      if (/mathematics|statistic|probabil/.test(n)) return 'Machine learning';
+      if (/machine learning/.test(n)) return 'Machine learning';
+      if (/artificial intelligence|modern approach/.test(n)) return 'Foundations and history';
+      return 'Foundations and history';
+    };
+    const groups = (bookCatalog.groups || []).map((g) => ({ topic: g.topic, curated: [], books: g.books || [] }));
+    const byTopic = Object.fromEntries(groups.map((g) => [g.topic, g]));
+    for (const l of learn.items || []) {
+      const t = SUBJECT(l.name);
+      if (!byTopic[t]) { byTopic[t] = { topic: t, curated: [], books: [] }; groups.push(byTopic[t]); }
+      byTopic[t].curated.push(l);
+    }
+    groups.sort((a, b) => (b.curated.length - a.curated.length) || (b.books.length - a.books.length));
+    const total = (learn.total || 0) + (bookCatalog.total || 0);
+    const free = (learn.free || 0) + (bookCatalog.free || 0);
+    return (
+      <>
+        <h1>{learn.name}</h1>
+        <p class="answer"><b>{total} AI books</b>, {free} of them free to read in full, across
+          {' '}{groups.length} subjects. Eleven are recommended and carry a level, an audience and, where it
+          exists, public companion code; the rest are catalogued from Open Library because a reader can
+          actually open them, free to read or borrowable free from the Internet Archive. {learn.blurb}</p>
+        <p class="meta-line">Last verified: {learn.generated} · Links re-verified daily. Recommendation
+          is editorial: significance, not sponsorship. Catalogue inclusion means the book is about AI and
+          is reachable; fiction and conference proceedings are excluded. Skills these teach map to the
+          {' '}<a href="/skills/">AI Skills Graph</a>.</p>
+        {groups.map((g) => (
+          <section>
+            <h2>{g.topic} <span class="n">{g.curated.length + g.books.length}</span></h2>
+            {g.curated.map((l) => (
+              <div class="dom bk-rec">
+                <h3><span class="flag-rec">Recommended</span> <a href={l.source_url} rel="noopener">{l.name}</a></h3>
+                <p>{l.note}.</p>
+                <p class="meta-line">{l.provider} · Level: {l.level} · For: {l.audience} · Cost: {l.cost}
+                  {l.code_url && <> · <a href={l.code_url} rel="noopener">Companion code</a></>} ·
+                  verified {l.verified}</p>
+              </div>
+            ))}
+            {g.books.length > 0 && (
+              <ul class="bk-list">
+                {g.books.map((b) => (
+                  <li>
+                    <a href={b.read_url || b.url} rel="noopener">{b.title}</a>
+                    {b.year ? <span class="bk-yr"> ({b.year})</span> : null}
+                    <div class="meta-line">
+                      {(b.authors || []).length ? b.authors.join(', ') : 'Author not recorded'} ·
+                      {' '}{b.access === 'public' ? 'Free to read' : 'Borrowable free'} ·
+                      {' '}<a href={b.url} rel="noopener">Open Library record</a>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        ))}
+        <p class="meta-line">Catalogue records from <a href="https://openlibrary.org/" rel="noopener">Open
+          Library</a>, a project of the Internet Archive. Titles, authors and dates are facts and are
+          reproduced as such; no description or review text is copied.</p>
+        <Reading reading={learn.reading} heading={`What does this ${learn.name.toLowerCase()} catalogue show?`} />
+        <div class="cite-box">Cite this page: <code>"{learn.name}." The World of AI,
+          theworldofai.org{BASE}/{learn.uid}/. Retrieved {learn.generated}.</code></div>
+      </>
+    );
+  })()}
+
+  {learn && learn.shape === 'learning' && !(learn.tax === 'books' && bookCatalog) && (
     <>
       <h1>{learn.name}</h1>
       <p class="answer"><b>{learn.total} {(learn.name || 'entries').toLowerCase()}</b>, {learn.free} of them
@@ -261,7 +338,7 @@ const jsonld = JSON.stringify(
             verified {l.verified}</p>
         </div>
       ))}
-      {learn.tax === 'books' && bookCatalog && (
+      {false && learn.tax === 'books' && bookCatalog && (
         <>
           <h2>Borrow or read online</h2>
           <p class="answer"><b>{bookCatalog.total} more AI books you can open today</b>, across
@@ -478,6 +555,8 @@ const jsonld = JSON.stringify(
   .bk-list { list-style: none; padding: 0; margin: 0 0 1.4rem; }
   .bk-list li { padding: .55rem 0; border-bottom: 1px solid #eceff3; }
   .bk-yr { color: #7A8A9E; }
+  .flag-rec { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; margin-right: 8px; color: #fff; background: #F07800; vertical-align: middle; }
+  .bk-rec { border-left: 3px solid #F07800; padding-left: 12px; }
   .chain { display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
     background: var(--cream); border-radius: 6px; padding: .9em 1em; margin: 1.2em 0 1.6em; }
   .chain .link { background: #201868; color: #fff; border-radius: 4px;
