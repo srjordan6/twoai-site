@@ -249,7 +249,9 @@ const jsonld = JSON.stringify(
     // curated titles are placed by what they are about.
     const SUBJECT = (name) => {
       const n = String(name).toLowerCase();
-      if (/language|speech|nlp/.test(n)) return 'Language and speech';
+      if (/alignment|human compatible|coming wave|weapons of math|atlas of ai|empire of ai|co-intelligence|ethic|policy|society/.test(n)) return 'Ethics, society and policy';
+      if (/worlds i see|genius makers|history/.test(n)) return 'Foundations and history';
+      if (/language|speech|nlp|llm engineer/.test(n)) return 'Language and speech';
       if (/deep learning|neural|large language model|llm|gpt/.test(n)) return 'Neural networks and deep learning';
       if (/reinforcement/.test(n)) return 'Machine learning';
       if (/mathematics|statistic|probabil/.test(n)) return 'Machine learning';
@@ -271,7 +273,7 @@ const jsonld = JSON.stringify(
       <>
         <h1>{learn.name}</h1>
         <p class="answer"><b>{total} AI books</b>, {free} of them free to read in full, across
-          {' '}{groups.length} subjects. Eleven are recommended and carry a level, an audience and, where it
+          {' '}{groups.length} subjects. {learn.total} are recommended and carry a level, an audience and, where it
           exists, public companion code; the rest are catalogued from Open Library because a reader can
           actually open them, free to read or borrowable free from the Internet Archive. {learn.blurb}</p>
         <p class="meta-line">Last verified: {learn.generated} · Links re-verified daily. Recommendation
