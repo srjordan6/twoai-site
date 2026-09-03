@@ -505,23 +505,28 @@ const facBare = sec.shape === 'dc-facility' && !(
             href="https://www.openstreetmap.org/copyright"
             rel="noopener">OpenStreetMap contributors</a>, ODbL. State assignment
             via the FCC census area API.</p>
-          <div class="dom">
-            <h3>Directories by state</h3>
-            <p>{sec.state_pages.map((st, i) => (
-              <>{i > 0 && ' · '}<a href={`${BASE}/${st.uid}/`}>{st.code}&nbsp;({st.count})</a></>
-            ))}</p>
+          {/* The two directories used to live here as dotted lines - 52 state
+              codes and then 157 operator names sorted by count, at the foot of
+              a very long page. Stephen, 2026-09-02: each deserves its own
+              address. They are pages now, linked from here as two cards;
+              the lists themselves left with them. */}
+          <div class="dc-dirs">
+            {sec.operators_index_uid && (
+              <a class="dc-dir" href={`${BASE}/${sec.operators_index_uid}/`}>
+                <b>Data centers by operator</b>
+                <span>{(sec.operator_pages || []).length} companies, grouped by what kind of
+                  operator they are, each with a page listing every facility it controls.</span>
+              </a>
+            )}
+            {sec.states_index_uid && (
+              <a class="dc-dir" href={`${BASE}/${sec.states_index_uid}/`}>
+                <b>Data centers by state</b>
+                <span>{(sec.state_pages || []).length} state directories
+                  {(sec.intl_pages || []).length > 0 && <> and {(sec.intl_pages || []).length} countries</>},
+                  {' '}{sec.fac_total ? fmt(sec.fac_total) : ''} mapped facilities.</span>
+              </a>
+            )}
           </div>
-          {sec.operator_pages && sec.operator_pages.length > 0 && (
-            <div class="dom">
-              <h3>By operator</h3>
-              <p>One page per company that runs data centers in this registry, every facility it
-                controls grouped by state, with address, capacity and campus where a public record
-                states them. {sec.operator_pages.length} operators.</p>
-              <p>{sec.operator_pages.map((op, i) => (
-                <>{i > 0 && ' · '}<a href={`${BASE}/${op.uid}/`}>{op.name}&nbsp;({op.facilities})</a></>
-              ))}</p>
-            </div>
-          )}
           {sec.intl_pages && sec.intl_pages.length > 0 && (
             <div class="dom">
               <h3>Beyond America: China and Europe</h3>
@@ -903,6 +908,100 @@ const facBare = sec.shape === 'dc-facility' && !(
               with the source, and stops. The crowd-mapped baseline for the rest of the state is
               in the <a href={`${BASE}/${sec.state_page?.uid || sec.parent.uid}/`}>directory</a>.</p>
           </section>
+        </>
+      )}
+      {sec.shape === 'dc-operators-index' && (() => {
+        // Group by what kind of operator it is, largest groups first, and
+        // fold single-facility operators - banks, universities, one-building
+        // enterprises - under their own heading so they do not compete with
+        // AWS and Equinix for the eye. Nine hyperscalers, twenty-odd
+        // colocation operators, a handful of wholesale and carrier, then
+        // everyone else.
+        const TYPE_LABEL = {
+          hyperscaler: 'Hyperscalers', colocation: 'Colocation operators', wholesale: 'Wholesale developers',
+          carrier: 'Carriers and telecoms', enterprise: 'Enterprises with their own facilities',
+          government: 'Government and public bodies', university: 'Universities and research',
+          'crypto/hpc': 'Crypto and HPC', crypto: 'Crypto and HPC', edge: 'Edge operators', other: 'Other operators',
+        };
+        const TYPE_ORDER = ['hyperscaler', 'colocation', 'wholesale', 'carrier', 'crypto/hpc', 'crypto', 'edge', 'enterprise', 'government', 'university', 'other'];
+        const ops = Array.isArray(sec.operators) ? sec.operators : [];
+        const multi = ops.filter((o) => o.facilities >= 2);
+        const single = ops.filter((o) => o.facilities < 2).sort((a, b) => a.name.localeCompare(b.name));
+        const groups = TYPE_ORDER
+          .map((t) => ({ type: t, label: TYPE_LABEL[t] || t, rows: multi.filter((o) => (o.type || 'other') === t) }))
+          .filter((g) => g.rows.length > 0);
+        const leftover = multi.filter((o) => !TYPE_ORDER.includes(o.type || 'other'));
+        if (leftover.length) groups.push({ type: 'other', label: 'Other operators', rows: leftover });
+        return (
+          <>
+            <p class="answer"><b>{sec.operator_count}</b> companies operate the <b>{fmt(sec.facility_count)}</b> mapped
+              data centers in this registry. Each has its own page listing every facility it
+              controls, grouped by state, with address, capacity and campus where the operator or a
+              public record states them.</p>
+            <p class="meta-line">Last verified: {sec.generated} · Registry:
+              {' '}<a href={`${BASE}/${sec.parent.uid}/`}>data centers</a>{sec.states_index_uid && <> ·
+              {' '}<a href={`${BASE}/${sec.states_index_uid}/`}>by state</a></>}.</p>
+            {groups.map((g) => (
+              <section>
+                <h2>{g.label} ({g.rows.length})</h2>
+                <div class="tbl-scroll"><table class="op-idx">
+                  <thead><tr><th>Operator</th><th class="num">Facilities</th><th>States</th><th class="num">Known IT MW</th><th>Headquarters</th></tr></thead>
+                  <tbody>{g.rows.map((o) => (
+                    <tr>
+                      <td><a href={`${BASE}/${o.uid}/`}>{o.name}</a></td>
+                      <td class="num">{o.facilities}</td>
+                      <td>{(o.states || []).join(' ')}</td>
+                      <td class="num">{o.known_mw ? Math.round(o.known_mw) : <span class="muted">—</span>}</td>
+                      <td>{o.headquarters || <span class="muted">—</span>}</td>
+                    </tr>
+                  ))}</tbody>
+                </table></div>
+              </section>
+            ))}
+            {single.length > 0 && (
+              <section>
+                <h2>Also in the registry: one facility each ({single.length})</h2>
+                <p class="meta-line">Banks, universities, agencies and enterprises running a single mapped
+                  building. Each still has its page.</p>
+                <p>{single.map((o, i) => (
+                  <>{i > 0 && ' · '}<a href={`${BASE}/${o.uid}/`}>{o.name}</a></>
+                ))}</p>
+              </section>
+            )}
+          </>
+        );
+      })()}
+      {sec.shape === 'dc-states-index' && (
+        <>
+          <p class="answer"><b>{fmt(sec.facility_count)}</b> mapped data centers across
+            <b> {(sec.state_pages || []).length}</b> state directories{(sec.intl_pages || []).length > 0 && <> and
+            {' '}{(sec.intl_pages || []).length} countries</>}. Every directory lists its facilities
+            with operator, city and coordinates, and links to each facility that has a page.</p>
+          <p class="meta-line">Last verified: {sec.generated} · Registry:
+            {' '}<a href={`${BASE}/${sec.parent.uid}/`}>data centers</a>{sec.operators_index_uid && <> ·
+            {' '}<a href={`${BASE}/${sec.operators_index_uid}/`}>by operator</a></>}.</p>
+          <section>
+            <h2>United States</h2>
+            <div class="tbl-scroll"><table class="op-idx">
+              <thead><tr><th>State</th><th class="num">Mapped facilities</th></tr></thead>
+              <tbody>{(sec.state_pages || []).map((st) => (
+                <tr><td><a href={`${BASE}/${st.uid}/`}>{st.code}</a></td><td class="num">{st.count}</td></tr>
+              ))}</tbody>
+            </table></div>
+          </section>
+          {(sec.intl_pages || []).length > 0 && (
+            <section>
+              <h2>Beyond the United States</h2>
+              <div class="tbl-scroll"><table class="op-idx">
+                <thead><tr><th>Country</th><th class="num">Mapped facilities</th></tr></thead>
+                <tbody>{sec.intl_pages.map((c) => (
+                  <tr><td><a href={`${BASE}/${c.uid}/`}>{c.code}</a></td><td class="num">{c.count}</td></tr>
+                ))}</tbody>
+              </table></div>
+            </section>
+          )}
+          <p class="meta-line">Facility data © OpenStreetMap contributors, ODbL. State assignment via
+            the FCC census area API.</p>
         </>
       )}
       {sec.shape === 'dc-operator' && (
@@ -1799,6 +1898,13 @@ const facBare = sec.shape === 'dc-facility' && !(
   .op-facs td, .op-facs th { vertical-align: top; }
   .op-facs .muted { color: #7A8A9E; }
   .op-outlink { margin-top: 1.2em; padding-top: .8em; border-top: 1px solid #ececf2; font-weight: 600; }
+  .op-idx td, .op-idx th { vertical-align: top; }
+  .dc-dirs { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin: 1em 0 1.4em; }
+  .dc-dir { display: block; padding: 14px 16px; border: 1px solid #d9dced; border-left: 4px solid #F07800;
+    border-radius: 0 8px 8px 0; text-decoration: none; color: inherit; background: #fbfbfd; }
+  .dc-dir b { display: block; color: #201868; font-size: 16px; margin-bottom: 4px; }
+  .dc-dir span { color: #4a5568; font-size: 13.5px; line-height: 1.5; }
+  .dc-dir:hover { border-color: #201868; }
   .faq h3 { margin: 1.1em 0 .3em; font-size: 1.05rem; }
   .faq p { margin: 0 0 .6em; }
   .vc-block { margin: 2em 0 0; max-width: 760px; }
