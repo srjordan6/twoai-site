@@ -76,6 +76,7 @@ function skipReason(pathname) {
 let scanned = 0;
 let pruned = 0;
 const dropped = [];
+const prunedPaths = [];
 const reasons = {};
 
 for (const f of sitemapFiles()) {
@@ -94,6 +95,7 @@ for (const f of sitemapFiles()) {
     const reason = skipReason(pathname);
     if (!reason) return block;
     pruned += 1;
+    prunedPaths.push(pathname);
     reasons[reason] = (reasons[reason] || 0) + 1;
     if (dropped.length < 6) dropped.push(`${pathname} (${reason})`);
     return '';
@@ -115,3 +117,32 @@ const detail = Object.entries(reasons).map(([k, v]) => `${v} ${k}`).join(', ');
 console.log(`sitemap-prune: ${pruned} URL(s) removed from the sitemap of ${scanned} scanned` +
   (detail ? ` (${detail})` : '') +
   (dropped.length ? `; e.g. ${dropped.join(', ')}${pruned > dropped.length ? ', …' : ''}` : ''));
+
+// A PRUNED PAGE IS STILL A PAGE. Until 2026-09-03 this script removed a URL
+// from the sitemap and stopped there, so a noindex page fell out of BOTH
+// lists the site publishes: not advertised, and not in unlisted-urls.json
+// either. That left it invisible to url-guard, which reads those two lists
+// and nothing else, and it made the registry count 881 bare facility pages
+// as gone the moment they declared noindex - while every one of them served
+// 200. Everything pruned here is appended to the unlisted manifest, so the
+// two lists together still describe every URL this build serves.
+if (prunedPaths.length) {
+  const manifestPath = `${DIST}/unlisted-urls.json`;
+  try {
+    const m = existsSync(manifestPath)
+      ? JSON.parse(readFileSync(manifestPath, 'utf8'))
+      : { note: 'Live pages deliberately kept out of sitemap.xml.', generated: new Date().toISOString().slice(0, 10), count: 0, urls: [] };
+    const have = new Set(m.urls || []);
+    let added = 0;
+    for (const p of prunedPaths) {
+      const u = `https://theworldofai.org${p}`;
+      if (!have.has(u)) { have.add(u); added += 1; }
+    }
+    m.urls = [...have].sort();
+    m.count = m.urls.length;
+    writeFileSync(manifestPath, JSON.stringify(m));
+    console.log(`sitemap-prune: ${added} pruned URL(s) added to unlisted-urls.json (now ${m.count})`);
+  } catch (e) {
+    console.error(`sitemap-prune: could not update unlisted-urls.json: ${e.message}`);
+  }
+}
