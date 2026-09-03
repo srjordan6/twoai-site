@@ -760,6 +760,31 @@ export default {
     };
     const citedPapers = papers.filter((pp) => namedInAnswer(pp.title));
 
+    // DEMAND IS A SIGNAL. Stephen, 2026-09-03: whenever an answer cites a
+    // paper from the research index, the site should spin up a page on that
+    // paper. The index holds 1.38 million works and the curated shelf holds
+    // 134, so almost every paper the box cites has no page of its own. This
+    // records each citation - the DOI or open-access link, the title, the
+    // question - and the pipeline stage twoaiDemandPages turns that record
+    // into a research-paper page with the abstract and the three explanations
+    // on its next run. The reader who asked tonight finds the page tomorrow;
+    // the next reader with the same question finds it in the answer. Fire and
+    // forget: it must never slow or fail the answer.
+    if (env.AUDIT_DB && citedPapers.length) {
+      ctx.waitUntil((async () => {
+        const s2 = postgres(env.AUDIT_DB.connectionString, { max: 1, fetch_types: false, idle_timeout: 5 });
+        try {
+          for (const pp of citedPapers.slice(0, 5)) {
+            const doi = pp.url.startsWith('https://doi.org/') ? pp.url.slice('https://doi.org/'.length) : null;
+            await s2`INSERT INTO twoai_ask_cited_works (doi, url, title, question_norm)
+                     VALUES (${doi}, ${pp.url}, ${pp.title}, ${norm})`;
+          }
+        } catch { /* a missed demand record is not worth a failed answer */ } finally {
+          try { await s2.end(); } catch {}
+        }
+      })());
+    }
+
     // THE SAME RULE, NOW APPLIED TO PAGES. Papers were filtered to those the
     // answer actually names; site pages were not, so every page retrieval
     // returned got listed as a source whether the answer leaned on it or not.
