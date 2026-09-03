@@ -967,12 +967,35 @@ const facBare = sec.shape === 'dc-facility' && !(
             ))}
             {single.length > 0 && (
               <section>
-                <h2>Also in the registry: one facility each ({single.length})</h2>
-                <p class="meta-line">Banks, universities, agencies and enterprises running a single mapped
-                  building. Each still has its page.</p>
-                <p>{single.map((o, i) => (
-                  <>{i > 0 && ' · '}<a href={`${BASE}/${o.uid}/`}>{o.name}</a></>
-                ))}</p>
+                <h2>One facility each ({single.length})</h2>
+                <p class="meta-line">Banks, universities, agencies, carriers and enterprises running a
+                  single mapped building. Grouped by kind; each has its page.</p>
+                {TYPE_ORDER.map((t) => single.filter((o) => (o.type || 'other') === t)).filter((rows) => rows.length > 0).map((rows) => (
+                  <>
+                    <h3>{TYPE_LABEL[rows[0].type || 'other'] || 'Other operators'} ({rows.length})</h3>
+                    <div class="tbl-scroll"><table class="op-idx">
+                      <thead><tr><th>Operator</th><th>State</th><th>Headquarters</th></tr></thead>
+                      <tbody>{rows.map((o) => (
+                        <tr>
+                          <td><a href={`${BASE}/${o.uid}/`}>{o.name}</a></td>
+                          <td>{(o.states || []).join(' ') || <span class="muted">—</span>}</td>
+                          <td>{o.headquarters || <span class="muted">—</span>}</td>
+                        </tr>
+                      ))}</tbody>
+                    </table></div>
+                  </>
+                ))}
+                {(() => { const left = single.filter((o) => !TYPE_ORDER.includes(o.type || 'other')); return left.length > 0 && (
+                  <>
+                    <h3>Other operators ({left.length})</h3>
+                    <div class="tbl-scroll"><table class="op-idx">
+                      <thead><tr><th>Operator</th><th>State</th><th>Headquarters</th></tr></thead>
+                      <tbody>{left.map((o) => (
+                        <tr><td><a href={`${BASE}/${o.uid}/`}>{o.name}</a></td><td>{(o.states || []).join(' ')}</td><td>{o.headquarters || ''}</td></tr>
+                      ))}</tbody>
+                    </table></div>
+                  </>
+                ); })()}
               </section>
             )}
           </>
