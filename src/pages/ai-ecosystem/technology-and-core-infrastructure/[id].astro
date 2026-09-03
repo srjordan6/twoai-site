@@ -917,13 +917,20 @@ const facBare = sec.shape === 'dc-facility' && !(
         // AWS and Equinix for the eye. Nine hyperscalers, twenty-odd
         // colocation operators, a handful of wholesale and carrier, then
         // everyone else.
+        // The type vocabulary is the research pass's, read from the data the
+        // index carries, not invented here: hyperscaler, colocation,
+        // colocation_reit, wholesale, network_carrier, enterprise_private,
+        // government, academic, facility_services, other. Anything unlisted
+        // still renders, under Other, rather than vanishing.
         const TYPE_LABEL = {
-          hyperscaler: 'Hyperscalers', colocation: 'Colocation operators', wholesale: 'Wholesale developers',
-          carrier: 'Carriers and telecoms', enterprise: 'Enterprises with their own facilities',
-          government: 'Government and public bodies', university: 'Universities and research',
-          'crypto/hpc': 'Crypto and HPC', crypto: 'Crypto and HPC', edge: 'Edge operators', other: 'Other operators',
+          hyperscaler: 'Hyperscalers', colocation_reit: 'Colocation REITs', colocation: 'Colocation operators',
+          wholesale: 'Wholesale developers', network_carrier: 'Network carriers', carrier: 'Network carriers',
+          'crypto/hpc': 'Crypto and HPC', crypto: 'Crypto and HPC', edge: 'Edge operators',
+          enterprise_private: 'Enterprises with their own facilities', enterprise: 'Enterprises with their own facilities',
+          government: 'Government and public bodies', academic: 'Universities and research', university: 'Universities and research',
+          facility_services: 'Facility services', other: 'Other operators',
         };
-        const TYPE_ORDER = ['hyperscaler', 'colocation', 'wholesale', 'carrier', 'crypto/hpc', 'crypto', 'edge', 'enterprise', 'government', 'university', 'other'];
+        const TYPE_ORDER = ['hyperscaler', 'colocation_reit', 'colocation', 'wholesale', 'network_carrier', 'carrier', 'crypto/hpc', 'crypto', 'edge', 'enterprise_private', 'enterprise', 'government', 'academic', 'university', 'facility_services', 'other'];
         const ops = Array.isArray(sec.operators) ? sec.operators : [];
         const multi = ops.filter((o) => o.facilities >= 2);
         const single = ops.filter((o) => o.facilities < 2).sort((a, b) => a.name.localeCompare(b.name));
