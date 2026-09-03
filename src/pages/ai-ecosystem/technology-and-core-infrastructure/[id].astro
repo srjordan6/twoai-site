@@ -274,18 +274,20 @@ const licLine = (sec.licences || [])
 // builds, still serves, still sits in its state directory - the never-removed
 // rule is untouched - but it declares noindex, and sitemap-noindex-prune.mjs
 // reads that from the built HTML and drops it from the sitemap. The moment
-// the facility gains a reading, an address, a capacity or a campus, the next
-// build indexes it again on its own. Same containment the research paper
-// pages use.
+// the facility gains a reading, the next build indexes it again on its own.
+// Same containment the research paper pages use.
+//
+// TIGHTENED 2026-09-03. The first version indexed a facility that held any
+// one fact - an address, a capacity - and a live crawl the same evening
+// counted 1,570 facility pages in the sitemap under 500 words, 59 under 300:
+// an address is a line, not a page. Indexing now requires a READING, either
+// the cron's dated reading or the research pass's prose, because that is
+// the only thing that carries a facility page past the floor. The facts
+// still render for the reader who arrives by the directory or the operator
+// page; the search engine is invited when the page can answer a question.
 const facBare = sec.shape === 'dc-facility' && !(
-  (sec.reading && sec.reading.body)
-  || (typeof sec.profile?.reading === 'string' && sec.profile.reading.length > 80)
-  || sec.profile?.address
-  || sec.profile?.campus
-  || (Array.isArray(sec.profile?.facility_codes) && sec.profile.facility_codes.length)
-  || sec.profile?.it_capacity_mw
-  || sec.profile?.planned_it_capacity_mw
-  || (sec.mw && sec.mw > 0)
+  (sec.reading && sec.reading.body && String(sec.reading.body).length > 300)
+  || (typeof sec.profile?.reading === 'string' && sec.profile.reading.length > 300)
 );
 ---
 <Base title={`${pageTitle} — The World of AI`} description={desc.slice(0, 300)}
