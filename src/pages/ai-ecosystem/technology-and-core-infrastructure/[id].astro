@@ -137,8 +137,17 @@ const facRest = [
 // What the reader should trust the numbers as. An operator spec sheet and a
 // county compliance release are different kinds of fact and must not be
 // described with the same sentence.
-const facHasSources = Array.isArray(sec.profile?.sources)
-  && sec.profile.sources.some((s) => s && (s.title || s.url));
+// A row that carries a spec figure or a named source has, by definition,
+// something published about it. On 2026-09-04 the SV1 page carried Equinix's
+// own square footage in its reading while the basis line said the operator
+// had published no specifications - because the research pass stored the
+// figure under a key this test did not look at. The test now looks at all
+// of them.
+const facHasSources = (Array.isArray(sec.profile?.sources)
+  && sec.profile.sources.some((s) => s && (s.title || s.url || s.publisher)))
+  || !!sec.profile?.source?.url
+  || ['space_sqft', 'technical_space_sqft', 'building_sqft', 'it_capacity_mw', 'planned_it_capacity_mw',
+      'certifications', 'power_density_kw_rack', 'standby_generation_mw'].some((k) => sec.profile && sec.profile[k]);
 const facBasis = facSelfPublished
   ? "Every figure here is the operator's stated specification"
   : facHasSources
@@ -348,6 +357,10 @@ const facBare = sec.shape === 'dc-facility' && !(
             const op = sec.operator || '';
             const totalSqft = p.building_sqft || p.total_space_sqft || p.gross_sqft || null;
             const whiteSqft = p.technical_space_sqft || p.white_space_sqft || p.colocation_space_sqft || null;
+            // space_sqft is the research pass's figure where the operator did
+            // not say whether it meant the building or the floor; shown as
+            // published, labelled as such, rather than hidden.
+            const asPublished = (!totalSqft && !whiteSqft && p.space_sqft) ? p.space_sqft : null;
             const mwOp = sec.mw || p.it_capacity_mw || null;
             const mwPlan = p.planned_it_capacity_mw || null;
             const density = p.power_density_kw_rack || p.kw_per_rack || null;
@@ -365,8 +378,10 @@ const facBare = sec.shape === 'dc-facility' && !(
                   <dt>Address</dt><dd>{addr || (sec.city ? `${sec.city}${sec.state ? ', ' + sec.state : ''} (street address not published)` : NP)}</dd>
                   <dt>Phone</dt><dd>{phone || NP}</dd>
                   <dt>Operator</dt><dd>{op ? (sec.operator_uid ? <a href={`${BASE}/${sec.operator_uid}/`}>{op}</a> : op) : NP}</dd>
-                  <dt>Total space</dt><dd>{totalSqft ? `${fmtN(totalSqft)} sq ft` : NP}</dd>
-                  <dt>Technical space</dt><dd>{whiteSqft ? `${fmtN(whiteSqft)} sq ft` : NP}</dd>
+                  {asPublished
+                    ? <><dt>Space, as published</dt><dd>{fmtN(asPublished)} sq ft</dd></>
+                    : <><dt>Total space</dt><dd>{totalSqft ? `${fmtN(totalSqft)} sq ft` : NP}</dd>
+                       <dt>Technical space</dt><dd>{whiteSqft ? `${fmtN(whiteSqft)} sq ft` : NP}</dd></>}
                   <dt>Total power</dt><dd>{mwOp ? `${fmtN(mwOp)} MW IT` : mwPlan ? `${fmtN(mwPlan)} MW planned` : NP}</dd>
                   <dt>Power density</dt><dd>{density ? `${fmtN(density)} kW per rack` : NP}</dd>
                   {standby ? <><dt>Standby generation</dt><dd>{fmtN(standby)} MW diesel</dd></> : null}
