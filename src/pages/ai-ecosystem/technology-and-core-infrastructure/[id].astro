@@ -294,6 +294,9 @@ const licLine = (sec.licences || [])
 // the only thing that carries a facility page past the floor. The facts
 // still render for the reader who arrives by the directory or the operator
 // page; the search engine is invited when the page can answer a question.
+// Full state names for headings; a heading says Arizona, a fact box says AZ.
+const STATE_NAME = {AL:'Alabama',AK:'Alaska',AZ:'Arizona',AR:'Arkansas',CA:'California',CO:'Colorado',CT:'Connecticut',DE:'Delaware',DC:'District of Columbia',FL:'Florida',GA:'Georgia',HI:'Hawaii',ID:'Idaho',IL:'Illinois',IN:'Indiana',IA:'Iowa',KS:'Kansas',KY:'Kentucky',LA:'Louisiana',ME:'Maine',MD:'Maryland',MA:'Massachusetts',MI:'Michigan',MN:'Minnesota',MS:'Mississippi',MO:'Missouri',MT:'Montana',NE:'Nebraska',NV:'Nevada',NH:'New Hampshire',NJ:'New Jersey',NM:'New Mexico',NY:'New York',NC:'North Carolina',ND:'North Dakota',OH:'Ohio',OK:'Oklahoma',OR:'Oregon',PA:'Pennsylvania',PR:'Puerto Rico',RI:'Rhode Island',SC:'South Carolina',SD:'South Dakota',TN:'Tennessee',TX:'Texas',UT:'Utah',VT:'Vermont',VA:'Virginia',WA:'Washington',WV:'West Virginia',WI:'Wisconsin',WY:'Wyoming'};
+
 const facBare = sec.shape === 'dc-facility' && !(
   (sec.reading && sec.reading.body && String(sec.reading.body).length > 300)
   || (typeof sec.profile?.reading === 'string' && sec.profile.reading.length > 300)
@@ -339,68 +342,6 @@ const facBare = sec.shape === 'dc-facility' && !(
   <p class="meta-line"><a href="/">AI Ecosystem</a> ·
     <a href={`${BASE}/`}>{CATEGORY_NAME}</a></p>
 
-  {sec.shape === 'dc-facility' && (
-    <>
-          {/* THE FACT BOX. Stephen, 2026-09-03: every data-centre page carries
-              a box on the right with address, phone, operator, space, power,
-              density and distance to the nearest airport. Rendered BEFORE the
-              title so it sits at the top of the column, directly under the
-              navigation, with the title and lede flowing beside it - not level
-              with the lede, which is where it first landed. Every line is either
-              a published figure with its source on this page, or "not
-              published" - the box never estimates. The airport distance is
-              computed from two public coordinates; the operator link goes to
-              the operator's own page on this site. */}
-          {(() => {
-            const p = sec.profile || {};
-            const addr = Array.isArray(p.address) ? p.address.join(', ') : (p.address || '');
-            const op = sec.operator || '';
-            const totalSqft = p.building_sqft || p.total_space_sqft || p.gross_sqft || null;
-            const whiteSqft = p.technical_space_sqft || p.white_space_sqft || p.colocation_space_sqft || null;
-            // space_sqft is the research pass's figure where the operator did
-            // not say whether it meant the building or the floor; shown as
-            // published, labelled as such, rather than hidden.
-            const asPublished = (!totalSqft && !whiteSqft && p.space_sqft) ? p.space_sqft : null;
-            const mwOp = sec.mw || p.it_capacity_mw || null;
-            const mwPlan = p.planned_it_capacity_mw || null;
-            const density = p.power_density_kw_rack || p.kw_per_rack || null;
-            const phone = p.phone || p.contact_phone || null;
-            const ap = sec.nearest_airport || null;
-            const standby = p.standby_generation_mw || null;
-            const certs = Array.isArray(p.certifications) ? p.certifications : [];
-            const year = p.year_opened || p.year_built || null;
-            const NP = <span class="fb-np">not published</span>;
-            const fmtN = (n) => Number(n).toLocaleString();
-            return (
-              <aside class="fact-box" aria-label="Facility facts">
-                <div class="fb-head">{sec.name}</div>
-                <dl>
-                  <dt>Address</dt><dd>{addr || (sec.city ? `${sec.city}${sec.state ? ', ' + sec.state : ''} (street address not published)` : NP)}</dd>
-                  <dt>Phone</dt><dd>{phone || NP}</dd>
-                  <dt>Operator</dt><dd>{op ? (sec.operator_uid ? <a href={`${BASE}/${sec.operator_uid}/`}>{op}</a> : op) : NP}</dd>
-                  {asPublished
-                    ? <><dt>Space, as published</dt><dd>{fmtN(asPublished)} sq ft</dd></>
-                    : <><dt>Total space</dt><dd>{totalSqft ? `${fmtN(totalSqft)} sq ft` : NP}</dd>
-                       <dt>Technical space</dt><dd>{whiteSqft ? `${fmtN(whiteSqft)} sq ft` : NP}</dd></>}
-                  <dt>Total power</dt><dd>{mwOp ? `${fmtN(mwOp)} MW IT` : mwPlan ? `${fmtN(mwPlan)} MW planned` : NP}</dd>
-                  <dt>Power density</dt><dd>{density ? `${fmtN(density)} kW per rack` : NP}</dd>
-                  {standby ? <><dt>Standby generation</dt><dd>{fmtN(standby)} MW diesel</dd></> : null}
-                  {year ? <><dt>Opened</dt><dd>{year}</dd></> : null}
-                  {certs.length ? <><dt>Certifications</dt><dd>{certs.join(', ')}</dd></> : null}
-                  <dt>Nearest airport</dt><dd>{ap ? <>{ap.miles} miles to {ap.name}{ap.iata ? ` (${ap.iata})` : ''}</> : NP}</dd>
-                  <dt>AI Compute suitability, from published facts</dt>
-                  <dd>{sec.suitability
-                    ? <><b class="fb-score">{sec.suitability.score}</b> / 100 <span class="fb-np">from {sec.suitability.components.join(', ')}</span></>
-                    : <span class="fb-np">not enough published data to score</span>}
-                    {' '}<a href="/compute-suitability/" class="fb-how">how it is calculated</a></dd>
-                </dl>
-                <p class="fb-foot">Published figures only, sources at the foot of the page. Airport distance is
-                  great-circle from the mapped coordinates.</p>
-              </aside>
-            );
-          })()}
-    </>
-  )}
   <h1>{pageTitle}</h1>
 
   {isDC && (
@@ -861,6 +802,65 @@ const facBare = sec.shape === 'dc-facility' && !(
             {(sec.profile?.source?.page || sec.website) && <>
             {' '}Source: <a href={sec.profile?.source?.page || sec.website} rel="noopener" target="_blank">
             {facPublisher || sec.operator || 'operator'}</a>.</>}</p>
+          {/* THE FACT BOX. Stephen, 2026-09-03: every data-centre page carries
+              a box on the right with address, phone, operator, space, power,
+              density and distance to the nearest airport. Rendered AFTER the lede and
+              meta line, floated right, so the lede keeps the full width and the
+              box sits lower right beside the sections that follow - Stephen's
+              placement of 2026-09-04, the third; the first was level with the
+              lede, the second beside the title. Every line is either
+              a published figure with its source on this page, or "not
+              published" - the box never estimates. The airport distance is
+              computed from two public coordinates; the operator link goes to
+              the operator's own page on this site. */}
+          {(() => {
+            const p = sec.profile || {};
+            const addr = Array.isArray(p.address) ? p.address.join(', ') : (p.address || '');
+            const op = sec.operator || '';
+            // A stored value that is not a number renders as not published, never as NaN
+            // (a research note written into building_sqft did exactly that on SJC16).
+            const pick = (...ks) => { for (const k of ks) { if (Number.isFinite(Number(p[k])) && Number(p[k]) > 0) return Number(p[k]); } return null; };
+            const totalSqft = pick('building_sqft', 'total_space_sqft', 'gross_sqft');
+            const whiteSqft = pick('technical_space_sqft', 'white_space_sqft', 'colocation_space_sqft');
+            const asPublished = (!totalSqft && !whiteSqft) ? pick('space_sqft') : null;
+            const mwOp = (Number.isFinite(Number(sec.mw)) && Number(sec.mw) > 0) ? Number(sec.mw) : pick('it_capacity_mw');
+            const mwPlan = pick('planned_it_capacity_mw');
+            const density = pick('power_density_kw_rack', 'kw_per_rack');
+            const phone = p.phone || p.contact_phone || null;
+            const ap = sec.nearest_airport || null;
+            const standby = pick('standby_generation_mw');
+            const certs = Array.isArray(p.certifications) ? p.certifications : [];
+            const year = p.year_opened || p.year_built || null;
+            const NP = <span class="fb-np">not published</span>;
+            const fmtN = (n) => Number(n).toLocaleString();
+            return (
+              <aside class="fact-box" aria-label="Facility facts">
+                <div class="fb-head">{sec.name}</div>
+                <dl>
+                  <dt>Address</dt><dd>{addr || (sec.city ? `${sec.city}${sec.state ? ', ' + sec.state : ''} (street address not published)` : NP)}</dd>
+                  <dt>Phone</dt><dd>{phone || NP}</dd>
+                  <dt>Operator</dt><dd>{op ? (sec.operator_uid ? <a href={`${BASE}/${sec.operator_uid}/`}>{op}</a> : op) : NP}</dd>
+                  {asPublished
+                    ? <><dt>Space, as published</dt><dd>{fmtN(asPublished)} sq ft</dd></>
+                    : <><dt>Total space</dt><dd>{totalSqft ? `${fmtN(totalSqft)} sq ft` : NP}</dd>
+                       <dt>Technical space</dt><dd>{whiteSqft ? `${fmtN(whiteSqft)} sq ft` : NP}</dd></>}
+                  <dt>Total power</dt><dd>{mwOp ? `${fmtN(mwOp)} MW IT` : mwPlan ? `${fmtN(mwPlan)} MW planned` : NP}</dd>
+                  <dt>Power density</dt><dd>{density ? `${fmtN(density)} kW per rack` : NP}</dd>
+                  {standby ? <><dt>Standby generation</dt><dd>{fmtN(standby)} MW diesel</dd></> : null}
+                  {year ? <><dt>Opened</dt><dd>{year}</dd></> : null}
+                  {certs.length ? <><dt>Certifications</dt><dd>{certs.join(', ')}</dd></> : null}
+                  <dt>Nearest airport</dt><dd>{ap ? <>{ap.miles} miles to {ap.name}{ap.iata ? ` (${ap.iata})` : ''}</> : NP}</dd>
+                  <dt>AI Compute suitability, from published facts</dt>
+                  <dd>{sec.suitability
+                    ? <><b class="fb-score">{sec.suitability.score}</b> / 100 <span class="fb-np">from {sec.suitability.components.join(', ')}</span></>
+                    : <span class="fb-np">not enough published data to score</span>}
+                    {' '}<a href="/compute-suitability/" class="fb-how">how it is calculated</a></dd>
+                </dl>
+                <p class="fb-foot">Published figures only, sources at the foot of the page. Airport distance is
+                  great-circle from the mapped coordinates.</p>
+              </aside>
+            );
+          })()}
 
           {Array.isArray(sec.profile?.address) && sec.profile.address.length > 0 && (
             <section>
@@ -1176,22 +1176,20 @@ const facBare = sec.shape === 'dc-facility' && !(
 
           {Array.isArray(sec.groups) && sec.groups.map((g) => (
             <section>
-              <h2>{g.state === 'Unlocated' ? 'Facilities not yet located to a state' : `${g.count} in ${g.state}`}</h2>
+              <h2>{g.state === 'Unlocated' ? 'Facilities not yet located to a state' : `${g.count} in ${STATE_NAME[g.state] || g.state}`}</h2>
+              {/* Stephen, 2026-09-04: facility, address, location - nothing else.
+                  Capacity and codes live in each facility's own fact box. */}
               <div class="tbl-scroll"><table class="op-facs">
-                <thead><tr><th>Facility</th><th>Location</th><th>Address</th><th class="num">IT MW</th><th>Campus / codes</th></tr></thead>
+                <thead><tr><th>Facility</th><th>Address</th><th>Location</th></tr></thead>
                 <tbody>
                   {g.facilities.map((f) => {
                     const p = f.profile || {};
                     const addr = Array.isArray(p.address) ? p.address.join(', ') : (p.address || '');
-                    const mw = f.mw || p.it_capacity_mw || (p.planned_it_capacity_mw ? `${p.planned_it_capacity_mw} planned` : '');
-                    const codes = [p.campus, ...(Array.isArray(p.facility_codes) ? p.facility_codes : [])].filter(Boolean).join(' · ');
                     return (
                       <tr>
                         <td>{f.uid ? <a href={`${BASE}/${f.uid}/`}>{f.name}</a> : f.name}</td>
-                        <td>{[f.city, f.state].filter(Boolean).join(', ') || f.country}</td>
                         <td>{addr || <span class="muted">not published</span>}</td>
-                        <td class="num">{mw || <span class="muted">—</span>}</td>
-                        <td>{codes || <span class="muted">—</span>}</td>
+                        <td>{[f.city, STATE_NAME[f.state] || f.state].filter(Boolean).join(', ') || f.country}</td>
                       </tr>
                     );
                   })}
