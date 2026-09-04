@@ -330,6 +330,57 @@ const facBare = sec.shape === 'dc-facility' && !(
   <p class="meta-line"><a href="/">AI Ecosystem</a> ·
     <a href={`${BASE}/`}>{CATEGORY_NAME}</a></p>
 
+  {sec.shape === 'dc-facility' && (
+    <>
+          {/* THE FACT BOX. Stephen, 2026-09-03: every data-centre page carries
+              a box on the right with address, phone, operator, space, power,
+              density and distance to the nearest airport. Rendered BEFORE the
+              title so it sits at the top of the column, directly under the
+              navigation, with the title and lede flowing beside it - not level
+              with the lede, which is where it first landed. Every line is either
+              a published figure with its source on this page, or "not
+              published" - the box never estimates. The airport distance is
+              computed from two public coordinates; the operator link goes to
+              the operator's own page on this site. */}
+          {(() => {
+            const p = sec.profile || {};
+            const addr = Array.isArray(p.address) ? p.address.join(', ') : (p.address || '');
+            const op = sec.operator || '';
+            const totalSqft = p.building_sqft || p.total_space_sqft || p.gross_sqft || null;
+            const whiteSqft = p.technical_space_sqft || p.white_space_sqft || p.colocation_space_sqft || null;
+            const mwOp = sec.mw || p.it_capacity_mw || null;
+            const mwPlan = p.planned_it_capacity_mw || null;
+            const density = p.power_density_kw_rack || p.kw_per_rack || null;
+            const phone = p.phone || p.contact_phone || null;
+            const ap = sec.nearest_airport || null;
+            const standby = p.standby_generation_mw || null;
+            const certs = Array.isArray(p.certifications) ? p.certifications : [];
+            const year = p.year_opened || p.year_built || null;
+            const NP = <span class="fb-np">not published</span>;
+            const fmtN = (n) => Number(n).toLocaleString();
+            return (
+              <aside class="fact-box" aria-label="Facility facts">
+                <div class="fb-head">{sec.name}</div>
+                <dl>
+                  <dt>Address</dt><dd>{addr || (sec.city ? `${sec.city}${sec.state ? ', ' + sec.state : ''} (street address not published)` : NP)}</dd>
+                  <dt>Phone</dt><dd>{phone || NP}</dd>
+                  <dt>Operator</dt><dd>{op ? (sec.operator_uid ? <a href={`${BASE}/${sec.operator_uid}/`}>{op}</a> : op) : NP}</dd>
+                  <dt>Total space</dt><dd>{totalSqft ? `${fmtN(totalSqft)} sq ft` : NP}</dd>
+                  <dt>Technical space</dt><dd>{whiteSqft ? `${fmtN(whiteSqft)} sq ft` : NP}</dd>
+                  <dt>Total power</dt><dd>{mwOp ? `${fmtN(mwOp)} MW IT` : mwPlan ? `${fmtN(mwPlan)} MW planned` : NP}</dd>
+                  <dt>Power density</dt><dd>{density ? `${fmtN(density)} kW per rack` : NP}</dd>
+                  {standby ? <><dt>Standby generation</dt><dd>{fmtN(standby)} MW diesel</dd></> : null}
+                  {year ? <><dt>Opened</dt><dd>{year}</dd></> : null}
+                  {certs.length ? <><dt>Certifications</dt><dd>{certs.join(', ')}</dd></> : null}
+                  <dt>Nearest airport</dt><dd>{ap ? <>{ap.miles} miles to {ap.name}{ap.iata ? ` (${ap.iata})` : ''}</> : NP}</dd>
+                </dl>
+                <p class="fb-foot">Published figures only, sources at the foot of the page. Airport distance is
+                  great-circle from the mapped coordinates.</p>
+              </aside>
+            );
+          })()}
+    </>
+  )}
   <h1>{pageTitle}</h1>
 
   {isDC && (
@@ -775,44 +826,6 @@ const facBare = sec.shape === 'dc-facility' && !(
       )}
       {sec.shape === 'dc-facility' && (
         <>
-          {/* THE FACT BOX. Stephen, 2026-09-03: every data-centre page carries
-              a box on the right with address, phone, operator, space, power,
-              density and distance to the nearest airport. Every line is either
-              a published figure with its source on this page, or "not
-              published" - the box never estimates. The airport distance is
-              computed from two public coordinates; the operator link goes to
-              the operator's own page on this site. */}
-          {(() => {
-            const p = sec.profile || {};
-            const addr = Array.isArray(p.address) ? p.address.join(', ') : (p.address || '');
-            const op = sec.operator || '';
-            const totalSqft = p.building_sqft || p.total_space_sqft || p.gross_sqft || null;
-            const whiteSqft = p.technical_space_sqft || p.white_space_sqft || p.colocation_space_sqft || null;
-            const mwOp = sec.mw || p.it_capacity_mw || null;
-            const mwPlan = p.planned_it_capacity_mw || null;
-            const density = p.power_density_kw_rack || p.kw_per_rack || null;
-            const phone = p.phone || p.contact_phone || null;
-            const ap = sec.nearest_airport || null;
-            const NP = <span class="fb-np">not published</span>;
-            const fmtN = (n) => Number(n).toLocaleString();
-            return (
-              <aside class="fact-box" aria-label="Facility facts">
-                <div class="fb-head">{sec.name}</div>
-                <dl>
-                  <dt>Address</dt><dd>{addr || (sec.city ? `${sec.city}${sec.state ? ', ' + sec.state : ''} (street address not published)` : NP)}</dd>
-                  <dt>Phone</dt><dd>{phone || NP}</dd>
-                  <dt>Operator</dt><dd>{op ? (sec.operator_uid ? <a href={`${BASE}/${sec.operator_uid}/`}>{op}</a> : op) : NP}</dd>
-                  <dt>Total space</dt><dd>{totalSqft ? `${fmtN(totalSqft)} sq ft` : NP}</dd>
-                  <dt>Technical space</dt><dd>{whiteSqft ? `${fmtN(whiteSqft)} sq ft` : NP}</dd>
-                  <dt>Total power</dt><dd>{mwOp ? `${fmtN(mwOp)} MW IT` : mwPlan ? `${fmtN(mwPlan)} MW planned` : NP}</dd>
-                  <dt>Power density</dt><dd>{density ? `${fmtN(density)} kW per rack` : NP}</dd>
-                  <dt>Nearest airport</dt><dd>{ap ? <>{ap.miles} miles to {ap.name}{ap.iata ? ` (${ap.iata})` : ''}</> : NP}</dd>
-                </dl>
-                <p class="fb-foot">Published figures only, sources at the foot of the page. Airport distance is
-                  great-circle from the mapped coordinates.</p>
-              </aside>
-            );
-          })()}
           {/* Most OpenStreetMap rows carry no operator tag, so neither the
               lead sentence nor the meta line may assume one: an early version
               of this published "published by  on its own facility page" on
