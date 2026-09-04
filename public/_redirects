@@ -318,6 +318,12 @@
 /ai-ecosystem/ecosystem-entities-market-and-operations/9aba19cf/  /ai-ecosystem/ecosystem-entities-market-and-operations/8df0db22/#9aba19cf  301
 # Karrie G. Dixon -> Advocates and Public Voices
 /ai-ecosystem/ecosystem-entities-market-and-operations/b6beaa7f/  /ai-ecosystem/ecosystem-entities-market-and-operations/8df0db22/#b6beaa7f  301
+# Her entity-id stub (roster-only, unlisted, bio_len=0) was the one per-person
+# file the 2026-09-01 sweep did not cover because it never sat in the sitemap.
+# When the pipeline stopped writing people/{uid}.json the file vanished, the
+# URL dropped, and url-guard blocked two builds on 2026-09-04. Same person,
+# same anchor.
+/ai-ecosystem/ecosystem-entities-market-and-operations/d1111429/  /ai-ecosystem/ecosystem-entities-market-and-operations/8df0db22/#b6beaa7f  301
 # Melva Wallace -> Advocates and Public Voices
 /ai-ecosystem/ecosystem-entities-market-and-operations/5a7a0ca7/  /ai-ecosystem/ecosystem-entities-market-and-operations/8df0db22/#5a7a0ca7  301
 # Noland Arbaugh -> Advocates and Public Voices
