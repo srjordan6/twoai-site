@@ -1009,18 +1009,6 @@ const facBare = sec.shape === 'dc-facility' && !(
               </ul>
             </section>
           )}
-
-          <section>
-            <h2>What this page is, and is not</h2>
-            <p>{sec.profile?.source?.basis
-                || (facSelfPublished || facHasSources
-                    ? 'Operator-published structured facts only.'
-                    : 'A mapped location, not a specification.')} Fields
-              the operator does not publish, rack density, PUE, redundancy topology, tenancy, are
-              absent here rather than estimated: this registry states what the operator states,
-              with the source, and stops. The crowd-mapped baseline for the rest of the state is
-              in the <a href={`${BASE}/${sec.state_page?.uid || sec.parent.uid}/`}>directory</a>.</p>
-          </section>
         </>
       )}
       {sec.shape === 'dc-operators-index' && (() => {
