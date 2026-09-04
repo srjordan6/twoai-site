@@ -82,16 +82,19 @@ function fromGitHub() {
   console.log(`fetch-content: GitHub tarball, ${n} files copied`);
 }
 
-// One-shot GitHub-first: the last pipeline run before this deploy shipped a
-// stale ecosystem/research-knowledge-and-learning.json in R2. Prefer GitHub
-// (which was pushed directly with the corrected file) this build; the next
-// pipeline run at 11 UTC will refresh R2 and restore R2-first behaviour.
+// R2 FIRST, AS THE HEADER SAYS. A one-shot GitHub-first override was left
+// here after a corrected file was pushed straight to the repo, and it never
+// came out. On 2026-09-04 that cost a build: the GitHub publish had been
+// killed at its 45-minute deadline halfway through 1,500 changed files, so
+// the tarball was a mixed set, while R2 held the complete atomic bundle
+// the same run had already written. R2 is the content bus. GitHub is the
+// fallback, and nothing else.
 try {
-  fromGitHub();
+  fromR2();
 } catch (e) {
-  console.warn('fetch-content: GitHub unavailable, falling back to R2:', e.message);
+  console.warn('fetch-content: R2 unavailable, falling back to GitHub:', e.message);
   try {
-    fromR2();
+    fromGitHub();
   } catch (e2) {
     console.warn('fetch-content: proceeding without remote content:', e2.message);
   }
