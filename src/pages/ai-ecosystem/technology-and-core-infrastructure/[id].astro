@@ -971,9 +971,17 @@ const facBare = sec.shape === 'dc-facility' && !(
             </section>
           )}
           {/* The research pass writes its reading as a string on the profile
-              itself, plus facility and regional notes. Rendered when the
-              cron reading above is absent, so a page never carries two. */}
-          {!sec.reading?.body && typeof sec.profile?.reading === 'string' && sec.profile.reading.length > 80 && (
+              itself, plus facility and regional notes. UNTIL 2026-09-04 this
+              rendered only when the cron reading above was absent, "so a page
+              never carries two" - and because the cron had written a
+              first-layer reading on 1,300 facilities before it was switched
+              off, every one of those pages hid the researched reading Cowork
+              wrote from sources. 1,211 facilities held 1,800+ characters of
+              sourced prose in the database while their live pages measured
+              under 400 words. The two are different things and both render:
+              this is what is KNOWN about the facility, from records; the cron
+              section above is what the published figures MEAN for AI. */}
+          {typeof sec.profile?.reading === 'string' && sec.profile.reading.length > 80 && (
             <section>
               <h2>What is known about this facility</h2>
               {String(sec.profile.reading).split(/\n\n+/).map((p) => <p>{p}</p>)}
