@@ -37,6 +37,24 @@ const jsonld = JSON.stringify({
     in depth, the name links to a full profile with pricing, weaknesses, and governance notes.</p>
   {c.generated && <p class="meta-line">Last verified: {c.generated} · Source: SRJ tool catalog</p>}
 
+  {/* The category's own account of itself: what it is, what buyers choose
+      between, how it moved in the last year. Written into
+      twoai_tool_category_intros; absent until it is written, because a
+      generated sentence about a category is worth less than silence. */}
+  {c.intro && (
+    <section>
+      <h2>What this category is</h2>
+      {String(c.intro).split(/\n{2,}/).map((para) => <p>{para}</p>)}
+      {Array.isArray(c.intro_sources) && c.intro_sources.length > 0 && (
+        <p class="meta-line">Sources: {c.intro_sources.map((s, i) => (
+          <>{i > 0 && ' · '}{s.url
+            ? <a href={s.url} rel="noopener">{s.title || s.publisher || s.url}</a>
+            : (s.title || s.publisher)}</>
+        ))}{c.intro_updated_on && <> · Written {c.intro_updated_on}</>}</p>
+      )}
+    </section>
+  )}
+
   <table>
     <thead><tr><th>Tool</th><th>Vendor</th><th>What it does</th></tr></thead>
     <tbody>
