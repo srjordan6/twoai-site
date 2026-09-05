@@ -2014,8 +2014,23 @@ const facBare = sec.shape === 'dc-facility' && !(
      sticky pillar card. Two defences: ids may wrap anywhere, and the
      table scrolls inside its own container instead of overflowing the
      grid column. Screenshot bug, 2026-08-29. */
-  .tbl-scroll { overflow-x: auto; }
+  .tbl-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .tbl-scroll .pay td:first-child { overflow-wrap: anywhere; }
+  /* WIDE TABLES SCROLL ON A PHONE, THEY DO NOT CRUSH. The wrapper already
+     said overflow-x: auto, but the table inside was still free to shrink to
+     the viewport, so a six-column model table on a 380px screen wrapped every
+     heading and every cell one character per line - Stephen's screenshot of
+     2026-09-04 showed "Downlo / ads" above "23 / ,3 / 72 / ,3 / 27". Giving
+     the table a floor wider than the screen makes the wrapper do its job.
+     Numbers, dates and short labels never wrap; the first column still wraps,
+     because model ids are long and are what the reader is scanning for. */
+  @media (max-width: 760px) {
+    .tbl-scroll table { min-width: 620px; }
+    .tbl-scroll th, .tbl-scroll td { white-space: nowrap; }
+    .tbl-scroll td:first-child, .tbl-scroll th:first-child { white-space: normal; min-width: 190px; }
+    .tbl-scroll::after { content: "Scroll sideways for the rest of this table."; display: block;
+      font-size: 11.5px; color: #7A8A9E; padding: 4px 2px 0; position: sticky; left: 0; }
+  }
   .pay { width: 100%; border-collapse: collapse; margin: 1em 0 1.6em; font-size: .92rem; }
   .pay th, .pay td { text-align: left; padding: .45em .6em; border-bottom: 1px solid #e7e7ee; }
   .pay th.num, .pay td.num { text-align: right; font-variant-numeric: tabular-nums; }
