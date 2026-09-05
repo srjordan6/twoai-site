@@ -91,7 +91,11 @@
   "hyperdrive": [
     {
       "binding": "AUDIT_DB",
-      "id": "de0bbffadff8402d9e67383e71e0d3ac"
+      // 2026-09-05: the database moved from Render to Stephen's PC. This is
+      // the tunnel config (srj-audit-home), the same one srj-home-dbproof
+      // has read through since 2026-09-02. The Render config
+      // de0bbffadff8402d9e67383e71e0d3ac points at a frozen copy.
+      "id": "5c56ecd1dc9041b9b9de6ab8a1708623"
     }
   ],
   "vectorize": [
