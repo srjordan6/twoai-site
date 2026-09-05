@@ -76,6 +76,33 @@ const jsonld = JSON.stringify({
       unclosed one can no longer take the page with it. */}
   <div class="body" set:html={d.body_html} />
 
+  {/* The siting watch. Ordinances, moratoria and utility rulings land in the
+      policy-news intake every day; without this they stopped at the daily
+      briefing and this page went stale between edits. Each row is a headline
+      and its source, nothing more - the analysis belongs in the body above,
+      written after somebody has read the ordinance. */}
+  {Array.isArray(d.siting_watch) && d.siting_watch.length > 0 && (
+    <section class="siting-watch">
+      <h2>Recent siting, zoning and utility activity</h2>
+      <p>Reported decisions and proposals that bear on where data centres may be built and
+        who pays for their power, collected daily from the policy news intake. These are
+        headlines with their sources; where one has been read and written into the regimes
+        above, it appears there with the ordinance or docket cited.</p>
+      <ul>
+        {d.siting_watch.map((w) => (
+          <li>
+            <a href={w.url} rel="noopener" target="_blank">{w.title}</a>
+            <span class="sw-meta">
+              {w.jurisdiction && <>{w.jurisdiction} · </>}
+              {w.kind && <>{w.kind} · </>}
+              {w.publisher}{w.date && <> · {w.date}</>}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
+
   {steps.length > 0 && (
     <>
       <h2>{d.howto?.name || 'How to comply'}</h2>
@@ -136,6 +163,10 @@ const jsonld = JSON.stringify({
     border: 1px solid #e7e7ee; padding: 8px 10px; text-align: left; font-size: .93rem;
   }
   .steps li { margin-bottom: .7em; }
+  .siting-watch { margin: 2em 0 1.5em; padding-top: 1.2em; border-top: 1px solid #e6e6ef; }
+  .siting-watch ul { list-style: none; padding: 0; margin: 1em 0 0; }
+  .siting-watch li { padding: .6em 0; border-bottom: 1px solid #ececf2; }
+  .siting-watch .sw-meta { display: block; font-size: 12.5px; color: #7A8A9E; margin-top: 2px; text-transform: capitalize; }
   .cites { font-size: .92rem; }
   .cites li { margin-bottom: .35em; }
 </style>
