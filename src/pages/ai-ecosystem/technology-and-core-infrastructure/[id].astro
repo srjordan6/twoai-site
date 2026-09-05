@@ -787,28 +787,14 @@ const facBare = sec.shape === 'dc-facility' && !(
       )}
       {sec.shape === 'dc-facility' && (
         <>
-          {/* Most OpenStreetMap rows carry no operator tag, so neither the
-              lead sentence nor the meta line may assume one: an early version
-              of this published "published by  on its own facility page" on
-              every unattributed facility. The publisher recorded with the
-              source is the fallback, and where even that is absent the clause
-              is dropped rather than left hanging. */}
-          <p class="answer"><b>{facLede}</b><Fragment set:html={facRest} /> {facBasis}, read on
-            {' '}{sec.profile?.source?.retrieved || sec.generated}.</p>
-          <p class="meta-line">Last verified: {sec.generated}
-            {sec.operator && <> · Operator: {sec.operator}</>} ·
-            {sec.state_page?.uid && <> Directory:
-            {' '}<a href={`${BASE}/${sec.state_page.uid}/`}>data centers in {sec.state || sec.country}</a> ·</>}
-            {(sec.profile?.source?.page || sec.website) && <>
-            {' '}Source: <a href={sec.profile?.source?.page || sec.website} rel="noopener" target="_blank">
-            {facPublisher || sec.operator || 'operator'}</a>.</>}</p>
           {/* THE FACT BOX. Stephen, 2026-09-03: every data-centre page carries
               a box on the right with address, phone, operator, space, power,
-              density and distance to the nearest airport. Rendered AFTER the lede and
-              meta line, floated right, so the lede keeps the full width and the
-              box sits lower right beside the sections that follow - Stephen's
-              placement of 2026-09-04, the third; the first was level with the
-              lede, the second beside the title. Every line is either
+              density and distance to the nearest airport. Placed at the top of the facility
+              body, floated right, so the title spans the full width and the
+              lede, the meta line and everything below wrap to its left. This
+              is the fourth placement: level with the lede, then beside the
+              title, then below the meta line, and now here - the box belongs
+              at the top right of the page's content, not partway down it. Every line is either
               a published figure with its source on this page, or "not
               published" - the box never estimates. The airport distance is
               computed from two public coordinates; the operator link goes to
@@ -862,6 +848,21 @@ const facBare = sec.shape === 'dc-facility' && !(
               </aside>
             );
           })()}
+          {/* Most OpenStreetMap rows carry no operator tag, so neither the
+              lead sentence nor the meta line may assume one: an early version
+              of this published "published by  on its own facility page" on
+              every unattributed facility. The publisher recorded with the
+              source is the fallback, and where even that is absent the clause
+              is dropped rather than left hanging. */}
+          <p class="answer"><b>{facLede}</b><Fragment set:html={facRest} /> {facBasis}, read on
+            {' '}{sec.profile?.source?.retrieved || sec.generated}.</p>
+          <p class="meta-line">Last verified: {sec.generated}
+            {sec.operator && <> · Operator: {sec.operator}</>} ·
+            {sec.state_page?.uid && <> Directory:
+            {' '}<a href={`${BASE}/${sec.state_page.uid}/`}>data centers in {sec.state || sec.country}</a> ·</>}
+            {(sec.profile?.source?.page || sec.website) && <>
+            {' '}Source: <a href={sec.profile?.source?.page || sec.website} rel="noopener" target="_blank">
+            {facPublisher || sec.operator || 'operator'}</a>.</>}</p>
 
           {Array.isArray(sec.profile?.address) && sec.profile.address.length > 0 && (
             <section>
@@ -2034,7 +2035,10 @@ const facBare = sec.shape === 'dc-facility' && !(
 </Base>
 
 <style>
-  .fact-box { float: right; width: 300px; max-width: 42%; margin: 0 0 1.2rem 1.6rem; padding: 14px 16px 12px; border: 1px solid #d9dced; border-top: 4px solid #F07800; border-radius: 0 0 8px 8px; background: #fbfbfd; font-size: 13.5px; line-height: 1.45; }
+  /* 34% not 42%: at 42 the box took nearly half the column and the prose
+     beside it wrapped two or three words to a line. The box is a reference
+     panel, not a second column. */
+  .fact-box { float: right; width: 300px; max-width: 34%; margin: 0 0 1.2rem 1.8rem; padding: 14px 16px 12px; border: 1px solid #d9dced; border-top: 4px solid #F07800; border-radius: 0 0 8px 8px; background: #fbfbfd; font-size: 13.5px; line-height: 1.45; }
   .fact-box .fb-head { font-family: Lora, Georgia, serif; font-weight: 700; color: #201868; font-size: 15px; margin-bottom: 8px; }
   .fact-box dl { margin: 0; }
   .fact-box dt { color: #7A8A9E; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; margin-top: 8px; }
@@ -2043,7 +2047,7 @@ const facBare = sec.shape === 'dc-facility' && !(
   .fact-box .fb-foot { margin: 10px 0 0; font-size: 11.5px; color: #7A8A9E; }
   .fact-box .fb-score { font-family: Lora, Georgia, serif; font-size: 22px; color: #201868; }
   .fact-box .fb-how { font-size: 11.5px; }
-  @media (max-width: 720px) { .fact-box { float: none; width: auto; max-width: none; margin: 0 0 1.2rem; } }
+  @media (max-width: 900px) { .fact-box { float: none; width: auto; max-width: none; margin: 0 0 1.4rem; } }
   .dcx-lede { font-size: 15px; line-height: 1.6; color: #444; margin: 0 0 18px; }
   .dcx-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
     gap: 1px; background: #e6e6ef; border: 1px solid #e6e6ef; margin: 0 0 14px; }
