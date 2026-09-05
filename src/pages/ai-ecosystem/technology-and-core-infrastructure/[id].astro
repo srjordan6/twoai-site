@@ -847,6 +847,7 @@ const facBare = sec.shape === 'dc-facility' && !(
                   <dt>Total power</dt><dd>{mwOp ? `${fmtN(mwOp)} MW IT` : mwPlan ? `${fmtN(mwPlan)} MW planned` : NP}</dd>
                   <dt>Power density</dt><dd>{density ? `${fmtN(density)} kW per rack` : NP}</dd>
                   {standby ? <><dt>Standby generation</dt><dd>{fmtN(standby)} MW diesel</dd></> : null}
+                  {pick('onsite_generation_mw') ? <><dt>On-site generation</dt><dd>{fmtN(pick('onsite_generation_mw'))} MW fuel cell</dd></> : null}
                   {year ? <><dt>Opened</dt><dd>{year}</dd></> : null}
                   {certs.length ? <><dt>Certifications</dt><dd>{certs.join(', ')}</dd></> : null}
                   <dt>Nearest airport</dt><dd>{ap ? <>{ap.miles} miles to {ap.name}{ap.iata ? ` (${ap.iata})` : ''}</> : NP}</dd>
@@ -991,6 +992,54 @@ const facBare = sec.shape === 'dc-facility' && !(
                 <>
                   <h3>The region</h3>
                   <p>{sec.profile.regional_context}</p>
+                </>
+              )}
+              {/* On-site generation, and what a locality has published about
+                  it. Hilliard, Ohio put a full FAQ and two commissioned air
+                  studies online for the fuel cell plant on Amazon's Scioto
+                  Darby campus; that is a public record about a facility, and
+                  it belongs on the facility's page. */}
+              {sec.profile.power?.onsite_generation_mw && (
+                <>
+                  <h3>On-site generation</h3>
+                  <p>{sec.profile.onsite_generation_type} rated at
+                    {' '}{sec.profile.power.onsite_generation_mw} MW,
+                    {' '}{sec.profile.onsite_generation_owner}.
+                    {sec.profile.onsite_generation_status && <> {sec.profile.onsite_generation_status}.</>}</p>
+                  {sec.profile.power.technology && <p>{sec.profile.power.technology}</p>}
+                  {sec.profile.power.why && <p>{sec.profile.power.why}</p>}
+                  {sec.profile.power.duration && <p>{sec.profile.power.duration}</p>}
+                  {sec.profile.power.gas_supply && <p>{sec.profile.power.gas_supply}</p>}
+                  {(sec.profile.power.co2_lb_per_hour || sec.profile.power.noise_db_at_boundary) && (
+                    <p class="meta-line">
+                      {sec.profile.power.co2_lb_per_hour && <>Carbon dioxide: {Number(sec.profile.power.co2_lb_per_hour).toLocaleString()} lb per hour</>}
+                      {sec.profile.power.co2_lb_per_day && <>, about {Number(sec.profile.power.co2_lb_per_day).toLocaleString()} lb per day</>}
+                      {sec.profile.power.noise_db_at_boundary && <> · Noise at the property boundary: {sec.profile.power.noise_db_at_boundary} dB</>}</p>
+                  )}
+                </>
+              )}
+              {sec.profile.campus_power_note && (
+                <>
+                  <h3>Campus power</h3>
+                  <p>{sec.profile.campus_power_note}</p>
+                </>
+              )}
+              {sec.profile.regulatory_note && (
+                <>
+                  <h3>Jurisdiction</h3>
+                  <p>{sec.profile.regulatory_note}</p>
+                </>
+              )}
+              {sec.profile.community_note && (
+                <>
+                  <h3>The local record</h3>
+                  <p>{sec.profile.community_note}</p>
+                </>
+              )}
+              {sec.profile.incentives_note && (
+                <>
+                  <h3>Tax and incentives</h3>
+                  <p>{sec.profile.incentives_note}</p>
                 </>
               )}
               <p class="meta-line">Compiled from the sources listed below and nothing else. Where a
