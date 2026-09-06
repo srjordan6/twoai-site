@@ -740,9 +740,38 @@ const jsonld = JSON.stringify(
         {hub.tracked_only > 0 && <> The other {hub.tracked_only} are listed with their role and no
         page yet, because a name and a job title is not a profile.</>}</p>
       {hub.generated && <p class="meta-line">Last verified: {hub.generated}</p>}
-      {/* p.path is the anchor on the person's primary section page, written by
-          the pipeline. A profile no longer has a page of its own, so linking
-          `${BASE}/${p.uid}/` here would point every name at a 301. */}
+
+      {/* A to Z. Stephen, 2026-09-06: past 160 people a list is not read, it is
+          scrolled. Grouped on the surname, because that is how a reader looks a
+          person up, with the letter as the group. Jump links first, then the
+          groups, then the full cards below for anyone browsing rather than
+          searching. */}
+      {hub.az?.length > 0 && (
+        <section class="azdir">
+          <nav class="azbar" aria-label="Jump to a letter">
+            {hub.az.map((g) => <a href={`#az-${g.letter === '#' ? 'other' : g.letter}`}>{g.letter}</a>)}
+          </nav>
+          {hub.az.map((g) => (
+            <div class="azgroup" id={`az-${g.letter === '#' ? 'other' : g.letter}`}>
+              <h2>{g.letter} <span class="azn">{g.count}</span></h2>
+              <ul class="azlist">
+                {g.people.map((p) => (
+                  <li>
+                    {p.path ? <a href={p.path}>{p.name}</a> : <span>{p.name}</span>}
+                    {p.moniker && <span class="azmon">{p.moniker}</span>}
+                    {p.profiled === 'no' && <span class="aztracked">tracked, no profile yet</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {/* p.path is the person's own page, written by the pipeline from
+          2026-09-06. Before that it was an anchor on their category page; both
+          forms are honoured here so a build that ships ahead of the pipeline
+          still links correctly. */}
       <ul class="grid">
         {hub.people.map((p) => (
           <li class="card">
@@ -797,12 +826,24 @@ const jsonld = JSON.stringify(
       <Reading reading={pcat.reading}
         heading={`What do the ${pcat.name.toLowerCase()} in this directory have in common?`} />
 
-      {pcat.profiles?.map((p) => (
-        <PersonProfile person={{ ...p, home_uid: pcat.uid }} base={BASE}
-          orgUid={p.org
-            ? g2.__twoaiCompanyByName[String(p.org).toLowerCase().replace(/[^a-z0-9]/g, '')] || null
-            : null} />
-      ))}
+      {/* The profile now lives on the person's own page. What the category
+          carries is the entry, and the uid stays as the row's id so anchor
+          links published while profiles lived here still land on the right
+          person. Stephen, 2026-09-06. */}
+      {pcat.profiles?.length > 0 && (
+        <ul class="pcatlist">
+          {pcat.profiles.map((p) => (
+            <li id={p.uid}>
+              <a class="pcatname" href={p.path || `${BASE}/${p.uid}/`}>{p.name}</a>
+              {p.moniker && <span class="pcatmon">{p.moniker}</span>}
+              {p.hook && <p>{p.hook}</p>}
+              {Array.isArray(p.fields) && p.fields.length > 0 && (
+                <p class="meta-line">{p.fields.join(' · ')}</p>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
 
       {pcat.also?.length > 0 && (
         <section class="alsohere">
@@ -1200,6 +1241,28 @@ const jsonld = JSON.stringify(
   .jump { margin: 1.2em 0 1.8em; padding: .9em 1.1em; background: var(--cream, #FFF6EC);
     border-left: 3px solid #F07800; font-size: .93rem; line-height: 1.9; }
   .alsohere { margin-top: 2.4em; padding-top: 1.6em; border-top: 2px solid #ececf2; }
+
+  /* A to Z on the people hub, and the category listing. Both replaced walls
+     of full profiles with something a reader can scan. 2026-09-06. */
+  .azdir { margin: 1.6em 0 2.4em; }
+  .azbar { display: flex; flex-wrap: wrap; gap: 4px; padding: 10px 0 14px; border-bottom: 1px solid #ececf2; position: sticky; top: 0; background: #fff; z-index: 2; }
+  .azbar a { display: inline-block; min-width: 26px; text-align: center; padding: 3px 6px; border: 1px solid #d9dced; border-radius: 4px; font-size: 13px; font-weight: 600; text-decoration: none; }
+  .azbar a:hover { background: #201868; color: #fff; border-color: #201868; }
+  .azgroup { margin-top: 1.6em; scroll-margin-top: 56px; }
+  .azgroup h2 { margin: 0 0 .4em; font-size: 1.35rem; border-bottom: 2px solid #F07800; display: inline-block; padding-right: 10px; }
+  .azgroup .azn { font-size: .8rem; color: #7A8A9E; font-weight: 400; }
+  .azlist { list-style: none; padding: 0; margin: 0; columns: 2; column-gap: 2.4em; }
+  .azlist li { break-inside: avoid; padding: .35em 0; border-bottom: 1px solid #f2f2f6; }
+  .azlist a { font-weight: 600; }
+  .azmon { display: block; font-size: 12.5px; color: #7A8A9E; }
+  .aztracked { display: block; font-size: 12px; color: #9aa4b5; font-style: italic; }
+  @media (max-width: 700px) { .azlist { columns: 1; } }
+
+  .pcatlist { list-style: none; padding: 0; margin: 1.4em 0 0; }
+  .pcatlist li { padding: 1em 0; border-bottom: 1px solid #ececf2; scroll-margin-top: 20px; }
+  .pcatlist li p { margin: .4em 0 0; }
+  .pcatname { font-size: 1.12rem; font-weight: 700; }
+  .pcatmon { display: block; font-size: 13px; color: #7A8A9E; margin-top: 2px; }
 
   /* Quick facts read as sentences, not as a two-column table of numbered rows. */
   .qfacts { margin: 0 0 1.4em; padding-left: 1.15em; }
