@@ -56,6 +56,30 @@ const jsonld = JSON.stringify({
   <p class="meta-line">Last verified: <time datetime={d.generated}>{d.generated}</time> · Source: LegiScan API ·
     <a href="/ai-laws/">All states</a></p>
 
+  {/* Hand-written context, joined from twoai_state_law_context at build time
+      rather than stored on the page row: the LegiScan stage rewrites the whole
+      row every run, so prose kept in it is destroyed daily. What a legislature
+      did and did not do, which existing statutes already reach AI conduct, and
+      why a zero count is often a session calendar rather than an absence. */}
+  {d.context && (
+    <section class="state-context">
+      {String(d.context).split(/\n{2,}/).map((para) => <p>{para}</p>)}
+      {Array.isArray(d.context_sources) && d.context_sources.length > 0 && (
+        <details class="ctx-sources">
+          <summary>Sources for this section</summary>
+          <ul>
+            {d.context_sources.map((s) => (
+              <li>{s.url
+                ? <a href={s.url} rel="noopener">{s.title || s.publisher || s.url}</a>
+                : (s.title || s.publisher)}{s.publisher && s.title ? ` · ${s.publisher}` : ''}{s.date ? ` · ${s.date}` : ''}</li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {d.context_updated_on && <p class="meta-line">This section written {d.context_updated_on}.</p>}
+    </section>
+  )}
+
   {d.count > 0 ? (
     <table>
       <thead><tr><th>Bill</th><th>Title</th><th>Last action date</th></tr></thead>

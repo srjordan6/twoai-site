@@ -93,9 +93,9 @@ const jsonld = JSON.stringify({
           <li>
             <a href={w.url} rel="noopener" target="_blank">{w.title}</a>
             <span class="sw-meta">
-              {w.jurisdiction && <>{w.jurisdiction} · </>}
-              {w.kind && <>{w.kind} · </>}
-              {w.publisher}{w.date && <> · {w.date}</>}
+              {w.jurisdiction ? `${w.jurisdiction} · ` : ''}
+              {w.kind ? `${w.kind} · ` : ''}
+              {w.publisher}{w.date ? ` · ${w.date}` : ''}
             </span>
           </li>
         ))}

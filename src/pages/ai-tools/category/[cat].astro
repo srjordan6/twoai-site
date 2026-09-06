@@ -47,10 +47,10 @@ const jsonld = JSON.stringify({
       {String(c.intro).split(/\n{2,}/).map((para) => <p>{para}</p>)}
       {Array.isArray(c.intro_sources) && c.intro_sources.length > 0 && (
         <p class="meta-line">Sources: {c.intro_sources.map((s, i) => (
-          <>{i > 0 && ' · '}{s.url
+          <span>{i > 0 ? ' · ' : ''}{s.url
             ? <a href={s.url} rel="noopener">{s.title || s.publisher || s.url}</a>
-            : (s.title || s.publisher)}</>
-        ))}{c.intro_updated_on && <> · Written {c.intro_updated_on}</>}</p>
+            : (s.title || s.publisher)}</span>
+        ))}{c.intro_updated_on ? ` · Written ${c.intro_updated_on}` : ''}</p>
       )}
     </section>
   )}
