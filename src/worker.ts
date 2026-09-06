@@ -659,6 +659,35 @@ export default {
       ctx.waitUntil(log(false));
       const notCovered =
         "The World of AI does not cover that yet. The question has been recorded, and topics that come up repeatedly get researched and published.";
+
+      // THE FREE STRUCTURED TIERS RUN HERE TOO. Until 2026-09-06 they hung
+      // only off the second refusal path, where the model refuses after
+      // retrieval found something. An entity the site had never heard of -
+      // "who is Krithivasan", the night his page was written but not yet
+      // built - came down THIS path, empty retrieval, and went straight to
+      // the web search gate, which its vocabulary failed. Wikidata never ran.
+      // The path for unknown entities was the one path that skipped the free
+      // encyclopaedia. Same tiers, same order, same recording and promotion.
+      {
+        const subject = subjectOf(question);
+        const cached = await cachedLookup(env, norm, qVec);
+        if (cached && (cached.wikidata || cached.lookup)) {
+          return json({ answered: false, answer: notCovered, sources: [],
+            wikidata: cached.wikidata, lookup: cached.lookup, lookupCached: true, lookupFetchedAt: cached.fetchedAt });
+        }
+        const wd = await wikidataLookup(question);
+        const alt = wd ? null : (await huggingFaceModel(subject, question)) ?? (await openAlexAuthor(subject, question));
+        if (wd || alt) {
+          const recorded: Array<{ sourceLabel: string; title: string; url: string; facts: any[] }> = [];
+          if (wd) recorded.push({ sourceLabel: "Wikidata " + wd.qid, title: wd.title, url: wd.url, facts: wd.facts });
+          if (alt) recorded.push({ sourceLabel: alt.sourceLabel, title: alt.title, url: alt.url, facts: alt.facts });
+          ctx.waitUntil(recordLookup(env, question, norm, 0, 0, qVec, best, recorded, { wikidata: wd ?? undefined, lookup: alt ?? undefined }));
+          if (wd) ctx.waitUntil(promoteFacts(env, wd).then((r) => console.log("promote:", r)));
+          return json({ answered: false, answer: notCovered, sources: [], wikidata: wd ?? undefined, lookup: alt ?? undefined,
+            wikidataError: !wd ? (lastWikidataError || undefined) : undefined });
+        }
+      }
+
       // WEB FALLBACK, added 2026-09-01 on Stephen's decision. It fires ONLY
       // here, on a genuine empty from both retrievers, which is why the tier-3
       // rarity fix had to land first: before it, tier 3 returned papers that
