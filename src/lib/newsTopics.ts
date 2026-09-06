@@ -128,6 +128,26 @@ const FALLBACK = {
 };
 
 export function categoryOf(s: Story): { name: string; slug: string } {
+  return categoriesOf(s)[0];
+}
+
+/**
+ * Every category a headline hits, most specific first, ending with the
+ * fallback only when nothing else matched. A story about a 1 GW campus signed
+ * with a state government is a data-centre story AND a policy story AND a
+ * business story, and a reader arriving from any of those sections should
+ * find it. The first entry is what the briefing groups by; the rest are the
+ * highlight pills on the story page. Stephen, 2026-09-06.
+ */
+export function categoriesOf(s: Story): { name: string; slug: string }[] {
+  const hay = (s.Headline || '').toLowerCase();
+  const hits = CATEGORIES
+    .filter((c) => c.patterns.some((p) => new RegExp(`\\b${p}\\b`).test(hay)))
+    .map((c) => ({ name: c.name, slug: c.slug }));
+  return hits.length ? hits : [FALLBACK];
+}
+
+function _categoryOfLegacy(s: Story): { name: string; slug: string } {
   const hay = (s.Headline || '').toLowerCase();
   for (const c of CATEGORIES) {
     if (c.patterns.some((p) => new RegExp(`\\b${p}\\b`).test(hay))) {

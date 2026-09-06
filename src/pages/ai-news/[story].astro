@@ -14,7 +14,7 @@
 import Base from '../../layouts/Base.astro';
 import KeepReading from '../../components/KeepReading.astro';
 import { matchTerms, companyFor } from '../../lib/related';
-import { categoryOf, coverageByDay, readingMinutes, titleCase, type Story } from '../../lib/newsTopics';
+import { categoryOf, categoriesOf, coverageByDay, readingMinutes, titleCase, type Story } from '../../lib/newsTopics';
 
 import { loadKnownEntities, resolveEntities } from '../../lib/knownEntities';
 export async function getStaticPaths() {
@@ -78,6 +78,7 @@ const story: Story = {
 };
 
 const cat = categoryOf(story);
+const cats = categoriesOf(story);
 // Onward links: terms this story actually names, and the company pages for any
 // organisation in it that we track. See src/lib/related.ts for why the matching
 // is whole-word and exact-name rather than substring.
@@ -91,7 +92,7 @@ const krTerms = matchTerms(`${story.Title ?? ''} ${story.Summary ?? story.Descri
 const knownEntityIndex = loadKnownEntities();
 const knownOrgs = resolveEntities(story.Orgs, knownEntityIndex, 12);
 const knownPersons = resolveEntities(story.Persons, knownEntityIndex, 12);
-const known4 = [...knownOrgs, ...knownPersons].slice(0, 4);
+const known4 = [...knownOrgs, ...knownPersons].slice(0, 6);
 
 const timeline = coverageByDay(story.Articles);
 const stamp = generated ? `${new Date(generated).toUTCString().slice(0, 22)} UTC` : null;
@@ -165,7 +166,12 @@ const jsonld = JSON.stringify({
     · {minutes}-minute read
   </p>
   <div class="pills">
-    <a class="pill pill-cat" href={`/ai-news/daily/#${cat.slug}`}>{cat.name}</a>
+    {/* Every section this story belongs to, then every entity on this site it
+        names. A 1 GW campus signed with a state is a data-centre story, a
+        policy story and a business story, and it names an operator, a parent
+        company and a chief executive - the reader should be able to go to any
+        of them from here. Stephen, 2026-09-06. */}
+    {cats.map((c) => <a class="pill pill-cat" href={`/ai-news/daily/#${c.slug}`}>{c.name}</a>)}
     {known4.map((e) => <a class="pill" href={e.href}>{e.label}</a>)}
   </div>
 

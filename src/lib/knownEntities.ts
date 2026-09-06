@@ -84,6 +84,30 @@ export function loadKnownEntities(): Map<string, KnownEntity> {
     }
   }
 
+  // Data-centre operators and named facilities. A story that names HyperVault
+  // or Equinix LA7 should link to the registry page, not only to a parent
+  // company. Operator docs are tech/dc-op-*.json; facility docs are the rest
+  // of tech/ with shape dc-facility. Facility names are long and specific
+  // ("QTS Phoenix 1 (PHX1, Van Buren)"), so exact-name matching is safe;
+  // operator names are short and are added with their aliases where the doc
+  // carries them. Stephen, 2026-09-06.
+  if (existsSync('content/tech')) {
+    for (const f of readdirSync('content/tech')) {
+      if (!f.endsWith('.json')) continue;
+      try {
+        const d = JSON.parse(readFileSync(`content/tech/${f}`, 'utf8'));
+        if (!d?.uid) continue;
+        const href = `/ai-ecosystem/technology-and-core-infrastructure/${d.uid}/`;
+        if (d.shape === 'dc-operator') {
+          add(d.name, href);
+          for (const a of (Array.isArray(d.aliases) ? d.aliases : [])) add(a, href);
+        } else if (d.shape === 'dc-facility' && d.name && d.name.length >= 12) {
+          add(d.name, href);
+        }
+      } catch { /* as above */ }
+    }
+  }
+
   return known;
 }
 
