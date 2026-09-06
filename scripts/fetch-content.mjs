@@ -80,10 +80,24 @@ function fromR2() {
   // The commit too. A pipeline build can be proved by the bundle hash; a git
   // push cannot, because the bundle does not change. On 2026-09-06 seven
   // consecutive builds failed from 14:32 to 21:02 and the only way anyone knew
-  // was reading the Cloudflare dashboard. Workers Builds sets these in the
-  // build environment; with the commit published, the buildwatch stage can
-  // compare the live site against origin/main and alert when a push has not
-  // shipped, whoever pushed it and whatever broke.
+  // was reading the Cloudflare dashboard. With the commit published, the
+  // buildwatch stage compares the live site against origin/main and alerts
+  // when a push has not shipped, whoever pushed it and whatever broke.
+  //
+  // READ IT FROM GIT, NOT FROM THE ENVIRONMENT. The first version trusted
+  // WORKERS_CI_COMMIT_SHA and build cb5075c7 published commit: "main" - the
+  // branch name, not a hash. Whatever Cloudflare sets that variable to on a
+  // deploy-hook build, it is not the SHA. The repository is checked out in
+  // the build container, so git itself is the source that cannot be wrong.
+  // Falls back to the environment, then to null; a null commit makes
+  // buildwatch say "cannot tell" rather than cry wolf.
+  let commit = null;
+  try {
+    commit = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim() || null;
+  } catch {
+    commit = process.env.WORKERS_CI_COMMIT_SHA || null;
+  }
+  if (commit && !/^[0-9a-f]{40}$/.test(commit)) commit = null;
   writeFileSync('public/api/build.json', JSON.stringify({
     bundle: m.bundle,
     sha256: m.sha256,
@@ -91,7 +105,7 @@ function fromR2() {
     files_declared: m.files,
     files_copied: n,
     built_at: new Date().toISOString(),
-    commit: process.env.WORKERS_CI_COMMIT_SHA || null,
+    commit,
     branch: process.env.WORKERS_CI_BRANCH || null,
     build_uuid: process.env.WORKERS_CI_BUILD_UUID || null,
   }, null, 2));
