@@ -123,7 +123,9 @@ const TOP_K = 18;      // over-fetch, then cap per page
 const PER_PAGE = 2;    // at most two chunks from any one page
 const MAX_SOURCES = 8;
 
-const SYSTEM = `You answer questions about artificial intelligence using ONLY the excerpts provided, which come from theworldofai.org and from its research index of academic papers.
+const SYSTEM = `You answer questions about artificial intelligence using ONLY the material provided: records marked [DB] from this site's own database, excerpts from theworldofai.org pages, and papers from its research index.
+
+[DB] RECORDS COME FIRST. They are the site's authoritative data, current to the second, each with a page URL and each relationship with its own source URL. When a [DB] record answers the question, answer from it, link the page, and cite the relationship sources. Never say the site does not cover something that a [DB] record describes.
 
 RULES, in order:
 1. Use only what is in the excerpts. Refuse ONLY when NEITHER the site pages NOR the research papers below answer the question: a relevant paper IS an answer, and refusing while holding one tells the reader we have nothing when we do. When nothing answers, say plainly: "The World of AI does not cover that yet." Do not fill the gap from your own knowledge, and never guess a date, a number, a case outcome or a legal requirement.
@@ -278,6 +280,76 @@ export default {
     // so, and the answer links out to the DOI so the reader goes to the source.
     type Paper = { title: string; year: number | null; cited: number | null; url: string };
     let papers: Paper[] = [];
+
+    // THE DATABASE ANSWERS FIRST. Stephen, 2026-09-06: "once you entered
+    // Krithivasan in the database it should be able to query the database for
+    // the answer, that is what I have wanted all along." He was right. Until
+    // now the site's own pages reached this box only as embedded chunks in
+    // Vectorize, rebuilt each pipeline run, so an entity written to SQL at
+    // 04:00 was unknown here until the next build. This block asks SQL
+    // directly: every registry the site keeps, matched on the names in the
+    // question, plus the entity's edges from the knowledge graph with the
+    // evidence for each. Live, at the moment of asking.
+    type Fact = { entity: string; kind: string; url: string; facts: string[]; edges: string[] };
+    let facts: Fact[] = [];
+    if (env.AUDIT_DB) {
+      try {
+        const sql = postgres(env.AUDIT_DB.connectionString, { max: 1, fetch_types: false, idle_timeout: 10 });
+        // Candidate names: capitalised runs in the question, and the whole
+        // question lower-cased for single-word names.
+        const caps = Array.from(question.matchAll(/\b([A-Z][\w.&'-]+(?:\s+[A-Z][\w.&'-]+){0,3})/g)).map((m) => m[1]);
+        const names = Array.from(new Set([...caps, ...caps.map((c) => c.replace(/^[A-Z]\.\s*/, ''))].map((n) => n.toLowerCase().trim()).filter((n) => n.length >= 3)));
+        if (names.length) {
+          const rows = await sql.unsafe(`
+            WITH q AS (SELECT unnest($1::text[]) AS n)
+            SELECT 'person' AS kind, p.slug AS uid, p.data->>'name' AS name,
+                   '/ai-ecosystem/ecosystem-entities-market-and-operations/' || p.slug || '/' AS url,
+                   ARRAY[p.data->>'moniker', p.data->>'hook'] || ARRAY(SELECT jsonb_array_elements_text(p.data->'quick_facts')) AS facts
+            FROM site_people p JOIN q ON lower(p.data->>'name') = q.n
+               OR lower(regexp_replace(p.data->>'name', '^[A-Z]\\.\\s*', '')) = q.n
+               OR lower(split_part(p.data->>'name', ' ', -1)) = q.n AND length(q.n) >= 6
+            UNION ALL
+            SELECT 'company', c.uid, c.name, '/companies/' || c.uid || '/',
+                   ARRAY[c.org_type, c.headquarters, 'founded ' || c.founded, 'ticker ' || c.ticker, c.website]
+            FROM twoai_company_profiles c JOIN q ON lower(c.name) = q.n
+               OR EXISTS (SELECT 1 FROM twoai_entities e WHERE e.uid = c.uid AND EXISTS (SELECT 1 FROM jsonb_array_elements_text(e.aliases) a WHERE lower(a) = q.n))
+            UNION ALL
+            SELECT 'dc_operator', o.uid, o.name, '/ai-ecosystem/technology-and-core-infrastructure/' || o.uid || '/',
+                   ARRAY[o.operator_type, o.headquarters, o.profile->>'note', o.facility_count || ' facilities in the registry']
+            FROM twoai_dc_operators o JOIN q ON lower(o.name) = q.n WHERE o.retired_at IS NULL
+            UNION ALL
+            SELECT 'facility', f.id, f.name, '/ai-ecosystem/technology-and-core-infrastructure/' || f.id || '/',
+                   ARRAY[f.operator, f.city || ', ' || f.state, f.profile->>'address', f.profile->>'campus', f.status]
+            FROM twoai_dc_facilities f JOIN q ON lower(f.name) = q.n
+            LIMIT 6`, [names]);
+          for (const r of rows) {
+            let edges: string[] = [];
+            try {
+              const er = await sql.unsafe(`
+                SELECT g.label, g.other_kind, g.other_uid, g.confidence, g.evidence_url, g.evidence_title, g.evidence_quote,
+                       COALESCE(p.data->>'name', c.name, o.name, f.name, e.name, g.other_uid) AS other_name
+                FROM twoai_graph g
+                LEFT JOIN site_people p ON g.other_kind='person' AND p.slug = g.other_uid
+                LEFT JOIN twoai_company_profiles c ON g.other_kind='company' AND c.uid = g.other_uid
+                LEFT JOIN twoai_dc_operators o ON g.other_kind='dc_operator' AND o.uid = g.other_uid
+                LEFT JOIN twoai_dc_facilities f ON g.other_kind='facility' AND f.id = g.other_uid
+                LEFT JOIN twoai_entities e ON e.uid = g.other_uid
+                WHERE g.kind = $1 AND g.uid = $2 AND g.relation <> 'mentioned_in' AND g.confidence <> 'candidate'
+                ORDER BY g.confidence = 'primary' DESC, g.evidence_date DESC NULLS LAST LIMIT 12`, [r.kind, r.uid]);
+              edges = er.map((x: any) => `${r.name} ${x.label} ${x.other_name}` +
+                (x.evidence_quote ? ` ("${String(x.evidence_quote).slice(0, 140)}")` : '') +
+                (x.evidence_url ? ` [source: ${x.evidence_title || x.evidence_url} ${x.evidence_url}]` : ''));
+            } catch {}
+            facts.push({ entity: r.name, kind: r.kind, url: r.url, facts: (r.facts || []).filter((x: any) => x && String(x).trim() && !String(x).startsWith('founded null') && !String(x).startsWith('ticker null')), edges });
+          }
+        }
+        await sql.end();
+      } catch (e) {
+        // A lookup failure must not stop the vector and paper paths; note it
+        // in the log line and carry on.
+        console.warn("ask: entity lookup failed:", String((e as any)?.message ?? e).slice(0, 160));
+      }
+    }
     if (env.AUDIT_DB) {
       try {
         const sql = postgres(env.AUDIT_DB.connectionString, {
@@ -583,7 +655,7 @@ export default {
     // research index, so the refusal now requires BOTH retrievers to come back
     // empty. Papers alone are a thinner answer and it says so, but refusing
     // while holding a relevant paper would be the box lying about its reach.
-    if ((!hits.length || best < SCORE_FLOOR) && !papers.length) {
+    if ((!hits.length || best < SCORE_FLOOR) && !papers.length && !facts.length) {
       ctx.waitUntil(log(false));
       const notCovered =
         "The World of AI does not cover that yet. The question has been recorded, and topics that come up repeatedly get researched and published.";
@@ -628,7 +700,12 @@ export default {
     const research = researchExcerpts.length
       ? `\n\nPapers from the research index (NOT pages on this site, cite by name and link, never reproduce an abstract):\n\n${researchExcerpts.join("\n\n")}`
       : "";
-    const userContent = `Excerpts from theworldofai.org:\n\n${excerpts}${research}\n\nQuestion: ${question}\n\nAnswer using only the excerpts above.`;
+    const dbFacts = facts.length
+      ? `Records from this site's database (live, authoritative; cite the page URL for the record and the source URL for each relationship):\n\n` +
+        facts.map((f) => `[DB] ${f.entity} (${f.kind}) - page ${f.url}\n  ${f.facts.join('\n  ')}` +
+          (f.edges.length ? `\n  Relationships:\n  - ${f.edges.join('\n  - ')}` : '')).join('\n\n') + `\n\n`
+      : '';
+    const userContent = `${dbFacts}Excerpts from theworldofai.org:\n\n${excerpts || '(no page excerpts matched)'}${research}\n\nQuestion: ${question}\n\nAnswer using only the records and excerpts above. A [DB] record is this site's own data and outranks a page excerpt where they differ.`;
 
     // Direct call to the Anthropic API. No Workers AI, no gateway, no partner
     // billing: just the key. Errors carry the HTTP status and the first slice
