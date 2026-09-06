@@ -68,11 +68,16 @@ const jsonld = JSON.stringify({
         <details class="ctx-sources">
           <summary>Sources for this section</summary>
           <ul>
-            {d.context_sources.map((s) => (
-              <li>{s.url
-                ? <a href={s.url} rel="noopener">{s.title || s.publisher || s.url}</a>
-                : (s.title || s.publisher)}{s.publisher && s.title ? ` · ${s.publisher}` : ''}{s.date ? ` · ${s.date}` : ''}</li>
-            ))}
+            {d.context_sources.map((s) => {
+              const label = s.title || s.publisher || s.url;
+              const tail = [s.title && s.publisher ? s.publisher : '', s.date || ''].filter(Boolean).join(' · ');
+              return (
+                <li>
+                  {s.url ? <a href={s.url} rel="noopener">{label}</a> : <span>{label}</span>}
+                  {tail ? <span class="ctx-tail"> · {tail}</span> : null}
+                </li>
+              );
+            })}
           </ul>
         </details>
       )}
