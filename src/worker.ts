@@ -302,7 +302,10 @@ export default {
         if (names.length) {
           const rows = await sql.unsafe(`
             WITH q AS (SELECT unnest($1::text[]) AS n)
-            SELECT 'person' AS kind, p.slug AS uid, p.data->>'name' AS name,
+            SELECT 'person' AS kind,
+                   COALESCE((SELECT e.uid FROM twoai_entities e WHERE e.kind='person'
+                             AND e.normalized = regexp_replace(regexp_replace(lower(p.data->>'name'), '[^a-z0-9]+', '-', 'g'), '^-|-$', '', 'g') LIMIT 1), p.slug) AS uid,
+                   p.data->>'name' AS name,
                    '/ai-ecosystem/ecosystem-entities-market-and-operations/' || p.slug || '/' AS url,
                    ARRAY[p.data->>'moniker', p.data->>'hook'] || ARRAY(SELECT jsonb_array_elements_text(p.data->'quick_facts')) AS facts
             FROM site_people p JOIN q ON lower(p.data->>'name') = q.n
@@ -329,7 +332,8 @@ export default {
                 SELECT g.label, g.other_kind, g.other_uid, g.confidence, g.evidence_url, g.evidence_title, g.evidence_quote,
                        COALESCE(p.data->>'name', c.name, o.name, f.name, e.name, g.other_uid) AS other_name
                 FROM twoai_graph g
-                LEFT JOIN site_people p ON g.other_kind='person' AND p.slug = g.other_uid
+                LEFT JOIN twoai_entities pe ON g.other_kind='person' AND pe.uid = g.other_uid
+                LEFT JOIN site_people p ON g.other_kind='person' AND regexp_replace(regexp_replace(lower(p.data->>'name'), '[^a-z0-9]+', '-', 'g'), '^-|-$', '', 'g') = pe.normalized
                 LEFT JOIN twoai_company_profiles c ON g.other_kind='company' AND c.uid = g.other_uid
                 LEFT JOIN twoai_dc_operators o ON g.other_kind='dc_operator' AND o.uid = g.other_uid
                 LEFT JOIN twoai_dc_facilities f ON g.other_kind='facility' AND f.id = g.other_uid
