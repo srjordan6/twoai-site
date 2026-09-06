@@ -21,6 +21,29 @@ export function storyUid(slug: string | undefined | null, given?: string | null)
 }
 
 /**
+ * THE INCIDENT UID.
+ *
+ * Same rule, different kind. An AI Incident Database record is an entity on
+ * this site and twoai_entities mints its uid as sha256("incident:" + the AIID
+ * incident number), truncated to 8. Stephen, 2026-09-06: no uids in the logged
+ * harms section. There were none anywhere - not on the briefing entries, not on
+ * the hub preview, and the incident permalink at /ai-news/incident/{id}/ had no
+ * stamp at all, so the one kind of record on this site that is a report of real
+ * harm was the one nobody could cite.
+ *
+ * NOT page_uid. The incident page document carries page_uid, which is minted
+ * from the document's path (page:news/incident-1650.json) and identifies the
+ * page, not the incident. The entity uid identifies the incident itself and is
+ * what the register, the graph and any citation should agree on. Where the two
+ * differ, this is the one to show.
+ */
+export function incidentUid(id: string | number | undefined | null, given?: string | null): string {
+  if (given) return given;
+  if (id === undefined || id === null || id === '') return '';
+  return createHash('sha256').update(`incident:${id}`).digest('hex').slice(0, 8);
+}
+
+/**
  * A summary that is a language model declining to write one is not a summary.
  * On 2026-09-06 the briefing published "I appreciate you sharing this, but I'm
  * unable to complete your request." as the summary of a story about New York

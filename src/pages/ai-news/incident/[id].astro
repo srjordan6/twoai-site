@@ -17,6 +17,7 @@
  * citable: /ai-news/incident/1661/ is incident 1661 forever.
  */
 import Base from '../../../layouts/Base.astro';
+import { incidentUid } from '../../../lib/storyUid';
 
 export function getStaticPaths() {
   const mods = import.meta.glob('../../../../content/news/incident-*.json', { eager: true });
@@ -32,6 +33,21 @@ const dates = reports.map((r) => r.published).filter(Boolean).sort();
 const first = dates[0];
 const last = dates[dates.length - 1];
 
+// THE STAMP. This page had none at all - no date, no time, no uid - so the one
+// kind of record on this site that is a report of real harm was the one nobody
+// could cite. Stephen, 2026-09-06.
+//
+// The uid shown is the INCIDENT's, sha256("incident:" + AIID number), which is
+// what twoai_entities registers. NOT inc.page_uid, which is minted from the
+// document path and identifies the page rather than the incident; the two are
+// different strings and only one of them means anything to the register or to
+// a reader citing the harm.
+const stampDoc = {
+  page_uid: incidentUid(inc.incident_id, inc.uid),
+  built_at: inc.built_at ?? inc.generated,
+  generated: inc.published ?? inc.generated,
+};
+
 const desc = `${inc.title}. A logged harm from a deployed AI system, catalogued by the AI Incident Database as incident ${inc.incident_id}, reported by ${inc.outlet_count || reports.length} ${(inc.outlet_count || reports.length) === 1 ? 'outlet' : 'outlets'}. What happened, what kind of failure it was, and what is not established.`;
 
 const jsonld = JSON.stringify({
@@ -46,7 +62,7 @@ const jsonld = JSON.stringify({
   citation: reports.map((r) => ({ '@type': 'CreativeWork', name: r.title, url: r.url })),
 });
 ---
-<Base title={`${inc.title} — logged harm — The World of AI`} description={desc.slice(0, 300)} current="/ai-news/" jsonld={jsonld}>
+<Base title={`${inc.title} — logged harm — The World of AI`} description={desc.slice(0, 300)} current="/ai-news/" jsonld={jsonld} doc={stampDoc} stampLabel="Incident recorded">
   <p class="meta-line"><a href="/ai-news/">AI News</a> ·
     <a href="/ai-news/daily/#incidents">When AI goes wrong</a></p>
   <h1>{inc.title}</h1>
@@ -57,7 +73,8 @@ const jsonld = JSON.stringify({
     {(inc.outlet_count || reports.length) === 1 ? ' outlet' : ' outlets'}
     {first && <> between {first} and {last}</>}. Listing an incident is a record that the harm
     was reported, not a finding of fault.</p>
-  <p class="meta-line">Last verified: <time datetime={inc.generated}>{inc.generated}</time></p>
+  <p class="meta-line">Last verified: <time datetime={inc.generated}>{inc.generated}</time>
+    {' '}&middot; <span class="uid" title="This incident's identifier on theworldofai.org">uid {incidentUid(inc.incident_id, inc.uid)}</span></p>
 
   {inc.summary && (
     <>

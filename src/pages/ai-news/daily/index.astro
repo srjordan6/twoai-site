@@ -18,7 +18,7 @@ import {
   type Story,
 } from '../../../lib/newsTopics';
 import { loadKnownEntities, resolveEntities, reportUnresolved } from '../../../lib/knownEntities';
-import { storyUid, cleanSummary } from '../../../lib/storyUid';
+import { storyUid, cleanSummary, incidentUid } from '../../../lib/storyUid';
 
 const mods = import.meta.glob('../../../../content/news/news.json', { eager: true });
 const news: any = Object.values(mods)[0]?.default ?? null;
@@ -41,7 +41,7 @@ const stories: Story[] = raw.map((s: any) => ({
   Articles: s.Articles ?? [],
 }));
 
-const incidents = news?.incidents ?? [];
+const incidents = (news?.incidents ?? []).map((i: any) => ({ ...i, uid: incidentUid(i.incident_id, i.uid) }));
 const grouped = groupByCategory(stories);
 // The logged-harms section is the second most interesting thing on this page
 // and it was rendering below every category, roughly two thirds down, where
@@ -291,6 +291,7 @@ const jsonld = JSON.stringify({
                 {inc.published && <> &middot; {inc.published}</>} &middot;
                 {' '}<a href={inc.cite_url} rel="noopener">AIID incident #{inc.incident_id}</a>
                 {inc.outlet_count > 1 && <> &middot; carried by {inc.outlet_count} outlets</>}
+                {' '}&middot; <span class="uid" title="This incident's identifier on theworldofai.org">uid {inc.uid}</span>
               </p>
               {inc.summary && (
                 <>

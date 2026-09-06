@@ -14,7 +14,7 @@
  */
 import Base from '../../layouts/Base.astro';
 import { categoryOf, type Story } from '../../lib/newsTopics';
-import { storyUid, cleanSummary } from '../../lib/storyUid';
+import { storyUid, cleanSummary, incidentUid } from '../../lib/storyUid';
 
 const newsMods = import.meta.glob('../../../content/news/news.json', { eager: true });
 const news: any = Object.values(newsMods)[0]?.default ?? null;
@@ -63,7 +63,7 @@ const widest = stories[0];
 // shipped, and this hub never mentioned it: the hub described itself as
 // "two sections" while the section it summarises had three. Stephen looked
 // for AIID here twice. Same news.json, same field the daily page reads.
-const incidents: any[] = news?.incidents ?? [];
+const incidents: any[] = (news?.incidents ?? []).map((i: any) => ({ ...i, uid: incidentUid(i.incident_id, i.uid) }));
 const top3Incidents = incidents.slice(0, 3);
 const incidentOutlets = new Set(incidents.map((i: any) => i.domain).filter(Boolean)).size;
 
@@ -257,7 +257,8 @@ const jsonld = JSON.stringify({
               <li>
                 <a href={`/ai-news/incident/${inc.incident_id}/`}>{inc.title}</a>
                 <span class="pmeta">{inc.domain}
-                  {inc.published && <> &middot; {inc.published}</>} &middot; AIID #{inc.incident_id}</span>
+                  {inc.published && <> &middot; {inc.published}</>} &middot; AIID #{inc.incident_id}
+                  &middot; <span class="uid" title="This incident's identifier on theworldofai.org">uid {inc.uid}</span></span>
               </li>
             ))}
           </ol>
