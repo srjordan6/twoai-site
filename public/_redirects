@@ -1,4 +1,4 @@
-﻿# Cloudflare Pages _redirects. First match wins.
+# Cloudflare Pages _redirects. First match wins.
 
 # The AI Ecosystem map is the home page, so /ai-ecosystem/ would be a second
 # copy of it. Redirect rather than publish the duplicate. The category pages
