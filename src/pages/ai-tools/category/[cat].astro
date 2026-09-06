@@ -44,7 +44,7 @@ const jsonld = JSON.stringify({
   {c.intro && (
     <section>
       <h2>What this category is</h2>
-      {String(c.intro).split(/\n{2,}/).map((para) => <p>{para}</p>)}
+      {String(c.intro).split(/\r?\n\r?\n+/).map((para) => <p>{para}</p>)}
       {Array.isArray(c.intro_sources) && c.intro_sources.length > 0 && (
         <p class="meta-line">Sources: {c.intro_sources.map((s, i) => (
           <span>{i > 0 ? ' · ' : ''}{s.url

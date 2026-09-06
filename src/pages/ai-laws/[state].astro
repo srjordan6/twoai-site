@@ -63,7 +63,11 @@ const jsonld = JSON.stringify({
       why a zero count is often a session calendar rather than an absence. */}
   {d.context && (
     <section class="state-context">
-      {String(d.context).split(/\n{2,}/).map((para) => <p>{para}</p>)}
+      {/* Split on blank lines. NOT /\n{2,}/ - Astro's compiler reads the
+         braces in {2,} as JSX delimiters and the build dies with
+         "Expected ) but found $$render". That broke every build from
+         2026-09-05 20:24 until this was found in the Cloudflare log. */}
+      {String(d.context).split(/\r?\n\r?\n+/).map((para) => <p>{para}</p>)}
       {Array.isArray(d.context_sources) && d.context_sources.length > 0 && (
         <details class="ctx-sources">
           <summary>Sources for this section</summary>
