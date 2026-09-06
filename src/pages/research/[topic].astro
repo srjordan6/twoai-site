@@ -60,6 +60,12 @@ const jsonld = JSON.stringify({
   <p class="meta-line"><a href="/research/">AI Research Library</a></p>
   <h1>{t.name}</h1>
   <p class="answer">{blurb}</p>
+  {/* A shelf with a small paper count reads as thin at the topic page's own
+      word count, even though the reader is one click from a full page. This
+      line only appears then, and it points at the reading a reader who wants
+      the shelf's premise, not the single paper, actually wants: what the
+      whole area of research is asking and why it matters. */}
+  {papers.length <= 3 && t.area_note && <p>{t.area_note}</p>}
   <p class="meta-line">
     <b>{papers.length}</b> paper{papers.length === 1 ? '' : 's'}
     {totalCites > 0 && <> · <b>{totalCites.toLocaleString()}</b> combined citations</>}
@@ -76,6 +82,15 @@ const jsonld = JSON.stringify({
             {typeof p.citations === 'number' && <> · <b>{p.citations.toLocaleString()} citations</b></>}
           </p>
           {p.note && <p class="note">{p.note}</p>}
+          {/* A shelf of one or two papers with only the one-line note left the
+              page thin even though a full three-level explanation already
+              exists on the paper itself - the beginner explanation is written
+              here too rather than making the reader click through for a
+              32-word page. Shelves with more papers stay a list; the point of
+              a big shelf is the index, not a wall of repeated prose. */}
+          {papers.length <= 3 && p.explain_beginner && (
+            <p class="shelf-explain">{p.explain_beginner}</p>
+          )}
           <p class="src-line">Read the <a href={p.url} rel="noopener">source paper</a> · <a href={`/research/paper/${p.uid}/`}>Read our summary</a></p>
         </li>
       ))}
@@ -95,6 +110,7 @@ const jsonld = JSON.stringify({
   .papers li { margin-bottom: 1.4em; }
   .papers li a { font-weight: 600; }
   .papers .note { margin: .35em 0 0; color: #4a4a55; font-size: .95rem; }
+  .papers .shelf-explain { margin: .6em 0 0; line-height: 1.6; }
   .papers .src-line { margin: .35em 0 0; color: #6b6b78; font-size: .85rem; }
   .cite-box { margin-top: 2em; padding: .9em 1em; background: #f6f6fa; border-radius: 8px;
     font-size: .9rem; color: #4a4a55; }

@@ -43,6 +43,26 @@ const jsonld = JSON.stringify({
     latency profile. Cable length, optics type and power draw per port are real constraints in a
     dense hall and are not modelled here.</p>
 
+  <h2>A worked example</h2>
+  <p>A 1,024-accelerator cluster with one 400 Gbps NIC per accelerator needs 1,024 host-facing
+    ports. At 32 host ports per leaf switch that is 32 leaf switches. Each leaf also carries 32
+    uplink ports at 400 Gbps, matching its 32 downlink ports at the same speed, which is what
+    1:1 oversubscription means: as much bandwidth going up to the spine as coming down from the
+    hosts. Thirty-two uplink ports per leaf means the fabric needs 32 spine switches for every
+    leaf to reach every spine once, and the aggregate leaf-to-spine bisection bandwidth is 32
+    leaves times 32 uplinks times 400 Gbps, or 409.6 Tbps, the ceiling on how fast the cluster
+    can complete an all-to-all exchange.</p>
+
+  <h2>Why oversubscription cannot be hidden in a training cluster</h2>
+  <p>An enterprise network absorbs 3:1 or 4:1 oversubscription because most traffic never uses
+    the uplink at the same moment other traffic does. A synchronised all-reduce breaks that
+    assumption entirely: every accelerator sends and receives at once, on a fixed schedule set
+    by the slowest participant, so a congested uplink does not merely add latency, it stalls the
+    entire training step until the last packet arrives. That is the reason AI fabrics are priced
+    and built to 1:1 while general-purpose data centre networks are not, and why the switch and
+    optics count this calculator produces, not the accelerator count, is often the harder
+    capacity constraint on a large training run.</p>
+
   <div class="cite-box">Cite this tool: <code>"AI Fabric Sizing Calculator." The World of AI,
     theworldofai.org/calculators/ai-fabric/.</code></div>
 

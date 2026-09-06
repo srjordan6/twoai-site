@@ -45,6 +45,28 @@ const jsonld = JSON.stringify({
     manufacturer discharge tables rather than in a formula like this. Ambient temperature is the
     other missing variable: VRLA life roughly halves for every 10°C above 25°C.</p>
 
+  <h2>A worked example</h2>
+  <p>A 500 kW critical load at 0.95 power factor needs a 526 kVA UPS. Ten minutes of runtime at
+    95 percent inverter efficiency means the battery must deliver about 87.7 kWh, and at 80
+    percent usable depth of discharge for lithium-ion, that requires 109.6 kWh of installed
+    capacity. Over a 15-year planning horizon a battery rated for roughly 12 years needs one
+    replacement; the same load on VRLA, usable to only 50 percent, needs 175.4 kWh installed for
+    the identical ten minutes, and at a 4-year life it is replaced three times over the same
+    15 years. The lithium-ion system installs about 60 percent more capacity in kWh terms once,
+    the VRLA system installs less capacity but buys it four times, and which one wins on total
+    cost depends on the price gap between the chemistries at the site's scale, not on the
+    installed-capacity number alone.</p>
+
+  <h2>Why runtime is a design choice, not a technical limit</h2>
+  <p>Ten minutes of battery runtime is not what a UPS is capable of, it is what the facility's
+    generator start and transfer sequence requires. A generator that reliably reaches rated load
+    within 30 to 60 seconds still needs the UPS to bridge that gap plus a margin for a failed
+    first start and an automatic transfer switch cycle, which is where the 5 to 10 minute range
+    common in data centre design comes from. A site with slower or less reliable generation, or
+    one running without generators at all as a bridge to grid restoration, sizes runtime
+    accordingly, and the batteries above are specified to that decision rather than to any
+    property of the chemistry itself.</p>
+
   <div class="cite-box">Cite this tool: <code>"UPS and Battery Runtime Calculator." The World of AI,
     theworldofai.org/calculators/ups-runtime/.</code></div>
 

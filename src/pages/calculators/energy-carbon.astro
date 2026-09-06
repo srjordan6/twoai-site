@@ -54,6 +54,28 @@ const jsonld = JSON.stringify({
   <p>Excluded: embodied carbon in manufacturing the hardware, networking and storage outside the
     GPU, and the water footprint of cooling. Each is a live research area and none is trivial.</p>
 
+  <h2>A worked example</h2>
+  <p>Training a model for 10,000 H100 hours at 700 watts a card, in a facility with a PUE of
+    1.2, draws 8,400 kWh. On the US average grid at about 369 grams of CO2e per kWh, that is
+    roughly 3,100 kg of CO2e, close to the emissions of driving a petrol car for 7,750 miles.
+    The same run on a hydro or nuclear-heavy grid at 30 grams per kWh falls to about 250 kg,
+    a twelvefold difference for identical compute, which is why the grid selection matters more
+    than any other input here. At $0.08 per kWh the electricity itself costs about $672,
+    a small fraction of the GPU rental cost for the same hours but not a rounding error at
+    scale: a lab running this workload continuously for a year would spend roughly $58,900
+    on power for one card's worth of continuous use, before PUE, cooling maintenance or the
+    demand charges many large sites pay separately from the energy rate.</p>
+
+  <h2>Why PUE and grid intensity move the answer more than GPU choice</h2>
+  <p>Swapping an H100 for a B200-class accelerator changes the wattage input by less than 50
+    percent, and the higher-power part typically does more work per hour, so throughput-adjusted
+    energy often improves even as board power rises. Grid intensity varies by more than tenfold
+    between the presets above, and PUE varies by nearly twofold between a modern hyperscale hall
+    and an older enterprise room. A reader trying to estimate or reduce a training run's carbon
+    footprint gets more leverage from choosing where and when to run it than from choosing which
+    accelerator to run it on, which is the opposite of where most public discussion of AI energy
+    use puts its attention.</p>
+
   <div class="cite-box">Cite this tool: <code>"AI Energy and Carbon Estimator." The World of AI,
     theworldofai.org/calculators/energy-carbon/.</code></div>
 
