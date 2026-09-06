@@ -44,6 +44,22 @@ export type Story = {
 // buckets come before the broader ones.
 const CATEGORIES: { name: string; slug: string; blurb: string; patterns: string[] }[] = [
   {
+    // First, because it is the most specific and because Policy's old
+    // `centre\S*` pattern was catching the "centre" in "data centre": on
+    // 2026-09-06 a 1 GW Hyderabad campus announcement filed under Policy &
+    // Regulation. Stories about where compute gets built, who powers it,
+    // and what it costs belong with the facility registry they feed.
+    name: 'Data Centres & Infrastructure',
+    slug: 'datacenters',
+    blurb: 'Campuses, capacity, power, cooling, siting, and the operators building them.',
+    patterns: [
+      String.raw`data.cent(er|re)s?`, 'hyperscale', String.raw`hyperscalers?`, 'colocation',
+      String.raw`gigawatts?`, String.raw`megawatts?`, String.raw`\d+\s?gw`, String.raw`\d+\s?mw`,
+      String.raw`substations?`, 'interconnection', String.raw`fuel cells?`, 'liquid cooling',
+      'moratorium', 'rezoning', String.raw`server farms?`, 'campus',
+    ],
+  },
+  {
     name: 'Policy & Regulation',
     slug: 'policy',
     blurb: 'Legislation, regulators, enforcement, and government AI programmes.',
@@ -52,7 +68,7 @@ const CATEGORIES: { name: string; slug: string; blurb: string; patterns: string[
       'lawsuit', 'court', 'ruling', 'antitrust', 'ftc', 'doj', String.raw`polic(y|ies)`,
       'ban', 'bill', 'compliance', String.raw`govern\w*`, 'privacy', 'white house',
       'executive order', String.raw`sanction\w*`, String.raw`tariff\w*`, 'export control',
-      'beijing', 'minister', String.raw`centre\S*`,
+      'beijing', 'minister',
     ],
   },
   {
