@@ -17,6 +17,7 @@ import { matchTerms, companyFor } from '../../lib/related';
 import { categoryOf, categoriesOf, coverageByDay, readingMinutes, titleCase, type Story } from '../../lib/newsTopics';
 
 import { loadKnownEntities, resolveEntities } from '../../lib/knownEntities';
+import { storyUid, cleanSummary } from '../../lib/storyUid';
 export async function getStaticPaths() {
   const mods = import.meta.glob('../../../content/news/news.json', { eager: true });
   const news: any = Object.values(mods)[0]?.default ?? null;
@@ -32,7 +33,8 @@ export async function getStaticPaths() {
   for (const s of news?.stories ?? []) {
     if (!s.Slug || seen.has(s.Slug)) continue;
     seen.add(s.Slug);
-    out.push({ params: { story: s.Slug }, props: { s, date: news.date, generated: news.generated } });
+    // news.json carries no uid; the archive does. Same slug, same uid either way.
+    out.push({ params: { story: s.Slug }, props: { s: { ...s, uid: storyUid(s.Slug, s.uid) }, date: news.date, generated: news.generated } });
   }
   for (const raw of archive?.stories ?? []) {
     // The enactment trigger writes archive rows with lowercase keys (slug,
@@ -53,6 +55,7 @@ export async function getStaticPaths() {
     };
     if (!s.Slug || seen.has(s.Slug)) continue;
     seen.add(s.Slug);
+    s.uid = storyUid(s.Slug, s.uid);
     out.push({
       params: { story: s.Slug },
       // An archived story dates itself from the day it ran, not from the day
@@ -71,6 +74,7 @@ const { s, date, generated } = Astro.props;
 // refuses to publish such a payload, but this guard stays.
 const story: Story = {
   ...s,
+  Summary: cleanSummary(s.Summary),
   Orgs: s.Orgs ?? [],
   Persons: s.Persons ?? [],
   Domains: s.Domains ?? [],
@@ -84,7 +88,7 @@ const story: Story = {
 // The uid is minted by the pipeline from the story slug, so it is stable for
 // the life of the permalink. Stephen, 2026-09-06.
 const stampDoc = {
-  page_uid: (s as any).uid,
+  page_uid: storyUid(s.Slug, (s as any).uid),
   built_at: generated,
   generated: date,
 };

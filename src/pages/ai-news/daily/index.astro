@@ -18,6 +18,7 @@ import {
   type Story,
 } from '../../../lib/newsTopics';
 import { loadKnownEntities, resolveEntities, reportUnresolved } from '../../../lib/knownEntities';
+import { storyUid, cleanSummary } from '../../../lib/storyUid';
 
 const mods = import.meta.glob('../../../../content/news/news.json', { eager: true });
 const news: any = Object.values(mods)[0]?.default ?? null;
@@ -26,8 +27,14 @@ const big = news?.big_picture ?? [];
 
 // Go marshals a nil slice to JSON null. The pipeline validates against that,
 // but the guard stays: templates should not assume their only writer.
+// Every story is an entity and carries its uid wherever it appears, with the
+// date it ran. news.json has no uid; the same slug yields the same uid the
+// archive stage mints. A summary that is a model declining to write one is
+// dropped, not printed. Stephen, 2026-09-06.
 const stories: Story[] = raw.map((s: any) => ({
   ...s,
+  uid: storyUid(s.Slug, s.uid),
+  Summary: cleanSummary(s.Summary),
   Domains: s.Domains ?? [],
   Orgs: s.Orgs ?? [],
   Persons: s.Persons ?? [],
@@ -202,7 +209,7 @@ const jsonld = JSON.stringify({
           {top5.map((s) => (
             <li>
               <a href={`/ai-news/${s.Slug}/`}>{s.Headline}</a>
-              <span class="t5meta">{categoryOf(s).name} · <strong>{s.DomainCount}</strong> outlets</span>
+              <span class="t5meta">{categoryOf(s).name} · <strong>{s.DomainCount}</strong> outlets · {news.date} · <span class="uid" title="This story's identifier on theworldofai.org">uid {(s as any).uid}</span></span>
             </li>
           ))}
         </ol>
@@ -231,6 +238,7 @@ const jsonld = JSON.stringify({
                 <span class="num"><strong>{s.DomainCount}</strong> outlets</span>
                 <span class="num"><strong>{s.ArticleCount}</strong> articles</span>
                 <span class="num"><strong>{s.Orgs.length + s.Persons.length}</strong> entities</span>
+                <span class="num stamp">{news.date} · <span class="uid" title="This story's identifier on theworldofai.org">uid {(s as any).uid}</span></span>
               </div>
               <a class="more" href={`/ai-news/${s.Slug}/`}>Full coverage and sources &rarr;</a>
             </article>
@@ -256,6 +264,7 @@ const jsonld = JSON.stringify({
                 <span class="num"><strong>{s.DomainCount}</strong> outlets</span>
                 <span class="num"><strong>{s.ArticleCount}</strong> articles</span>
                 <span class="num"><strong>{s.Orgs.length + s.Persons.length}</strong> entities</span>
+                <span class="num stamp">{news.date} · <span class="uid" title="This story's identifier on theworldofai.org">uid {(s as any).uid}</span></span>
               </div>
               <a class="more" href={`/ai-news/${s.Slug}/`}>Full coverage and sources &rarr;</a>
             </article>

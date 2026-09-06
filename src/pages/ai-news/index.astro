@@ -14,11 +14,17 @@
  */
 import Base from '../../layouts/Base.astro';
 import { categoryOf, type Story } from '../../lib/newsTopics';
+import { storyUid, cleanSummary } from '../../lib/storyUid';
 
 const newsMods = import.meta.glob('../../../content/news/news.json', { eager: true });
 const news: any = Object.values(newsMods)[0]?.default ?? null;
+// Every story is an entity with its own uid, and every place a story appears
+// shows its date and its uid. news.json carries neither the uid nor a clean
+// summary guarantee; see lib/storyUid.ts. Stephen, 2026-09-06.
 const stories: Story[] = (news?.stories ?? []).map((s: any) => ({
   ...s,
+  uid: storyUid(s.Slug, s.uid),
+  Summary: cleanSummary(s.Summary),
   Domains: s.Domains ?? [],
   Orgs: s.Orgs ?? [],
   Persons: s.Persons ?? [],
@@ -43,6 +49,7 @@ const firstSentence = (t: string) => {
 };
 const digest = stories.map((s: any) => ({
   slug: s.Slug,
+  uid: s.uid,
   headline: s.Headline,
   line: firstSentence(s.Summary),
   outlets: s.DomainCount,
@@ -163,7 +170,8 @@ const jsonld = JSON.stringify({
         {digest.map((d) => (
           <li>
             <a href={`/ai-news/${d.slug}/`}>{d.headline}</a>
-            <span class="pmeta">{d.category} &middot; {d.outlets} {d.outlets === 1 ? 'outlet' : 'outlets'}</span>
+            <span class="pmeta">{d.category} &middot; {d.outlets} {d.outlets === 1 ? 'outlet' : 'outlets'}
+              &middot; {news.date} &middot; <span class="uid" title="This story's identifier on theworldofai.org">uid {d.uid}</span></span>
             {d.line && <p>{d.line}</p>}
           </li>
         ))}
@@ -187,7 +195,7 @@ const jsonld = JSON.stringify({
           {top3.map((s) => (
             <li>
               <a href={`/ai-news/${s.Slug}/`}>{s.Headline}</a>
-              <span class="pmeta">{categoryOf(s).name} · {s.DomainCount} outlets</span>
+              <span class="pmeta">{categoryOf(s).name} · {s.DomainCount} outlets · {news.date} · <span class="uid" title="This story's identifier on theworldofai.org">uid {(s as any).uid}</span></span>
             </li>
           ))}
         </ol>
