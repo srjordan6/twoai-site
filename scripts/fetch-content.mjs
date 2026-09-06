@@ -77,6 +77,13 @@ function fromR2() {
   // reports a different hash then the build did not ship, whatever the clock
   // says. Written into the built output so it deploys with the site.
   mkdirSync('public/api', { recursive: true });
+  // The commit too. A pipeline build can be proved by the bundle hash; a git
+  // push cannot, because the bundle does not change. On 2026-09-06 seven
+  // consecutive builds failed from 14:32 to 21:02 and the only way anyone knew
+  // was reading the Cloudflare dashboard. Workers Builds sets these in the
+  // build environment; with the commit published, the buildwatch stage can
+  // compare the live site against origin/main and alert when a push has not
+  // shipped, whoever pushed it and whatever broke.
   writeFileSync('public/api/build.json', JSON.stringify({
     bundle: m.bundle,
     sha256: m.sha256,
@@ -84,6 +91,9 @@ function fromR2() {
     files_declared: m.files,
     files_copied: n,
     built_at: new Date().toISOString(),
+    commit: process.env.WORKERS_CI_COMMIT_SHA || null,
+    branch: process.env.WORKERS_CI_BRANCH || null,
+    build_uuid: process.env.WORKERS_CI_BUILD_UUID || null,
   }, null, 2));
 
   if (n === 0) throw new Error('R2 bundle contained no content directories');
