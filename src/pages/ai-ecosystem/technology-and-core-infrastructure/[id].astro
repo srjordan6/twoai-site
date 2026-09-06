@@ -1050,7 +1050,15 @@ const facBare = sec.shape === 'dc-facility' && !(
             </section>
           )}
 
-          {facHasSources && (
+          {/* The gate and the dereference must test the same thing. facHasSources is
+              true when the facility has ANY published figure - a capacity, a square
+              footage, a named source URL - because that is what the basis line needs
+              to know. It does NOT promise that profile.sources exists, and on the first
+              facility that had a capacity but no source rows (041b48ae, 2026-09-06)
+              this section reached into an undefined array and killed the whole build:
+              six consecutive Cloudflare builds failed and nothing shipped for six
+              hours. The section now gates on the rows it actually renders. */}
+          {Array.isArray(sec.profile?.sources) && sec.profile.sources.some((sr) => sr && (sr.title || sr.url)) && (
             <section>
               <h2>Sources</h2>
               <ul class="sources">
