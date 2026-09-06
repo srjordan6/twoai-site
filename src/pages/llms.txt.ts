@@ -74,9 +74,11 @@ const text = `# The World of AI
 > Services LLC, Frisco, Texas.
 
 Every reference page carries a visible date stamp (generated, last verified, or
-last reviewed) and a ready-made citation. Citing these pages with attribution
-is welcome and encouraged. Counts in this file are computed from the same data
-that built the pages, in the build dated ${generated}.
+last reviewed) and a ready-made citation, and every entity on the site carries a
+stable eight-character identifier that appears in its URL and in the API files.
+Citing these pages with attribution is welcome and encouraged. Counts in this
+file are computed from the same data that built the pages, in the build dated
+${generated}.
 
 ## Sections
 - [AI Laws by State](https://theworldofai.org/ai-laws/): every tracked AI bill
@@ -89,7 +91,13 @@ that built the pages, in the build dated ${generated}.
 - [AI Compliance Frameworks](https://theworldofai.org/ai-compliance/): ${fmt(compCount)}
   framework pages covering the EU AI Act, NIST AI RMF, ISO/IEC 42001, sector
   regulators, and agency enforcement, each with scope, obligations, deadlines,
-  and what changed most recently.
+  and what changed most recently. Includes
+  [Data Centre Siting, Power and Local Regulation](https://theworldofai.org/ai-compliance/datacenter-siting-and-power/):
+  the five regimes that decide where AI compute may be built and who pays for
+  its power - state siting boards, municipal zoning, utility commissions,
+  environmental permitting, and infrastructure thresholds - with the ordinance,
+  docket or statute behind each, and a daily watch of new moratoria, rezonings
+  and rate rulings from the news intake.
 - [AI Tools Directory](https://theworldofai.org/ai-tools/): profiles covering
   pricing, strengths, weaknesses, and governance notes for the tools we have
   researched directly.
@@ -156,12 +164,19 @@ that built the pages, in the build dated ${generated}.
   and colocation operators read from SEC filings, material facility 8-Ks, ${fmt(dcMetrics)}
   operations and market metrics defined, and a directory of grid queues, market
   researchers, and standards bodies. Under it sits a facility registry: a
-  directory per US state and per harvested country, and a page for every
-  facility whose operator publishes specifications, carrying the IT megawatts,
-  technical floor area and compliance certifications the operator states, with
-  the source page and the date it was read. Crowd-mapped locations come from
-  OpenStreetMap contributors under ODbL and are labelled as such; operator
-  figures are labelled as the operator's own.` : ''}
+  directory per US state and per harvested country, a page for every
+  facility whose operator publishes specifications, and a page for every
+  campus announced in the news - operator, place, stated capacity, acreage and
+  investment, exactly as the report states them and marked as announced, not
+  operating. Facility pages carry the IT megawatts, utility service, standby
+  and on-site generation, technical floor area and certifications the
+  operator states, kept as four distinct power figures because directories
+  routinely confuse them; and where a municipality has published a record of
+  its own - a siting decision, an air-dispersion study, an abatement agreement,
+  a zoning prohibition - that record appears on the facility's page with its
+  source. Crowd-mapped locations come from OpenStreetMap contributors under
+  ODbL and are labelled as such; operator figures are labelled as the
+  operator's own.` : ''}
 - [Sources and References](https://theworldofai.org/sources/): the primary
   sources behind every fact on the site, across EU and Council of Europe, US
   federal, US state and city, other jurisdictions, standards bodies and SROs,
@@ -207,11 +222,21 @@ that built the pages, in the build dated ${generated}.
   Face catalog movement, provider API uptime from public status feeds,
   funding activity from SEC Form D filings, USPTO patent filings, and
   security incidents from provider status feeds. Daily snapshots accumulate.
-- Entity Graph (same category): the site's own knowledge graph, roughly
-  7,000 nodes across sixteen entity types (companies, people, models, papers,
-  lawsuits, MCP servers, patents, filings, benchmarks, and more) and 3,100
-  relationships across eleven edge types, each edge carrying the method that
-  produced it. Rendered as two sections and exposed for machine reading.
+- Entity Graph (same category): the site's own knowledge graph. Every entity
+  of every kind - person, company, data-centre operator, facility, model,
+  tool, lawsuit, paper, place, government, story - carries one stable
+  identifier minted by this site; external identifiers (Wikidata, ORCID,
+  OpenStreetMap, DOI, SEC CIK, court docket) are attached to it, never the
+  other way round. Relationships between entities are drawn from a fixed
+  vocabulary of twenty types (executive of, subsidiary of, operates, signed
+  with, regulated by, defendant in, author of, invested in, makes, and so on)
+  and every relationship carries the URL that states it, the sentence quoted
+  from that source, the date, and a confidence: primary for the entity's own
+  page or a filing, stated for reporting, candidate until a second
+  independent source carries the same claim. Edges extracted from news are
+  admitted only when the supporting sentence is verified verbatim against the
+  article; a relationship without evidence does not exist here. Rendered as
+  two sections and exposed for machine reading.
 - Cloud GPU and Compute Telemetry and Acquisitions (under AI Companies):
   quarterly capital expenditure for the seven largest AI infrastructure
   spenders drawn from SEC XBRL company facts, and 8-K acquisition filings
@@ -229,12 +254,19 @@ that built the pages, in the build dated ${generated}.
 
 ## Ask this site
 Every page carries an ask box backed by POST https://theworldofai.org/api/ask
-(JSON body: {"question": "..."}). It answers only from this site's own pages
-using retrieval over the daily index, cites the pages it drew from, and
-refuses questions the site does not cover rather than guessing. Rate limits:
-10 questions per minute per IP and a global daily ceiling; over either limit
-it declines quietly. Answers are generated, so treat the cited pages as the
-authoritative record.
+(JSON body: {"question": "..."}). It answers in this order: first from the
+site's own database, live - any person, company, operator or facility named in
+the question is looked up directly, with its relationships from the knowledge
+graph and the source for each; then from the site's pages by retrieval over the
+daily index; then from the research index of academic papers by full-text
+search. When none of those hold an answer it consults free structured sources -
+Wikidata first, then Hugging Face for models and OpenAlex for authors - records
+what it found for review, and only then, within a small daily budget, searches
+the web. It cites every page and source it drew from and says plainly when the
+site does not cover something rather than guessing. Rate limits: 10 questions
+per minute per IP and a global daily ceiling; over either limit it declines
+quietly. Answers are generated, so treat the cited pages as the authoritative
+record.
 
 ## Machine-readable data
 - https://theworldofai.org/api/laws.json (per-state counts and index)
@@ -266,24 +298,31 @@ authoritative record.
 ## Update cadence
 The main pipeline runs every three hours; the "generated" or "last verified"
 date on each page and in each API file is the verification date. A second,
-separate run at 05:10 UTC reads publishers' own pages to fill facility
+separate run once a day reads publishers' own pages to fill facility
 specifications and company details, and audits every page on this site for
-thin content and every internal link for dead targets. Benchmark results
-refresh from structured official sources and fail closed to the last verified
-snapshot rather than publishing an unverified number. The arXiv watch and
-vendor news sections use a rolling 30-day window.
+thin content and every outbound link for dead targets. The news intake feeds
+the registries as well as the briefing: an announced data centre becomes a
+facility record the day it is reported, a moratorium or rezoning reaches the
+siting page the same day, and every story is read for the relationships it
+states. Benchmark results refresh from structured official sources and fail
+closed to the last verified snapshot rather than publishing an unverified
+number. The arXiv watch and vendor news sections use a rolling 30-day window.
 
 ## Editorial policy
 Every fact on this site traces to a primary source cataloged on the
 [Sources and References](https://theworldofai.org/sources/) page. Where a
 claim cannot be sourced, it is not published. Vendor announcements are
 labelled as the vendor's own claims, not verified facts. Preprints are
-labelled as not peer reviewed. Every outbound source URL on curated pages
+labelled as not peer reviewed. Municipal records - a city's own FAQ, a
+commissioned study, an ordinance - are treated as primary sources for the
+facilities they concern, and operator projections relayed by a city are
+recorded as projections. Every outbound source URL on curated pages
 is verified live before publication and re-verified on each daily run; a
 source that stops resolving is marked stale on the page rather than removed
-silently. Computed figures (counts, censuses, live statistics) are verified
-against production data before they ship. Corrections are welcomed at
-info@srjconsultingservices.com.
+silently. Nothing is deleted: a superseded fact or a duplicate record is
+marked and kept, and a published page is never removed. Computed figures
+(counts, censuses, live statistics) are verified against production data
+before they ship. Corrections are welcomed at info@srjconsultingservices.com.
 
 ## Citation format
 "{Page title}." The World of AI, {URL}. Verified {date}.
