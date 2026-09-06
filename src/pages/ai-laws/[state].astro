@@ -48,7 +48,7 @@ const jsonld = JSON.stringify({
   ],
 });
 ---
-<Base title={`${d.name} AI Laws (${d.count} bills tracked) — The World of AI`} description={desc} current="/ai-laws/" jsonld={jsonld}>
+<Base title={`${d.name} AI Laws (${d.count} bills tracked) — The World of AI`} description={desc} current="/ai-laws/" jsonld={jsonld} doc={d} stampLabel="Bill list last refreshed">
   <h1>{d.name} AI Laws</h1>
   <p class="answer"><b>{d.name} has {d.count} artificial intelligence bill{d.count === 1 ? '' : 's'}</b> tracked
     as of {d.generated}, drawn daily from the LegiScan legislative database. Every bill below

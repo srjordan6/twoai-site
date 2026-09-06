@@ -77,6 +77,18 @@ const story: Story = {
   Articles: s.Articles ?? [],
 };
 
+// The stamp reads built_at and generated; a story carries its own dates under
+// different names because a permalink must date itself from the day the story
+// ran, not from whenever the archive was last rebuilt. Mapped here rather than
+// renaming the story fields, which are consumed in a dozen other places.
+// The uid is minted by the pipeline from the story slug, so it is stable for
+// the life of the permalink. Stephen, 2026-09-06.
+const stampDoc = {
+  page_uid: (s as any).uid,
+  built_at: generated,
+  generated: date,
+};
+
 const cat = categoryOf(story);
 const cats = categoriesOf(story);
 // Onward links: terms this story actually names, and the company pages for any
@@ -157,7 +169,7 @@ const jsonld = JSON.stringify({
   ],
 });
 ---
-<Base title={`${title} | AI News`} description={description} current="/ai-news/" jsonld={jsonld} ogType="article">
+<Base title={`${title} | AI News`} description={description} current="/ai-news/" jsonld={jsonld} ogType="article" doc={stampDoc} stampLabel="Story first published">
   <p class="meta-line"><a href="/ai-news/">AI News</a> · <a href="/ai-news/daily/">Daily News</a></p>
   <h1>{story.Headline}</h1>
   <p class="dateline">

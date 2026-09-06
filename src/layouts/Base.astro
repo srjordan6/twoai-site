@@ -13,13 +13,14 @@ import Footer from '../components/Footer.astro';
 import AmazonShelf from '../components/AmazonShelf.astro';
 import PillarBox from '../components/PillarBox.astro';
 import Topbar from '../components/Topbar.astro';
+import DataStamp from '../components/DataStamp.astro';
 
-interface Props { title: string; description: string; current?: string; jsonld?: string; canonicalOverride?: string; noindex?: boolean; ogType?: string; rail?: boolean; titleTail?: string; }
+interface Props { title: string; description: string; current?: string; jsonld?: string; canonicalOverride?: string; noindex?: boolean; ogType?: string; rail?: boolean; titleTail?: string; doc?: Record<string, any>; stampLabel?: string; }
 /* rail=false drops the section-index card and lets the content run full width.
    The home page opts out: it IS the ecosystem map, so a card listing the same
    five categories beside it is the page repeating itself in miniature, and it
    pushed the hero, the ask box and everything below off centre. */
-const { title, description, current = '', jsonld, canonicalOverride, noindex = false, ogType = 'website', rail = true, titleTail } = Astro.props;
+const { title, description, current = '', jsonld, canonicalOverride, noindex = false, ogType = 'website', rail = true, titleTail, doc, stampLabel } = Astro.props;
 const nav = [
   { href: '/ai-ecosystem/technology-and-core-infrastructure/', label: 'Technology & Infrastructure', short: 'Technology' },
   { href: '/ai-ecosystem/ecosystem-entities-market-and-operations/', label: 'Market & Entities', short: 'Market' },
@@ -419,7 +420,18 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
         <slot name="rail" />
       </div>
     )}
-    <div class="main-col"><slot /></div>
+    <div class="main-col">
+      <slot />
+      {/* EVERY PAGE CARRIES A DATE, A TIME AND A UID. Stephen's standing rule
+          of 2026-09-06. Rendering it here rather than in each of the 65 page
+          templates is the only way it stays true: a convention repeated 65
+          times drifts, and before today only three of 4,928 pages carried a
+          time. A page passes its document as `doc` and the stamp appears at
+          the foot of the content; a page that has not been wired yet simply
+          shows nothing here, so this can be adopted template by template
+          without a flag day. */}
+      {doc && <DataStamp doc={doc} label={stampLabel ?? 'Generated'} />}
+    </div>
   </main>
 
   <AmazonShelf />

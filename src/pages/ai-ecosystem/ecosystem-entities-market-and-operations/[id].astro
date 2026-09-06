@@ -334,6 +334,8 @@ const jsonld = JSON.stringify(
 ---
 <Base title={title}
   description={desc} current={`${BASE}/`} jsonld={jsonld}
+  doc={legacyPerson || pcat || hub || company || chub || obs || jhub || csec || cpat || cpriv || corg || cfund || cma}
+  stampLabel="Last verified"
   canonicalOverride={company ? `https://theworldofai.org/companies/${company.uid}/` : undefined}>
   {/* EVERY COMPANY WAS PUBLISHED AT TWO SELF-CANONICAL URLS. This route builds a
       company page under the ecosystem path and src/pages/companies/[id].astro

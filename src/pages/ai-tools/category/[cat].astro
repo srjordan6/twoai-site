@@ -30,7 +30,7 @@ const jsonld = JSON.stringify({
   dateModified: c.generated,
 });
 ---
-<Base title={`${c.name}: ${c.tools.length} AI tools compared`} description={desc} current="/ai-tools/" jsonld={jsonld}>
+<Base title={`${c.name}: ${c.tools.length} AI tools compared`} description={desc} current="/ai-tools/" jsonld={jsonld} doc={c} stampLabel="Category last verified">
   <h1>{c.name}</h1>
   <p class="answer">This category tracks <b>{c.tools.length} AI tools</b> in {c.name.toLowerCase()}.
     Each entry names the vendor and what the tool actually does. Where we have researched a tool

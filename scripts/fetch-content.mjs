@@ -62,6 +62,30 @@ function fromR2() {
   execSync('rm -rf /tmp/twoai-r2 && mkdir -p /tmp/twoai-r2 && tar -xzf /tmp/twoai-bundle.tar.gz -C /tmp/twoai-r2', { stdio: 'inherit' });
   const n = copyDirs('/tmp/twoai-r2');
   console.log(`fetch-content: R2 bundle ${m.bundle}, ${m.files} files declared, ${n} copied, generated ${m.generated}`);
+
+  // WHAT THIS BUILD WAS BUILT FROM, published so the pipeline can check it.
+  // Before 2026-09-06 the deploy verifier compared the site's "generated"
+  // DATE against today and called that verified. On 2026-09-05 the pipeline
+  // moved to Stephen's PC and started running on Central time, so at 21:32
+  // Central its today was still the 5th - which the stale site already
+  // reported. Five consecutive builds failed while the verifier said
+  // "verified live" every time, and the site served a build twelve hours old
+  // with every stage reporting success.
+  //
+  // A date cannot prove a build. This can: the sha256 is unique to one
+  // publish, the pipeline knows the one it just wrote, and if the live site
+  // reports a different hash then the build did not ship, whatever the clock
+  // says. Written into the built output so it deploys with the site.
+  mkdirSync('public/api', { recursive: true });
+  writeFileSync('public/api/build.json', JSON.stringify({
+    bundle: m.bundle,
+    sha256: m.sha256,
+    bundle_generated: m.generated,
+    files_declared: m.files,
+    files_copied: n,
+    built_at: new Date().toISOString(),
+  }, null, 2));
+
   if (n === 0) throw new Error('R2 bundle contained no content directories');
   // A shortfall means the bundle holds a directory this script does not know
   // about, which is how the company directory published to R2 and then never

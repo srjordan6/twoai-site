@@ -1,0 +1,97 @@
+---
+/**
+ * DataStamp - the date, the time and the uid, on every page.
+ *
+ * Stephen's standing rule of 2026-09-06: wherever a piece of data appears on
+ * this site, a reader can see when it was made and which record it is. Before
+ * today 2,872 page documents carried no identifier at all and only three of
+ * 4,928 carried a time; the pipeline's shared upsert and a database trigger
+ * now stamp built_at, generated and page_uid on every write, and this
+ * component is the single place that renders them.
+ *
+ * WHY A COMPONENT RATHER THAN A LINE IN EACH TEMPLATE. There are 65 page
+ * kinds. A convention repeated 65 times drifts - three of them would show the
+ * date in a different format, one would forget the uid, and nobody would
+ * notice for a month. One component means the stamp is identical everywhere
+ * and changing it is one edit.
+ *
+ * The uid is shown, not hidden in a tooltip or a data attribute, because it
+ * is the thing a reader cites and a machine keys on. The <time> element
+ * carries the machine-readable timestamp; the visible text is the plain date,
+ * with the exact build time available on hover for anyone who needs it.
+ */
+interface Props {
+  /** The page document. Any object carrying page_uid, built_at, generated. */
+  doc?: Record<string, any>;
+  /** Overrides, for pages that assemble their own values. */
+  uid?: string;
+  builtAt?: string;
+  generated?: string;
+  /** What the date means on this page: generated, verified, reviewed. */
+  label?: string;
+  /** A source line to carry alongside, where the page has one. */
+  source?: string;
+  sourceUrl?: string;
+}
+const { doc = {}, uid, builtAt, generated, label = 'Generated', source, sourceUrl } = Astro.props;
+
+const theUid = uid ?? doc.page_uid ?? doc.uid ?? '';
+const theBuilt = builtAt ?? doc.built_at ?? '';
+const theDate = generated ?? doc.generated ?? doc.refreshed ?? (theBuilt ? theBuilt.slice(0, 10) : '');
+
+// The exact time, in the reader's own reading of it: the stamp is written
+// with its offset, so showing the clock time alongside the date is honest
+// without pretending to know the reader's timezone.
+const clock = theBuilt && theBuilt.length >= 19 ? theBuilt.slice(11, 16) : '';
+---
+{(theDate || theUid) && (
+  <p class="datastamp">
+    {theDate && (
+      <>
+        {label}:{' '}
+        <time datetime={theBuilt || theDate} title={theBuilt || undefined}>
+          {theDate}{clock && <span class="ds-clock"> at {clock}</span>}
+        </time>
+      </>
+    )}
+    {theUid && (
+      <>
+        {theDate && <span class="ds-sep"> · </span>}
+        <span class="ds-uid" title="This page's identifier on theworldofai.org">
+          uid <code>{theUid}</code>
+        </span>
+      </>
+    )}
+    {source && (
+      <>
+        <span class="ds-sep"> · </span>
+        Source:{' '}
+        {sourceUrl ? <a href={sourceUrl} rel="noopener">{source}</a> : source}
+      </>
+    )}
+  </p>
+)}
+
+<style>
+  .datastamp {
+    color: var(--gray, #7A8A9E);
+    font-size: 13.5px;
+    margin: 0 0 18px;
+    line-height: 1.6;
+  }
+  .datastamp time { color: inherit; }
+  .ds-clock { opacity: .8; }
+  .ds-sep { opacity: .55; }
+  .ds-uid code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12.5px;
+    background: #f4f4f8;
+    border: 1px solid #e6e6ee;
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: #4a4a55;
+  }
+  @media (max-width: 520px) {
+    .datastamp { font-size: 13px; }
+  }
+</style>

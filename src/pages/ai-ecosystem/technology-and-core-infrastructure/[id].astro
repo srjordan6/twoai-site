@@ -303,7 +303,7 @@ const facBare = sec.shape === 'dc-facility' && !(
 );
 ---
 <Base title={`${pageTitle} — The World of AI`} description={desc.slice(0, 300)}
-  current={`${BASE}/`} jsonld={jsonld} noindex={facBare}>
+  current={`${BASE}/`} jsonld={jsonld} noindex={facBare} doc={sec} stampLabel="Last verified">
   {isVibe && (
     <>
       {sec.blocks.map((b: any) => (
