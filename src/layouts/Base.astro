@@ -674,15 +674,27 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
        below make it good at. Restoring a scroller means wrapping the table in
        its own element, never breaking the table box to get one.
 
-       overflow-wrap:anywhere also comes off the first column, where it broke
-       "2002" into "20 / 02": anywhere lets the browser treat a four-digit year
-       as having a min-content width of one character, so auto layout gave the
-       year column almost no room and then shredded the year to fit it. A year,
-       a date or a short code must never wrap mid-token. Same fault as the
-       operator tables in a7eef39, in a second place. */
+       overflow-wrap:anywhere also has to go. It let the browser treat "2002" as
+       having a min-content width of one character, so auto layout handed the
+       year column almost no room and then shredded the year to fit what it had
+       given: "20 / 02". The same thing broke a facility count into "24 / 8" on
+       the operators table, in the SECOND column, which is why this is fixed for
+       every cell rather than for the first one.
+
+       break-word is the right value and anywhere is not. Both break a word that
+       cannot fit, but only anywhere shrinks the column's min-content width to a
+       single character first, which is what invites the shredding. With
+       break-word a column is sized as though its words were unbreakable, so
+       "2002" and "248" keep their natural width, and a genuinely unbreakable
+       string - a long URL - still breaks rather than overflowing.
+
+       No white-space:nowrap anywhere here. An earlier version of this fix put
+       nowrap on the first column to protect years, which would have forced
+       "Amazon Web Services" onto one line and made the operators table wider
+       than the page. Sizing is the fix; pinning is not. Same fault as the
+       operator tables in a7eef39, in a second and third place. */
     .main-col table { display: table; width: 100%; max-width: 100%; }
     th, td { overflow-wrap: break-word; }
-    th:first-child, td:first-child { overflow-wrap: normal; white-space: nowrap; }
     table { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 15px; }
     th { text-align: left; background: var(--navy); color: #fff; padding: 9px 12px;
       font-weight: 600; font-size: 13.5px; }
