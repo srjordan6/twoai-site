@@ -75,7 +75,12 @@ const text = `# The World of AI
 
 Every reference page carries a visible date stamp (generated, last verified, or
 last reviewed) and a ready-made citation, and every entity on the site carries a
-stable eight-character identifier that appears in its URL and in the API files.
+stable eight-character identifier. That identifier is printed on the page and
+carried in the API files, and it is the URL wherever the URL is uid-addressed
+(people, companies, data-centre facilities and operators, models, tools). Where
+a URL is addressed by a more citable public key instead - a news story by its
+slug, an AI Incident Database entry by its AIID number - the uid is on the page
+and in the register rather than in the address.
 Citing these pages with attribution is welcome and encouraged. Counts in this
 file are computed from the same data that built the pages, in the build dated
 ${generated}.
@@ -150,6 +155,11 @@ ${generated}.
   https://theworldofai.org/ai-news/incident/{AIID incident number}/ carrying an
   account written here from the reporting, every outlet that covered it, and
   what the incident shows, with the publishers' links at the foot of the page.
+  Every story and every incident is a registered entity: each carries its own
+  eight-character uid, printed on the story or incident page beside the date it
+  ran and repeated in the daily briefing, the hub and the archive, so a
+  particular day's coverage of a particular story can be cited unambiguously
+  even though the URL is addressed by slug or by AIID number.
 - [AI Prompts](https://theworldofai.org/ai-prompts/): prompting techniques and
   domain prompt guides.
 - [AI Talent Network](https://theworldofai.org/talent/): profiles of
