@@ -654,12 +654,15 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
        exactly that on 2026-08-31, with the rail card sitting on top of the
        description text.
 
-       Two rules stop it without touching a single page. Cells are allowed to
+       Two rules stopped it without touching a single page. Cells are allowed to
        break inside a long word, so a package id or a domain cannot force the
-       table wide on its own. And any table that is still too wide gets its own
-       horizontal scroller, which is what .tbl-scroll does where it was applied
-       by hand; wrapping the table in its own block-level scroll container gives
-       every table that behaviour whether the page remembered or not. */
+       table wide on its own. The second rule gave every table its own
+       horizontal scroller by setting display:block on it, and that is the rule
+       the block below had to undo: it bought the scroller by destroying the
+       table box, which is too high a price. A table that is too wide now wraps.
+       .tbl-scroll still exists for pages that wrap a table by hand, and that
+       remains the correct way to get a scroller - a wrapper around the table,
+       never a change to the table itself. */
     /* A TABLE MUST STAY ONE TABLE. The rule above set display:block on the
        table, which stops it being a table box at all: thead and tbody then take
        display:table each and become two INDEPENDENT tables that size their
