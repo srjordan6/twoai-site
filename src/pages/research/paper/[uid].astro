@@ -109,20 +109,35 @@ const jsonld = JSON.stringify({
     </tbody>
   </table>
 
-  <h2>Abstract</h2>
-  {abstract ? (
+  {/* THE ABSTRACT HEADING ONLY EXISTS WHEN THERE IS AN ABSTRACT.
+
+      The 2026-08-29 fix removed the placeholder sentences from this page but
+      left this heading unconditional, so 129 of 135 papers still published a
+      section called Abstract whose entire content was a link out to the
+      publisher. That is the same fault one field further in: a labelled empty
+      section is a promise the page does not keep, and it is what an AdSense
+      reviewer sampling the research library sees 129 times in a row.
+
+      The source link is not part of the abstract and does not belong under
+      that heading when there is nothing to attribute. It moves to the foot of
+      the page, where a paper page should point at the publisher anyway.
+
+      Verified before this change rather than assumed: 129 of 135 rows in
+      twoai_research_papers still have an empty abstract, all 135 are in the
+      live sitemap, and the three sampled pages returned 200 and indexable at
+      649 to 802 words. They index because the explanations DID get written -
+      the thin test asks for any block, and the explanations satisfy it - so
+      the containment is working as designed and only the empty heading is
+      wrong. */}
+  {abstract && (
     <>
+      <h2>Abstract</h2>
       <p class="abstract">{abstract}</p>
       <p class="attribution">
         Read the <a href={p.url} rel="noopener">source paper</a> at the
         original publisher.
       </p>
     </>
-  ) : (
-    <p class="attribution">
-      Read the <a href={p.url} rel="noopener">source paper</a> at the
-      original publisher.
-    </p>
   )}
 
   {anyExplain && (
@@ -164,6 +179,18 @@ const jsonld = JSON.stringify({
   <div class="cite-box">
     Cite this paper on The World of AI: <code>{authors || 'Author(s)'}{p.year ? `. (${p.year}).` : '.'} {p.title}.{p.journal ? ` ${p.journal}` : ''}{p.volume ? `, ${p.volume}` : ''}.{p.doi ? ` https://doi.org/${p.doi}` : ''} Cataloged at theworldofai.org/research/paper/{p.uid}/.{p.generated ? ` Verified ${p.generated}.` : ''}</code>
   </div>
+
+  {/* The source link, for a paper with no abstract to carry it. A paper page
+      must always point at the publisher: the DOI row does it when there is a
+      DOI, but 129 papers have no abstract and not all of them have a DOI
+      either, so removing the empty Abstract block above would otherwise take
+      the only outbound link with it. Rendered only when the abstract block
+      did not already render it, so no page shows it twice. */}
+  {!abstract && p.url && (
+    <p class="meta-line">
+      Read the <a href={p.url} rel="noopener">source paper</a> at the original publisher.
+    </p>
+  )}
 
   <p class="meta-line">
     Every source cited on this site is indexed on our <a href="/sources/">Sources page</a>.
