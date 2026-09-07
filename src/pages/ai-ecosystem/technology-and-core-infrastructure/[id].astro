@@ -787,16 +787,47 @@ const facBare = sec.shape === 'dc-facility' && !(
       )}
       {sec.shape === 'dc-facility' && (
         <>
+          {/* THE LEDE RUNS FULL WIDTH, THE BOX STARTS BELOW IT. Stephen,
+              2026-09-06: the box to the right and lower - the cream answer
+              block beside it is too narrow.
+
+              A right float squeezes every block that follows it in source
+              order, and the fact box used to come first, so the one-sentence
+              lede that says where the figures came from was reading at about
+              two thirds width beside a 300px box. Source order is the whole
+              control here: the answer and the meta line are emitted first and
+              take the full measure, and the float begins underneath them, so
+              it now wraps the body sections rather than the page's opening
+              sentence.
+
+              Fifth placement, and the reasoning for the previous four is kept
+              below because each was a real attempt: level with the lede, then
+              beside the title, then below the meta line, then top-right of the
+              content. This one differs in kind - it is not about where the box
+              sits but about what it is allowed to narrow. */}
+          {/* Most OpenStreetMap rows carry no operator tag, so neither the
+              lead sentence nor the meta line may assume one: an early version
+              of this published "published by  on its own facility page" on
+              every unattributed facility. The publisher recorded with the
+              source is the fallback, and where even that is absent the clause
+              is dropped rather than left hanging. */}
+          <p class="answer"><b>{facLede}</b><Fragment set:html={facRest} /> {facBasis}, read on
+            {' '}{sec.profile?.source?.retrieved || sec.generated}.</p>
+          <p class="meta-line">Last verified: {sec.generated}
+            {sec.operator && <> · Operator: {sec.operator}</>} ·
+            {sec.state_page?.uid && <> Directory:
+            {' '}<a href={`${BASE}/${sec.state_page.uid}/`}>data centers in {sec.state || sec.country}</a> ·</>}
+            {(sec.profile?.source?.page || sec.website) && <>
+            {' '}Source: <a href={sec.profile?.source?.page || sec.website} rel="noopener" target="_blank">
+            {facPublisher || sec.operator || 'operator'}</a>.</>}</p>
+
           {/* THE FACT BOX. Stephen, 2026-09-03: every data-centre page carries
               a box on the right with address, phone, operator, space, power,
-              density and distance to the nearest airport. Placed at the top of the facility
-              body, floated right, so the title spans the full width and the
-              lede, the meta line and everything below wrap to its left. This
-              is the fourth placement: level with the lede, then beside the
-              title, then below the meta line, and now here - the box belongs
-              at the top right of the page's content, not partway down it. Every line is either
-              a published figure with its source on this page, or "not
-              published" - the box never estimates. The airport distance is
+              density and distance to the nearest airport. Floated right,
+              starting below the lede, so the title and the opening sentence
+              span the full width and the body sections wrap to its left. Every
+              line is either a published figure with its source on this page, or
+              "not published" - the box never estimates. The airport distance is
               computed from two public coordinates; the operator link goes to
               the operator's own page on this site. */}
           {(() => {
@@ -850,21 +881,6 @@ const facBare = sec.shape === 'dc-facility' && !(
               </aside>
             );
           })()}
-          {/* Most OpenStreetMap rows carry no operator tag, so neither the
-              lead sentence nor the meta line may assume one: an early version
-              of this published "published by  on its own facility page" on
-              every unattributed facility. The publisher recorded with the
-              source is the fallback, and where even that is absent the clause
-              is dropped rather than left hanging. */}
-          <p class="answer"><b>{facLede}</b><Fragment set:html={facRest} /> {facBasis}, read on
-            {' '}{sec.profile?.source?.retrieved || sec.generated}.</p>
-          <p class="meta-line">Last verified: {sec.generated}
-            {sec.operator && <> · Operator: {sec.operator}</>} ·
-            {sec.state_page?.uid && <> Directory:
-            {' '}<a href={`${BASE}/${sec.state_page.uid}/`}>data centers in {sec.state || sec.country}</a> ·</>}
-            {(sec.profile?.source?.page || sec.website) && <>
-            {' '}Source: <a href={sec.profile?.source?.page || sec.website} rel="noopener" target="_blank">
-            {facPublisher || sec.operator || 'operator'}</a>.</>}</p>
 
           {Array.isArray(sec.profile?.address) && sec.profile.address.length > 0 && (
             <section>
