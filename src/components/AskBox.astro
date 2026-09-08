@@ -46,9 +46,21 @@ const {
       if (!q || !go || !out) return;
       var busy = false;
       function esc(s) {
-        return String(s).replace(/[&<>"]/g, function (c) {
-          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+        return String(s).replace(/[&<>"']/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
         });
+      }
+      // A URL THAT ARRIVES FROM OUTSIDE IS NOT A URL UNTIL IT IS CHECKED.
+      // Escaping makes a string safe as TEXT; it does nothing about the scheme
+      // of a link. "javascript:alert(1)" survives esc() unchanged and runs on
+      // click. Everything below that reaches an href comes from Wikidata, a
+      // third-party lookup tier, or an open-web search result, so only http
+      // and https are allowed through and anything else renders as inert text.
+      // Relative paths are allowed because our own source links are relative.
+      function safeUrl(u) {
+        var s = String(u == null ? '' : u).trim();
+        if (/^\//.test(s) && !/^\/\//.test(s)) return esc(s);
+        return /^https?:\/\//i.test(s) ? esc(s) : '';
       }
       // The model answers in Markdown. Until now the answer was escaped and
       // then only split on blank lines, so every "#" and "**" printed as a
@@ -141,23 +153,38 @@ const {
               'Not verified or published by us. '
           });
           structured.forEach(function (s) {
+            // EVERY VALUE HERE IS ESCAPED. These blocks render Wikidata and
+            // third-party lookup data, and Wikidata is editable by anyone on
+            // the internet: a label, a description or a fact value containing
+            // an <img onerror> would have executed in the reader's browser.
+            // The sources and papers lists below always escaped; these two
+            // did not, which is the whole bug - sanitisation applied in some
+            // branches and not others is the same as none.
             var rows = s.facts.map(function (f) {
-              return '<tr><th>' + f.label + '</th><td>' + f.value + '</td></tr>';
+              return '<tr><th>' + esc(f.label) + '</th><td>' + esc(f.value) + '</td></tr>';
             }).join('');
-            html += '<div class="ask-wd"><p class="ask-wd-label">' + s.label + '</p>' +
-              '<p class="ask-wd-title">' + s.title +
-              (s.description ? ' \u2014 ' + s.description : '') + '</p>' +
+            var href = safeUrl(s.url);
+            html += '<div class="ask-wd"><p class="ask-wd-label">' + esc(s.label) + '</p>' +
+              '<p class="ask-wd-title">' + esc(s.title) +
+              (s.description ? ' \u2014 ' + esc(s.description) : '') + '</p>' +
               '<table class="ask-wd-facts">' + rows + '</table>' +
-              '<p class="ask-wd-note">' + s.note +
-              '<a href="' + s.url + '" rel="nofollow noopener" target="_blank">' +
-              s.linkText + '</a></p></div>';
+              '<p class="ask-wd-note">' + esc(s.note) +
+              (href
+                ? '<a href="' + href + '" rel="nofollow noopener" target="_blank">' + esc(s.linkText) + '</a>'
+                : esc(s.linkText)) +
+              '</p></div>';
           });
           if (d.web) {
             var wsrc = '';
             if (d.webSources && d.webSources.length) {
               wsrc = '<ul class="ask-web-src">' + d.webSources.map(function (s) {
-                return '<li><a href="' + s.url + '" rel="nofollow noopener" target="_blank">' +
-                  (s.title || s.url) + '</a></li>';
+                // Open-web results: the least trusted input on the page, and
+                // it was going into an href unchecked.
+                var u = safeUrl(s.url);
+                var label = esc(s.title || s.url);
+                return '<li>' + (u
+                  ? '<a href="' + u + '" rel="nofollow noopener" target="_blank">' + label + '</a>'
+                  : label) + '</li>';
               }).join('') + '</ul>';
             }
             var wnote = 'We have not verified or published this. Your question was recorded; topics asked often get researched and added.';
@@ -181,7 +208,7 @@ const {
           if (d.sources && d.sources.length) {
             html += '<p class="ask-src-label">Sources on this site</p><ul class="ask-src">';
             for (var i = 0; i < d.sources.length; i++) {
-              html += '<li><a href="' + esc(d.sources[i].url) + '">' + esc(d.sources[i].title) + '</a></li>';
+              html += '<li><a href="' + safeUrl(d.sources[i].url) + '">' + esc(d.sources[i].title) + '</a></li>';
             }
             html += '</ul>';
           }
@@ -192,7 +219,7 @@ const {
             html += '<p class="ask-src-label">Research papers (not pages on this site)</p><ul class="ask-src">';
             for (var j = 0; j < d.papers.length; j++) {
               var pp = d.papers[j];
-              html += '<li><a href="' + esc(pp.url) + '" rel="nofollow noopener">' + esc(pp.title) + '</a>' +
+              html += '<li><a href="' + safeUrl(pp.url) + '" rel="nofollow noopener">' + esc(pp.title) + '</a>' +
                 (pp.year ? ' <span class="ask-src-meta">' + esc(pp.year) + '</span>' : '') + '</li>';
             }
             html += '</ul>';
