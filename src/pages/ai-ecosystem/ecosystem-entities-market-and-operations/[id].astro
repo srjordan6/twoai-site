@@ -215,6 +215,26 @@ if (chub) {
 }
 const letters = Object.keys(grouped).sort((a, b) => (a === '#' ? 1 : b === '#' ? -1 : a.localeCompare(b)));
 
+// A to Z on the Public AI Companies section. Stephen, 2026-09-08: an alpha
+// index at the top of the page. This list is about to grow from 38 to every
+// constituent of the eight tracked AI funds - several hundred names - and a
+// list that long is not read, it is scrolled. Same sticky azbar the people hub
+// uses, grouped on the first letter of the company name, with anything not
+// A-Z under # so nothing is silently dropped.
+const secAz = csec
+  ? (() => {
+      const g = {};
+      for (const c of csec.companies) {
+        const ch = (c.name || '').trim().charAt(0).toUpperCase();
+        const key = /[A-Z]/.test(ch) ? ch : '#';
+        (g[key] ||= []).push(c);
+      }
+      return Object.keys(g)
+        .sort((a, b) => (a === '#' ? 1 : b === '#' ? -1 : a.localeCompare(b)))
+        .map((letter) => ({ letter, companies: g[letter].sort((a, b) => a.name.localeCompare(b.name)) }));
+    })()
+  : [];
+
 // Jobs hub: group listings by category for the three sections, newest first
 // (they arrive pre-sorted from SQL). Market blocks are optional: a missing
 // feed renders nothing rather than an empty panel.
@@ -891,17 +911,27 @@ const jsonld = JSON.stringify(
         registrant name; parent-company mappings (Google to Alphabet, AWS to Amazon.com) are
         individually verified, never fuzzy-matched. Companies not listed here are not SEC
         registrants, which for a US company generally means privately held.</p>
-      {csec.companies.map((c) => (
-        <div class="dom">
-          <h3><a href={`${BASE}/${c.uid}/`}>{c.name}</a>
-            <span class="n">{c.ticker}{c.exchange && ` · ${c.exchange}`}</span></h3>
-          <p class="meta-line">{c.registrant && c.registrant.toLowerCase() !== c.name.toLowerCase()
-            && <>Registrant: {c.registrant} · </>}{c.industry && <>{c.industry} · </>}CIK {c.cik}</p>
-          {Array.isArray(c.sec) && c.sec.length > 0 && (
-            <p class="filings">{c.sec.map((f, i) => (
-              <>{i > 0 && ' · '}<a href={f.URL || f.url} rel="noopener">{f.Form || f.form} {f.Date || f.date}</a></>
-            ))}</p>
-          )}
+      {secAz.length > 0 && (
+        <nav class="azbar" aria-label="Jump to a letter">
+          {secAz.map((g) => <a href={`#az-${g.letter === '#' ? 'other' : g.letter}`}>{g.letter}</a>)}
+        </nav>
+      )}
+      {secAz.map((g) => (
+        <div class="azgroup" id={`az-${g.letter === '#' ? 'other' : g.letter}`}>
+          <h2>{g.letter} <span class="azn">{g.companies.length}</span></h2>
+          {g.companies.map((c) => (
+            <div class="dom">
+              <h3><a href={`${BASE}/${c.uid}/`}>{c.name}</a>
+                <span class="n">{c.ticker}{c.exchange && ` · ${c.exchange}`}</span></h3>
+              <p class="meta-line">{c.registrant && c.registrant.toLowerCase() !== c.name.toLowerCase()
+                && <>Registrant: {c.registrant} · </>}{c.industry && <>{c.industry} · </>}CIK {c.cik}</p>
+              {Array.isArray(c.sec) && c.sec.length > 0 && (
+                <p class="filings">{c.sec.map((f, i) => (
+                  <>{i > 0 && ' · '}<a href={f.URL || f.url} rel="noopener">{f.Form || f.form} {f.Date || f.date}</a></>
+                ))}</p>
+              )}
+            </div>
+          ))}
         </div>
       ))}
       <Reading reading={csec.reading} heading="What does the public-company set show?" />
