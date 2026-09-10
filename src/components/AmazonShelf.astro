@@ -32,6 +32,16 @@ const COVERS = [
   // audit's does not.
   ['implementation', '/covers/it-security-implementation.jpg', 512],
   ['security audit', '/covers/it-security-audit.jpg', 500],
+  // Volume VII, added 2026-09-08. It was on the shelf already - press_books
+  // carried it, so the caption and the Amazon link rendered - but with no
+  // entry here coverFor returned null and the slot showed a bare title over
+  // empty space, which is what Stephen saw. That degradation is deliberate
+  // and it worked: a book without art still links, it just looks unfinished.
+  //
+  // 'secure by design' rather than 'secure': the narrower phrase cannot
+  // collide with a future title that merely contains the word, which is the
+  // ordering rule this list is built on.
+  ['secure by design', '/covers/secure-by-design.jpg', 512],
 ];
 function coverFor(title) {
   const t = (title || '').toLowerCase();
