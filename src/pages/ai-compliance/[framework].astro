@@ -23,7 +23,9 @@ export function getStaticPaths() {
   // until the prose is updated and someone clears it. Absent file means no
   // reviews, not an error.
   const reviewsPath = 'content/compliance/page-reviews.json';
-  const reviews = existsSync(reviewsPath) ? (JSON.parse(readFileSync(reviewsPath, 'utf8')).reviews || {}) : {};
+  const reviewsDoc = existsSync(reviewsPath) ? JSON.parse(readFileSync(reviewsPath, 'utf8')) : {};
+  const reviews = reviewsDoc.reviews || {};
+  const reviewed = reviewsDoc.reviewed || {};
   const titles = {};
   const docs = [];
   for (const f of files) {
@@ -37,9 +39,9 @@ export function getStaticPaths() {
     titles[d.slug] = d.title;
     docs.push(d);
   }
-  return docs.map((d) => ({ params: { framework: d.slug }, props: { d, titles, reviews: reviews[d.slug] || [] } }));
+  return docs.map((d) => ({ params: { framework: d.slug }, props: { d, titles, reviews: reviews[d.slug] || [], reviewedOn: reviewed[d.slug] || null } }));
 }
-const { d, titles, reviews } = Astro.props;
+const { d, titles, reviews, reviewedOn } = Astro.props;
 const desc = (d.meta_description || d.short || d.subtitle || d.title).slice(0, 300);
 const steps = d.howto?.steps || [];
 const cites = d.citations || [];
@@ -71,7 +73,18 @@ const jsonld = JSON.stringify({
   <h1>{d.title}</h1>
   {d.subtitle && <p class="lede">{d.subtitle}</p>}
   {d.short && <p class="answer">{d.short}</p>}
-  {d.generated && <p class="meta-line">Last verified: <time datetime={d.generated}>{d.generated}</time></p>}
+  {/* TWO DATES, HONESTLY LABELLED. generated is the build date and moves
+      every run; on its own it read "Last verified: today" over guidance
+      nobody had touched in weeks. reviewedOn is site_content.updated_at,
+      the date a person last changed the words. A reader deciding whether to
+      trust this page needs the second one. */}
+  {(reviewedOn || d.generated) && (
+    <p class="meta-line">
+      {reviewedOn && <>Guidance last updated: <time datetime={reviewedOn}>{reviewedOn}</time></>}
+      {reviewedOn && d.generated && <> · </>}
+      {d.generated && <>Page built: <time datetime={d.generated}>{d.generated}</time></>}
+    </p>
+  )}
 
   {/* THE GUIDANCE IS BEHIND THE LAW, AND THE PAGE SAYS SO.
 
