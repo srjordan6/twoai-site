@@ -17,7 +17,13 @@ export function getStaticPaths() {
   // not a framework page and has no slug field - excluding it by name here
   // rather than renaming it keeps the digest's own frontend read
   // (ai-compliance/index.astro) working off the same simple path.
-  const files = readdirSync('content/compliance').filter((f) => f.endsWith('.json') && f !== 'index.json' && f !== 'what-changed.json');
+  const files = readdirSync('content/compliance').filter((f) => f.endsWith('.json') && f !== 'index.json' && f !== 'what-changed.json' && f !== 'page-reviews.json');
+  // Open review items per page, written by the pipeline's enactment trigger.
+  // A governor-stage bill event opens one against the state's page; it stays
+  // until the prose is updated and someone clears it. Absent file means no
+  // reviews, not an error.
+  const reviewsPath = 'content/compliance/page-reviews.json';
+  const reviews = existsSync(reviewsPath) ? (JSON.parse(readFileSync(reviewsPath, 'utf8')).reviews || {}) : {};
   const titles = {};
   const docs = [];
   for (const f of files) {
@@ -31,9 +37,9 @@ export function getStaticPaths() {
     titles[d.slug] = d.title;
     docs.push(d);
   }
-  return docs.map((d) => ({ params: { framework: d.slug }, props: { d, titles } }));
+  return docs.map((d) => ({ params: { framework: d.slug }, props: { d, titles, reviews: reviews[d.slug] || [] } }));
 }
-const { d, titles } = Astro.props;
+const { d, titles, reviews } = Astro.props;
 const desc = (d.meta_description || d.short || d.subtitle || d.title).slice(0, 300);
 const steps = d.howto?.steps || [];
 const cites = d.citations || [];
@@ -66,6 +72,38 @@ const jsonld = JSON.stringify({
   {d.subtitle && <p class="lede">{d.subtitle}</p>}
   {d.short && <p class="answer">{d.short}</p>}
   {d.generated && <p class="meta-line">Last verified: <time datetime={d.generated}>{d.generated}</time></p>}
+
+  {/* THE GUIDANCE IS BEHIND THE LAW, AND THE PAGE SAYS SO.
+
+      Stephen, 2026-09-10: intelligence from the news must feed AI governance
+      automatically, not sit in a link. California signed SB 813 and AB 1405
+      on 09-09, the first state AI auditing regime; the pipeline had the bill
+      record hours later and this page kept describing California law as it
+      stood before either bill existed, because nothing connected a bill
+      event to the page it changes.
+
+      Now it does. The enactment trigger opens a review item against the
+      state's compliance page when a bill is presented to, signed by or vetoed
+      by the governor, and this block renders it until the prose is updated
+      and the item cleared. It is not a rewrite - a model is not allowed to
+      change legal guidance on its own - it is the honest state: a reader can
+      see the guidance predates the law, with the primary source to hand,
+      rather than trusting a page that looks current and is not. */}
+  {reviews.length > 0 && (
+    <aside class="law-review" aria-label="Legislative changes since this page was reviewed">
+      <p class="law-review-label">Changed since this guidance was reviewed</p>
+      <ul>
+        {reviews.map((r) => (
+          <li>
+            <strong>{r.ref}</strong> — {r.summary}
+            {r.source_url && <> <a href={r.source_url} rel="noopener" target="_blank">Legislative record</a>.</>}
+            <span class="n"> Detected {r.opened_on}.</span>
+          </li>
+        ))}
+      </ul>
+      <p class="law-review-foot">Detected automatically from the legislative record. The guidance on this page has not yet been reviewed against the enacted text.</p>
+    </aside>
+  )}
 
   {/* AN UNCLOSED ANCHOR MUST NOT REPAINT THE PAGE. A single missing </a> in
       the stored HTML left the anchor open for the rest of the document, and
@@ -169,4 +207,14 @@ const jsonld = JSON.stringify({
   .siting-watch .sw-meta { display: block; font-size: 12.5px; color: #7A8A9E; margin-top: 2px; text-transform: capitalize; }
   .cites { font-size: .92rem; }
   .cites li { margin-bottom: .35em; }
+  /* The review flag. Cream ground and an orange rule so it reads as a notice
+     the way the answer box does, not as an error and not as decoration. It
+     sits above the body because a reader should know the guidance is behind
+     before reading it, not after. */
+  .law-review { margin: 1.2em 0 1.6em; padding: 14px 18px; background: #fff7ec; border-left: 4px solid var(--orange); }
+  .law-review-label { margin: 0 0 .5em; font: 600 12px/1.3 Poppins, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--navy); }
+  .law-review ul { list-style: none; margin: 0; padding: 0; }
+  .law-review li { margin: 0 0 .6em; font-size: .95rem; }
+  .law-review .n { color: #7A8A9E; font-size: 12.5px; }
+  .law-review-foot { margin: .6em 0 0; font-size: 12.5px; color: #5d6470; }
 </style>
