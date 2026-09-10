@@ -1255,8 +1255,19 @@ const jsonld = JSON.stringify(
 
           Splitting on blank lines lets a section say as much as it needs to in
           readable paragraphs, and a one-line blurb still renders as one line,
-          so nothing else on the site changes. */}
-      {corg.blurb && corg.blurb.split(/\n{2,}/).map((para: string) => <p>{para.trim()}</p>)}
+          so nothing else on the site changes.
+
+          The split pattern deliberately contains NO BRACE. Writing the
+          quantifier form of "two or more newlines" is the obvious way to do
+          this and it broke the build: Astro's compiler reads the opening
+          brace of that quantifier as the start of a JSX expression and fails
+          with "Expected closing brace but found dot", pointing at a column
+          with a misleading hint about browser APIs. Backslash-n backslash-s
+          star backslash-n says the same thing with no brace anywhere - and
+          this comment avoids one too, because a brace inside a JSX comment
+          sits inside the same expression container and can confuse the same
+          parser. */}
+      {corg.blurb && corg.blurb.split(/\n\s*\n/).map((para: string) => <p>{para.trim()}</p>)}
       <p class="meta-line">Last verified: {corg.generated} · This list is curated and grows as
         classifications are verified; a missing organisation is an editorial gap, not a
         judgement — <a href="/contact/">tell us</a>.</p>
