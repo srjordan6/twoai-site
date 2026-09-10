@@ -1243,8 +1243,20 @@ const jsonld = JSON.stringify(
       <h1>{corg.name}</h1>
       <p class="answer"><b>{corg.total} {corg.total === 1 ? 'organisation' : 'organisations'}</b>,
         each individually verified against its own published materials — nothing here is
-        classified by inference. {corg.blurb} Corporate research divisions (FAIR, DeepMind,
-        Microsoft Research) live on their parent company's page rather than here.</p>
+        classified by inference. Corporate research divisions (FAIR, DeepMind, Microsoft
+        Research) live on their parent company's page rather than here.</p>
+      {/* THE BLURB IS ITS OWN PARAGRAPHS, NOT A TAIL ON THE ANSWER.
+
+          It used to be interpolated inside the answer sentence, which was fine
+          while every blurb was one line. Research Labs then grew a 1,986
+          character blurb against roughly 100 for its three siblings, and the
+          whole thing rendered as a single wall - Stephen, 2026-09-10: no more
+          than four or five sentences per paragraph.
+
+          Splitting on blank lines lets a section say as much as it needs to in
+          readable paragraphs, and a one-line blurb still renders as one line,
+          so nothing else on the site changes. */}
+      {corg.blurb && corg.blurb.split(/\n{2,}/).map((para: string) => <p>{para.trim()}</p>)}
       <p class="meta-line">Last verified: {corg.generated} · This list is curated and grows as
         classifications are verified; a missing organisation is an editorial gap, not a
         judgement — <a href="/contact/">tell us</a>.</p>
