@@ -100,11 +100,20 @@ export function getStaticPaths() {
   if (existsSync('content/jobs/index.json')) {
     const jidx = JSON.parse(readFileSync('content/jobs/index.json', 'utf8'));
     if (jidx.uid) paths.push({ params: { id: jidx.uid }, props: { jhub: jidx } });
+    // One page per discipline, written by the pipeline from 2026-09-10 as
+    // jobs/discipline-{slug}.json. Absent before the pipeline's next run, in
+    // which case the hub still renders its inline groups from the old bundle
+    // - see the jobGroups branch - so neither deploy order breaks a link.
+    for (const f of readdirSync('content/jobs')) {
+      if (!f.startsWith('discipline-') || !f.endsWith('.json')) continue;
+      const d = JSON.parse(readFileSync(`content/jobs/${f}`, 'utf8'));
+      if (d.uid) paths.push({ params: { id: d.uid }, props: { jdisc: d, jhubUid: jidx.uid } });
+    }
   }
 
   return paths;
 }
-const { hub, hubUid, chub, company, generated, chubUid, jhub, pcat, csec, cpat, cpriv, corg, cfund, obs, cma, website, profileText, companyReading, legacyPerson } = Astro.props;
+const { hub, hubUid, chub, company, generated, chubUid, jhub, jdisc, jhubUid, pcat, csec, cpat, cpriv, corg, cfund, obs, cma, website, profileText, companyReading, legacyPerson } = Astro.props;
 // MCP servers we are willing to say this company published. Exact namespace
 // match only; see src/lib/mcpAttribution.ts for why a substring test is not
 // safe here.
@@ -165,6 +174,8 @@ const desc = clampDesc(cma
   ? `${pcat.name} in the AI People Directory: ${pcat.total} profiled ${pcat.total === 1 ? 'person' : 'people'}, each with a timeline, achievements, and sources. ${pcat.blurb || ''}`.trim().slice(0, 300)
   : jhub
   ? `${jhub.total} open AI and computer-security jobs, refreshed daily from USAJobs, company career boards, and free job feeds, with market data on AI hiring share. Every listing links to the original posting.`
+  : jdisc
+  ? `${jdisc.count} open ${jdisc.name} ${jdisc.count === 1 ? 'role' : 'roles'} in AI and computer security, refreshed daily from USAJobs, company career boards, and free job feeds. Every listing links to the original posting.`
   : hub
   ? `Profiles of ${hub.total} people shaping artificial intelligence: researchers, founders, executives, and policymakers, each with a timeline, achievements, and sources.`
   : chub
@@ -192,6 +203,8 @@ const title = cma
   ? `${pcat.name} — AI People Directory`
   : jhub
   ? 'AI Jobs and Market Dynamics — The World of AI'
+  : jdisc
+  ? `${jdisc.name} Jobs — The World of AI`
   : hub
   ? 'AI People Directory — The World of AI'
   : chub
@@ -331,6 +344,16 @@ const jsonld = JSON.stringify(
         url: `https://theworldofai.org${BASE}/${jhub.uid}/`,
         dateModified: jhub.generated,
       }
+    : jdisc
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: `${jdisc.name} Jobs`,
+        description: desc,
+        url: `https://theworldofai.org${BASE}/${jdisc.uid}/`,
+        dateModified: jdisc.generated,
+        isPartOf: { '@type': 'CollectionPage', name: 'AI Jobs and Market Dynamics', url: `https://theworldofai.org${BASE}/${jhubUid}/` },
+      }
     : hub || chub
     ? {
         '@context': 'https://schema.org',
@@ -354,7 +377,7 @@ const jsonld = JSON.stringify(
 ---
 <Base title={title}
   description={desc} current={`${BASE}/`} jsonld={jsonld}
-  doc={legacyPerson || pcat || hub || company || chub || obs || jhub || csec || cpat || cpriv || corg || cfund || cma}
+  doc={legacyPerson || pcat || hub || company || chub || obs || jhub || jdisc || csec || cpat || cpriv || corg || cfund || cma}
   stampLabel="Last verified"
   canonicalOverride={company ? `https://theworldofai.org/companies/${company.uid}/` : undefined}>
   {/* EVERY COMPANY WAS PUBLISHED AT TWO SELF-CANONICAL URLS. This route builds a
@@ -416,17 +439,21 @@ const jsonld = JSON.stringify(
 
       {jobGroups.length > 0 ? (
         <>
-          <h2>Roles by discipline</h2>
+          <h2 id="disciplines">Roles by discipline</h2>
           <p>
-            {jobGroups.length} disciplines, alphabetical, with roles alphabetical inside each.
-            Every title links to the original posting.
+            {jobGroups.length} disciplines, alphabetical. Each opens its own page listing every
+            role in that discipline, alphabetical by title, with a link to the original posting.
           </p>
           <ul class="disc-index">
             {jobGroups.map((g: any) => (
-              <li><a href={`#${g.slug}`}>{g.name}</a> <span class="jn">{g.count}</span></li>
+              <li><a href={g.uid ? `${BASE}/${g.uid}/` : `#${g.slug}`}>{g.name}</a> <span class="jn">{g.count}</span></li>
             ))}
           </ul>
-          {jobGroups.map((g: any) => (
+          {/* Inline listings render only from a bundle that still carries
+              them. From 2026-09-10 the pipeline writes each discipline to its
+              own page and leaves g.jobs off the hub, so this block disappears
+              the moment the new bundle lands and a job is rendered in one place. */}
+          {jobGroups.filter((g: any) => Array.isArray(g.jobs) && g.jobs.length > 0).map((g: any) => (
             <section class="letter-block">
               <h3 id={g.slug}>{g.name} <span class="jn">{g.count}</span></h3>
               <ul class="co-list">
@@ -564,6 +591,37 @@ const jsonld = JSON.stringify(
       <Reading reading={jhub.reading} heading="What does the hiring data show?" />
       <div class="cite-box">Cite this page: <code>"AI Jobs and Market Dynamics." The World of AI,
         theworldofai.org{BASE}/{jhub.uid}/. Verified {jhub.generated}.</code></div>
+    </>
+  )}
+
+  {jdisc && (
+    <>
+      <p class="meta-line"><a href={`${BASE}/${jhubUid}/`}>AI Jobs and Market Dynamics</a></p>
+      <h1>{jdisc.name} Jobs</h1>
+      <p class="answer"><b>{jdisc.count} open {jdisc.name} {jdisc.count === 1 ? 'role' : 'roles'}</b>,
+        refreshed daily from the official USAJobs federal feed, the public career boards of
+        tracked AI and security companies, and free job feeds whose terms permit republication.
+        Roles are alphabetical by title. Every listing links to the original posting; nothing is
+        hosted here.</p>
+      <p class="meta-line">Last verified: {jdisc.generated} · One of
+        {' '}<a href={`${BASE}/${jhubUid}/#disciplines`}>29 disciplines</a> on the jobs hub</p>
+      <ul class="co-list">
+        {(jdisc.jobs || []).map((j: any) => (
+          <li>
+            <a href={j.url} rel="noopener nofollow" target="_blank">{j.title}</a>
+            <p>{j.company}{j.location && <> · {j.location}</>}{j.remote && !String(j.location || '').toLowerCase().includes('remote') && <> · Remote</>}{j.salary && <> · {j.salary}</>}{j.posted && <> · Posted {j.posted}</>} · <span class="jsrc">{j.source}</span></p>
+          </li>
+        ))}
+      </ul>
+      <h2>Where these listings come from</h2>
+      <ul class="cites">
+        {(jdisc.sources || []).map((s: any) => (
+          <li>{s.url ? <a href={s.url} rel="noopener">{s.name}</a> : <b>{s.name}</b>} — {s.note}</li>
+        ))}
+      </ul>
+      <p><a href={`${BASE}/${jhubUid}/`}>All disciplines and market data</a></p>
+      <div class="cite-box">Cite this page: <code>"{jdisc.name} Jobs." The World of AI,
+        theworldofai.org{BASE}/{jdisc.uid}/. Verified {jdisc.generated}.</code></div>
     </>
   )}
 
