@@ -62,6 +62,24 @@ const website = profile.website || siteUrl || '';
 // company page. capParagraphs enforces the five-sentence rule here too.
 const paras = capParagraphs(profileText?.body);
 
+// THIN-PAGE GATE. Stephen, 2026-09-11: asked directly whether the ETF-fund
+// company pages are thin or real. They are thin by construction - a facts
+// table from SEC EDGAR, no products, no prose, because no website was ever
+// supplied to crawl - and this page had NO noindex protection at all, unlike
+// research/paper, mcp-server and the jobs discipline pages, each of which
+// learned this the hard way (129 of 135 empty paper pages triggered an
+// AdSense low-value-content flag on 2026-08-29). Checked live before writing
+// this: only 2 of 318 existing company pages were fully bare, so this was a
+// dormant gap rather than an active problem - until 60-plus ticker-only pages
+// were about to land through it with nothing to stop them being indexed.
+//
+// A page is thin when it has no products, no lawsuits, no MCP servers and no
+// written profile: nothing but the bare facts table. It stays reachable and
+// linked - the directory still lists it, the fact table still shows what SEC
+// EDGAR verified - but it does not ask to be indexed until it clears that
+// floor, the same discipline every other kind on this site already has.
+const thin = products.length === 0 && cases.length === 0 && mcp.length === 0 && paras.length === 0;
+
 function fmtRevenue(usd) {
   if (typeof usd !== 'number') return null;
   if (usd >= 1e12) return `$${(usd / 1e12).toFixed(2)}T`;
@@ -147,7 +165,7 @@ const jsonld = JSON.stringify({
   ],
 });
 ---
-<Base title={`${n}: AI products, lawsuits, and MCP servers`} description={desc.slice(0, 300)} current="/companies/" jsonld={jsonld}>
+<Base title={`${n}: AI products, lawsuits, and MCP servers`} description={desc.slice(0, 300)} current="/companies/" jsonld={jsonld} noindex={thin}>
   {/* The stock box lives in the rail, beside the prose, not in it. A public
       company with a tracked instrument gets its close, change, range and a
       sparkline; a public company whose listing the free feed cannot cover

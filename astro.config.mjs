@@ -90,7 +90,34 @@ function thinPaperPaths() {
   return out;
 }
 
-const excluded = new Set([...redirectedPaths(), ...noindexPeoplePaths(), ...thinPaperPaths()]);
+// Same gate as thinPaperPaths, for company pages. Added 2026-09-11 when
+// Stephen asked directly whether the ETF-fund constituent pages are thin or
+// real: they are thin by construction, a facts table with no products, no
+// lawsuits, no MCP servers and no written profile, because no website was
+// supplied for the harvester to crawl. This page had no noindex protection
+// at all until the same day - see the noindex prop in companies/[id].astro -
+// so the sitemap side has to agree with it or the two signals contradict,
+// which is the exact failure this file's own opening comment exists to
+// prevent.
+function thinCompanyPaths() {
+  const out = new Set();
+  const dir = 'content/companies';
+  if (!existsSync(dir)) return out;
+  const arrLen = (v) => (Array.isArray(v) ? v.length : 0);
+  for (const f of readdirSync(dir)) {
+    if (!f.endsWith('.json') || f === 'index.json' || f === 'stocks.json') continue;
+    try {
+      const d = JSON.parse(readFileSync(`${dir}/${f}`, 'utf8'));
+      const c = d && d.company;
+      if (!c || !c.uid) continue;
+      const bare = arrLen(c.products) === 0 && arrLen(c.cases) === 0 && arrLen(c.mcp) === 0 && !d.profile_text;
+      if (bare) out.add(`/companies/${c.uid}/`);
+    } catch { /* a malformed file fails the build elsewhere; not here */ }
+  }
+  return out;
+}
+
+const excluded = new Set([...redirectedPaths(), ...noindexPeoplePaths(), ...thinPaperPaths(), ...thinCompanyPaths()]);
 
 // Pages the sitemap deliberately withholds, recorded as the build decides
 // them. THIS EXISTS BECAUSE url_registry READS THE SITEMAP. That was the right
