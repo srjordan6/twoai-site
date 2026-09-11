@@ -22,6 +22,7 @@
  */
 import Base from '../../../layouts/Base.astro';
 import Reading from '../../../components/Reading.astro';
+import { capParagraphs } from '../../../lib/prose';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
 export function getStaticPaths() {
@@ -36,7 +37,15 @@ export function getStaticPaths() {
 
 const { p } = Astro.props;
 const doiUrl = p.doi ? `https://doi.org/${p.doi}` : '';
-const abstract = (p.abstract || '').trim();
+// THE PUBLISHED ABSTRACT IS NEVER RENDERED. Stephen, 2026-09-10: this site
+// does not republish papers, it gives its own interpretation of them. The
+// abstract is the authors' text - on r0000042 it opened "We explore how
+// generating a chain of thought...", their voice, verbatim - and six pages
+// were printing it under an Abstract heading. It stays in the database as
+// INPUT for the site's own reading, and as retrieval context for the ask
+// box, and nothing else. What a reader gets here is what the site wrote:
+// three lenses, an editor's note, and where present the site's reading.
+const abstract = '';
 const beg = (p.explain_beginner || '').trim();
 const prac = (p.explain_practitioner || '').trim();
 const biz = (p.explain_business || '').trim();
@@ -51,7 +60,7 @@ const authors = (p.authors || '').trim();
 const authorList = authors ? authors.split(/\s*,\s*|\s+and\s+/).filter(Boolean) : [];
 const authorCount = authorList.length;
 
-const desc = (abstract || p.note || `${p.title} by ${authors || 'unknown authors'}.`).slice(0, 158);
+const desc = (beg || p.note || `${p.title} by ${authors || 'unknown authors'}.`).slice(0, 158);
 
 // Paper titles routinely run past any sensible title-tag length; clamp the
 // whole tag to 65 characters, cutting the paper title at a word boundary and
@@ -71,7 +80,6 @@ const jsonld = JSON.stringify({
   isPartOf: p.journal ? { '@type': 'Periodical', name: p.journal, volumeNumber: p.volume || undefined } : undefined,
   identifier: p.doi ? { '@type': 'PropertyValue', propertyID: 'DOI', value: p.doi } : undefined,
   url: `https://theworldofai.org/research/paper/${p.uid}/`,
-  abstract: abstract || undefined,
   dateModified: p.generated,
 });
 ---
@@ -129,39 +137,37 @@ const jsonld = JSON.stringify({
       the thin test asks for any block, and the explanations satisfy it - so
       the containment is working as designed and only the empty heading is
       wrong. */}
-  {abstract && (
-    <>
-      <h2>Abstract</h2>
-      <p class="abstract">{abstract}</p>
-      <p class="attribution">
-        Read the <a href={p.url} rel="noopener">source paper</a> at the
-        original publisher.
-      </p>
-    </>
-  )}
+  {/* The published abstract is deliberately absent - see the frontmatter.
+      What follows is the site's own reading of the paper, and it says so. */}
 
   {anyExplain && (
     <>
-      <h2>Three ways to read this paper</h2>
+      <h2>What this paper says, in our words</h2>
+      <p class="attribution">
+        This is The World of AI's interpretation, written from the paper and its
+        published abstract. It is not the authors' text. Read the
+        {' '}<a href={p.url || doiUrl} rel="noopener">paper itself</a> at the original publisher
+        for what they actually wrote.
+      </p>
 
       {beg && (
         <section class="explain">
           <h3>For a beginner</h3>
-          <p>{beg}</p>
+          {capParagraphs(beg).map((para) => <p>{para}</p>)}
         </section>
       )}
 
       {prac && (
         <section class="explain">
           <h3>For a practitioner</h3>
-          <p>{prac}</p>
+          {capParagraphs(prac).map((para) => <p>{para}</p>)}
         </section>
       )}
 
       {biz && (
         <section class="explain">
           <h3>For a business reader</h3>
-          <p>{biz}</p>
+          {capParagraphs(biz).map((para) => <p>{para}</p>)}
         </section>
       )}
     </>
@@ -170,7 +176,7 @@ const jsonld = JSON.stringify({
   {p.note && (
     <>
       <h2>Editor&apos;s note</h2>
-      <p>{p.note}</p>
+      {capParagraphs(p.note).map((para) => <p>{para}</p>)}
     </>
   )}
 
@@ -180,13 +186,10 @@ const jsonld = JSON.stringify({
     Cite this paper on The World of AI: <code>{authors || 'Author(s)'}{p.year ? `. (${p.year}).` : '.'} {p.title}.{p.journal ? ` ${p.journal}` : ''}{p.volume ? `, ${p.volume}` : ''}.{p.doi ? ` https://doi.org/${p.doi}` : ''} Cataloged at theworldofai.org/research/paper/{p.uid}/.{p.generated ? ` Verified ${p.generated}.` : ''}</code>
   </div>
 
-  {/* The source link, for a paper with no abstract to carry it. A paper page
-      must always point at the publisher: the DOI row does it when there is a
-      DOI, but 129 papers have no abstract and not all of them have a DOI
-      either, so removing the empty Abstract block above would otherwise take
-      the only outbound link with it. Rendered only when the abstract block
-      did not already render it, so no page shows it twice. */}
-  {!abstract && p.url && (
+  {/* A paper page must always point at the publisher. The DOI row does it
+      when there is a DOI; not every paper has one, so this link is
+      unconditional now that no abstract block carries it. */}
+  {p.url && (
     <p class="meta-line">
       Read the <a href={p.url} rel="noopener">source paper</a> at the original publisher.
     </p>
