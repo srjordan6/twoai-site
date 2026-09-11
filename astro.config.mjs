@@ -163,10 +163,110 @@ function unlistedManifest() {
   };
 }
 
+// FIVE SENTENCES PER PARAGRAPH, ENFORCED ON THE RENDERED HTML.
+//
+// Stephen's standing rule: no paragraph on the site over four or five
+// sentences. It was first enforced at render time in four templates on
+// 2026-09-10 (capParagraphs in src/lib/prose.ts), and on 2026-09-11 a live
+// sample of 192 pages across all 28 sections still found 59 paragraphs over
+// the limit, the worst at 15 sentences: compliance pages, prompt examples,
+// weekly recaps carrying bill descriptions, facility pages, static pages.
+// Dozens of templates print prose, and wiring the cap into each one is how
+// "committed" and "true" came apart.
+//
+// So the rule is applied here, once, to every HTML file the build produced,
+// after every template has run. Nothing can render a long paragraph past
+// this step, whichever template wrote it and whenever it is added.
+//
+// Splitting is HTML-aware and conservative. A <p> is tokenised into tags and
+// text; a split may only happen at a sentence boundary in text that sits
+// at inline-tag depth zero, so a sentence that ends inside an <a> or <b>
+// is never cut mid-element. Paragraphs containing block or code elements
+// are left alone, as is anything inside <pre>. The split keeps the <p>'s
+// own attributes on every piece, so Astro's scoped-style data attributes
+// survive and the pieces style exactly as the original did. Six sentences
+// become 3+3, not 5+1, the same even distribution as capParagraphs.
+function capParagraphsInHtml() {
+  const SB = /[.!?]+["'\u2019\u201d)]*(?=\s+[A-Z0-9"'\u2018\u201c(]|\s*$)/g;
+  const MAX = 5;
+  const splitOne = (open, inner) => {
+    if (/<(p|div|ul|ol|li|table|pre|code|blockquote|h[1-6]|section|figure|svg)[\s>]/i.test(inner)) return null;
+    const toks = inner.split(/(<[^>]+>)/).filter((t) => t !== '');
+    // Sentence units: each is a run of tokens ending at a boundary at depth 0.
+    const units = [];
+    let cur = '';
+    let depth = 0;
+    for (const t of toks) {
+      if (t.startsWith('<')) {
+        cur += t;
+        if (/^<\/[a-z]/i.test(t)) depth = Math.max(0, depth - 1);
+        else if (!/\/>$/.test(t) && !/^<(br|img|wbr|input|hr)\b/i.test(t)) depth++;
+        continue;
+      }
+      if (depth > 0) { cur += t; continue; }
+      let last = 0;
+      let m;
+      SB.lastIndex = 0;
+      while ((m = SB.exec(t))) {
+        const end = m.index + m[0].length;
+        cur += t.slice(last, end);
+        units.push(cur);
+        cur = '';
+        last = end;
+      }
+      cur += t.slice(last);
+    }
+    if (cur.trim()) units.push(cur);
+    if (units.length <= MAX) return null;
+    const chunks = Math.ceil(units.length / MAX);
+    const per = Math.ceil(units.length / chunks);
+    const out = [];
+    for (let i = 0; i < units.length; i += per) out.push(open + units.slice(i, i + per).join('').trim() + '</p>');
+    return out.join('\n');
+  };
+  return {
+    name: 'twoai-cap-paragraphs',
+    hooks: {
+      'astro:build:done': async ({ dir }) => {
+        const { readdirSync, readFileSync, writeFileSync, statSync } = await import('node:fs');
+        const { join } = await import('node:path');
+        const root = new URL(dir).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+        let files = 0, split = 0;
+        const walk = (d) => {
+          for (const f of readdirSync(d)) {
+            const p = join(d, f);
+            if (statSync(p).isDirectory()) { walk(p); continue; }
+            if (!f.endsWith('.html')) continue;
+            const html = readFileSync(p, 'utf8');
+            // Protect <pre> blocks from any rewriting.
+            const pres = [];
+            let work = html.replace(/<pre[\s\S]*?<\/pre>/gi, (m) => { pres.push(m); return `\u0000PRE${pres.length - 1}\u0000`; });
+            let n = 0;
+            work = work.replace(/(<p\b[^>]*>)([\s\S]*?)<\/p>/gi, (m, open, inner) => {
+              const r = splitOne(open, inner);
+              if (r === null) return m;
+              n++;
+              return r;
+            });
+            if (n > 0) {
+              work = work.replace(/\u0000PRE(\d+)\u0000/g, (_, i) => pres[+i]);
+              writeFileSync(p, work);
+              split += n;
+            }
+            files++;
+          }
+        };
+        walk(root);
+        console.log(`cap-paragraphs: ${files} pages scanned, ${split} paragraphs split to <=${MAX} sentences`);
+      },
+    },
+  };
+}
+
 // Static output; content is fetched from the twoai-content repo by
 // scripts/fetch-content.mjs before every build (see package.json prebuild).
 export default defineConfig({
   site: 'https://theworldofai.org',
-  integrations: [sitemap({ filter: sitemapKeeps }), unlistedManifest()],
+  integrations: [sitemap({ filter: sitemapKeeps }), unlistedManifest(), capParagraphsInHtml()],
   build: { format: 'directory' },
 });
