@@ -18,6 +18,7 @@
  */
 import Base from '../../../layouts/Base.astro';
 import { incidentUid } from '../../../lib/storyUid';
+import { capParagraphs } from '../../../lib/prose';
 
 export function getStaticPaths() {
   const mods = import.meta.glob('../../../../content/news/incident-*.json', { eager: true });
@@ -28,7 +29,21 @@ export function getStaticPaths() {
 }
 const { inc } = Astro.props;
 const reports: any[] = inc.reports ?? [];
-const paras = (t: string) => String(t || '').split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+// THE HEADLINE IN ENGLISH. Stephen, 2026-09-11, on incident 1684: the H1
+// was a Dutch parliamentary motion, verbatim, above an English summary. The
+// summary and reading were always English because Claude wrote them; the
+// title was copied from the feed and never touched. The pipeline now
+// translates any non-English headline once and carries it as title_en with
+// title_lang. The page leads with the English rendering and says it is a
+// translation, and the publisher's own headline stays exactly as written on
+// the source link at the foot - that link label is the AIID rule and is not
+// ours to change. Language names are looked up for the handful of codes
+// that actually occur; an unknown code shows as the code.
+const LANGS: Record<string, string> = { nl: 'Dutch', de: 'German', fr: 'French', es: 'Spanish', it: 'Italian', pt: 'Portuguese', ja: 'Japanese', zh: 'Chinese', ko: 'Korean', ru: 'Russian', ar: 'Arabic', hi: 'Hindi', sv: 'Swedish', da: 'Danish', no: 'Norwegian', fi: 'Finnish', pl: 'Polish', tr: 'Turkish', he: 'Hebrew', id: 'Indonesian', cs: 'Czech', el: 'Greek', hu: 'Hungarian', ro: 'Romanian', uk: 'Ukrainian', vi: 'Vietnamese', th: 'Thai' };
+const translated = !!(inc.title_en && inc.title_lang && inc.title_lang !== 'en' && inc.title_en !== inc.title);
+const headline = translated ? inc.title_en : inc.title;
+const langName = translated ? (LANGS[inc.title_lang] || inc.title_lang) : '';
+const paras = (t: string) => capParagraphs(t);
 const dates = reports.map((r) => r.published).filter(Boolean).sort();
 const first = dates[0];
 const last = dates[dates.length - 1];
@@ -48,12 +63,13 @@ const stampDoc = {
   generated: inc.published ?? inc.generated,
 };
 
-const desc = `${inc.title}. A logged harm from a deployed AI system, catalogued by the AI Incident Database as incident ${inc.incident_id}, reported by ${inc.outlet_count || reports.length} ${(inc.outlet_count || reports.length) === 1 ? 'outlet' : 'outlets'}. What happened, what kind of failure it was, and what is not established.`;
+const desc = `${headline}. A logged harm from a deployed AI system, catalogued by the AI Incident Database as incident ${inc.incident_id}, reported by ${inc.outlet_count || reports.length} ${(inc.outlet_count || reports.length) === 1 ? 'outlet' : 'outlets'}. What happened, what kind of failure it was, and what is not established.`;
 
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'Article',
-  headline: inc.title,
+  headline: headline,
+  ...(translated ? { alternativeHeadline: inc.title, inLanguage: 'en' } : {}),
   description: desc.slice(0, 300),
   datePublished: inc.published || inc.generated,
   dateModified: inc.generated,
@@ -62,10 +78,14 @@ const jsonld = JSON.stringify({
   citation: reports.map((r) => ({ '@type': 'CreativeWork', name: r.title, url: r.url })),
 });
 ---
-<Base title={`${inc.title} — logged harm — The World of AI`} description={desc.slice(0, 300)} current="/ai-news/" jsonld={jsonld} doc={stampDoc} stampLabel="Incident recorded">
+<Base title={`${headline} — logged harm — The World of AI`} description={desc.slice(0, 300)} current="/ai-news/" jsonld={jsonld} doc={stampDoc} stampLabel="Incident recorded">
   <p class="meta-line"><a href="/ai-news/">AI News</a> ·
     <a href="/ai-news/daily/#incidents">When AI goes wrong</a></p>
-  <h1>{inc.title}</h1>
+  <h1>{headline}</h1>
+  {translated && (
+    <p class="meta-line original-title">Translated from {langName}. Original headline:
+      {' '}<span lang={inc.title_lang}>{inc.title}</span></p>
+  )}
 
   <p class="answer">A report of real-world harm from a deployed AI system, catalogued by the
     AI Incident Database as <b>incident {inc.incident_id}</b> and carried by
@@ -114,7 +134,7 @@ const jsonld = JSON.stringify({
     for LLM Applications</a>. Where a harm has become litigation, it appears on the
     {' '}<a href="/ai-lawsuits/">AI lawsuit tracker</a>.</p>
 
-  <div class="cite-box">Cite this page: <code>"{inc.title}." AI Incident {inc.incident_id},
+  <div class="cite-box">Cite this page: <code>"{headline}." AI Incident {inc.incident_id},
     The World of AI, theworldofai.org/ai-news/incident/{inc.incident_id}/. Retrieved {inc.generated}.</code></div>
 
   <h2>Sources</h2>
@@ -138,4 +158,5 @@ const jsonld = JSON.stringify({
   .src-meta { display: block; font-size: 12.5px; color: #7A8A9E; margin-top: 2px; }
   .cite-box { margin: 1.6em 0; padding: .9em 1em; background: #f7f7fb; border-left: 3px solid #201868; font-size: .9rem; }
   .cite-box code { display: block; margin-top: .3em; }
+  .original-title { margin-top: -.4em; font-style: italic; }
 </style>
