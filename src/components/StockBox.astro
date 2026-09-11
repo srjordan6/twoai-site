@@ -1,0 +1,120 @@
+---
+/**
+ * StockBox: the rail call-out for a listed security.
+ *
+ * Stephen, 2026-09-08: a stock call-out box on the right of every publicly
+ * traded AI company page, tracking the history of the closing price. This is
+ * it. Renders in Base's rail slot, so it sits beside the prose rather than
+ * inside it - the same placement the facility fact box moved to on 09-07,
+ * after five attempts at floating it in the article each narrowed the text.
+ *
+ * Everything shown is from twoai_stock_closes via companies/stocks.json:
+ * latest close and its date, change against the prior close, 52-week range,
+ * and a 30-day sparkline. The full history is in the database and served by
+ * the API; the page carries what a reader glances at, not the whole series.
+ *
+ * Three honesty rules. The date is always shown: a price without a date is a
+ * rumour. The source is always named, because Twelve Data's free tier
+ * requires attribution and because every other figure on this site names its
+ * source. And "end-of-day close" is said outright, so nobody reads a number
+ * that is hours old as a live quote.
+ *
+ * No entry, no box. A company with no tracked instrument renders nothing
+ * here rather than an empty frame. `untracked` is for the case the free tier
+ * cannot cover - a non-US listing - and says so instead of showing a blank.
+ */
+interface Entry {
+  uid: string; ticker: string; name: string; exchange?: string;
+  close: number; close_date: string; prev_close: number;
+  change: number; change_pct: number;
+  spark?: number[]; history_points?: number; history_since?: string;
+  year_low?: number; year_high?: number;
+  source: string; source_url: string; issuer?: string; note?: string;
+}
+interface Props { entry?: Entry | null; untracked?: { ticker: string; exchange?: string } | null; compact?: boolean }
+const { entry, untracked = null, compact = false } = Astro.props;
+
+const money = (v: number) => v >= 1000
+  ? v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  : v.toFixed(2);
+
+// Sparkline: 30 closes into a 120x36 polyline. Scaled to its own range so a
+// flat stock and a volatile one both use the full height and the shape is
+// readable; the axis is deliberately unlabelled because the numbers beside it
+// are the numbers, and a labelled axis at 36px tall would be noise.
+let path = '';
+if (entry && entry.spark && entry.spark.length > 1) {
+  const pts = entry.spark;
+  const lo = Math.min(...pts), hi = Math.max(...pts);
+  const span = hi - lo || 1;
+  const w = 120, h = 36, pad = 2;
+  path = pts.map((v, i) => {
+    const x = pad + (i / (pts.length - 1)) * (w - pad * 2);
+    const y = h - pad - ((v - lo) / span) * (h - pad * 2);
+    return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+}
+const up = entry ? entry.change > 0 : false;
+const down = entry ? entry.change < 0 : false;
+---
+{entry && (
+  <aside class:list={['stock', { compact }]} aria-label={`${entry.ticker} share price`}>
+    <p class="stock-head">
+      <span class="stock-ticker">{entry.ticker}</span>
+      {entry.exchange && <span class="stock-ex">{entry.exchange}</span>}
+    </p>
+    <p class="stock-price">
+      <span class="stock-close">${money(entry.close)}</span>
+      <span class:list={['stock-chg', { up, down }]} aria-label={`change ${entry.change >= 0 ? 'up' : 'down'} ${Math.abs(entry.change_pct)} percent`}>
+        {entry.change >= 0 ? '+' : '\u2212'}{Math.abs(entry.change).toFixed(2)} ({entry.change >= 0 ? '+' : '\u2212'}{Math.abs(entry.change_pct).toFixed(2)}%)
+      </span>
+    </p>
+    <p class="stock-date">End-of-day close, <time datetime={entry.close_date}>{entry.close_date}</time></p>
+    {path && (
+      <svg class="stock-spark" viewBox="0 0 120 36" width="120" height="36" role="img" aria-label={`Last ${entry.spark!.length} closes`}>
+        <path d={path} fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" />
+      </svg>
+    )}
+    {typeof entry.year_low === 'number' && typeof entry.year_high === 'number' && (
+      <p class="stock-range">52-week range <b>${money(entry.year_low)}</b> \u2013 <b>${money(entry.year_high)}</b></p>
+    )}
+    {entry.history_points && entry.history_since && (
+      <p class="stock-hist">{entry.history_points.toLocaleString()} daily closes held since <time datetime={entry.history_since}>{entry.history_since}</time></p>
+    )}
+    {entry.note && !compact && <p class="stock-note">{entry.note}</p>}
+    <p class="stock-src">Prices: <a href={entry.source_url} rel="noopener nofollow">{entry.source}</a> \u00b7 uid <code>{entry.uid}</code></p>
+  </aside>
+)}
+{!entry && untracked && (
+  <aside class="stock untracked" aria-label={`${untracked.ticker} share price not tracked`}>
+    <p class="stock-head">
+      <span class="stock-ticker">{untracked.ticker}</span>
+      {untracked.exchange && <span class="stock-ex">{untracked.exchange}</span>}
+    </p>
+    <p class="stock-note">Prices are not tracked for this listing. This site's free price feed covers US-listed instruments only.</p>
+  </aside>
+)}
+
+<style>
+  .stock { width: 100%; margin: 1.2rem 0 0; padding: 14px 16px 12px; background: #fff;
+    border: 1px solid #e6e6ee; border-top: 4px solid var(--orange, #F07800); font-family: Poppins, sans-serif; }
+  .stock p { margin: 0; }
+  .stock-head { display: flex; align-items: baseline; gap: .5rem; margin-bottom: .35rem; }
+  .stock-ticker { font: 700 15px/1 Poppins, sans-serif; letter-spacing: .06em; color: var(--navy, #201868); }
+  .stock-ex { font-size: 11.5px; color: #7A8A9E; letter-spacing: .04em; text-transform: uppercase; }
+  .stock-price { display: flex; align-items: baseline; gap: .55rem; flex-wrap: wrap; }
+  .stock-close { font: 600 26px/1.1 Lora, Georgia, serif; color: var(--navy, #201868); }
+  .stock-chg { font-size: 13px; font-weight: 600; color: #5d6470; }
+  .stock-chg.up { color: #0f7b4a; }
+  .stock-chg.down { color: #b42318; }
+  .stock-date { font-size: 12px; color: #7A8A9E; margin-top: .2rem; }
+  .stock-spark { display: block; margin: .6rem 0 .3rem; color: var(--navy, #201868); }
+  .stock-range, .stock-hist { font-size: 12.5px; color: #5d6470; margin-top: .25rem; }
+  .stock-range b { color: var(--navy, #201868); font-weight: 600; }
+  .stock-note { font-size: 12.5px; color: #5d6470; margin-top: .5rem; line-height: 1.45; }
+  .stock-src { font-size: 11.5px; color: #7A8A9E; margin-top: .6rem; padding-top: .5rem; border-top: 1px solid #f0f0f4; }
+  .stock-src code { font-size: 11px; }
+  .stock.untracked { border-top-color: #cfd3dc; }
+  .stock.compact { padding: 10px 12px 9px; margin: 0 0 .6rem; }
+  .stock.compact .stock-close { font-size: 20px; }
+</style>

@@ -19,21 +19,28 @@
  */
 import Base from '../../layouts/Base.astro';
 import Reading from '../../components/Reading.astro';
+import StockBox from '../../components/StockBox.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { ownedServers } from '../../lib/mcpAttribution';
 
 export function getStaticPaths() {
   if (!existsSync('content/companies')) return [];
+  // Prices for every tracked instrument, keyed by company uid. Written by the
+  // pipeline as companies/stocks.json; absent before its first run, in which
+  // case no page renders a box - no entry, no box, never an empty frame.
+  const stocks = existsSync('content/companies/stocks.json')
+    ? JSON.parse(readFileSync('content/companies/stocks.json', 'utf8')) : { by_company: {} };
   return readdirSync('content/companies')
-    .filter((f) => f.endsWith('.json') && f !== 'index.json')
+    .filter((f) => f.endsWith('.json') && f !== 'index.json' && f !== 'stocks.json')
     .map((f) => JSON.parse(readFileSync(`content/companies/${f}`, 'utf8')))
     .filter((d) => d && d.company && d.company.uid)
     .map((d) => ({
       params: { id: d.company.uid },
-      props: { company: d.company, generated: d.generated, profileText: d.profile_text || null, siteUrl: d.website || '', reading: d.reading || null },
+      props: { company: d.company, generated: d.generated, profileText: d.profile_text || null, siteUrl: d.website || '', reading: d.reading || null,
+        stock: (stocks.by_company || {})[d.company.uid] || null },
     }));
 }
-const { company, generated, profileText, siteUrl, reading } = Astro.props;
+const { company, generated, profileText, siteUrl, reading, stock } = Astro.props;
 const profile = company.profile || {};
 const products = company.products || [];
 const cases = company.cases || [];
@@ -136,6 +143,15 @@ const jsonld = JSON.stringify({
 });
 ---
 <Base title={`${n}: AI products, lawsuits, and MCP servers`} description={desc.slice(0, 300)} current="/companies/" jsonld={jsonld}>
+  {/* The stock box lives in the rail, beside the prose, not in it. A public
+      company with a tracked instrument gets its close, change, range and a
+      sparkline; a public company whose listing the free feed cannot cover
+      gets a box that says so; a private company gets nothing. */}
+  {(stock || (profile.org_type === 'public-company' && profile.ticker)) && (
+    <Fragment slot="rail">
+      <StockBox entry={stock} untracked={stock ? null : { ticker: profile.ticker, exchange: profile.exchange }} />
+    </Fragment>
+  )}
   <p class="meta-line"><a href="/companies/">AI Company Directory</a></p>
   <h1>{n}</h1>
   <p class="answer"><b>{n} {who}.</b> It publishes <b>{products.length}</b> AI product{products.length === 1 ? '' : 's'} this site tracks
@@ -291,7 +307,12 @@ const jsonld = JSON.stringify({
   table { border-collapse: collapse; margin: 1em 0; width: 100%; }
   table th, table td { text-align: left; vertical-align: top; padding: .5em .7em;
     border-bottom: 1px solid #ececf2; }
-  table th { font-weight: 600; background: #f7f7fb; }
+  /* Row labels were INVISIBLE: Base.astro gives every th white text for the
+     navy thead it expects, and this page overrides the background to light
+     grey without overriding the colour. White on #f7f7fb. Stephen found it on
+     Adobe's page on 2026-09-10 - Organisation, Founded, Headquarters all
+     blank. Both must be set together whenever one is. */
+  table th { font-weight: 600; background: #f7f7fb; color: var(--navy, #201868); }
   table.facts th { white-space: nowrap; width: 12em; }
   code { font-family: ui-monospace, monospace; font-size: .92em; }
   .faq h3 { margin: 1.1em 0 .3em; font-size: 1.05rem; }
