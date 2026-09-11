@@ -33,13 +33,17 @@ interface Props {
 }
 const { reading, heading = 'What does this tell us?', note } = Astro.props as Props;
 
-// Paragraph splitting is defensive on purpose. The model is asked for blank-line
-// separated paragraphs and gives them, but a single stray run of whitespace
-// should degrade to one paragraph rather than to an empty section.
-const paras = String(reading?.body ?? '')
-  .split(/\n\s*\n+/)
-  .map((p) => p.trim())
-  .filter(Boolean);
+import { capParagraphs } from '../lib/prose';
+
+// Paragraph splitting is defensive on purpose, and now two-stage. The model is
+// asked for blank-line separated paragraphs and gives them, but a single stray
+// run of whitespace should degrade to one paragraph rather than to an empty
+// section - that is capParagraphs' first pass. Its second pass enforces the
+// site's own rule, no paragraph over five sentences: an audit on 2026-09-10
+// found 552 readings running past it, one at 24 sentences, because this
+// component had only ever split on blank lines and a model that wrote one
+// unbroken block sailed straight through. See src/lib/prose.ts.
+const paras = capParagraphs(reading?.body);
 ---
 {paras.length > 0 && (
   <section class="reading">

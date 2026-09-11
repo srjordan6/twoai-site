@@ -18,6 +18,7 @@ import { ownedServers } from '../../../lib/mcpAttribution';
 import Reading from '../../../components/Reading.astro';
 import PersonProfile from '../../../components/PersonProfile.astro';
 import StockBox from '../../../components/StockBox.astro';
+import { capParagraphs } from '../../../lib/prose';
 
 const CATEGORY = 'ecosystem-entities-market-and-operations';
 const CATEGORY_NAME = 'Ecosystem Entities, Market and Operations';
@@ -620,6 +621,19 @@ const jsonld = JSON.stringify(
         hosted here.</p>
       <p class="meta-line">Last verified: {jdisc.generated} · One of
         {' '}<a href={`${BASE}/${jhubUid}/#disciplines`}>29 disciplines</a> on the jobs hub</p>
+      {jdisc.guide && (
+        <>
+          <h2>What does a {jdisc.name} role involve, and what do employers ask for?</h2>
+          {capParagraphs(jdisc.guide).map((p: string) => <p>{p}</p>)}
+          {Array.isArray(jdisc.guide_sources) && jdisc.guide_sources.length > 0 && (
+            <p class="meta-line">Sources: {jdisc.guide_sources.map((s: any, i: number) => (
+              <>{i > 0 && ', '}{s.url ? <a href={s.url} rel="noopener">{s.name || s.url}</a> : (s.name || s)}</>
+            ))}</p>
+          )}
+          <p class="meta-line">Written {jdisc.guide_written_on} from the {jdisc.count} listing{jdisc.count === 1 ? '' : 's'}
+            this site tracked for {jdisc.name} at the time, and rewritten as that set changes.</p>
+        </>
+      )}
       <ul class="co-list">
         {(jdisc.jobs || []).map((j: any) => (
           <li>
@@ -1295,8 +1309,16 @@ const jsonld = JSON.stringify(
           star backslash-n says the same thing with no brace anywhere - and
           this comment avoids one too, because a brace inside a JSX comment
           sits inside the same expression container and can confuse the same
-          parser. */}
-      {corg.blurb && corg.blurb.split(/\n\s*\n/).map((para: string) => <p>{para.trim()}</p>)}
+          parser.
+
+          Upgraded again 2026-09-10 to capParagraphs, which also enforces the
+          site's five-sentence limit: that day's audit found 14 of this
+          table's paragraphs over it, including this section's own rewrite at
+          first draft. A free-form blurb is exactly where a future edit could
+          reintroduce the wall it was fixed for on 09-10; enforcing the limit
+          at render time rather than trusting the next author is the same
+          reasoning as the same-day fix to Reading.astro. */}
+      {corg.blurb && capParagraphs(corg.blurb).map((para: string) => <p>{para}</p>)}
       <p class="meta-line">Last verified: {corg.generated} · This list is curated and grows as
         classifications are verified; a missing organisation is an editorial gap, not a
         judgement — <a href="/contact/">tell us</a>.</p>
