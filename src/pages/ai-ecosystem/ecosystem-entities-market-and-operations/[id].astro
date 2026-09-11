@@ -60,6 +60,14 @@ export function getStaticPaths() {
     paths.push({ params: { id: cidx.uid }, props: { chub: cidx } });
     for (const f of readdirSync('content/companies')) {
       if (!f.endsWith('.json') || f === 'index.json') continue;
+      // Non-company documents in this directory. stocks.json broke the build
+      // on 2026-09-11 the first time the pipeline wrote it: this loop reads
+      // every file and expects company.uid, and a document with no company
+      // threw "Cannot read properties of undefined (reading 'uid')" from
+      // getStaticPaths, which fails the whole route. The same exclusion
+      // already existed in companies/[id].astro; it has to exist in every
+      // reader of this directory, and there are two.
+      if (f === 'stocks.json') continue;
       const d = JSON.parse(readFileSync(`content/companies/${f}`, 'utf8'));
       // public.json and patents.json are the sourced section hubs, not
       // company records; they render as their own page shapes below.
