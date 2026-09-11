@@ -638,9 +638,9 @@ const jsonld = JSON.stringify(
         <>
           <h2>What does a {jdisc.name} role involve, and what do employers ask for?</h2>
           {capParagraphs(jdisc.guide).map((p: string) => <p>{p}</p>)}
-          {Array.isArray(jdisc.guide_sources) && jdisc.guide_sources.length > 0 && (
-            <p class="meta-line">Sources: {jdisc.guide_sources.map((s: any, i: number) => (
-              <>{i > 0 && ', '}{s.url ? <a href={s.url} rel="noopener">{s.name || s.url}</a> : (s.name || s)}</>
+          {Array.isArray(jdisc.guide_sources) && jdisc.guide_sources.some((s: any) => s && (s.url || s.name)) && (
+            <p class="meta-line">Sources: {jdisc.guide_sources.filter((s: any) => s && (s.url || s.name)).map((s: any, i: number) => (
+              <>{i > 0 && ', '}{s.url ? <a href={s.url} rel="noopener">{s.name || s.url}</a> : s.name}</>
             ))}</p>
           )}
           <p class="meta-line">Written {jdisc.guide_written_on} from the {jdisc.count} listing{jdisc.count === 1 ? '' : 's'}
