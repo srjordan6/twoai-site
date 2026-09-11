@@ -130,6 +130,19 @@ export function getStaticPaths() {
   return paths;
 }
 const { hub, hubUid, chub, company, generated, chubUid, jhub, jdisc, jhubUid, pcat, csec, funds = [], fundsGenerated = null, cpat, cpriv, corg, cfund, obs, cma, website, profileText, companyReading, legacyPerson } = Astro.props;
+// NEVER TRUST A LIST FROM THE PIPELINE TO BE A LIST. A Go nil slice marshals
+// to JSON null, and on 2026-09-11 the first build carrying profile-only
+// companies (ETF constituents with no product in the catalog) died three
+// times on `company.products.length` - null, not []. The pipeline is fixed
+// at the source too, but this route renders 300-plus companies from a
+// document another program wrote, and a build that any one null can take
+// down is the failure this file's own history (2026-07-28, Orgs: null)
+// says not to allow twice.
+if (company) {
+  company.products = Array.isArray(company.products) ? company.products : [];
+  company.cases = Array.isArray(company.cases) ? company.cases : [];
+  company.mcp = Array.isArray(company.mcp) ? company.mcp : [];
+}
 // MCP servers we are willing to say this company published. Exact namespace
 // match only; see src/lib/mcpAttribution.ts for why a substring test is not
 // safe here.
