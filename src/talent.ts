@@ -769,16 +769,33 @@ export async function handleTalent(request: Request, env: TalentEnv): Promise<Re
   }
 
 
-  // ---- POST /api/talent/login {email, password} -> {t} ----------------------
+  // ---- POST /api/talent/login {email, password, turnstile} -> {t} ---------
   // Password is the return path for people who lost the email link; the token
   // it returns IS the account's confirm_token, so both entrances open the
   // same session and nothing forks.
+  //
+  // TURNSTILE IS REQUIRED HERE, added 2026-09-11 when Stephen noticed the
+  // login page had none. Signup always had it; login is the page that
+  // actually needs it more. Signup gives an attacker nothing - it is not an
+  // oracle, and it costs an email round trip - while login is an
+  // unauthenticated endpoint that takes an email and a password and answers
+  // whether the pair is right. The shared per-IP limiter above was the only
+  // thing in front of it, and credential stuffing is distributed across
+  // thousands of IPs precisely so a per-IP limit never fires.
+  //
+  // Fail-closed, with a clear 503 when the secret is absent, which is this
+  // module's standing rule for a missing dependency: never a silent success.
   if (path === "/api/talent/login" && request.method === "POST") {
     let b: any;
     try { b = await request.json(); } catch { return tJson({ error: "Bad request" }, 400); }
     const email = str(b.email, 254).toLowerCase();
     const password = typeof b.password === "string" ? b.password : "";
     if (!email || !password) return tJson({ error: "Email and password required." }, 400);
+    if (!env.TURNSTILE_SECRET) return tJson({ error: "Login is temporarily unavailable. Use the link in your confirmation email." }, 503);
+    const lip = request.headers.get("cf-connecting-ip") || "unknown";
+    if (!(await verifyTurnstile(env, str(b.turnstile, 4096), lip))) {
+      return tJson({ error: "Verification failed. Reload the page and try again." }, 400);
+    }
     const row = await env.ASSISTANT_DB.prepare(
       "SELECT confirm_token, pw_salt, pw_hash FROM talent_state WHERE lower(email)=? AND status != 'deleted' LIMIT 1"
     ).bind(email).first<{ confirm_token: string; pw_salt: string | null; pw_hash: string | null }>();
