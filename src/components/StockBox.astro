@@ -31,7 +31,7 @@ interface Entry {
   year_low?: number; year_high?: number;
   source: string; source_url: string; issuer?: string; note?: string;
 }
-interface Props { entry?: Entry | null; untracked?: { ticker: string; exchange?: string } | null; compact?: boolean }
+interface Props { entry?: Entry | null; untracked?: { ticker: string; exchange?: string; pending?: boolean } | null; compact?: boolean }
 const { entry, untracked = null, compact = false } = Astro.props;
 
 const money = (v: number) => v >= 1000
@@ -91,7 +91,21 @@ const down = entry ? entry.change < 0 : false;
       <span class="stock-ticker">{untracked.ticker}</span>
       {untracked.exchange && <span class="stock-ex">{untracked.exchange}</span>}
     </p>
-    <p class="stock-note">Prices are not tracked for this listing. This site's free price feed covers US-listed instruments only.</p>
+    {/* TWO DIFFERENT FACTS, AND SAYING THE WRONG ONE IS WORSE THAN SAYING
+        NOTHING. Stephen, 2026-09-11: AMD's page read "Prices are not tracked
+        for this listing. This site's free price feed covers US-listed
+        instruments only." AMD is on NASDAQ. It had been registered as a
+        tracked instrument an hour earlier and simply had not been through a
+        fetch yet - 67 instruments were in that state. The template was
+        reading "absent from stocks.json" as "not US-listed", which is only
+        one of the two reasons an entry can be missing.
+
+        pending says we have not fetched it yet, which is true and temporary.
+        The other wording is reserved for a listing the free feed genuinely
+        cannot cover, which is a real and permanent limit worth stating. */}
+    {untracked.pending
+      ? <p class="stock-note">Price history for this listing has not been collected yet. It appears here after the next daily run.</p>
+      : <p class="stock-note">Prices are not tracked for this listing. This site's free price feed covers US-listed instruments only.</p>}
   </aside>
 )}
 
