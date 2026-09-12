@@ -7,6 +7,7 @@
  * the page says less rather than inventing case studies.
  */
 import Base from '../../../layouts/Base.astro';
+import { capParagraphs } from '../../../lib/prose';
 import Reading from '../../../components/Reading.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
@@ -492,13 +493,35 @@ const jsonld = JSON.stringify(clc ? {
 
   {isIndustry && sec.analysis && <h2>The sourced record</h2>}
 
-  {isIndustry && sec.points.map((f) => (
+  {/* THE POINT, THEN WHAT THE SOURCE ACTUALLY SAYS, THEN THE LINK.
+      Stephen, 2026-09-11, on "Stanford HAI measures the macro trends": we
+      could have paraphrased the report before sending them to the source.
+      151 of 159 points across these pages were a headline, one line, and a
+      link out, with the reader doing all the work.
+
+      point_briefs is keyed by the point's own source URL and written by
+      srj-pipeline's twoai_point_briefs from the text the harvest already
+      pulls daily. A point whose source has no brief renders exactly as it
+      did before, so the pages fill in as briefs are written rather than
+      changing shape all at once. The written-on date is shown because a
+      brief describes a source as it stood on a day, and the harvest
+      rewrites it when that source changes. */}
+  {isIndustry && sec.points.map((f) => {
+    const b = (sec.point_briefs || {})[f.source];
+    return (
     <div class="dom">
       <h3>{f.name}</h3>
       <p>{f.desc}</p>
+      {b && b.brief && (
+        <>
+          {capParagraphs(b.brief).map((para: string) => <p class="point-brief">{para}</p>)}
+          <p class="meta-line brief-stamp">Our reading of the source, written {b.written_on}.</p>
+        </>
+      )}
       <p class="meta-line"><a href={f.source} rel="noopener">Source</a></p>
     </div>
-  ))}
+    );
+  })}
 
   <p class="meta-line">Related on this site: <a href="/ai-laws/">AI laws by state</a> ·
     <a href="/ai-lawsuits/">the AI lawsuit tracker</a> ·
@@ -781,6 +804,11 @@ const jsonld = JSON.stringify(clc ? {
 </Base>
 
 <style>
+  /* A point's brief: the site's own reading of the cited source, set apart
+     from the one-line summary above it so a reader can tell our words from
+     the point, and from the source they are about to open. */
+  .point-brief { margin: .5rem 0 .2rem; color: #2b3240; }
+  .brief-stamp { font-size: 12px; color: #7A8A9E; margin-top: .15rem; }
   .atlas-id { font-size: 12px; color: #7A8A9E; font-family: ui-monospace, monospace; }
   .cs-list { padding-left: 1.2rem; }
   .cs-list li { margin-bottom: 1.1rem; }
