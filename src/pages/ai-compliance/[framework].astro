@@ -175,12 +175,37 @@ const jsonld = JSON.stringify({
   {cites.length > 0 && (
     <>
       <h2>Sources</h2>
+      {/* THE TEMPLATE READ FIELDS THE DATA DOES NOT CARRY. Stephen, 2026-09-11:
+          a row of empty bullets under Sources, on a lot of pages, very ugly.
+          Every compliance page showed it. The citations in twoai_pages carry
+          author, year, journal and quote - real scholarly references - and
+          this list rendered title, url and publisher, none of which exist on
+          those objects, so every <li> came out blank. Same failure shape as
+          the person template on 2026-09-01: a silent mismatch between what a
+          template reads and what the data holds, invisible in JSX because a
+          missing property is undefined rather than an error.
+
+          Now it renders the citation as a citation - author, year, journal,
+          and the quote where there is one - while still supporting the
+          title/url/publisher shape, because other pages that share this
+          template do use it. And an entry with nothing renderable is dropped
+          rather than printed as a bullet with no content: an empty bullet is
+          never the right output. */}
       <ul class="cites">
-        {cites.map((c) => (
-          <li>{c.url
-            ? <a href={c.url} rel="noopener">{c.title || c.url}</a>
-            : (c.title || '')}{c.publisher && <> · {c.publisher}</>}</li>
-        ))}
+        {cites.map((c) => {
+          const label = c.title || c.author || '';
+          const bits = [c.journal || c.publisher, c.year].filter(Boolean).join(', ');
+          if (!label && !bits && !c.quote && !c.url) return null;
+          return (
+            <li>
+              {c.url
+                ? <a href={c.url} rel="noopener">{label || c.url}</a>
+                : <b>{label}</b>}
+              {bits && <> · {bits}</>}
+              {c.quote && <div class="cite-quote">“{c.quote}”</div>}
+            </li>
+          );
+        })}
       </ul>
     </>
   )}
@@ -220,6 +245,7 @@ const jsonld = JSON.stringify({
   .siting-watch .sw-meta { display: block; font-size: 12.5px; color: #7A8A9E; margin-top: 2px; text-transform: capitalize; }
   .cites { font-size: .92rem; }
   .cites li { margin-bottom: .35em; }
+  .cite-quote { margin: .2em 0 .1em; font-style: italic; color: #5d6470; }
   /* The review flag. Cream ground and an orange rule so it reads as a notice
      the way the answer box does, not as an error and not as decoration. It
      sits above the body because a reader should know the guidance is behind
