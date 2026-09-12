@@ -4,10 +4,19 @@
  * carrying the vendor's own published description so a reader knows why the
  * outbound link is worth their click before they leave the site. The summary
  * is the vendor's og:description, quoted as their words and labelled as
- * such; where a vendor publishes no per-post description, the page says what
+ * such; where no description exists at all, the page says what
  * it verifiably can (who posted it, when we surfaced it) and does not invent
  * a summary. Slugs are name + 6 chars of the URL hash, permanent once
  * published per the standing URL rule.
+ *
+ * THE STUB WORDING WAS A CLAIM WE COULD NOT MAKE. It used to read "{vendor}
+ * did not publish a per-post description for this one", asserting something
+ * about the vendor from the absence of a field in their FEED. Stephen found
+ * a Vercel post saying exactly that while vercel.com carried a 240-character
+ * og:description on the post itself, and 2,733 of 5,689 posts - 48% - said
+ * the same false thing. twoai_vendor_enrich now reads the page's own
+ * metadata, and this wording claims only what it knows, without blaming the
+ * publisher for our gap.
  *
  * Paths come from `archive`, which is every post the pipeline has ever seen,
  * not from the hub's `vendors` blocks. Those are capped at 25 per vendor for
@@ -103,9 +112,9 @@ const jsonld = JSON.stringify({
       <p>{it.summary}</p>
     ) : (
       <p>
-        An announcement published by {vendor} on its own site. {vendor} did not publish a
-        per-post description for this one, so rather than inventing a summary, this page sends
-        you straight to the source.
+        An announcement published by {vendor} on its own site. We have no description
+        for this one — neither the feed nor the post itself published one — so rather
+        than inventing a summary, this page sends you straight to the source.
       </p>
     )}
   </div>
