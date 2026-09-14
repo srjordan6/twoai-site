@@ -1,6 +1,17 @@
 ---
 import Base from '../../layouts/Base.astro';
 
+// Same Turnstile site key as the join page: one widget, one key, one secret.
+//
+// MISSING FROM 2026-09-12 TO 2026-09-14, and login was dead the whole time.
+// The commit that added Turnstile to /api/talent/login shipped the server
+// check and the submit script but not the widget: a three-part edit was
+// rejected over a character mismatch in the script section, the script was
+// re-applied alone, and the key and the widget never landed. Every login
+// then sent an empty token and got "Verification failed". The endpoint test
+// afterwards passed, because rejecting a bad token is correct - it just
+// never asked whether a good one could be produced.
+const TURNSTILE_SITEKEY = '0x4AAAAAAEXO3e0E3BMHmG2x';
 const desc = 'Log in to your AI Talent Network profile to update your skills, background, headshot, or sharing settings.';
 ---
 <Base title="Log in — AI Talent Network — The World of AI" description={desc} current="/talent/" noindex={true}>
@@ -12,6 +23,7 @@ const desc = 'Log in to your AI Talent Network profile to update your skills, ba
   <div class="talent-card" style="max-width: 30rem">
     <label>Email address <input type="email" id="l-email" autocomplete="email" maxlength="254" /></label>
     <label>Password <input type="password" id="l-pw" autocomplete="current-password" maxlength="200" /></label>
+    <div class="cf-turnstile" data-sitekey={TURNSTILE_SITEKEY}></div>
     <button id="l-btn" type="button">Log in</button>
     <p id="l-msg" class="t-msg" role="status"></p>
     <p class="meta-line"><a href="/talent/join/">New here? Create a profile instead.</a></p>
