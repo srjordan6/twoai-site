@@ -117,11 +117,18 @@ if (pageTitle.length < MIN_CH) {
   }
 }
 }
-let metaDesc = wordClamp(description, 158);
+// 155, not 158. A Screaming Frog crawl on 2026-09-13 flagged 134 pages, 29%
+// of the sample, for descriptions over 155 characters; the site's clamp was
+// three characters looser than the tool's threshold and every page that
+// landed in the gap was reported. Google truncates on pixel width, not
+// characters, so neither figure is exact - but 155 is the figure every audit
+// tool checks, and being three characters over it buys nothing.
+const DESC_MAX = 155;
+let metaDesc = wordClamp(description, DESC_MAX);
 if (metaDesc.length < 110) {
   const long = `${metaDesc} From The World of AI, an atlas of artificial intelligence rebuilt daily from primary sources.`.trim();
   const short = `${metaDesc} From The World of AI, rebuilt daily from primary sources.`.trim();
-  metaDesc = long.length <= 158 ? long : short.length <= 158 ? short : wordClamp(short, 158);
+  metaDesc = long.length <= DESC_MAX ? long : short.length <= DESC_MAX ? short : wordClamp(short, DESC_MAX);
 }
 
 // GA4 custom dimensions, resolved at build time so every page reports which
@@ -764,6 +771,11 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
 
     .cite-box { border: 1px dashed var(--gray); padding: 14px 18px; margin: 30px 0 0;
       font-size: 13.5px; color: var(--gray); }
+    /* A source link the checker has confirmed dead. The build turns the
+       anchor into this span (see astro.config.mjs, neutraliseDeadLinks): the
+       name stays so the citation still reads, the underline goes dotted so a
+       reader can see it is not a link, and the title says why. */
+    .dead-link { color: var(--gray); text-decoration: underline dotted; cursor: help; }
     .cite-box code { color: var(--ink); font-size: 13px; }
     .btn { display: inline-block; background: var(--orange); color: var(--navy); font-weight: 700;
       padding: 12px 22px; font-size: 14px; letter-spacing: .04em; }

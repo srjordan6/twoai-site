@@ -514,7 +514,15 @@ const jsonld = JSON.stringify(clc ? {
       <p>{f.desc}</p>
       {b && b.brief && (
         <>
-          {capParagraphs(b.brief).map((para: string) => <p class="point-brief">{para}</p>)}
+          {/* set:html because a brief may carry anchors to this site's own
+              pages. srj-pipeline's twoai_point_briefs writes them: the model
+              marks a subject it judges the source to be about, and the
+              pipeline resolves that mark against the real page inventory,
+              dropping anything it cannot find. So the only HTML that reaches
+              here is an <a href> to a path this site publishes - never model
+              output rendered raw, which is why this is safe and why the
+              resolution happens there rather than here. */}
+          {capParagraphs(b.brief).map((para: string) => <p class="point-brief" set:html={para} />)}
           <p class="meta-line brief-stamp">Our reading of the source, written {b.written_on}.</p>
         </>
       )}

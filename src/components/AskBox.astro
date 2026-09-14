@@ -10,7 +10,7 @@
    component must appear at most once on a page. */
 interface Props { heading?: string; placeholder?: string; note?: string; }
 const {
-  heading = 'Ask this site a question',
+  heading = 'Ask Stephen a Question',
   placeholder = 'What are the AI laws in Texas?',
   note = '',
 } = Astro.props;
@@ -29,7 +29,7 @@ const {
     <div class="ask-row">
       <input id="ask-q" type="text" autocomplete="off"
         placeholder={placeholder}
-        aria-label="Ask a question about AI, answered from this site" maxlength="500" />
+        aria-label="Ask Stephen a question about AI, answered from this site" maxlength="500" />
       <button id="ask-go" type="button">Ask</button>
     </div>
     <p class="ask-note">Answered from this site's pages and its research index of academic papers,

@@ -263,10 +263,84 @@ function capParagraphsInHtml() {
   };
 }
 
+// DEAD OUTBOUND LINKS, NEUTRALISED AT BUILD TIME.
+//
+// srj-pipeline's twoai_link_check fetches every external URL the site
+// renders and, when one answers 404 or 410 on two checks at least three days
+// apart, publishes it in content/meta/dead-links.json. Until 2026-09-14 that
+// verdict went to stderr and nowhere else: the page kept its link and a
+// reader kept getting a 404. A Screaming Frog crawl that day flagged four
+// dead outbound links; the checker already knew about 24.
+//
+// This does the same thing for links that capParagraphsInHtml does for
+// prose: one pass over the built HTML, after every template has run, so
+// the fix reaches all of them at once and reaches templates written next
+// year. A dead anchor keeps its text and loses its href, gaining a title
+// that says why - the reader sees the source's name and is not sent to a
+// page that is not there. A source that comes back leaves the list on the
+// next pipeline run and its anchor returns on the next build.
+function neutraliseDeadLinks() {
+  return {
+    name: 'twoai-dead-links',
+    hooks: {
+      'astro:build:done': async ({ dir }) => {
+        const { readdirSync, readFileSync, writeFileSync, statSync, existsSync } = await import('node:fs');
+        const { join } = await import('node:path');
+        if (!existsSync('content/meta/dead-links.json')) return;
+        let dead;
+        try { dead = JSON.parse(readFileSync('content/meta/dead-links.json', 'utf8')); } catch { return; }
+        const urls = new Map();
+        for (const l of dead.links || []) if (l.url) urls.set(l.url, l);
+        if (urls.size === 0) { console.log('dead-links: none to neutralise'); return; }
+        const root = new URL(dir).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+        let pages = 0, anchors = 0;
+        const esc = (s) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+        const walk = (d) => {
+          for (const f of readdirSync(d)) {
+            const p = join(d, f);
+            if (statSync(p).isDirectory()) { walk(p); continue; }
+            if (!f.endsWith('.html')) continue;
+            const html = readFileSync(p, 'utf8');
+            let n = 0;
+            const out = html.replace(/<a\b([^>]*?)\shref="([^"]+)"([^>]*)>/gi, (m, pre, href, post) => {
+              const h = href.replace(/&amp;/g, '&');
+              const d = urls.get(h) || urls.get(h.replace(/\/$/, '')) || urls.get(h + '/');
+              if (!d) return m;
+              n++;
+              // Merge any class the template set so styling holds; drop rel
+              // and target since there is nothing to open.
+              const clsm = (pre + post).match(/\sclass="([^"]*)"/i);
+              const cls = clsm ? clsm[1] + ' dead-link' : 'dead-link';
+              return `<span class="${cls}" title="${esc('This source answered ' + d.status + ' on ' + d.since + ' and again later. Link removed until it returns.')}" data-dead-href="${esc(href)}">`;
+            });
+            if (n > 0) {
+              // Close the spans that replaced anchors. Anchors we did not
+              // touch still close with </a>; the ones we did need </span>.
+              // Simplest correct approach: walk anchors in order.
+              let fixed = '', depth = [];
+              const tokens = out.split(/(<a\b[^>]*>|<\/a>|<span class="[^"]*dead-link"[^>]*>)/i);
+              for (const t of tokens) {
+                if (/^<span class="[^"]*dead-link"/i.test(t)) { depth.push('span'); fixed += t; }
+                else if (/^<a\b/i.test(t)) { depth.push('a'); fixed += t; }
+                else if (/^<\/a>$/i.test(t)) { fixed += depth.pop() === 'span' ? '</span>' : '</a>'; }
+                else fixed += t;
+              }
+              writeFileSync(p, fixed);
+              anchors += n; pages++;
+            }
+          }
+        };
+        walk(root);
+        console.log(`dead-links: ${urls.size} known dead, ${anchors} anchors neutralised on ${pages} pages`);
+      },
+    },
+  };
+}
+
 // Static output; content is fetched from the twoai-content repo by
 // scripts/fetch-content.mjs before every build (see package.json prebuild).
 export default defineConfig({
   site: 'https://theworldofai.org',
-  integrations: [sitemap({ filter: sitemapKeeps }), unlistedManifest(), capParagraphsInHtml()],
+  integrations: [sitemap({ filter: sitemapKeeps }), unlistedManifest(), capParagraphsInHtml(), neutraliseDeadLinks()],
   build: { format: 'directory' },
 });
