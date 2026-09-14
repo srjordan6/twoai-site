@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- The favicon variant of the mark: white globe and orange orbit on the
+       brand navy square. mark.svg (navy strokes, transparent) is right inline
+       on a white page and wrong on a browser tab, where at 32px its thin
+       strokes cover 28% of the pixels and read as nothing. This is the same
+       mark the delivered brand kit ships as favicon32/192/512. -->
+  <rect width="256" height="256" rx="46" fill="#201868"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="13">
+    <circle cx="128" cy="128" r="70"/>
+  </g>
+  <ellipse cx="128" cy="128" rx="30.8" ry="70" fill="none" stroke="#FFFFFF" stroke-width="7" opacity=".85"/>
+  <ellipse cx="128" cy="128" rx="96" ry="35.8" transform="rotate(-22 128 128)"
+           fill="none" stroke="#F07800" stroke-width="10"/>
+  <circle cx="163.8" cy="80.8" r="13.5" fill="#F07800"/>
+</svg>
