@@ -1,9 +1,26 @@
-# Security contact for theworldofai.org (RFC 9116).
-# This is a static reference site published by SRJ Consulting & Services LLC.
-# In-scope: this domain, its /api/ endpoints, and content integrity issues.
+# Security contact for theworldofai.org
+#
+# RFC 9116. Scope notes added 2026-09-14 after Cloudflare flagged the file as
+# minimal: a researcher who finds a flaw in the talent portal needs to know
+# what is worth reporting and where it goes.
+
 Contact: mailto:info@srjconsultingservices.com
 Contact: https://theworldofai.org/contact/
 Expires: 2027-08-20T00:00:00.000Z
 Preferred-Languages: en
 Canonical: https://theworldofai.org/.well-known/security.txt
 Policy: https://theworldofai.org/contact/
+
+# theworldofai.org is published by SRJ Consulting & Services LLC, Frisco,
+# Texas. The site is static, rebuilt daily from a data pipeline; the only
+# endpoints that accept input are /api/talent/* (account signup, profile
+# submission, resume and photo upload) and /api/ask.
+#
+# Please report: authentication flaws in the talent portal, anything that
+# exposes another person's profile or resume, injection through the ask
+# endpoint, or a way to write to content this site publishes.
+#
+# Please do not report: missing security headers on static pages, the absence
+# of rate limiting on public read-only JSON endpoints (/api/laws.json and its
+# siblings are deliberately open and CORS-enabled for anyone to use), or
+# automated scanner output without a demonstrated impact.
