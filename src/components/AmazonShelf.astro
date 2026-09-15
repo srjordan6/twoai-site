@@ -42,6 +42,18 @@ const COVERS = [
   // collide with a future title that merely contains the word, which is the
   // ordering rule this list is built on.
   ['secure by design', '/covers/secure-by-design.jpg', 512],
+  // Volume VIII, added 2026-09-15, and the SECOND time this exact gap shipped.
+  // Stephen added the cover file, pushed it, rebuilt twice, and the slot still
+  // rendered a bare title - because the file was never the missing piece. A
+  // cover appears only if its title matches a keyword HERE, so publishing a
+  // book means two edits in two repositories, and the second one is invisible
+  // until someone looks at the homepage.
+  //
+  // 'application security' rather than 'application': the narrow phrase cannot
+  // collide with a later title that merely contains the word, which is the
+  // ordering rule this list is built on. It is safe below 'security audit'
+  // because Volume VIII's title carries neither 'audit' nor 'implementation'.
+  ['application security', '/covers/application-security.jpg', 512],
 ];
 function coverFor(title) {
   const t = (title || '').toLowerCase();
