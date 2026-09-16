@@ -547,7 +547,17 @@ const isDraft = Boolean((clx || law || secu || sec)?.draft);
           <p class="meta-line brief-stamp">Our reading of the source, written {b.written_on}.</p>
         </>
       )}
-      <p class="meta-line"><a href={f.source} rel="noopener">Source</a></p>
+      {f.source ? (
+        <p class="meta-line"><a href={f.source} rel="noopener">Source</a></p>
+      ) : (
+        /* NO SOURCE, NO LINK. This rendered <a href="">Source</a>
+           unconditionally, so a point still being researched emitted a link
+           to the current page under the word Source, which is the same empty
+           element failure as the compliance bullets on 2026-09-11 and reads
+           as a citation that is not there. A tracked item without a source
+           now says so plainly. */
+        <p class="meta-line">Tracked. No source published yet.</p>
+      )}
     </div>
     );
   })}
