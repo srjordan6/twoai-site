@@ -113,9 +113,30 @@ const jsonld = JSON.stringify(clc ? {
   dateModified: (clx || law || secu || sec).generated,
   isPartOf: { '@type': 'CollectionPage', name: CATEGORY_NAME, url: `https://theworldofai.org${BASE}/` },
 });
+// DRAFT PAGES ARE BUILT, REACHABLE, AND NOT IN THE INDEX.
+//
+// Stephen, 2026-09-15, on the new AI Insurance hub: we need time to build
+// this right and not be worried that we will get labeled as thin pages, and
+// I do not yet know whether each item is a page by itself or a hub for many
+// pages until I start building.
+//
+// Both concerns have the same answer. A page document carrying draft: true
+// renders so it can be worked on and read, and carries noindex so a search
+// engine never sees a section that is still an outline. astro.config.mjs
+// keeps the same pages out of the sitemap. Remove the flag when a section is
+// ready and it enters the index on the next build, with the URL it always
+// had - which is what makes it safe to decide the shape later.
+const isDraft = Boolean((clx || law || secu || sec)?.draft);
 ---
-<Base title={clc ? `${dcase.case_name} — AI Case Law — The World of AI` : clx ? 'AI Case Law: The Precedents Behind the Defenses — The World of AI' : law ? 'Enacted AI Laws: US Bills That Became Law — The World of AI' : secu ? `${secu.name} — AI Security and Risk — The World of AI` : isCases ? `AI Case Studies: Real Deployments, Indexed — The World of AI` : `AI in ${sec.name} — The World of AI`} description={desc}
+<Base noindex={isDraft} title={clc ? `${dcase.case_name} — AI Case Law — The World of AI` : clx ? 'AI Case Law: The Precedents Behind the Defenses — The World of AI' : law ? 'Enacted AI Laws: US Bills That Became Law — The World of AI' : secu ? `${secu.name} — AI Security and Risk — The World of AI` : isCases ? `AI Case Studies: Real Deployments, Indexed — The World of AI` : `AI in ${sec.name} — The World of AI`} description={desc}
   current={`${BASE}/`} jsonld={jsonld}>
+
+  {isDraft && (
+    <p class="meta-line" style="border-left:3px solid var(--orange); padding-left:12px">
+      Draft. This section is being built and is not in the search index yet. The
+      items below are what we intend to track, not findings.
+    </p>
+  )}
 
   <p class="meta-line"><a href="/">AI Ecosystem</a> ·
     <a href={`${BASE}/`}>{CATEGORY_NAME}</a></p>

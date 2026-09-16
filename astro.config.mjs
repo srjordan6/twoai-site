@@ -129,7 +129,27 @@ const excluded = new Set([...redirectedPaths(), ...noindexPeoplePaths(), ...thin
 // the build, so it cannot disagree with what actually rendered.
 const unlisted = new Set();
 
+// Draft section pages, read from the content bundle at config time. A page
+// document carrying draft: true is built and reachable but must not enter the
+// sitemap, so a section that is still an outline is never submitted for
+// indexing. The page itself also renders noindex; see the ecosystem [id]
+// route. Both read the same flag, so removing it in SQL publishes the page
+// with the URL it already had.
+const draftUids = new Set();
+try {
+  const { readdirSync, readFileSync } = await import('node:fs');
+  for (const f of readdirSync('content/industries')) {
+    if (!f.endsWith('.json')) continue;
+    const d = JSON.parse(readFileSync(`content/industries/${f}`, 'utf8'));
+    if (d?.draft && d?.uid) draftUids.add(d.uid);
+  }
+} catch { /* no bundle yet, or no industries directory: nothing to exclude */ }
+
 function sitemapKeeps(page) {
+  // Drafts never reach the sitemap.
+  for (const uid of draftUids) {
+    if (page.includes(`/${uid}/`)) return false;
+  }
   if (/\/mcp\/[^/]+\/$/.test(page) && !page.endsWith('/mcp/')) return false;
   // Vendor permalinks out, the hub itself in.
   if (/\/ai-news\/vendor\/[^/]+\/$/.test(page)) return false;
