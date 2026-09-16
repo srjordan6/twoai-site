@@ -69,7 +69,18 @@ export function loadKnownEntities(): Map<string, KnownEntity> {
       if (!f.endsWith('.json') || f === 'index.json') continue;
       try {
         const c = JSON.parse(readFileSync(`content/companies/${f}`, 'utf8'))?.company;
-        if (c?.uid) add(c.name, `/companies/${c.uid}/`);
+        if (c?.uid) {
+          add(c.name, `/companies/${c.uid}/`);
+          // ALIASES, because a newswire names the model and not the lab.
+          // Stephen, 2026-09-15, on a story about China closing the gap:
+          // it should list Moonshot AI, DeepSeek and Z.ai. Six of those labs
+          // already had pages. They did not chip because the article says
+          // Kimi, GLM and Qwen, and nothing mapped a model back to the
+          // company that makes it.
+          for (const a of (Array.isArray(c.aliases) ? c.aliases : [])) {
+            add(a, `/companies/${c.uid}/`);
+          }
+        }
       } catch { /* a malformed file fails the build in its own route, not here */ }
     }
   }
@@ -126,6 +137,38 @@ export function resolveEntities(names: string[], known: Map<string, KnownEntity>
   for (const raw of names) {
     const hit = resolveEntity(raw, known);
     if (!hit || seen.has(hit.href)) continue;
+    seen.add(hit.href);
+    out.push(hit);
+    if (out.length >= n) break;
+  }
+  return out;
+}
+
+/**
+ * Find entities NAMED IN THE TEXT that the extractor missed.
+ *
+ * GDELT's list is the only input resolveEntities has, and on a story about
+ * Chinese labs closing the gap it produced Trump, two officials and a news
+ * photographer while never naming Moonshot AI, DeepSeek or Z.ai, which were
+ * the subject. The extractor is tuned for people and institutions, not for
+ * model families.
+ *
+ * So the headline and summary are scanned directly for names this site
+ * publishes. Only keys of four characters or more, only whole words, and only
+ * entities already in the known map, so this cannot invent a chip: it can
+ * only find one the extractor overlooked.
+ */
+export function entitiesInText(text: string, known: Map<string, KnownEntity>, n = 6): KnownEntity[] {
+  const hay = ' ' + normEntity(text) + ' ';
+  const out: KnownEntity[] = [];
+  const seen = new Set<string>();
+  // Longest keys first, so a two-word lab name is not shadowed by one word of
+  // it matching something shorter.
+  const keys = [...known.keys()].filter((k) => k.length >= 4).sort((a, b) => b.length - a.length);
+  for (const k of keys) {
+    if (!hay.includes(' ' + k + ' ')) continue;
+    const hit = known.get(k)!;
+    if (seen.has(hit.href)) continue;
     seen.add(hit.href);
     out.push(hit);
     if (out.length >= n) break;
