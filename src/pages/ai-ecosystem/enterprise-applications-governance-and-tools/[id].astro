@@ -52,6 +52,23 @@ export function getStaticPaths() {
   return paths;
 }
 const { sec, secu, law, clx, clc } = Astro.props;
+// Compliance pages written from the statute: a map from "STATE BILL" to the
+// page slug, so the enacted-laws list can link each law to its own reading.
+// srj-pipeline's twoai_enacted_laws writes one per passed bill under
+// content/compliance/law-*.json; a bill without one yet renders as before.
+const lawPages = new Map();
+if (law && existsSync('content/compliance')) {
+  for (const f of readdirSync('content/compliance')) {
+    if (!f.startsWith('law-') || !f.endsWith('.json')) continue;
+    try {
+      const d = JSON.parse(readFileSync(`content/compliance/${f}`, 'utf8'));
+      if (d.state && d.bill_number && d.slug) {
+        lawPages.set(`${d.state} ${d.bill_number}`.replace(/\s+/g, ' ').toUpperCase(), d.slug);
+      }
+    } catch { /* a malformed page fails its own route, not this list */ }
+  }
+}
+const lawPage = (state, bill) => lawPages.get(`${state} ${bill}`.replace(/\s+/g, ' ').toUpperCase());
 const dcase = clc ? clc.case : null;
 const diss = dcase && dcase.dissection ? dcase.dissection : null;
 // Fixed pillar order and field labels for the five-pillar dissection. Keys
@@ -713,6 +730,9 @@ const isDraft = Boolean((clx || law || secu || sec)?.draft);
             <div class="dom">
               <h3><a href={b.url} rel="noopener">{b.state} {b.bill}</a> · {b.status_date}</h3>
               <p>{b.description || b.title}</p>
+              {lawPage(b.state, b.bill) && (
+                <p class="meta-line"><a href={`/ai-compliance/${lawPage(b.state, b.bill)}/`}>What this law does, who it applies to, and what it requires, with the full text</a></p>
+              )}
             </div>
           ))}
         </section>
@@ -721,7 +741,7 @@ const isDraft = Boolean((clx || law || secu || sec)?.draft);
       <section>
         <h2>Every enacted AI law on record</h2>
         <table>
-          <thead><tr><th>State</th><th>Bill</th><th>What it does</th><th>Status date</th></tr></thead>
+          <thead><tr><th>State</th><th>Bill</th><th>What it does</th><th>Status date</th><th>Reading</th></tr></thead>
           <tbody>
             {law.laws.map((b) => (
               <tr>
@@ -729,6 +749,7 @@ const isDraft = Boolean((clx || law || secu || sec)?.draft);
                 <td><a href={b.url} rel="noopener">{b.bill}</a></td>
                 <td>{b.title}</td>
                 <td>{b.status_date}</td>
+                <td>{lawPage(b.state, b.bill) ? <a href={`/ai-compliance/${lawPage(b.state, b.bill)}/`}>Read the law</a> : <span class="meta-line">pending</span>}</td>
               </tr>
             ))}
           </tbody>
