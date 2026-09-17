@@ -89,9 +89,10 @@ const jsonld = JSON.stringify({
 ---
 <Base title={`What is ${t.term}? Definition in plain English — The World of AI`.length <= 70
     ? `What is ${t.term}? Definition in plain English — The World of AI`
-    : (`What is ${t.term}? — AI Glossary`.length <= 70 ? `What is ${t.term}? — AI Glossary` : `What is ${t.term}?`)} description={desc} current="/ai-glossary/" jsonld={jsonld}>
+    : (`What is ${t.term}? — AI Glossary`.length <= 70 ? `What is ${t.term}? — AI Glossary` : `What is ${t.term}?`)} description={desc} current="/ai-glossary/" jsonld={jsonld}
+    doc={t.uid ? { page_uid: t.uid, built_at: generated, generated } : undefined} stampLabel="Term">
   <h1>{t.term}</h1>
-  <p class="meta-line"><span class="badge">{t.category}</span>{generated && <> · Last verified: <time datetime={generated}>{generated}</time></>}</p>
+  <p class="meta-line"><span class="badge">{t.category}</span>{generated && <> · Last verified: <time datetime={generated}>{generated}</time></>}{t.uid && <> · <span class="uid" title="This term's identifier on theworldofai.org">uid {t.uid}</span></>}</p>
   <p class="answer">{t.definition}</p>
   {t.example && (<><h2>Example</h2><p>{t.example}</p></>)}
 
