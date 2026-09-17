@@ -92,6 +92,27 @@ const CATEGORIES: { name: string; slug: string; blurb: string; hub: string; patt
     ],
   },
   {
+    // Before Business & Finance, because an insurance story is full of
+    // business words - deals, billion, market - and would file there
+    // otherwise. Stephen, 2026-09-17: add one for Insurance. The vocabulary
+    // mirrors srj-pipeline's insuranceTerm, the language of the market rather
+    // than the bare word, so "reinsurance capacity" and "errors and omissions"
+    // land here and a health-plan explainer does not.
+    name: 'Insurance & Risk Transfer',
+    slug: 'insurance',
+    hub: '/ai-ecosystem/enterprise-applications-governance-and-tools/7785d228/',
+    blurb: 'How the insurance market prices AI and data centre risk, and how insurers use AI.',
+    patterns: [
+      String.raw`reinsur\w*`, String.raw`underwrit\w*`, String.raw`insurers?`, String.raw`insurance`,
+      String.raw`actuar\w*`, String.raw`catastrophe bonds?`, String.raw`cat bonds?`,
+      'business interruption', 'errors and omissions', String.raw`e&o`, String.raw`d&o`,
+      String.raw`policy (?:exclusion|wording|form)s?`, String.raw`exclusion endorsements?`,
+      String.raw`surplus lines`, String.raw`captive insurers?`, String.raw`lloyd's`,
+      'swiss re', 'munich re', 'hannover re', 'marsh', 'aon', 'guy carpenter', 'am best',
+      String.raw`insurable value`, String.raw`probable maximum loss`, String.raw`parametric`,
+    ],
+  },
+  {
     name: 'Business & Finance',
     slug: 'business',
     hub: '/companies/',
