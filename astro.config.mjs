@@ -146,6 +146,12 @@ try {
 } catch { /* no bundle yet, or no industries directory: nothing to exclude */ }
 
 function sitemapKeeps(page) {
+  // Story URLs are uids since 2026-09-17. A story's slug URL still builds,
+  // as a redirect page to its uid, and must not be submitted: the uid page
+  // is the canonical one and the slug page carries noindex.
+  const sp = new URL(page).pathname;
+  if (/^\/ai-news\/[^/]+\/$/.test(sp) && !/^\/ai-news\/[0-9a-f]{8}\/$/.test(sp)
+      && !/^\/ai-news\/(daily|vendor|archive|timeline|incident)\/$/.test(sp)) return false;
   // Drafts never reach the sitemap.
   for (const uid of draftUids) {
     if (page.includes(`/${uid}/`)) return false;

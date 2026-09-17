@@ -15,12 +15,12 @@ import PillarBox from '../components/PillarBox.astro';
 import Topbar from '../components/Topbar.astro';
 import DataStamp from '../components/DataStamp.astro';
 
-interface Props { title: string; description: string; current?: string; jsonld?: string; canonicalOverride?: string; noindex?: boolean; ogType?: string; rail?: boolean; titleTail?: string; doc?: Record<string, any>; stampLabel?: string; }
+interface Props { title: string; description: string; current?: string; jsonld?: string; canonicalOverride?: string; noindex?: boolean; ogType?: string; rail?: boolean; titleTail?: string; doc?: Record<string, any>; stampLabel?: string; redirect?: string; }
 /* rail=false drops the section-index card and lets the content run full width.
    The home page opts out: it IS the ecosystem map, so a card listing the same
    five categories beside it is the page repeating itself in miniature, and it
    pushed the hero, the ask box and everything below off centre. */
-const { title, description, current = '', jsonld, canonicalOverride, noindex = false, ogType = 'website', rail = true, titleTail, doc, stampLabel } = Astro.props;
+const { title, description, current = '', jsonld, canonicalOverride, noindex = false, ogType = 'website', rail = true, titleTail, doc, stampLabel, redirect } = Astro.props;
 const nav = [
   { href: '/ai-ecosystem/technology-and-core-infrastructure/', label: 'Technology & Infrastructure', short: 'Technology' },
   { href: '/ai-ecosystem/ecosystem-entities-market-and-operations/', label: 'Market & Entities', short: 'Market' },
@@ -148,6 +148,13 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
   <meta name="description" content={metaDesc} />
   <link rel="canonical" href={canonical} />
   {noindex && <meta name="robots" content="noindex,follow" />}
+  {/* A page that has moved. Static hosting cannot issue a 301 for a URL
+      that is not in the redirects file, and that file is capped at two
+      thousand lines, so a moved page is a real page that says where it went:
+      meta refresh for browsers, canonical for search engines, noindex so
+      the old address drops out of the index in favour of the new one. The
+      story routes use this for slug URLs after the move to uids. */}
+  {redirect && <meta http-equiv="refresh" content={`0; url=${redirect}`} />}
   <link rel="icon" type="image/svg+xml" href="/brand/favicon.svg" />
   <link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png" />
   <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />

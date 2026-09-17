@@ -28,13 +28,29 @@ export async function getStaticPaths() {
   // live outlet counts; the archive then supplies every slug ever published.
   // news.json is fetched fresh from srj-content on every build and only ever
   // holds today, so without the archive a permalink lived exactly one day.
+  // THE UID IS THE URL. Stephen, 2026-09-17: make certain the URL is
+  // /ai-news/1d390b6c/ and not the slug. A uid is what every other entity
+  // on this site is addressed by, it never changes, and a slug cut at sixty
+  // characters is neither. So every story renders at its uid, and that is the
+  // canonical page. The slug URL is kept because 632 archived stories carry
+  // one and Google has indexed them: it renders a redirect page - meta
+  // refresh to the uid, canonical pointing at it, noindex - so an old link
+  // arrives at the right page and search engines learn the new address.
+  // Cloudflare's _redirects file is capped at two thousand lines, and the
+  // archive grows by about thirty a day, so the redirect is a page rather
+  // than a rule.
   const out: any[] = [];
   const seen = new Set<string>();
+  const push = (s: any, date: any, generated: any) => {
+    const uid = storyUid(s.Slug, s.uid);
+    const props = { s: { ...s, uid }, date, generated };
+    out.push({ params: { story: uid }, props });
+    if (s.Slug !== uid) out.push({ params: { story: s.Slug }, props: { ...props, redirectTo: `/ai-news/${uid}/` } });
+  };
   for (const s of news?.stories ?? []) {
     if (!s.Slug || seen.has(s.Slug)) continue;
     seen.add(s.Slug);
-    // news.json carries no uid; the archive does. Same slug, same uid either way.
-    out.push({ params: { story: s.Slug }, props: { s: { ...s, uid: storyUid(s.Slug, s.uid) }, date: news.date, generated: news.generated } });
+    push(s, news.date, news.generated);
   }
   for (const raw of archive?.stories ?? []) {
     // The enactment trigger writes archive rows with lowercase keys (slug,
@@ -55,18 +71,12 @@ export async function getStaticPaths() {
     };
     if (!s.Slug || seen.has(s.Slug)) continue;
     seen.add(s.Slug);
-    s.uid = storyUid(s.Slug, s.uid);
-    out.push({
-      params: { story: s.Slug },
-      // An archived story dates itself from the day it ran, not from the day
-      // the archive was last written.
-      props: { s, date: s.ArchivedDate ?? s.published_on ?? archive.date, generated: s.ArchivedGenerated ?? archive.generated },
-    });
+    push(s, s.ArchivedDate ?? s.published_on ?? archive.date, s.ArchivedGenerated ?? archive.generated);
   }
   return out;
 }
 
-const { s, date, generated } = Astro.props;
+const { s, date, generated, redirectTo } = Astro.props;
 
 // Go marshals a nil slice to JSON null, not []. One story with Orgs: null
 // took an entire site build down on 2026-07-28, because these pages are
@@ -92,6 +102,8 @@ const stampDoc = {
   built_at: generated,
   generated: date,
 };
+
+const storyPath = `/ai-news/${stampDoc.page_uid}/`;
 
 const cat = categoryOf(story);
 const cats = categoriesOf(story);
@@ -162,7 +174,7 @@ const jsonld = JSON.stringify({
     {
       '@type': 'CollectionPage',
       name: story.Headline,
-      url: `https://theworldofai.org/ai-news/${story.Slug}/`,
+      url: `https://theworldofai.org${storyPath}`,
       description,
       datePublished: date,
       dateModified: generated,
@@ -180,7 +192,12 @@ const jsonld = JSON.stringify({
   ],
 });
 ---
-<Base title={`${title} | AI News`} description={description} current="/ai-news/" jsonld={jsonld} ogType="article" doc={stampDoc} stampLabel="Story first published">
+{redirectTo ? (
+  <Base title={`${title} | AI News`} description={description} current="/ai-news/" noindex={true} canonicalOverride={`https://theworldofai.org${redirectTo}`} redirect={redirectTo}>
+    <p class="meta-line">This story has moved to its permanent address: <a href={redirectTo}>{story.Headline}</a></p>
+  </Base>
+) : (
+<Base title={`${title} | AI News`} description={description} current="/ai-news/" jsonld={jsonld} ogType="article" doc={stampDoc} stampLabel="Story first published" canonicalOverride={`https://theworldofai.org${storyPath}`}>
   <p class="meta-line"><a href="/ai-news/">AI News</a> · <a href="/ai-news/daily/">Daily News</a></p>
   <h1>{story.Headline}</h1>
   <p class="dateline">
@@ -404,6 +421,7 @@ const jsonld = JSON.stringify({
     ] },
   ]} />
 </Base>
+)}
 
 <style>
   h1 { max-width: 28ch; line-height: 1.2; }

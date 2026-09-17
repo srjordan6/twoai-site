@@ -122,7 +122,7 @@ const jsonld = JSON.stringify({
         '@type': 'ListItem',
         position: i + 1,
         name: s.Headline,
-        url: `https://theworldofai.org/ai-news/${s.Slug}/`,
+        url: `https://theworldofai.org/ai-news/${(s as any).uid}/`,
       })),
     },
     {
@@ -208,7 +208,7 @@ const jsonld = JSON.stringify({
         <ol class="top5">
           {top5.map((s) => (
             <li>
-              <a href={`/ai-news/${s.Slug}/`}>{s.Headline}</a>
+              <a href={`/ai-news/${(s as any).uid}/`}>{s.Headline}</a>
               <span class="t5meta">{categoryOf(s).name} · <strong>{s.DomainCount}</strong> outlets · {news.date} · <span class="uid" title="This story's identifier on theworldofai.org">uid {(s as any).uid}</span></span>
             </li>
           ))}
@@ -226,7 +226,7 @@ const jsonld = JSON.stringify({
           <div class="rule"></div>
           {g.stories.map((s) => (
             <article class="story">
-              <h3><a href={`/ai-news/${s.Slug}/`}>{s.Headline}</a></h3>
+              <h3><a href={`/ai-news/${(s as any).uid}/`}>{s.Headline}</a></h3>
               <p class="brief">
                 Covered by <strong>{s.DomainCount}</strong> outlets across
                 <strong> {s.ArticleCount}</strong> articles
@@ -240,7 +240,7 @@ const jsonld = JSON.stringify({
                 <span class="num"><strong>{s.Orgs.length + s.Persons.length}</strong> entities</span>
                 <span class="num stamp">{news.date} · <span class="uid" title="This story's identifier on theworldofai.org">uid {(s as any).uid}</span></span>
               </div>
-              <a class="more" href={`/ai-news/${s.Slug}/`}>Full coverage and sources &rarr;</a>
+              <a class="more" href={`/ai-news/${(s as any).uid}/`}>Full coverage and sources &rarr;</a>
             </article>
           ))}
         </section>
@@ -253,7 +253,7 @@ const jsonld = JSON.stringify({
           <div class="rule"></div>
           {g.stories.map((s) => (
             <article class="story">
-              <h3><a href={`/ai-news/${s.Slug}/`}>{s.Headline}</a></h3>
+              <h3><a href={`/ai-news/${(s as any).uid}/`}>{s.Headline}</a></h3>
               <p class="answer">{s.Answer}
                 {s.Entities && s.Entities.length > 0 && (
                   <span class="ents"> {s.Entities.join(' \u00b7 ')}</span>
@@ -266,7 +266,7 @@ const jsonld = JSON.stringify({
                 <span class="num"><strong>{s.Orgs.length + s.Persons.length}</strong> entities</span>
                 <span class="num stamp">{news.date} · <span class="uid" title="This story's identifier on theworldofai.org">uid {(s as any).uid}</span></span>
               </div>
-              <a class="more" href={`/ai-news/${s.Slug}/`}>Full coverage and sources &rarr;</a>
+              <a class="more" href={`/ai-news/${(s as any).uid}/`}>Full coverage and sources &rarr;</a>
             </article>
           ))}
         </section>
