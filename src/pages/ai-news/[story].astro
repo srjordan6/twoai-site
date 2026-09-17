@@ -16,7 +16,7 @@ import KeepReading from '../../components/KeepReading.astro';
 import { matchTerms, companyFor } from '../../lib/related';
 import { categoryOf, categoriesOf, coverageByDay, readingMinutes, titleCase, type Story } from '../../lib/newsTopics';
 
-import { loadKnownEntities, resolveEntities, entitiesInText } from '../../lib/knownEntities';
+import { loadKnownEntities, entitiesInText } from '../../lib/knownEntities';
 import { storyUid, cleanSummary } from '../../lib/storyUid';
 export async function getStaticPaths() {
   const mods = import.meta.glob('../../../content/news/news.json', { eager: true });
@@ -113,21 +113,24 @@ const cats = categoriesOf(story);
 const krTerms = matchTerms(`${story.Title ?? ''} ${story.Summary ?? story.Description ?? ''}`);
 
 // Entity chips and the sidebar list are restricted to organisations and people
-// this site publishes a page for, and render as links to those pages. The raw
-// Orgs and Persons arrays come from GDELT's extractor and are mostly fragments
-// and generic phrases; highlighting them implied a depth of coverage that did
-// not exist, and gave the reader nowhere to go. See lib/knownEntities.ts.
+// this site publishes a page for, and render as links to those pages.
+//
+// AND ONLY THOSE NAMED IN THE TEXT ON THIS PAGE. Stephen, 2026-09-17, on a
+// US-China AI safety story whose chips read NVIDIA, Dario Amodei, Jensen
+// Huang: none of these are in the story. They were not. GDELT extracted
+// them from article bodies in the cluster - an AP piece quoted both men -
+// but the page shows the headline and the pipeline's summary, and neither
+// names them. A chip a reader cannot find in the text in front of them looks
+// like an error, and on a reference site that is worse than a missing chip.
+// So the extractor's list is no longer a chip source. The headline and
+// summary are scanned for entities this site has pages for, and those are
+// the chips: every one can be checked against the words above it.
 const knownEntityIndex = loadKnownEntities();
-const knownOrgs = resolveEntities(story.Orgs, knownEntityIndex, 12);
-const knownPersons = resolveEntities(story.Persons, knownEntityIndex, 12);
-// Then the text itself, because the extractor misses the subject. On a story
-// about Chinese labs closing the gap it named Trump, two officials and a news
-// photographer, and never Moonshot AI, DeepSeek or Z.ai. Extractor hits come
-// first because GDELT saw the whole article; text hits fill what it missed
-// from the headline and summary this site actually publishes.
-const inText = entitiesInText(`${story.Headline} ${story.Summary || ''}`, knownEntityIndex, 8);
-const seenHref = new Set([...knownOrgs, ...knownPersons].map((e) => e.href));
-const known4 = [...knownOrgs, ...knownPersons, ...inText.filter((e) => !seenHref.has(e.href))].slice(0, 6);
+const onPage = entitiesInText(`${story.Headline} ${story.Summary || ''}`, knownEntityIndex, 12);
+const known4 = onPage.slice(0, 6);
+// The sidebar splits the same list by kind, read from the href shape.
+const knownPersons = onPage.filter((e) => /\/ecosystem-entities-market-and-operations\/[0-9a-f]{8}\/$/.test(e.href));
+const knownOrgs = onPage.filter((e) => !knownPersons.includes(e));
 
 const timeline = coverageByDay(story.Articles);
 const stamp = generated ? `${new Date(generated).toUTCString().slice(0, 22)} UTC` : null;
