@@ -42,7 +42,13 @@ export type Story = {
 
 // Order matters: the first category with a hit wins, so the more specific
 // buckets come before the broader ones.
-const CATEGORIES: { name: string; slug: string; blurb: string; patterns: string[] }[] = [
+//
+// Each category names its HUB: the page on this site that is about the
+// subject, not the section of today's briefing that happens to hold stories
+// in it. Stephen, 2026-09-17: when I click on these buttons it must take me to
+// a page about the button. A Security & Risk pill went to /ai-news/daily/#security,
+// a same-day filter; it goes to the AI Security and Risk hub now.
+const CATEGORIES: { name: string; slug: string; blurb: string; hub: string; patterns: string[] }[] = [
   {
     // First, because it is the most specific and because Policy's old
     // `centre\S*` pattern was catching the "centre" in "data centre": on
@@ -51,6 +57,7 @@ const CATEGORIES: { name: string; slug: string; blurb: string; patterns: string[
     // and what it costs belong with the facility registry they feed.
     name: 'Data Centres & Infrastructure',
     slug: 'datacenters',
+    hub: '/data-centers/',
     blurb: 'Campuses, capacity, power, cooling, siting, and the operators building them.',
     patterns: [
       String.raw`data.cent(er|re)s?`, 'hyperscale', String.raw`hyperscalers?`, 'colocation',
@@ -62,6 +69,7 @@ const CATEGORIES: { name: string; slug: string; blurb: string; patterns: string[
   {
     name: 'Policy & Regulation',
     slug: 'policy',
+    hub: '/ai-ecosystem/enterprise-applications-governance-and-tools/4d0aabb4/',
     blurb: 'Legislation, regulators, enforcement, and government AI programmes.',
     patterns: [
       String.raw`regulat\w*`, String.raw`legislat\w*`, 'congress', 'senate', 'parliament',
@@ -74,6 +82,7 @@ const CATEGORIES: { name: string; slug: string; blurb: string; patterns: string[
   {
     name: 'Security & Risk',
     slug: 'security',
+    hub: '/ai-ecosystem/enterprise-applications-governance-and-tools/0ff57218/',
     blurb: 'Breaches, model risk, safety incidents, and misuse.',
     patterns: [
       String.raw`breach\w*`, String.raw`hack\w*`, String.raw`cyber\w*`, 'ransomware',
@@ -85,6 +94,7 @@ const CATEGORIES: { name: string; slug: string; blurb: string; patterns: string[
   {
     name: 'Business & Finance',
     slug: 'business',
+    hub: '/companies/',
     blurb: 'Funding, earnings, deals, hiring, and market movement.',
     patterns: [
       'funding', 'raise', 'valuation', 'ipo', 'acquisition', String.raw`acquires?`, 'merger',
@@ -97,6 +107,7 @@ const CATEGORIES: { name: string; slug: string; blurb: string; patterns: string[
   {
     name: 'Research & Models',
     slug: 'research',
+    hub: '/research/',
     blurb: 'New models, benchmarks, papers, and technical capability.',
     patterns: [
       String.raw`models?`, 'llm', 'gpt', 'claude', 'gemini', 'llama', String.raw`benchmarks?`,
@@ -109,6 +120,7 @@ const CATEGORIES: { name: string; slug: string; blurb: string; patterns: string[
   {
     name: 'Society & Workforce',
     slug: 'society',
+    hub: '/ai-ecosystem/ecosystem-entities-market-and-operations/995676ef/',
     blurb: 'Labour, education, healthcare, and public reaction.',
     patterns: [
       String.raw`workers?`, String.raw`employees?`, String.raw`unions?`, 'education',
@@ -124,10 +136,11 @@ const CATEGORIES: { name: string; slug: string; blurb: string; patterns: string[
 const FALLBACK = {
   name: 'General AI',
   slug: 'general',
+  hub: '/ai-news/daily/',
   blurb: 'Stories that span categories or sit outside them.',
 };
 
-export function categoryOf(s: Story): { name: string; slug: string } {
+export function categoryOf(s: Story): { name: string; slug: string; hub: string } {
   return categoriesOf(s)[0];
 }
 
@@ -139,11 +152,11 @@ export function categoryOf(s: Story): { name: string; slug: string } {
  * find it. The first entry is what the briefing groups by; the rest are the
  * highlight pills on the story page. Stephen, 2026-09-06.
  */
-export function categoriesOf(s: Story): { name: string; slug: string }[] {
+export function categoriesOf(s: Story): { name: string; slug: string; hub: string }[] {
   const hay = (s.Headline || '').toLowerCase();
   const hits = CATEGORIES
     .filter((c) => c.patterns.some((p) => new RegExp(`\\b${p}\\b`).test(hay)))
-    .map((c) => ({ name: c.name, slug: c.slug }));
+    .map((c) => ({ name: c.name, slug: c.slug, hub: c.hub }));
   return hits.length ? hits : [FALLBACK];
 }
 

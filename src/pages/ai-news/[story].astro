@@ -194,7 +194,7 @@ const jsonld = JSON.stringify({
         policy story and a business story, and it names an operator, a parent
         company and a chief executive - the reader should be able to go to any
         of them from here. Stephen, 2026-09-06. */}
-    {cats.map((c) => <a class="pill pill-cat" href={`/ai-news/daily/#${c.slug}`}>{c.name}</a>)}
+    {cats.map((c) => <a class="pill pill-cat" href={c.hub || `/ai-news/daily/#${c.slug}`} title={`${c.name} on The World of AI`}>{c.name}</a>)}
     {known4.map((e) => <a class="pill" href={e.href}>{e.label}</a>)}
   </div>
 
