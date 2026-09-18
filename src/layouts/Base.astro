@@ -336,7 +336,18 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
     document.documentElement.style.setProperty('--sb',
       (window.innerWidth - document.documentElement.clientWidth) + 'px');
   </script>
-  <div class="site-sticky">
+  {/* THE FURNITURE IS NOT THE PAGE, FOR SEARCH ENGINES EITHER. On 2026-09-18 a
+      web search returned our Andersen v. Stability page with this as its
+      description: "Searches the full text of every published page, all built
+      from the same database...", which is the search box blurb in the header.
+      Another case page was described by its affiliate disclosure. The header,
+      rail, shelf and footer are identical on every page and come first or last
+      in the markup, so an engine choosing a snippet, or an answer engine
+      choosing a passage to quote, was picking furniture over content.
+      data-nosnippet is honoured by Google and Bing: the text stays crawlable
+      and the links still count, it just cannot be shown as the description.
+      Same idea as data-pagefind-body below, for the engines we do not run. */}
+  <div class="site-sticky" data-nosnippet>
   <Topbar />
   <header class="site-head">
     <div class="wrap bar">
@@ -411,7 +422,7 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
       });
     })();
   </script>
-  <nav class="mobile-panel" id="mobile-panel" aria-label="Mobile navigation" aria-hidden="true">
+  <nav class="mobile-panel" id="mobile-panel" aria-label="Mobile navigation" aria-hidden="true" data-nosnippet>
     <ul>
       {nav.map((n) => (
         <li><a href={n.href} aria-current={current === n.href ? 'page' : undefined}>{n.label}</a></li>
@@ -430,7 +441,7 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
 
   <main class={`wrap main-wrap${rail ? "" : " no-rail"}`}>
     {rail && (
-      <div class="rail-col">
+      <div class="rail-col" data-nosnippet>
         <PillarBox />
         <slot name="rail" />
       </div>
@@ -457,10 +468,12 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
     </div>
   </main>
 
+  <div data-nosnippet>
   <AmazonShelf />
   <Footer>
     <Logo slot="logo" variant="stacked-navy" />
   </Footer>
+  </div>
   <noscript><div class="statcounter"><a title="Web Analytics"
     href="https://statcounter.com/" target="_blank" rel="noopener noreferrer"><img
     class="statcounter"
