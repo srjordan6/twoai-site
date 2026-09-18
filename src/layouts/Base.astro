@@ -814,6 +814,18 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
        against. From 700px up only: on a phone a wide table needs every break
        it can get. */
     @media (min-width: 700px) { td.nw, th.nw { white-space: nowrap; } }
+    /* A table never leaves its column. The wrapper is added around every table
+       at build time by the same pass in astro.config.mjs. The table inside is
+       still a real table, so header and body share one column model; when it
+       is wider than the column it scrolls here instead of sliding under the
+       section menu, which is what it did on /mcp/ on 2026-09-18. The margin
+       moves to the wrapper so spacing is unchanged. */
+    .tbl-scroll { overflow-x: auto; max-width: 100%; margin: 18px 0; -webkit-overflow-scrolling: touch; }
+    .tbl-scroll > table { margin: 0; }
+    /* One long token with no space in it, a server id or a URL. Only these
+       cells may break anywhere; every other cell keeps break-word, for the
+       reason given in the long note above. */
+    td.tok, th.tok { overflow-wrap: anywhere; }
     .badge { display: inline-block; background: var(--cream); color: var(--navy);
       border: 1px solid var(--orange); font-size: 12.5px; font-weight: 600; padding: 2px 10px;
       border-radius: 20px; }

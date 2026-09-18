@@ -307,7 +307,43 @@ function capParagraphsInHtml() {
               return `<${tag}${a}>${inner}</${tag}>`;
             });
             nowrapped += cells;
-            if (n > 0 || cells > 0) {
+            // A TABLE NEVER LEAVES ITS COLUMN. Stephen, 2026-09-18, with a
+            // screenshot of /mcp/: the All servers table ran underneath the
+            // section menu on the right, hiding "What it does" and the last
+            // column. A table cannot be narrower than its longest unbreakable
+            // word, and an MCP server name such as io.github.someone/long-name
+            // is one word, so on a narrow desktop window the table was wider
+            // than the content column and slid under the rail beside it.
+            //
+            // Two changes, both made here on the built HTML so they reach every
+            // table on the site, including ones inside stored body_html.
+            //
+            // 1. Every table is wrapped in its own scroll box. Base.astro
+            //    records that a scroller must be a wrapper and never
+            //    display:block on the table itself, which split header and body
+            //    into two tables on 2026-09-06. The table stays a table. If it
+            //    is still too wide it scrolls inside its box and nothing moves
+            //    under the rail.
+            // 2. A cell that is one long token, 25 characters or more with no
+            //    space, may break anywhere. That is confined to those cells on
+            //    purpose: applied to every cell it shredded "2002" into "20/02",
+            //    which is the other half of the same note in Base.astro.
+            let wrapped = 0;
+            work = work.replace(/<(td|th)\b([^>]*)>([\s\S]*?)<\/\1>/gi, (m, tag, attrs, inner) => {
+              if (/<(table|p|ul|ol|div)\b/i.test(inner)) return m;
+              const text = inner.replace(/<[^>]+>/g, '').replace(/&[a-z#0-9]+;/gi, 'x').trim();
+              if (text.length < 25 || /\s/.test(text) || /\bclass="[^"]*\btok\b/.test(attrs)) return m;
+              wrapped++;
+              const a = /\bclass="/.test(attrs) ? attrs.replace(/\bclass="/, 'class="tok ') : `${attrs} class="tok"`;
+              return `<${tag}${a}>${inner}</${tag}>`;
+            });
+            work = work.replace(/<table\b[\s\S]*?<\/table>/gi, (m, off, whole) => {
+              if (/<div class="tbl-scroll">\s*$/.test(whole.slice(Math.max(0, off - 40), off))) return m;
+              if ((m.match(/<table\b/gi) || []).length > 1) return m;
+              wrapped++;
+              return `<div class="tbl-scroll">${m}</div>`;
+            });
+            if (n > 0 || cells > 0 || wrapped > 0) {
               work = work.replace(/\u0000PRE(\d+)\u0000/g, (_, i) => pres[+i]);
               writeFileSync(p, work);
             }
