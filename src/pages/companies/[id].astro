@@ -85,7 +85,15 @@ const paras = capParagraphs(profileText?.body);
 // linked - the directory still lists it, the fact table still shows what SEC
 // EDGAR verified - but it does not ask to be indexed until it clears that
 // floor, the same discipline every other kind on this site already has.
-const thin = products.length === 0 && cases.length === 0 && mcp.length === 0 && paras.length === 0;
+// A CATALOG ROW IS NOT SUBSTANCE. 2026-09-18: Google's "crawled, currently not
+// indexed" list named two company pages, and both HAD a product row. The old
+// test treated one line from the tools catalog as enough to index a page. It
+// is not: a page is worth indexing when it says something about the company
+// that the reader could not get from the directory row, which means a written
+// profile, a reading, a lawsuit or an MCP server. Products alone no longer
+// count. Nothing is deleted: a thin page stays published and linked, carries
+// noindex, and the sitemap step drops it by reading the built HTML.
+const thin = cases.length === 0 && mcp.length === 0 && paras.length === 0 && !reading;
 
 function fmtRevenue(usd) {
   if (typeof usd !== 'number') return null;
@@ -243,29 +251,34 @@ const jsonld = JSON.stringify({
       appears in another record this site keeps, a lawsuit, an MCP namespace or a filing.</p>
   )}
 
-  <h2>Is {n} named in any AI lawsuit this site tracks?</h2>
-  {cases.length > 0 ? (
+  {/* ONE ANSWER, ONCE. Until 2026-09-18 a company with no lawsuit and no MCP
+      server, which is 368 of 421, got a full heading and paragraph saying No
+      for each, then the same two No answers again under Frequently asked
+      questions, then 230 words on how the page is sourced that were identical
+      on every company page. Beautiful.ai had 260 words about Beautiful.ai and
+      800 words that appear on 400 other pages, and Google declined to index
+      it. The thin page sweep of 2026-09-01 had counted words, and boilerplate
+      has words. A section now renders only when it has something in it. The
+      negative answers stay, once, in the FAQ, where a reader asking "is X
+      being sued" finds them and where the FAQ schema carries them. */}
+  {cases.length > 0 && (
     <>
+      <h2>Is {n} named in any AI lawsuit this site tracks?</h2>
       <ul>{cases.map((c) => (
         <li><a href={`/ai-lawsuits/${c.slug}/`}>{c.name}</a>{c.court && <>, {c.court}</>}</li>
       ))}</ul>
       <p class="meta-line">Matched on the defendant field of the tracker. Being named as a
         defendant is not a finding of wrongdoing.</p>
     </>
-  ) : (
-    <p>Not as of {generated}. {n} is not named as a defendant in any case on the
-      {' '}<a href="/ai-lawsuits/">AI lawsuit tracker</a>, which is refreshed daily from court dockets.</p>
   )}
 
-  <h2>Does {n} publish MCP servers?</h2>
-  {mcp.length > 0 ? (
-    <ul>{mcp.map((m) => (
-      <li><a href={`/mcp/${m.slug}/`}>{m.name}</a>{m.description && <> — {m.description}</>}</li>
-    ))}</ul>
-  ) : (
-    <p>No. As of {generated}, no server under the {n} namespace appears in the official Model
-      Context Protocol registry, which this site reads daily. Attribution is by exact namespace,
-      never by a name that merely resembles the company's.</p>
+  {mcp.length > 0 && (
+    <>
+      <h2>Does {n} publish MCP servers?</h2>
+      <ul>{mcp.map((m) => (
+        <li><a href={`/mcp/${m.slug}/`}>{m.name}</a>{m.description && <> — {m.description}</>}</li>
+      ))}</ul>
+    </>
   )}
 
   {law && (
@@ -309,20 +322,12 @@ const jsonld = JSON.stringify({
   ))}
 
   <h2>Where does the information on this page come from?</h2>
-  <p>Each block above has one source and only one, which is why the page can be thin in places
-    rather than filled in. Products come from this site's tool catalog, where an entry exists
-    because the tool was catalogued, not because {n} was researched. Lawsuits come from the case
-    tracker and name {n} only where a filing does. MCP servers come from the official Model
-    Context Protocol registry, matched on an exact publisher namespace rather than a name
-    resemblance, because substring matching once produced 101 false attributions here. Financial
-    and filing details, where present, come from SEC EDGAR against a registrant identifier.</p>
-  <p>Silence therefore means one specific thing on each line. No lawsuits listed means no tracked
-    case names {n}, not that none exists. No MCP servers means none published under a namespace we
-    can prove belongs to {n}. An absent headquarters or founding date means the company has not
-    declared it in a machine-readable form we read, not that it is unknown. Nothing on this page
-    was inferred to fill a gap, and a gap that has not been filled is left visible.</p>
-  <p>If something here is wrong or missing, that is an editorial gap rather than a judgement, and
-    it is worth telling us: <a href="/contact/">contact</a>.</p>
+  <p>Each block has one source. Products come from this site's tool catalog, lawsuits from the
+    {' '}<a href="/ai-lawsuits/">case tracker</a>, MCP servers from the official registry matched on an
+    exact publisher namespace, and financial details from SEC EDGAR. A gap means this site holds no
+    record, not that none exists, and nothing here was inferred to fill one. The full list is on
+    {' '}<a href="/sources/">Sources and References</a>. If something is wrong or missing,
+    {' '}<a href="/contact/">tell us</a>.</p>
 
   <Reading reading={reading} heading={`What does the record on ${n} show?`} />
   <div class="cite-box">Cite this page: <code>"{n}." AI Company Directory,

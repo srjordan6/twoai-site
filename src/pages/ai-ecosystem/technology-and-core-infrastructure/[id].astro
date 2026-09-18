@@ -297,13 +297,26 @@ const licLine = (sec.licences || [])
 // Full state names for headings; a heading says Arizona, a fact box says AZ.
 const STATE_NAME = {AL:'Alabama',AK:'Alaska',AZ:'Arizona',AR:'Arkansas',CA:'California',CO:'Colorado',CT:'Connecticut',DE:'Delaware',DC:'District of Columbia',FL:'Florida',GA:'Georgia',HI:'Hawaii',ID:'Idaho',IL:'Illinois',IN:'Indiana',IA:'Iowa',KS:'Kansas',KY:'Kentucky',LA:'Louisiana',ME:'Maine',MD:'Maryland',MA:'Massachusetts',MI:'Michigan',MN:'Minnesota',MS:'Mississippi',MO:'Missouri',MT:'Montana',NE:'Nebraska',NV:'Nevada',NH:'New Hampshire',NJ:'New Jersey',NM:'New Mexico',NY:'New York',NC:'North Carolina',ND:'North Dakota',OH:'Ohio',OK:'Oklahoma',OR:'Oregon',PA:'Pennsylvania',PR:'Puerto Rico',RI:'Rhode Island',SC:'South Carolina',SD:'South Dakota',TN:'Tennessee',TX:'Texas',UT:'Utah',VT:'Vermont',VA:'Virginia',WA:'Washington',WV:'West Virginia',WI:'Wisconsin',WY:'Wyoming'};
 
+// A METRIC PAGE THAT IS ONLY A DEFINITION. 2026-09-18: three of the 25 metric
+// pages were on Google's "crawled, currently not indexed" list. Each holds a
+// one sentence definition, a formula and two sentences on why it matters,
+// about 60 words of its own, and every one of those words also appears in the
+// metrics table on the Data Centers page, which IS indexed. So the metric is
+// findable either way. The page asks to be indexed once it carries something
+// the table does not: a benchmark value in `target`, or a written reading.
+// Same rule as facBare below, same reasoning: the page stays published and
+// linked, and the sitemap step drops it by reading the built HTML.
+const metricBare = sec.shape === 'dc-metric' && !(
+  (sec.metric && sec.metric.target) ||
+  (sec.reading && sec.reading.body && String(sec.reading.body).length > 300)
+);
 const facBare = sec.shape === 'dc-facility' && !(
   (sec.reading && sec.reading.body && String(sec.reading.body).length > 300)
   || (typeof sec.profile?.reading === 'string' && sec.profile.reading.length > 300)
 );
 ---
 <Base title={`${pageTitle} — The World of AI`} description={desc.slice(0, 300)}
-  current={`${BASE}/`} jsonld={jsonld} noindex={facBare} doc={sec} stampLabel="Last verified">
+  current={`${BASE}/`} jsonld={jsonld} noindex={facBare || metricBare} doc={sec} stampLabel="Last verified">
   {/* THE FACT BOX LIVES IN THE RAIL, under the section navigation card.
       Stephen, 2026-09-06: not below the answer, to the right under the
       navigation box.
