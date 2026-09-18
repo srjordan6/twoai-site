@@ -23,7 +23,19 @@ import { readFileSync, existsSync } from 'node:fs';
 export function getStaticPaths() {
   if (!existsSync('content/glossary/glossary.json')) return [];
   const g = JSON.parse(readFileSync('content/glossary/glossary.json', 'utf8'));
-  const terms = g.terms ?? [];
+  const all = g.terms ?? [];
+  // A SLUG IS A URL PATH SEGMENT. A slash inside one makes Astro read it as a
+  // nested route, and the build dies with "Missing parameter: term" and a
+  // stack trace that names no term. That happened twice on 2026-09-17, from a
+  // seeded entry called "Tier III / Tier IV (Uptime Institute)". Anything
+  // unsafe is skipped with its name in the log, so one bad entry costs one
+  // page instead of the whole site.
+  const safeSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+  const terms = all.filter((t) => {
+    if (t?.slug && safeSlug.test(t.slug)) return true;
+    console.warn(`ai-glossary: skipping "${t?.term ?? '(unnamed)'}": slug ${JSON.stringify(t?.slug)} is not a safe URL segment`);
+    return false;
+  });
   return terms.map((t) => ({
     params: { term: t.slug },
     props: {
