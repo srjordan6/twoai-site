@@ -75,7 +75,21 @@ const otherCats = (person?.cats ?? []).filter((c) => c.uid && c.uid !== person?.
 ---
 <section class="person" id={person.uid}>
   <h2>{person.name}</h2>
-  {person.moniker && <p class="lede">{person.moniker}</p>}
+  {/* LIFE DATES UNDER THE NAME. Stephen, 2026-09-18, on Donald Hebb: this
+      person is dead. The record said so, 1904 and 1985, but the page only
+      mentioned it in the grey line below the opening paragraph, so a reader
+      met two hundred words about his career before learning it ended forty
+      years ago. For someone who has died the years now sit directly under the
+      name, the way a reference book prints them. A living person is unchanged,
+      and the year of birth alone is not promoted: it says little by itself. */}
+  {(person.moniker || person.died) && (
+    <p class="lede">
+      {person.moniker}
+      {person.died && (
+        <>{person.moniker && ' · '}<span class="life">{person.born ? `${String(person.born).slice(0, 4)} to ${String(person.died).slice(0, 4)}` : `Died ${String(person.died).slice(0, 4)}`}</span></>
+      )}
+    </p>
+  )}
   {person.hook && <p class="answer">{person.hook}</p>}
   <p class="meta-line">
     {person.nationality && <>{person.nationality} · </>}

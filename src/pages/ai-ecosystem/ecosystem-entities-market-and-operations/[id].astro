@@ -478,6 +478,27 @@ const jsonld = JSON.stringify(
         identifier: company.uid,
         url: `https://theworldofai.org${BASE}/${company.uid}/`,
       }
+    : legacyPerson
+    ? {
+        // A PERSON PAGE HAD NO STRUCTURED DATA AT ALL: this chain fell through
+        // to {} for every one of the 283 people. Found 2026-09-18 when Stephen
+        // pointed at Donald Hebb's page and said this person is dead. The record
+        // knew, born 1904 and died 1985, but the only place the page said so
+        // was a grey line under the opening paragraph, and nothing told a
+        // search or answer engine. birthDate and deathDate are emitted only
+        // when the record holds them, as the year or date it holds.
+        '@context': 'https://schema.org',
+        '@type': 'Person',
+        name: legacyPerson.name,
+        description: desc,
+        identifier: legacyPerson.uid,
+        url: `https://theworldofai.org${BASE}/${legacyPerson.uid}/`,
+        ...(legacyPerson.moniker ? { disambiguatingDescription: legacyPerson.moniker } : {}),
+        ...(legacyPerson.nationality ? { nationality: legacyPerson.nationality } : {}),
+        ...(legacyPerson.born ? { birthDate: String(legacyPerson.born) } : {}),
+        ...(legacyPerson.died ? { deathDate: String(legacyPerson.died) } : {}),
+        ...(Array.isArray(legacyPerson.fields) && legacyPerson.fields.length ? { knowsAbout: legacyPerson.fields } : {}),
+      }
     : {}
 );
 ---
