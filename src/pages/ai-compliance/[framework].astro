@@ -70,6 +70,26 @@ if (d.slug === 'state-ai-laws') {
     hasMap = true;
   }
 }
+
+// COUNTS IN PROSE COME FROM THE TRACKER. Stephen, 2026-09-17: the page said
+// six states had AI laws while the tracker held measures passed in 27. A
+// number typed into prose is wrong the next time a governor signs, so the
+// prose carries <span data-twoai="key">fallback</span> and the build writes
+// the live figure into it. The fallback is what the author typed, so a page
+// published before this code ships still reads as a sentence.
+{
+  const ep = 'content/compliance/enacted-ai-laws.json';
+  const laws = existsSync(ep) ? (JSON.parse(readFileSync(ep, 'utf8')).laws || []) : [];
+  const stateLaws = laws.filter((l) => l.state && l.state !== 'US');
+  const live = laws.length ? {
+    enacted_states: String(new Set(stateLaws.map((l) => l.state)).size),
+    enacted_state_measures: String(stateLaws.length),
+    enacted_measures: String(laws.length),
+  } : {};
+  const fill = (h) => h.replace(/<span data-twoai="(\w+)">([^<]*)<\/span>/g, (_m, k, fb) => live[k] || fb);
+  bodyBefore = fill(bodyBefore);
+  bodyAfter = fill(bodyAfter);
+}
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': steps.length ? 'HowTo' : 'Article',
