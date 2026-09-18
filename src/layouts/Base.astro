@@ -435,7 +435,15 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
         <slot name="rail" />
       </div>
     )}
-    <div class="main-col">
+    {/* SEARCH READS THE PAGE, NOT THE FURNITURE. Stephen, 2026-09-18: a search
+        for Amazon Web Services returned 4,248 results, every one matching the
+        same sentence, because Pagefind indexed the whole body and the Amazon
+        book shelf under every page says "now available on Amazon" and "SRJ
+        Consulting & Services". The header, the rail, the shelf and the footer
+        are identical on every page, so indexing them makes every page match
+        the words they contain and buries the pages that are actually about
+        the query. data-pagefind-body limits the index to this column. */}
+    <div class="main-col" data-pagefind-body>
       <slot />
       {/* EVERY PAGE CARRIES A DATE, A TIME AND A UID. Stephen's standing rule
           of 2026-09-06. Rendering it here rather than in each of the 65 page
@@ -635,6 +643,23 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
     .site-foot a:hover, .site-foot a:focus-visible,
     .site-foot .f-grid h3 a:hover, .site-foot .f-grid h3 a:focus-visible,
     .site-foot .f-legal a:hover, .site-foot .f-legal a:focus-visible { color: var(--orange) !important; }
+    /* THE TOP BAR AND THE SEARCH PANEL, the same fault as the footer. Stephen,
+       2026-09-18, with a screenshot of a search: the result titles, the AI
+       Talent Network Login link and the consultation link were all navy on
+       navy-deep. I fixed the footer that morning and should have audited every
+       navy block then instead of the one in the screenshot. This time the
+       shared layout was searched for every navy background: top bar, search
+       panel, language list, mobile panel, table headers, calculator answer,
+       footer. The last four were already handled; these three were not.
+       Search result titles are white at rest and orange under the pointer,
+       not orange at rest as Topbar.astro asks, because of the rule above. */
+    .topbar a, .topbar a:link, .topbar a:visited,
+    .search-panel a, .search-panel a:link, .search-panel a:visited,
+    .lang-panel a, .lang-panel a:link, .lang-panel a:visited { color: #fff !important; }
+    .search-panel .pagefind-ui__result-link { font-weight: 600; }
+    .topbar a:hover, .topbar a:focus-visible,
+    .search-panel a:hover, .search-panel a:focus-visible,
+    .lang-panel a:hover, .lang-panel a:focus-visible { color: var(--orange) !important; }
     /* The state maps carry a white-on-orange button inside their navy hover
        card. It is a button, so its text stays white in every state. */
     .ai-map-info a, .ai-map-info a:link, .ai-map-info a:visited,
