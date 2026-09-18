@@ -1,0 +1,64 @@
+---
+/**
+ * THE EMBEDDABLE LAWSUIT COUNT. The second widget the blueprint named, "a
+ * lawsuit-count badge". A small card for a sidebar or the foot of an article:
+ * the number of AI lawsuits tracked, the date, the three most sued companies,
+ * and a credit line that links to the tracker.
+ *
+ * Every figure is read from the tracker file at build time, so an embedded
+ * badge shows today's number on a page written months ago. That is what makes
+ * it worth embedding rather than typing a number that goes stale.
+ *
+ * Bare page, noindex, framing lifted by the Worker: see ai-laws-map.astro in
+ * this folder for why each of those is so.
+ */
+import { readFileSync, existsSync } from 'node:fs';
+
+const s = existsSync('content/lawsuits/lawsuits.json')
+  ? JSON.parse(readFileSync('content/lawsuits/lawsuits.json', 'utf8'))
+  : { cases: [], count: 0, generated: '' };
+const cases = s.cases || [];
+const count = Number(s.count || cases.length || 0);
+const asOf = String(s.generated || '').slice(0, 10);
+
+// The same defendant read the tracker page uses, kept to the three leaders.
+const NAMES = { openai: 'OpenAI', anthropic: 'Anthropic', meta: 'Meta', google: 'Google', microsoft: 'Microsoft', stability: 'Stability AI', midjourney: 'Midjourney', suno: 'Suno', udio: 'Udio', perplexity: 'Perplexity', character: 'Character.AI', workday: 'Workday', clearview: 'Clearview AI' };
+const tally = {};
+for (const c of cases) {
+  const d = String(c.case_name || '').split(/\sv\.?\s/i)[1] || '';
+  const m = d.match(/openai|anthropic|meta|google|microsoft|stability|midjourney|suno|udio|uncharted|perplexity|character|workday|clearview/i);
+  if (m) { let k = m[0].toLowerCase(); if (k === 'uncharted') k = 'udio'; tally[k] = (tally[k] || 0) + 1; }
+}
+const top = Object.entries(tally).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => `${NAMES[k] || k} ${v}`).join(', ');
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,follow" />
+  <base href="https://theworldofai.org/" target="_blank" />
+  <link rel="canonical" href="https://theworldofai.org/ai-lawsuits/" />
+  <title>AI lawsuits tracked, a live count from The World of AI</title>
+</head>
+<body>
+  <a class="badge" href="https://theworldofai.org/ai-lawsuits/">
+    <span class="num">{count.toLocaleString('en-US')}</span>
+    <span class="label">AI lawsuits tracked in United States courts</span>
+    {top && <span class="top">Most sued: {top}</span>}
+    <span class="foot">{asOf && <>As of {asOf} · </>}Source: The World of AI Lawsuit Tracker</span>
+  </a>
+</body>
+</html>
+
+<style is:global>
+  html, body { margin: 0; padding: 0; background: transparent; }
+  body { padding: 6px; font-family: system-ui, -apple-system, 'Segoe UI', Arial, sans-serif; }
+  .badge { display: block; text-decoration: none; background: #201868; color: #fff; border-radius: 12px;
+    padding: 16px 18px 14px; border-bottom: 4px solid #F07800; max-width: 340px; box-sizing: border-box; }
+  .badge:hover { background: #1A1357; }
+  .num { display: block; font: 700 44px/1 Georgia, 'Times New Roman', serif; letter-spacing: -.01em; }
+  .label { display: block; font-size: 14.5px; line-height: 1.35; margin-top: 6px; color: #fff; }
+  .top { display: block; font-size: 12.5px; line-height: 1.4; margin-top: 8px; color: rgba(255,255,255,.82); }
+  .foot { display: block; font-size: 11.5px; margin-top: 10px; color: rgba(255,255,255,.7); }
+</style>

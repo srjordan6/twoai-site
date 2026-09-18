@@ -1,0 +1,62 @@
+---
+/**
+ * THE EMBEDDABLE MAP. Section 5 of the build blueprint, 2026-08-01, called for
+ * "an iframe AI-laws-by-state map ... free with an attribution link. Every
+ * embed is a live backlink." Built 2026-09-18, the day the numbers showed why:
+ * Apple's crawler had fetched 3,370 pages in a week and sent no readers, and
+ * links from other sites are the one ranking factor Apple, Google and Bing all
+ * name that a seven week old domain does not have.
+ *
+ * This page is meant to be loaded inside someone else's page, so it does not
+ * use Base.astro: no header, no rail, no footer, no analytics, no ads. It is
+ * the map, a count, and a credit line that links home.
+ *
+ * <base target="_blank"> with the site as href: every state in the map is a
+ * relative link, and inside a frame a relative link would navigate the frame.
+ * With the base set, a click opens the real page on theworldofai.org in a new
+ * tab, which is the visit and the point.
+ *
+ * noindex,follow: this is a second copy of a map that lives at /ai-laws/, and
+ * the sitemap step drops a noindex page by reading the built HTML.
+ *
+ * FRAMING. The site's _headers forbid framing everywhere (X-Frame-Options
+ * SAMEORIGIN and frame-ancestors 'self'), which is right for every other page.
+ * The Worker lifts that for /embed/* only; see src/worker.ts and the
+ * run_worker_first entry in wrangler.jsonc. Without both, this page renders
+ * here and shows a blank box on anyone else's site.
+ */
+import StateLawMap from '../../components/StateLawMap.astro';
+import { readFileSync, existsSync } from 'node:fs';
+
+const idx = existsSync('content/laws/index.json')
+  ? JSON.parse(readFileSync('content/laws/index.json', 'utf8'))
+  : { states: [], total: 0, generated: '' };
+const total = Number(idx.total || 0).toLocaleString('en-US');
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,follow" />
+  <base href="https://theworldofai.org/" target="_blank" />
+  <link rel="canonical" href="https://theworldofai.org/ai-laws/" />
+  <title>AI Laws by State, a map from The World of AI</title>
+</head>
+<body>
+  <StateLawMap title="AI Laws by State" />
+  <p class="credit">
+    {total} state AI bills tracked{idx.generated && <> as of {idx.generated}</>}.
+    Source: <a href="https://theworldofai.org/ai-laws/">The World of AI, AI Laws by State</a>
+  </p>
+</body>
+</html>
+
+<style is:global>
+  html, body { margin: 0; padding: 0; background: #fff; }
+  body { padding: 4px 10px 10px; }
+  .credit { font: 13px/1.5 system-ui, -apple-system, 'Segoe UI', Arial, sans-serif; color: #4a4a55;
+    text-align: center; margin: 2px 0 0; }
+  .credit a { color: #201868; font-weight: 600; }
+  .credit a:hover { color: #F07800; }
+</style>

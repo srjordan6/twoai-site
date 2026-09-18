@@ -36,7 +36,8 @@ if (patternsHtml) {
     all of it: <b>{idx.total.toLocaleString()} artificial intelligence bills</b> across
     {idx.states.length} jurisdictions, refreshed daily from the LegiScan legislative database and
     linked to each bill's official page.</p>
-  {idx.generated && <p class="meta-line">Last verified: {idx.generated} · Source: LegiScan API</p>}
+  {idx.generated && <p class="meta-line">Last verified: {idx.generated} · Source: LegiScan API ·
+    {' '}<a href="/state-of-ai-laws/">State of AI Laws report</a> · <a href="/embed/">Embed this map</a></p>}
   <StateLawMap />
   {patternsHtml && (
     <section class="patterns">

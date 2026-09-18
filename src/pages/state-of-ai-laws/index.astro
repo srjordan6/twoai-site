@@ -1,0 +1,177 @@
+---
+/**
+ * THE STATE OF AI LAWS, the monthly data release.
+ *
+ * Section 8 of the build blueprint, 2026-08-01: a monthly "State of AI Laws"
+ * summary "designed for Reddit, HN, LinkedIn - the map and counts do the work.
+ * These earn the first real backlinks." Built 2026-09-18, after the day's
+ * numbers made the case: the engines already crawl this site heavily, and the
+ * one ranking factor a seven week old domain lacks is links from other sites.
+ * This is the page written to be linked to: one address, a headline number, a
+ * map, a few tables a reporter can lift, and a plain statement of method.
+ *
+ * EVERY FIGURE IS COMPUTED AT BUILD from the same files the rest of the site
+ * reads. Nothing is typed in, so the page cannot disagree with the tracker and
+ * cannot go stale while the pipeline runs. The month in the title is the month
+ * of the data's own date, not the build clock.
+ *
+ * ONE ADDRESS THAT IS ALWAYS CURRENT, deliberately. A link earned in September
+ * should still land on a true page in March. Dated monthly snapshots at their
+ * own permanent addresses are the pipeline's job, since a snapshot is content
+ * and content lives in SQL; this page does not pretend to be one.
+ */
+import Base from '../../layouts/Base.astro';
+import StateLawMap from '../../components/StateLawMap.astro';
+import { readFileSync, existsSync } from 'node:fs';
+
+const j = (p, fb) => (existsSync(p) ? JSON.parse(readFileSync(p, 'utf8')) : fb);
+const idx = j('content/laws/index.json', { states: [], total: 0, generated: '' });
+const enacted = (j('content/compliance/enacted-ai-laws.json', { laws: [] }).laws || []);
+const suits = j('content/lawsuits/lawsuits.json', { cases: [], count: 0, generated: '' });
+
+const asOf = String(idx.generated || '').slice(0, 10);
+const asOfMs = asOf ? Date.parse(asOf + 'T00:00:00Z') : Date.now();
+const monthYear = new Date(asOfMs).toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+const within = (d, days) => { const t = Date.parse(String(d || '').slice(0, 10) + 'T00:00:00Z'); return Number.isFinite(t) && asOfMs - t <= days * 86400000 && asOfMs - t >= 0; };
+const n = (x) => Number(x || 0).toLocaleString('en-US');
+
+const states = [...(idx.states || [])];
+const nameOf = Object.fromEntries(states.map((s) => [s.code, s.name]));
+const slugOf = Object.fromEntries(states.map((s) => [s.code, s.slug]));
+const withBills = states.filter((s) => s.count > 0);
+const top10 = [...states].sort((a, b) => b.count - a.count).slice(0, 10);
+const top10Share = idx.total ? Math.round((top10.reduce((t, s) => t + s.count, 0) / idx.total) * 100) : 0;
+
+const stateLaws = enacted.filter((l) => l.state && l.state !== 'US');
+const enactedStates = new Set(stateLaws.map((l) => l.state));
+const enactedByState = {};
+for (const l of stateLaws) enactedByState[l.state] = (enactedByState[l.state] || 0) + 1;
+const enactedLeaders = Object.entries(enactedByState).sort((a, b) => b[1] - a[1]).slice(0, 10);
+const recentEnacted = enacted.filter((l) => within(l.status_date, 60))
+  .sort((a, b) => String(b.status_date).localeCompare(String(a.status_date))).slice(0, 12);
+
+const cases = suits.cases || [];
+const newCases = cases.filter((c) => within(c.filed_date, 30));
+const byCat = {};
+for (const c of cases) { const k = c.category && c.category !== 'unclassified' ? c.category : null; if (k) byCat[k] = (byCat[k] || 0) + 1; }
+const catList = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+const desc = `State of AI Laws, ${monthYear}: ${n(idx.total)} AI bills tracked across ${withBills.length} US jurisdictions, ${n(stateLaws.length)} state measures enacted in ${enactedStates.size} states, and ${n(suits.count)} AI lawsuits in court. Free to cite and embed.`;
+const cite = `"State of AI Laws, ${monthYear}." The World of AI, theworldofai.org/state-of-ai-laws/. Data as of ${asOf}.`;
+
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Report',
+      name: `State of AI Laws, ${monthYear}`,
+      headline: `State of AI Laws, ${monthYear}`,
+      description: desc,
+      url: 'https://theworldofai.org/state-of-ai-laws/',
+      ...(asOf ? { dateModified: asOf, datePublished: asOf } : {}),
+      publisher: { '@type': 'Organization', name: 'The World of AI', url: 'https://theworldofai.org/' },
+      isAccessibleForFree: true,
+    },
+    {
+      '@type': 'Dataset',
+      name: 'US state artificial intelligence legislation and AI litigation, tracked daily',
+      description: `Counts of AI bills by US state from LegiScan, enacted AI measures, and AI lawsuits from CourtListener, refreshed daily. As of ${asOf}.`,
+      url: 'https://theworldofai.org/state-of-ai-laws/',
+      isAccessibleForFree: true,
+      creator: { '@type': 'Organization', name: 'The World of AI', url: 'https://theworldofai.org/' },
+      distribution: [
+        { '@type': 'DataDownload', encodingFormat: 'application/json', contentUrl: 'https://theworldofai.org/api/laws.json' },
+        { '@type': 'DataDownload', encodingFormat: 'application/json', contentUrl: 'https://theworldofai.org/api/lawsuits.json' },
+      ],
+    },
+  ],
+});
+---
+<Base title={`State of AI Laws, ${monthYear}: the numbers, the map and what changed — The World of AI`} description={desc.slice(0, 300)} current="/ai-laws/" jsonld={jsonld} doc={idx} stampLabel="Data as of">
+  <h1>State of AI Laws, {monthYear}</h1>
+  <p class="answer">As of {asOf}, United States legislatures have <b>{n(idx.total)} artificial intelligence bills</b> on
+    record across {withBills.length} jurisdictions. <b>{n(stateLaws.length)} state measures have been enacted in {enactedStates.size} states</b>,
+    and <b>{n(suits.count)} AI lawsuits</b> are being followed in United States courts. Every figure on this page is
+    computed from public records each day and may be quoted or embedded freely with credit.</p>
+  <p class="meta-line">Data as of {asOf} · Sources: LegiScan, CourtListener / RECAP ·
+    <a href="#cite">How to cite</a> · <a href="/embed/">Embed the map</a></p>
+
+  <div class="kpis">
+    <div><b>{n(idx.total)}</b><span>AI bills tracked</span></div>
+    <div><b>{n(stateLaws.length)}</b><span>state measures enacted</span></div>
+    <div><b>{enactedStates.size}</b><span>states with enacted AI law</span></div>
+    <div><b>{n(suits.count)}</b><span>AI lawsuits in court</span></div>
+  </div>
+
+  <StateLawMap title={`AI bills by state, ${monthYear}`} />
+
+  <h2>Where the bills are</h2>
+  <p>Ten states account for {top10Share} percent of all AI bills on record. A high count measures
+    legislative activity, not regulation: most bills never pass, and a state with few bills can still
+    have one of the broadest laws in force.</p>
+  <table>
+    <thead><tr><th>Rank</th><th>State</th><th>AI bills tracked</th><th>Enacted measures</th></tr></thead>
+    <tbody>
+      {top10.map((s, i) => (
+        <tr><td>{i + 1}</td><td><a href={`/ai-laws/${s.slug}/`}>{s.name}</a></td><td>{n(s.count)}</td><td>{enactedByState[s.code] || 0}</td></tr>
+      ))}
+    </tbody>
+  </table>
+
+  <h2>Where AI law has actually been enacted</h2>
+  <p>{enactedStates.size} states have enacted at least one AI measure this site has read in its enrolled text.
+    What those laws share, from impact assessments to disclosure duties, is set out in
+    {' '}<a href="/ai-compliance/state-ai-law-patterns/">What State AI Laws Have in Common</a>.</p>
+  <table>
+    <thead><tr><th>State</th><th>Enacted measures</th></tr></thead>
+    <tbody>
+      {enactedLeaders.map(([code, c]) => (
+        <tr><td>{slugOf[code] ? <a href={`/ai-laws/${slugOf[code]}/`}>{nameOf[code] || code}</a> : (nameOf[code] || code)}</td><td>{c}</td></tr>
+      ))}
+    </tbody>
+  </table>
+
+  {recentEnacted.length > 0 && (
+    <>
+      <h2>Enacted in the last 60 days</h2>
+      <table>
+        <thead><tr><th>Date</th><th>State</th><th>Measure</th><th>What it is</th></tr></thead>
+        <tbody>
+          {recentEnacted.map((l) => (
+            <tr>
+              <td>{l.status_date}</td>
+              <td>{l.state === 'US' ? 'Federal' : (nameOf[l.state] || l.state)}</td>
+              <td>{l.url ? <a href={l.url} rel="noopener">{l.bill}</a> : l.bill}</td>
+              <td>{l.title}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  )}
+
+  <h2>AI in the courts</h2>
+  <p>{n(suits.count)} AI lawsuits are tracked as of {String(suits.generated || asOf).slice(0, 10)}, and {newCases.length} were
+    filed in the last 30 days.{catList.length > 0 && <> By claim: {catList.map(([k, v]) => `${v} ${k}`).join(', ')}.</>}
+    {' '}The <a href="/ai-lawsuits/">lawsuit tracker</a> lists every case with its docket, and the
+    {' '}<a href="/ai-ecosystem/enterprise-applications-governance-and-tools/de99d3d0/">litigation map</a> shows them by state.</p>
+
+  <h2 id="method">How these numbers are made</h2>
+  <p>Bills come from the LegiScan legislative database, searched daily for artificial intelligence terms and
+    counted once per bill. Enacted measures are bills whose status is enacted and whose enrolled text this site
+    has read. Lawsuits come from CourtListener and RECAP dockets and are added only when a filing names an AI
+    company or an AI system. A count here is a count of records we hold, so it is a floor, not a census.</p>
+
+  <h2 id="cite">Cite or embed this</h2>
+  <div class="cite-box">Cite this page: <code>{cite}</code></div>
+  <p>The map and the lawsuit count are available as live widgets for any website, free with a credit line:
+    {' '}<a href="/embed/">embed our data</a>. The underlying records are open JSON at <a href="/api/">/api/</a>.
+    Journalists and researchers who need a cut of the data that is not here can <a href="/contact/">ask</a>.</p>
+</Base>
+
+<style>
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 22px 0 8px; }
+  .kpis div { background: #201868; border-radius: 12px; padding: 16px 18px; border-bottom: 4px solid #F07800; }
+  .kpis b { display: block; font: 700 34px/1.05 Lora, Georgia, serif; color: #fff; }
+  .kpis span { display: block; margin-top: 6px; font-size: 13.5px; color: rgba(255,255,255,.85); }
+</style>

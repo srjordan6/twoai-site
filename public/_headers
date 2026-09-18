@@ -8,6 +8,13 @@
 # unsafe-inline; there is no server to mint nonces. frame-ancestors and
 # X-Frame-Options are set together and agree: SAMEORIGIN.
 #
+# ONE EXCEPTION, MADE IN THE WORKER AND NOT HERE: /embed/* exists to be framed
+# by other sites, so src/worker.ts replaces these two headers on those paths
+# only. It is done there because a _headers rule cannot be negated, and adding
+# a second Content-Security-Policy in a more specific rule would not loosen
+# anything: a browser enforces every policy it is sent. frame-src carries
+# 'self' so the /embed/ guide page can preview its own widgets.
+#
 # HSTS carries `preload`: the domain is HTTPS-only across all subdomains, so it
 # is eligible for the browser preload list (submit once at hstspreload.org).
 # preload implies a 1-year max-age and includeSubDomains, both already present.
@@ -17,4 +24,4 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://challenges.cloudflare.com https://www.statcounter.com https://www.googletagmanager.com https://www.clarity.ms https://*.clarity.ms https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.google.com https://*.googleadservices.com https://translate.google.com https://translate.googleapis.com https://translate-pa.googleapis.com https://www.gstatic.com https://fundingchoicesmessages.google.com; style-src 'self' 'unsafe-inline' https://www.gstatic.com https://translate.googleapis.com; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://c.statcounter.com https://www.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com https://*.clarity.ms https://c.bing.com https://*.google.com https://*.googlesyndication.com https://*.doubleclick.net https://*.googleadservices.com https://translate.googleapis.com https://translate-pa.googleapis.com https://fundingchoicesmessages.google.com https://*.adtrafficquality.google; frame-src https://challenges.cloudflare.com https://*.googlesyndication.com https://*.doubleclick.net https://www.google.com https://fundingchoicesmessages.google.com https://*.adtrafficquality.google; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://challenges.cloudflare.com https://www.statcounter.com https://www.googletagmanager.com https://www.clarity.ms https://*.clarity.ms https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.google.com https://*.googleadservices.com https://translate.google.com https://translate.googleapis.com https://translate-pa.googleapis.com https://www.gstatic.com https://fundingchoicesmessages.google.com; style-src 'self' 'unsafe-inline' https://www.gstatic.com https://translate.googleapis.com; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://c.statcounter.com https://www.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com https://*.clarity.ms https://c.bing.com https://*.google.com https://*.googlesyndication.com https://*.doubleclick.net https://*.googleadservices.com https://translate.googleapis.com https://translate-pa.googleapis.com https://fundingchoicesmessages.google.com https://*.adtrafficquality.google; frame-src 'self' https://challenges.cloudflare.com https://*.googlesyndication.com https://*.doubleclick.net https://www.google.com https://fundingchoicesmessages.google.com https://*.adtrafficquality.google; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests

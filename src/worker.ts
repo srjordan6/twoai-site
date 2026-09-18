@@ -176,6 +176,34 @@ export default {
       return Response.redirect(`${url.origin}/sitemap-index.xml`, 301);
     }
 
+    if (url.pathname === "/embed" || url.pathname.startsWith("/embed/")) {
+      // THE EMBEDDABLE WIDGETS MUST BE FRAMEABLE, AND NOTHING ELSE MAY BE.
+      // public/_headers forbids framing sitewide, which is right. /embed/*
+      // exists to be placed on other people's pages, so this branch serves the
+      // same static file and swaps two headers. It is done here rather than in
+      // _headers because a second, looser Content-Security-Policy does not
+      // loosen anything: a browser enforces every policy it receives, so the
+      // sitewide frame-ancestors 'self' would still win.
+      //
+      // The guide page at /embed/ itself is an ordinary page and keeps the
+      // sitewide headers. Only the widgets under it are opened up.
+      //
+      // The policy is tighter than the sitewide one everywhere except framing:
+      // a widget loads no analytics, no ads and nothing from another origin.
+      // wrangler.jsonc lists /embed/* under run_worker_first; without that
+      // entry a file that exists is served without this code ever running.
+      const res = await env.ASSETS.fetch(request);
+      const isWidget = url.pathname !== "/embed" && url.pathname !== "/embed/";
+      if (!isWidget) return res;
+      const headers = new Headers(res.headers);
+      headers.delete("X-Frame-Options");
+      headers.set(
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; frame-ancestors *; base-uri 'self'; form-action 'none'; object-src 'none'",
+      );
+      return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
+    }
+
     if (url.pathname !== "/api/ask") {
       // Everything else is the static site, untouched.
       return env.ASSETS.fetch(request);

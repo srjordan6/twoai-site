@@ -22,7 +22,12 @@
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
-    "not_found_handling": "404-page"
+    "not_found_handling": "404-page",
+    // A static file that exists is normally served WITHOUT the Worker running
+    // at all, which is what keeps the site up when the Worker has a bug. The
+    // embeddable widgets are the exception: the Worker has to run to lift the
+    // sitewide ban on framing for those paths only. See src/worker.ts.
+    "run_worker_first": ["/embed/*"]
   },
   "ai": {
     "binding": "AI"

@@ -1,0 +1,70 @@
+---
+/**
+ * HOW TO EMBED. The page a journalist, a law firm blogger or a newsletter
+ * writer lands on when they want the map on their own site.
+ *
+ * THE CREDIT LINE IS THE POINT, AND IT SITS OUTSIDE THE FRAME. A link inside
+ * an iframe belongs to the framed page, not to the page doing the framing, so
+ * it earns the embedding site's readers a way to click through but it is not a
+ * link FROM that site. The line of ordinary HTML under the iframe is. That is
+ * why each snippet below is two elements and the terms ask for both.
+ */
+import Base from '../../layouts/Base.astro';
+import { readFileSync, existsSync } from 'node:fs';
+
+const laws = existsSync('content/laws/index.json') ? JSON.parse(readFileSync('content/laws/index.json', 'utf8')) : { total: 0, generated: '' };
+const suits = existsSync('content/lawsuits/lawsuits.json') ? JSON.parse(readFileSync('content/lawsuits/lawsuits.json', 'utf8')) : { count: 0 };
+
+const mapCode = `<iframe src="https://theworldofai.org/embed/ai-laws-map/" title="AI Laws by State, from The World of AI" width="100%" height="660" style="border:0;max-width:1100px" loading="lazy"></iframe>
+<p>Source: <a href="https://theworldofai.org/ai-laws/">The World of AI, AI Laws by State</a></p>`;
+const badgeCode = `<iframe src="https://theworldofai.org/embed/ai-lawsuit-count/" title="AI lawsuits tracked, from The World of AI" width="352" height="215" style="border:0" loading="lazy"></iframe>
+<p>Source: <a href="https://theworldofai.org/ai-lawsuits/">The World of AI Lawsuit Tracker</a></p>`;
+const desc = 'Free embeddable widgets from The World of AI: a live map of AI laws by state and a live count of AI lawsuits. Copy one snippet, keep the credit line.';
+---
+<Base title="Embed our data: a live AI laws map and lawsuit count — The World of AI" description={desc} current="/embed/">
+  <h1>Embed our data</h1>
+  <p class="answer">Two live widgets, free to use on any website: a map of AI laws by state covering
+    <b>{Number(laws.total || 0).toLocaleString('en-US')} bills</b>, and a count of the
+    <b>{Number(suits.count || 0).toLocaleString('en-US')} AI lawsuits</b> this site tracks. Each updates itself
+    every day, so a number you publish today is still right next month. Copy a snippet below and keep the credit line.</p>
+
+  <h2>AI laws by state, the map</h2>
+  <p>Every state, shaded by how many AI bills it has. A reader who clicks a state opens that state's page
+    here in a new tab. Best at full column width. The map needs about 660 pixels of height on a desktop.</p>
+  <div class="preview"><iframe src="/embed/ai-laws-map/" title="Preview of the AI laws map" width="100%" height="660" loading="lazy"></iframe></div>
+  <p class="meta-line">Copy this:</p>
+  <pre class="code"><code>{mapCode}</code></pre>
+
+  <h2>AI lawsuits tracked, the count</h2>
+  <p>A small card for a sidebar or the end of an article: the number of AI lawsuits in United States courts,
+    the three most sued companies, and the date. It is 352 pixels wide and 215 tall.</p>
+  <div class="preview small"><iframe src="/embed/ai-lawsuit-count/" title="Preview of the lawsuit count" width="352" height="215" loading="lazy"></iframe></div>
+  <p class="meta-line">Copy this:</p>
+  <pre class="code"><code>{badgeCode}</code></pre>
+
+  <h2>Terms, in plain English</h2>
+  <ul>
+    <li>Free for any site, commercial or not. No account, no key, no limit.</li>
+    <li>Keep the credit line under the widget, with its link. That is the whole price.</li>
+    <li>Do not alter the widget to remove the source or to suggest the data is yours.</li>
+    <li>The figures come from LegiScan and CourtListener through this site's daily pipeline. If you
+      quote a number in your own text, name the date beside it.</li>
+  </ul>
+
+  <h2>Prefer the raw numbers?</h2>
+  <p>The same data is published as open JSON for developers: <a href="/api/">the API index</a> lists
+    every endpoint, including <a href="/api/laws.json">laws.json</a> and <a href="/api/lawsuits.json">lawsuits.json</a>.
+    For a written summary to cite, see <a href="/state-of-ai-laws/">the State of AI Laws report</a>.</p>
+
+  <p class="meta-line">Trouble embedding, or want a different size or a widget for something else we track?
+    <a href="/contact/">Tell us</a>.</p>
+</Base>
+
+<style>
+  .preview { border: 1px solid #e8e2d4; border-radius: 12px; padding: 8px; background: #fff; margin: 12px 0 6px; }
+  .preview.small { display: inline-block; background: #faf8f3; }
+  .preview iframe { border: 0; display: block; max-width: 100%; }
+  .code { background: #12102e; color: #f3f1ff; border-radius: 10px; padding: 14px 16px; overflow-x: auto;
+    font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; }
+  .code code { background: none; color: inherit; padding: 0; }
+</style>
