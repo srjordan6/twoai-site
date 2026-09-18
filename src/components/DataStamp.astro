@@ -37,7 +37,16 @@ const { doc = {}, uid, builtAt, generated, label = 'Generated', source, sourceUr
 
 const theUid = uid ?? doc.page_uid ?? doc.uid ?? '';
 const theBuilt = builtAt ?? doc.built_at ?? '';
-const theDate = generated ?? doc.generated ?? doc.refreshed ?? (theBuilt ? theBuilt.slice(0, 10) : '');
+// THE DATE AND THE CLOCK COME FROM THE SAME STAMP. Found 2026-09-18 while
+// checking the lawsuit pages: the stamp read "2026-09-18 at 22:57" at half
+// past noon on the 18th, a time that had not happened yet. The date came from
+// `generated`, which the pipeline writes as the UTC day, and the clock came
+// from `built_at`, which carries the Central offset. A page built at 22:57
+// Central on the 17th is 03:57 UTC on the 18th, so the two halves were each
+// right and the sentence was wrong, on every page built after 19:00 Central.
+// When built_at exists it supplies both halves. `generated` is the fallback
+// for a document that has no built_at, where no clock is shown at all.
+const theDate = generated ?? (theBuilt && theBuilt.length >= 10 ? theBuilt.slice(0, 10) : (doc.generated ?? doc.refreshed ?? ''));
 
 // The exact time, in the reader's own reading of it: the stamp is written
 // with its offset, so showing the clock time alongside the date is honest
