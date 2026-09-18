@@ -68,7 +68,7 @@ const jsonld = {
 
   <section>
     <h2>What is being litigated in {name}</h2>
-    <p>By claim type: {catList.map(([k, v], i) => <>{i > 0 && ', '}{v} {k}</>)}.
+    <p>By claim type: {catList.map(([k, v]) => `${v} ${k}`).join(', ')}.
       A claim type is read from the docket record, so a case filed recently can show as unclassified until its first substantive filings are entered.</p>
     <p>Courts represented: {courts.join('; ')}.</p>
   </section>

@@ -79,7 +79,7 @@ const jsonld = JSON.stringify({
 <Base title={`AI Lawsuit Tracker: ${s.count} cases followed live — The World of AI`} description={desc} current="/ai-lawsuits/" jsonld={jsonld} doc={s} stampLabel="Dockets last checked">
   <h1>The AI Lawsuit Tracker</h1>
   <p class="answer">As of {asOf || 'today'}, this tracker follows <b>{s.count} AI lawsuits</b> in United States courts.
-    {catList.length > 0 && <> By claim: {catList.slice(0, 5).map(([k, v], i) => <>{i > 0 && ', '}{v} {k}</>)}.</>}
+    {catList.length > 0 && <> By claim: {catList.slice(0, 5).map(([k, v]) => `${v} ${k}`).join(', ')}.</>}
     {topDefs.length > 0 && <> The most sued companies are {topDefs.map(([k, v], i) => <>{i > 0 && (i === topDefs.length - 1 ? ' and ' : ', ')}{DEF_NAME[k] || k} ({v})</>)}.</>}
     {' '}Every case is a living page: dockets are checked against CourtListener daily and each page carries its full timeline.</p>
   {s.generated && <p class="meta-line">Last verified: {s.generated} · Source: CourtListener / RECAP ·
