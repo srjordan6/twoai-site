@@ -619,6 +619,28 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
     .calc-answer a, .mobile-panel a, .site-head .main-nav a, th a { color: #fff !important; }
     a.pill, a.pill:link, a.pill:visited, a.pill:hover, a.pill:focus-visible { color: #fff !important; text-decoration: none; }
     .site-head .main-nav a { color: var(--navy) !important; }
+    /* THE FOOTER. Stephen, 2026-09-18, with a screenshot: every footer link had
+       vanished. The rule above turns every link navy with !important and named
+       its white-on-navy exceptions, the mobile panel, table headers, the
+       calculator answer, and left out the footer, which sits on navy-deep. Navy
+       on navy: the section links, the API links, the email addresses, About,
+       Contact, and the advisory button were all there and all invisible.
+       Footer.astro already had the right colours; they were being overridden.
+       Same contract as everywhere else: readable at rest, orange under the
+       pointer. The legal line stays a step quieter, and the advisory button
+       keeps white text when its background goes orange. */
+    .site-foot a, .site-foot a:link, .site-foot a:visited { color: rgba(255, 255, 255, 0.86) !important; }
+    .site-foot .f-grid h3 a, .site-foot .f-grid h3 a:link, .site-foot .f-grid h3 a:visited { color: #fff !important; }
+    .site-foot .f-legal a, .site-foot .f-legal a:link, .site-foot .f-legal a:visited { color: rgba(255, 255, 255, 0.66) !important; }
+    .site-foot a:hover, .site-foot a:focus-visible,
+    .site-foot .f-grid h3 a:hover, .site-foot .f-grid h3 a:focus-visible,
+    .site-foot .f-legal a:hover, .site-foot .f-legal a:focus-visible { color: var(--orange) !important; }
+    /* The state maps carry a white-on-orange button inside their navy hover
+       card. It is a button, so its text stays white in every state. */
+    .ai-map-info a, .ai-map-info a:link, .ai-map-info a:visited,
+    .ai-map-info a:hover, .ai-map-info a:focus-visible { color: #fff !important; text-decoration: none; }
+    .site-foot a.f-cta, .site-foot a.f-cta:link, .site-foot a.f-cta:visited,
+    .site-foot a.f-cta:hover, .site-foot a.f-cta:focus-visible { color: #fff !important; text-decoration: none; }
     .calc-answer a:hover, .mobile-panel a:hover, .site-head .main-nav a:hover, th a:hover,
     .calc-answer a:focus-visible, .mobile-panel a:focus-visible, .site-head .main-nav a:focus-visible { color: var(--orange) !important; }
     /* Buttons are not text links. They keep the brand block. */
