@@ -305,6 +305,83 @@ const payLevels = (pay?.by_level ?? [])
   .sort((a: any, b: any) => LEVELS.indexOf(a.group) - LEVELS.indexOf(b.group));
 
 const secHub = csec || cpat || cpriv || corg || cfund;
+
+// NO READER IS SENT TO RAW XML. Stephen, 2026-09-18: these links go to xml
+// files, either render it or do not give the reader the option of seeing the
+// code. Form D is filed as XML and the pipeline stores the address of that
+// file, primary_doc.xml, which a browser shows as a page of angle brackets.
+// Every EDGAR filing also has an index page that a person can read, with the
+// form rendered and every document listed, at the same folder under the
+// accession number written with its dashes. Checked for the filing Stephen
+// sent: .../000110465914019446/0001104659-14-019446-index.html exists. The
+// stored URL is left alone, since it is the machine address; only what the
+// reader is handed changes. A URL that does not fit the pattern falls back to
+// the filing folder, which is a listing, never the XML.
+// Written with split, not a counted regex: this file's own notes record that a
+// brace quantifier in a pattern broke the Astro build once already.
+const edgarIndex = (u: string): string => {
+  const s = String(u || '');
+  const parts = s.split('/');
+  const i = parts.indexOf('data');
+  const acc = i > 0 ? parts[i + 2] || '' : '';
+  if (/\.xml$/i.test(s) && s.startsWith('https://www.sec.gov/Archives/edgar/data/') && acc.length === 18 && /^\d+$/.test(acc)) {
+    const dashed = `${acc.slice(0, 10)}-${acc.slice(10, 12)}-${acc.slice(12)}`;
+    return `${parts.slice(0, i + 3).join('/')}/${dashed}-index.html`;
+  }
+  return /\.xml$/i.test(s) ? s.replace(/[^/]+\.xml$/i, '') : s;
+};
+
+// WHO ON THE PRIVATE LIST IS ACTUALLY A PRIVATE COMPANY. Stephen, 2026-09-18:
+// clean this up. The page said its companies were verified by elimination and
+// that none was a lab, nonprofit or foundation, and then listed AMD, Amazon,
+// Arm and TSMC, three Chinese universities, MIT CSAIL, a dozen nonprofits and
+// one individual developer. The pipeline builds this set from "not matched to
+// a US SEC registrant" and never looks at the org_type the directory already
+// holds for each entry, so everything foreign listed or not a company at all
+// fell through as private. 49 of 299 were wrong by the database's own labels.
+//
+// Each entry's type is read from its own company document. An entry counts as
+// a private company only when the directory calls it a startup or has not
+// typed it. Everything else is shown below the list under what it actually is,
+// because the reader who came for AMD should still find AMD.
+//
+// NOT_PRIVATE is the part that should not exist. org_type is constrained to
+// seven values with no slot for an investor or a person, and widening that
+// constraint needs the table owner. Until it is widened these seven are named
+// here by uid, which never moves. Delete this set when the types exist.
+const NOT_PRIVATE: Record<string, string> = {
+  ec8a8b35: 'investor', '6973bae8': 'investor', be233f14: 'investor', '2931d976': 'investor',
+  '52a00194': 'investor', '61b674ee': 'investor', ccd2bf6f: 'individual',
+};
+const TYPE_LABEL: Record<string, string> = {
+  'public-company': 'Publicly listed companies', 'research-lab': 'Corporate and independent research labs',
+  'university-lab': 'Universities and university labs', nonprofit: 'Nonprofits',
+  'government-lab': 'Government backed labs', 'open-source-foundation': 'Open source projects',
+  investor: 'Investors', individual: 'Individual developers',
+};
+const typeOf = (uid: string): string => {
+  if (NOT_PRIVATE[uid]) return NOT_PRIVATE[uid];
+  const p = `content/companies/${uid}.json`;
+  if (!existsSync(p)) return '';
+  try { return JSON.parse(readFileSync(p, 'utf8'))?.company?.profile?.org_type || ''; } catch { return ''; }
+};
+const privTyped = cpriv ? cpriv.companies.map((c: any) => ({ ...c, type: typeOf(c.uid) })) : [];
+const isPrivate = (c: any) => c.type === '' || c.type === 'startup';
+const privReal = privTyped.filter(isPrivate);
+const privFormD = privReal.filter((c: any) => c.formd);
+const privPlain = privReal.filter((c: any) => !c.formd)
+  .sort((a: any, b: any) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
+const privOther = privTyped.filter((c: any) => !isPrivate(c));
+const letterOf = (n: string) => (/^[a-z]/i.test(n) ? n[0].toUpperCase() : '#');
+const privByLetter: Array<[string, any[]]> = [];
+for (const c of privPlain) {
+  const L = letterOf(c.name);
+  const last = privByLetter[privByLetter.length - 1];
+  if (last && last[0] === L) last[1].push(c); else privByLetter.push([L, [c]]);
+}
+const otherByType: Array<[string, any[]]> = Object.keys(TYPE_LABEL)
+  .map((t) => [t, privOther.filter((c: any) => c.type === t).sort((a: any, b: any) => a.name.localeCompare(b.name))] as [string, any[]])
+  .filter(([, list]) => list.length > 0);
 const jsonld = JSON.stringify(
   cma
     ? {
@@ -816,7 +893,7 @@ const jsonld = JSON.stringify(
             further US disclosure on record, not no further funding.</p>
           <ul class="patlist">
             {company.formd.filings.map((f) => (
-              <li><a href={f.url} rel="noopener">Form D{f.amendment && '/A'}</a> filed {f.filed}
+              <li><a href={edgarIndex(f.url)} rel="noopener">Form D{f.amendment && '/A'}</a> filed {f.filed}
                 {' '}as {f.issuer}: {f.sold >= 1e9 ? `$${(f.sold/1e9).toFixed(1)}B` : f.sold >= 1e6 ? `$${(f.sold/1e6).toFixed(1)}M` : `$${Math.round(f.sold/1e3)}k`} sold
                 {f.first_sale && <span class="muted"> (first sale {f.first_sale})</span>}</li>
             ))}
@@ -1256,10 +1333,11 @@ const jsonld = JSON.stringify(
   {cpriv && (
     <>
       <h1>Private AI Companies</h1>
-      <p class="answer"><b>{cpriv.total} of the {cpriv.tracked} companies</b> in the AI Company
-        Directory are privately held — verified by elimination: each was checked against SEC
-        EDGAR's registrant list and is not a listed company, and none is a classified lab,
-        nonprofit, or foundation. <b>{cpriv.with_formd}</b> of them have SEC Form D
+      <p class="answer"><b>{privReal.length} of the {cpriv.tracked} organisations</b> in the AI Company
+        Directory are privately held companies. Each was checked against SEC
+        EDGAR's registrant list and is not a US listed company, and the directory does not
+        classify it as a listed company, a lab, a university, a nonprofit or a foundation.
+        <b> {privFormD.length}</b> of them have SEC Form D
         exempt-offering disclosures on record, shown with their most recent filing.</p>
       <p class="meta-line">Last verified: {cpriv.generated} · Sources:
         {' '}<a href="https://www.sec.gov/search-filings" rel="noopener">SEC EDGAR</a> registrant
@@ -1268,26 +1346,49 @@ const jsonld = JSON.stringify(
         third-party SPV filings that merely carry a company's name are excluded. No Form D on
         record means no US exempt-offering disclosure, not no funding: many raises use
         exemptions that require no filing, and non-US companies rarely file.</p>
-      {cpriv.companies.filter((c) => c.formd).length > 0 && (
+      {privFormD.length > 0 && (
         <>
           <h2>With SEC filings on record</h2>
-          {cpriv.companies.filter((c) => c.formd).map((c) => (
+          {privFormD.map((c) => (
             <div class="dom">
               <h3><a href={`${BASE}/${c.uid}/`}>{c.name}</a>
                 <span class="n">{money(c.formd.sold)} disclosed</span></h3>
               <p class="meta-line">Most recent Form D{c.formd.amendment && ' (amendment)'}: filed
                 {' '}{c.formd.filed} as {c.formd.issuer}, {money(c.formd.sold)} sold of a
                 {' '}{money(c.formd.offering)} offering ·
-                {' '}<a href={c.formd.url} rel="noopener">filing</a>
+                {' '}<a href={edgarIndex(c.formd.url)} rel="noopener">SEC filing index</a>
                 {c.formd.filings > 1 && <> · {c.formd.filings} filings on record</>}</p>
             </div>
           ))}
         </>
       )}
       <h2>Tracked private companies</h2>
-      <p class="chip-list">{cpriv.companies.filter((c) => !c.formd).map((c, i) => (
-        <>{i > 0 && ' · '}<a href={`${BASE}/${c.uid}/`}>{c.name}</a></>
-      ))}</p>
+      <p>{privPlain.length} private companies with no Form D on record, A to Z. Each name opens our profile of the company.</p>
+      <div class="az-jump" aria-label="Jump to a letter">
+        {privByLetter.map(([L]) => <a href={`#pc-${L === '#' ? 'num' : L}`}>{L}</a>)}
+      </div>
+      <div class="az-grid">
+        {privByLetter.map(([L, list]) => (
+          <section class="az-group" id={`pc-${L === '#' ? 'num' : L}`}>
+            <h3>{L}</h3>
+            <ul>{list.map((c) => <li><a href={`${BASE}/${c.uid}/`}>{c.name}</a></li>)}</ul>
+          </section>
+        ))}
+      </div>
+      {otherByType.length > 0 && (
+        <>
+          <h2>In the directory, but not private companies</h2>
+          <p>These {privOther.length} organisations were on this list because they do not file with the US SEC, which is a different thing from being a private company.
+            A company listed in Hong Kong, Tokyo or Seoul has no US registration, and a university or a nonprofit is not a company at all.
+            They stay in the directory, under what they are.</p>
+          {otherByType.map(([t, list]) => (
+            <div class="other-type">
+              <h3>{TYPE_LABEL[t]} <span class="n">{list.length}</span></h3>
+              <ul class="other-list">{list.map((c) => <li><a href={`${BASE}/${c.uid}/`}>{c.name}</a></li>)}</ul>
+            </div>
+          ))}
+        </>
+      )}
       <Reading reading={cpriv.reading} heading="What does the private-company set show?" />
       <div class="cite-box">Cite this page: <code>"Private AI Companies." The World of AI,
         theworldofai.org{BASE}/{cpriv.uid}/. Retrieved {cpriv.generated}.</code></div>
@@ -1408,6 +1509,23 @@ const jsonld = JSON.stringify(
 </Base>
 
 <style>
+  /* The private companies list, A to Z in columns. It was one paragraph of 240
+     names joined by dots, which nobody can scan. */
+  .az-jump { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: 0 0 18px; }
+  .az-jump a { display: inline-block; min-width: 28px; text-align: center; padding: 4px 6px; border: 1px solid #e0e0ea;
+    border-radius: 6px; font: 600 13px/1.3 Poppins, sans-serif; text-decoration: none; }
+  .az-jump a:hover { border-color: var(--orange); text-decoration: none; }
+  .az-grid { columns: 3 220px; column-gap: 34px; }
+  .az-group { break-inside: avoid; margin: 0 0 20px; }
+  .az-group h3 { font-family: Lora, Georgia, serif; font-size: 19px; color: var(--navy); margin: 0 0 6px;
+    padding-bottom: 4px; border-bottom: 1px solid #e6e6ee; }
+  .az-group ul, .other-list { list-style: none; margin: 0; padding: 0; }
+  .az-group li { padding: 3px 0; line-height: 1.45; }
+  .other-type { margin: 0 0 18px; }
+  .other-type h3 { font-size: 16px; color: var(--navy); margin: 0 0 6px; }
+  .other-type h3 .n { color: #7A8A9E; font-weight: 500; font-size: 14px; margin-left: 4px; }
+  .other-list { columns: 3 220px; column-gap: 34px; }
+  .other-list li { padding: 3px 0; break-inside: avoid; line-height: 1.45; }
   /* The transitional person page renders one profile, so its own H1 duplicates
      the component's H2. Hidden rather than removed: the H1 is what the page
      needs for its outline and the H2 is what a section page needs for its. */
