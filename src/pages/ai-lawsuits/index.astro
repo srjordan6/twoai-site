@@ -1,6 +1,10 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { readFileSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+// Same key the pipeline and twoai_entities use, so the uid shown here is the
+// uid in the database even before the pipeline publishes it on each case.
+const caseUid = (c) => c.uid || createHash('sha256').update(`lawsuit:${c.slug}`).digest('hex').slice(0, 8);
 
 const s = existsSync('content/lawsuits/lawsuits.json')
   ? JSON.parse(readFileSync('content/lawsuits/lawsuits.json', 'utf8'))
@@ -68,7 +72,7 @@ const jsonld = JSON.stringify({
             {/* The case's own uid, from the pipeline. A td, not a container the
                 empty-render check reads, so a build against content published
                 before the pipeline carried uids shows a blank cell, not a failure. */}
-            <td class="uid">{c.uid ? <code>{c.uid}</code> : ''}</td>
+            <td class="uid"><code>{caseUid(c)}</code></td>
           </tr>
         ))}
       </tbody>

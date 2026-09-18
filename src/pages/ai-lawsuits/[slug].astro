@@ -4,6 +4,7 @@ import Reading from '../../components/Reading.astro';
 import KeepReading from '../../components/KeepReading.astro';
 import { matchTerms, companiesNamedIn } from '../../lib/related';
 import { readFileSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 
 export function getStaticPaths() {
   if (!existsSync('content/lawsuits/lawsuits.json')) return [];
@@ -36,10 +37,20 @@ export function getStaticPaths() {
     // one lawsuits.json becomes 100+ pages and a reading belongs to the case,
     // not to the file. See the second lateral in main.go's publish merge.
     const reading = s.readings?.[`/ai-lawsuits/${c.slug}/`] ?? null;
-    return { params: { slug: c.slug }, props: { c, generated: s.generated ?? '', related, reading } };
+    // THE CASE'S OWN UID. Stephen, 2026-09-18, on /ai-lawsuits/nyt-v-openai/:
+    // no uid. A case page never passed a document to Base, so the standard
+    // stamp never rendered, and the case carried no uid in lawsuits.json to
+    // show. The pipeline publishes one per case from df300da on. Until that
+    // run lands it is computed here with the SAME key the pipeline and
+    // twoai_entities use, sha256 of "lawsuit:" + slug, first 8 hex, so the
+    // value on the page is the value in the database, not a stand-in. The
+    // time and cadence come from the tracker file every case page is cut from.
+    const caseUid = c.uid || createHash('sha256').update(`lawsuit:${c.slug}`).digest('hex').slice(0, 8);
+    const stamp = { page_uid: caseUid, built_at: s.built_at, generated: s.generated, refresh_every_days: s.refresh_every_days };
+    return { params: { slug: c.slug }, props: { c, generated: s.generated ?? '', related, reading, stamp } };
   });
 }
-const { c, generated, related, reading } = Astro.props;
+const { c, generated, related, reading, stamp } = Astro.props;
 // The parties, claims and docket text name companies we hold profiles on. A
 // reader who lands here from a search for one of them had no route to it.
 const krText = `${c.case_name ?? ''} ${c.plaintiffs ?? ''} ${c.defendants ?? ''} ${c.significance ?? ''} ${c.summary ?? ''}`;
@@ -92,7 +103,7 @@ const jsonld = JSON.stringify({
   }] : [])],
 });
 ---
-<Base title={`${c.case_name} — AI lawsuit tracker`} description={desc} current="/ai-lawsuits/" jsonld={jsonld}>
+<Base title={`${c.case_name} — AI lawsuit tracker`} description={desc} current="/ai-lawsuits/" jsonld={jsonld} doc={stamp} stampLabel="Docket last checked">
   <h1>{c.case_name}</h1>
   <p class="meta-line"><span class="badge">{c.status_badge || c.status}</span> &nbsp; {c.category}
     {c.filed_date && <> · Filed <time datetime={c.filed_date}>{c.filed_date}</time></>}{generated && <> · Verified {generated}</>}</p>
