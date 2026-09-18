@@ -256,7 +256,11 @@ function capParagraphsInHtml() {
       'astro:build:done': async ({ dir }) => {
         const { readdirSync, readFileSync, writeFileSync, statSync } = await import('node:fs');
         const { join } = await import('node:path');
-        const root = new URL(dir).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+        // decodeURIComponent: a file URL writes a space as %20, and this checkout
+        // lives in "C:\SRJ Website Code Archive", so without it every local build
+        // on Stephen's PC died here with ENOENT after the pages had rendered.
+        // Cloudflare's build path has no spaces, which is why it never showed.
+        const root = decodeURIComponent(new URL(dir).pathname).replace(/^\/([A-Za-z]:)/, '$1');
         let files = 0, split = 0;
         const walk = (d) => {
           for (const f of readdirSync(d)) {
@@ -318,7 +322,7 @@ function neutraliseDeadLinks() {
         const urls = new Map();
         for (const l of dead.links || []) if (l.url) urls.set(l.url, l);
         if (urls.size === 0) { console.log('dead-links: none to neutralise'); return; }
-        const root = new URL(dir).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+        const root = decodeURIComponent(new URL(dir).pathname).replace(/^\/([A-Za-z]:)/, '$1'); // same %20 fix as cap-paragraphs above
         let pages = 0, anchors = 0;
         const esc = (s) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
         const walk = (d) => {
