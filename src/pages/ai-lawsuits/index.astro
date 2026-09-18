@@ -41,7 +41,7 @@ const jsonld = JSON.stringify({
   ],
 });
 ---
-<Base title={`AI Lawsuit Tracker: ${s.count} cases followed live — The World of AI`} description={desc} current="/ai-lawsuits/" jsonld={jsonld}>
+<Base title={`AI Lawsuit Tracker: ${s.count} cases followed live — The World of AI`} description={desc} current="/ai-lawsuits/" jsonld={jsonld} doc={s} stampLabel="Dockets last checked">
   <h1>The AI Lawsuit Tracker</h1>
   <p class="answer">The courts are deciding what AI may legally learn from and say. This tracker
     follows <b>{s.count} major AI lawsuits</b> as living pages, not one-time headlines: dockets
@@ -49,7 +49,7 @@ const jsonld = JSON.stringify({
   {s.generated && <p class="meta-line">Last verified: {s.generated} · Source: CourtListener / RECAP</p>}
   {s.cases.length > 0 ? (
     <table>
-      <thead><tr><th>Case</th><th>Category</th><th>Status</th><th>Latest development</th></tr></thead>
+      <thead><tr><th>Case</th><th>Category</th><th>Status</th><th>Latest development</th><th>uid</th></tr></thead>
       <tbody>
         {s.cases.map((c) => (
           <tr>
@@ -65,6 +65,10 @@ const jsonld = JSON.stringify({
             <td>{c.latest_development
               ? <>{c.latest_development_date && <b>{c.latest_development_date}: </b>}{c.latest_development}</>
               : <span class="pending">Filed. No docket development recorded by this tracker yet; checked daily.</span>}</td>
+            {/* The case's own uid, from the pipeline. A td, not a container the
+                empty-render check reads, so a build against content published
+                before the pipeline carried uids shows a blank cell, not a failure. */}
+            <td class="uid">{c.uid ? <code>{c.uid}</code> : ''}</td>
           </tr>
         ))}
       </tbody>
@@ -76,4 +80,5 @@ const jsonld = JSON.stringify({
 
 <style>
   .pending { color: #7A8A9E; font-style: italic; }
+  .uid code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; color: #4a4a55; }
 </style>

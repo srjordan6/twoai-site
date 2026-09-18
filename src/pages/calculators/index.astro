@@ -1,5 +1,13 @@
 ---
 import Base from '../../layouts/Base.astro';
+import { readFileSync, existsSync } from 'node:fs';
+// THE HUB HAD NO STAMP. Stephen, 2026-09-17: I don't see uids on /calculators/.
+// The pipeline has minted one for this hub all along, 3ffea8e7, in
+// content/industries/calculators.json; this page is hand-written Astro and
+// simply never read it. Passing the document to Base renders the standard
+// date, time and uid line like every other page.
+const hubPath = 'content/industries/calculators.json';
+const hubDoc = existsSync(hubPath) ? JSON.parse(readFileSync(hubPath, 'utf8')) : {};
 const desc = 'Free AI and data center calculators: power sizing, cooling and airflow, liquid cooling flow, PUE, WUE and CUE, build cost per megawatt, colocation, token cost, GPU VRAM, inference throughput and cluster fabric sizing. No signup, nothing uploaded.';
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
@@ -9,7 +17,7 @@ const jsonld = JSON.stringify({
   url: 'https://theworldofai.org/calculators/',
 });
 ---
-<Base title="AI and Data Center Calculators: power, cooling, cost, efficiency, and cluster sizing — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
+<Base title="AI and Data Center Calculators: power, cooling, cost, efficiency, and cluster sizing — The World of AI" description={desc} current="/calculators/" jsonld={jsonld} doc={hubDoc} stampLabel="Last reviewed">
   <p class="meta-line"><a href="/">AI Ecosystem</a> ·
     <a href="/ai-ecosystem/enterprise-applications-governance-and-tools/">Enterprise Applications, Governance and Tools</a></p>
   <h1>AI Calculators</h1>
