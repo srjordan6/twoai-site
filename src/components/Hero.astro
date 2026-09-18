@@ -79,11 +79,17 @@ const strip = [
 
         No orange in the text. The old second line was orange, which the
         no-orange-text-at-rest rule of 2026-09-16 forbids without exception,
-        and it had started rendering half white and half orange. The accent is
-        now a bar under the headline: orange as an object, not as text. */}
+        and it had started rendering half white and half orange.
+
+        An orange rule under the headline was tried and removed the same day:
+        the class name `bar` collides with a sitewide `.bar` in Base.astro, a
+        flex row with padding, which inflated a 72 by 4 rule into an orange
+        block the size of a button. Stephen saw it within the hour. The eyebrow
+        and the count strip already carry the accent, through the orange
+        underline that appears on a count when the pointer is over it, so the
+        headline needs no ornament of its own. */}
     <p class="eyebrow">Rebuilt from primary sources every day</p>
     <h1>The whole AI ecosystem, in one place.<br />Every fact traced to its source.</h1>
-    <span class="bar" aria-hidden="true"></span>
     <p class="lede">
       Laws and lawsuits. Companies, models and tools. Data centers and the power behind them.
       Research, jobs, insurance and security. {total.toLocaleString()} records and growing, each one dated
@@ -157,9 +163,8 @@ const strip = [
   h1 {
     font-family: 'Lora', Georgia, serif;
     font-size: clamp(2rem, 5.2vw, 3.4rem); line-height: 1.14;
-    color: #fff; margin: 0 0 18px; text-wrap: balance;
+    color: #fff; margin: 0 0 22px; text-wrap: balance;
   }
-  .bar { display: block; width: 72px; height: 4px; border-radius: 2px; background: #F07800; margin: 0 auto 22px; }
   .lede {
     font-family: 'Poppins', system-ui, sans-serif;
     font-size: clamp(15px, 1.6vw, 17px); line-height: 1.7;
