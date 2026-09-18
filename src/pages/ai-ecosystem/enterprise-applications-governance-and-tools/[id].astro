@@ -109,6 +109,22 @@ const isCases = !!sec && sec.shape === 'case-studies';
 // Without this branch a coverage item fell into isIndustry below and rendered
 // as "AI in Direct-to-Chip Liquid Cooling Leaks", which is not a sentence.
 const isCoverage = !!sec && sec.shape === 'coverage-item';
+// A POINT THAT LEADS TO ONE OF OUR OWN PAGES IS A LINK, NOT A CITATION.
+// Stephen, 2026-09-18, on every AI Insurance section: remove the word Source
+// and make the title turn orange under the pointer. The ten points on each
+// section lead to that item's own page on this site, but the pipeline stores
+// the address in full, https://theworldofai.org/..., and the template only
+// recognised a path beginning with a slash. So it treated our own page as an
+// outside citation: a plain title, then a link called Source underneath that
+// went to another page of ours. "Source" now means what it says, a document
+// somewhere else, and appears only for those. ownHref returns the site path
+// for any address of ours, in either form, and an empty string otherwise.
+const ownHref = (src: string | undefined | null): string => {
+  const s = String(src || '').trim();
+  if (s.startsWith('/')) return s;
+  const m = s.match(/^https?:\/\/(?:www\.)?theworldofai\.org(\/.*)?$/i);
+  return m ? (m[1] || '/') : '';
+};
 const isInsHub = !!sec && !isCoverage && (sec.is_hub || (Array.isArray(sec.children) && sec.children.length > 0));
 // This route's per-industry branch was written as "any sec that is not the
 // hub", so every new sec shape added later fell into it and crashed on
@@ -554,7 +570,7 @@ const isDraft = Boolean((clx || law || secu || sec)?.draft);
             const b = (sec.point_briefs || {})[f.source];
             return (
               <div class="dom">
-                <h3>{f.source && f.source.startsWith('/') ? <a href={f.source}>{f.name}</a> : f.name}</h3>
+                <h3>{ownHref(f.source) ? <a class="pt-link" href={ownHref(f.source)}>{f.name}</a> : f.name}</h3>
                 <p>{f.desc}</p>
                 {b && b.brief && (
                   <>
@@ -562,7 +578,7 @@ const isDraft = Boolean((clx || law || secu || sec)?.draft);
                     <p class="meta-line brief-stamp">Our reading of the source, written {b.written_on}.</p>
                   </>
                 )}
-                {f.source && !f.source.startsWith('/') ? (
+                {f.source && !ownHref(f.source) ? (
                   <p class="meta-line"><a href={f.source} rel="noopener">Source</a></p>
                 ) : !f.source ? (
                   <p class="meta-line">Tracked. No source published yet.</p>
@@ -678,7 +694,7 @@ const isDraft = Boolean((clx || law || secu || sec)?.draft);
     const b = (sec.point_briefs || {})[f.source];
     return (
     <div class="dom">
-      <h3>{f.name}</h3>
+      <h3>{ownHref(f.source) ? <a class="pt-link" href={ownHref(f.source)}>{f.name}</a> : f.name}</h3>
       <p>{f.desc}</p>
       {b && b.brief && (
         <>
@@ -694,7 +710,7 @@ const isDraft = Boolean((clx || law || secu || sec)?.draft);
           <p class="meta-line brief-stamp">Our reading of the source, written {b.written_on}.</p>
         </>
       )}
-      {f.source ? (
+      {f.source && ownHref(f.source) ? null : f.source ? (
         <p class="meta-line"><a href={f.source} rel="noopener">Source</a></p>
       ) : (
         /* NO SOURCE, NO LINK. This rendered <a href="">Source</a>
@@ -994,6 +1010,11 @@ const isDraft = Boolean((clx || law || secu || sec)?.draft);
 </Base>
 
 <style>
+  /* A point title that leads to our own page. Navy at rest, orange under the
+     pointer, no underline at rest so a list of ten reads as headings and not
+     as a column of links. Stephen, 2026-09-18. */
+  .pt-link { text-decoration: none; }
+  .pt-link:hover, .pt-link:focus-visible { color: var(--orange); text-decoration: underline; text-underline-offset: 3px; }
   /* A point's brief: the site's own reading of the cited source, set apart
      from the one-line summary above it so a reader can tell our words from
      the point, and from the source they are about to open. */
