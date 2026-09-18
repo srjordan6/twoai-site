@@ -436,7 +436,10 @@ const jsonld = JSON.stringify({
   .pill:hover { background: #F07800; }
   .wl a { color: var(--navy, #201868); text-decoration: none; font-weight: 600; }
   .wl a:hover { color: #F07800; }
-  .pill-cat { background: #F07800; text-decoration: none; }
+  /* The category pill was orange at rest. Stephen, 2026-09-17: nothing in
+     orange unless it is under the pointer. Navy like the entity pills; all
+     of them go orange on hover, which is the one meaning orange has now. */
+  .pill-cat { background: var(--navy, #201868); text-decoration: none; }
 
   /* THE NESTED SECOND SIDEBAR IS GONE. This template used to open its own
      two-column grid INSIDE Base's main column, while Base was already

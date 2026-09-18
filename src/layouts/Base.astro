@@ -591,6 +591,42 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
     h2 { font-size: clamp(1.3rem, 3vw, 1.7rem); margin-top: 1.6em; }
     a { color: var(--orange); text-decoration: none; }
     a:hover { text-decoration: underline; }
+    /* NO ORANGE TEXT AT REST. ORANGE MEANS "THERE IS MORE HERE", ON HOVER.
+       Stephen, 2026-09-17: on any word, sentence, paragraph, page I do not
+       want anything in orange. If you roll over the text with your mouse and
+       we have additional content then turn that text to orange. Do this for
+       the whole website, no exceptions.
+
+       So every link reads in navy like the text around it, and turns orange
+       under the pointer or keyboard focus. Orange therefore has exactly one
+       meaning on this site: the thing under your cursor leads somewhere. The
+       few places that coloured text orange for emphasis - the current nav
+       item, card counts, the calculator verdict, the refresh-due stamp - go
+       to navy weight instead, because orange emphasis and orange links were
+       two meanings for one colour.
+
+       !important is deliberate and this is the one place it belongs. Sixty
+       five page templates carry their own scoped link colours, and "no
+       exceptions" cannot be kept by editing sixty five files and hoping the
+       sixty sixth remembers. Brand orange stays where it is not text: the
+       masthead rule, the answer box edge, the badge outline, focus rings,
+       buttons. */
+    a, a:link, a:visited { color: var(--navy) !important; }
+    a:hover, a:focus-visible { color: var(--orange) !important; text-decoration: underline; }
+    /* White-on-navy links keep their white and still go orange on hover.
+       Pills are white text on a navy block whose BACKGROUND goes orange, so
+       their text stays white in both states. */
+    .calc-answer a, .mobile-panel a, .site-head .main-nav a, th a { color: #fff !important; }
+    a.pill, a.pill:link, a.pill:visited, a.pill:hover, a.pill:focus-visible { color: #fff !important; text-decoration: none; }
+    .site-head .main-nav a { color: var(--navy) !important; }
+    .calc-answer a:hover, .mobile-panel a:hover, .site-head .main-nav a:hover, th a:hover,
+    .calc-answer a:focus-visible, .mobile-panel a:focus-visible, .site-head .main-nav a:focus-visible { color: var(--orange) !important; }
+    /* Buttons are not text links. They keep the brand block. */
+    a.btn, a.btn:link, a.btn:visited { color: var(--navy) !important; }
+    /* Orange-as-emphasis becomes weight, not colour. */
+    .main-nav a[aria-current="page"], .card .n, .calc-answer .verdict b, .ds-overdue, .ds-current { color: inherit !important; font-weight: 700; }
+    .main-nav a[aria-current="page"] { text-decoration: underline; text-underline-offset: 4px; }
+    .mobile-panel a[aria-current="page"] { color: #fff !important; }
     main { min-height: 55vh; padding: 34px 22px 64px; }
 
     /* Sticky lives on the wrapper now, so the masthead is a plain block inside
