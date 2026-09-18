@@ -782,12 +782,13 @@ export default {
     // Attempt order: direct Anthropic when the secret exists, the partner
     // route only when it does not (so unified billing enabled later just
     // works), llama always last so the box on the home page never dies.
+    // NO ANTHROPIC. Stephen, 2026-09-17: cut all ties with the API. The direct
+    // call and the partner route are both out of the attempt list, so the
+    // secret is never read even if it is still set on the Worker. The answer
+    // model is the Cloudflare-hosted one, which was already serving whenever
+    // Anthropic failed. askAnthropicDirect stays defined and uncalled; putting
+    // it back is a code change, not a secret.
     const attempts: Array<[string, () => Promise<string>]> = [];
-    if (env.ANTHROPIC_API_KEY) {
-      attempts.push([`anthropic-direct/${ANTHROPIC_MODEL}`, askAnthropicDirect]);
-    } else {
-      attempts.push([PARTNER_MODEL, () => askWorkersAI(PARTNER_MODEL)]);
-    }
     attempts.push([FALLBACK_MODEL, () => askWorkersAI(FALLBACK_MODEL)]);
 
     let answer = "";

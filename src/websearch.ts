@@ -55,7 +55,10 @@ export type WebAnswer = {
 // The glossary vocabulary gate below is the second condition; the 15-a-day
 // cap is the ceiling. Set false to switch web search off entirely without
 // disturbing the gap recording, which runs either way.
-const WEB_SEARCH_ENABLED = true;
+// OFF. Stephen, 2026-09-17: cut all ties with the Anthropic API. This tier was
+// the Anthropic web-search tool, so it is switched off here and the key is no
+// longer read. Gap recording still runs, so unanswered questions stay ranked.
+const WEB_SEARCH_ENABLED = false;
 
 // VOCABULARY GATE. Stephen's request: only spend a search when the question
 // is actually about something this site covers, using the published glossary
@@ -145,8 +148,8 @@ export async function webFallback(
     lastWebError = "gate: best score " + (bestScore ?? 0).toFixed(3) + " below floor";
     return null;
   }
-  if (!env.ANTHROPIC_API_KEY || !env.AUDIT_DB) {
-    lastWebError = !env.ANTHROPIC_API_KEY ? "no ANTHROPIC_API_KEY" : "no AUDIT_DB";
+  if (!env.AUDIT_DB) {
+    lastWebError = "no AUDIT_DB";
     return null;
   }
   lastWebError = "";

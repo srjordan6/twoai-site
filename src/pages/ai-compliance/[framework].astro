@@ -9,6 +9,7 @@
  * self-canonical on the next pipeline run.
  */
 import Base from '../../layouts/Base.astro';
+import StateLawMap from '../../components/StateLawMap.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
 export function getStaticPaths() {
@@ -46,6 +47,29 @@ const desc = (d.meta_description || d.short || d.subtitle || d.title).slice(0, 3
 const steps = d.howto?.steps || [];
 const cites = d.citations || [];
 const kids = (d.children || []).filter((k) => titles[k]);
+
+// THE MAP IS DATA, NOT PROSE. Stephen, 2026-09-17: the state AI laws page
+// carried a hand-coloured SVG inside body_html, eight states set by hand while
+// the tracker held 101 enacted bills in 28 jurisdictions. The body is split
+// where the map sits and StateLawMap is rendered in the gap, coloured from the
+// tracker and linking each state to /ai-laws/{state}/.
+//
+// Two shapes are accepted so code and SQL can ship in either order: the
+// placeholder div the prose now carries, and the legacy inline SVG with its
+// hand-written legend paragraph, which is cut out rather than shown beside
+// the live map. A page with neither renders exactly as before.
+let bodyBefore = d.body_html || '';
+let bodyAfter = '';
+let hasMap = false;
+const mapSlot = /<div data-twoai-map="state-laws"><\/div>|<svg class="srjgov-usmap"[\s\S]*?<\/svg>\s*<p style="font-family:Poppins[^>]*>[\s\S]*?<\/p>/;
+if (d.slug === 'state-ai-laws') {
+  const m = mapSlot.exec(bodyBefore);
+  if (m) {
+    bodyAfter = bodyBefore.slice(m.index + m[0].length);
+    bodyBefore = bodyBefore.slice(0, m.index);
+    hasMap = true;
+  }
+}
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': steps.length ? 'HowTo' : 'Article',
@@ -125,7 +149,9 @@ const jsonld = JSON.stringify({
       SQL, but a body written elsewhere can break again, so the container also
       pins its own text colour. A link inside still looks like a link; an
       unclosed one can no longer take the page with it. */}
-  <div class="body" set:html={d.body_html} />
+  <div class="body" set:html={bodyBefore} />
+  {hasMap && <StateLawMap />}
+  {hasMap && <div class="body" set:html={bodyAfter} />}
 
   {/* The siting watch. Ordinances, moratoria and utility rulings land in the
       policy-news intake every day; without this they stopped at the daily

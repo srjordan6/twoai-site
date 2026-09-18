@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import StateLawMap from '../../components/StateLawMap.astro';
 import { readFileSync, existsSync } from 'node:fs';
 
 const idx = existsSync('content/laws/index.json')
@@ -14,6 +15,7 @@ const desc = `Artificial intelligence legislation in every US state: ${idx.total
     {idx.states.length} jurisdictions, refreshed daily from the LegiScan legislative database and
     linked to each bill's official page.</p>
   {idx.generated && <p class="meta-line">Last verified: {idx.generated} · Source: LegiScan API</p>}
+  <StateLawMap />
   <ul class="grid">
     {idx.states.map((s) => (
       <li class="card">

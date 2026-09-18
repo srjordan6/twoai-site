@@ -15,6 +15,16 @@ export function getStaticPaths() {
     });
 }
 const { d } = Astro.props;
+// ENACTED FIRST. Stephen, 2026-09-17: a reader who clicks a state on the map
+// wants the AI laws of that state, and this page opened on a flat list of
+// every bill filed with nothing to say which ones became law. The enacted
+// set is already published for the Enacted AI Laws section, so it is read
+// here and filtered to this state. Absent file or no match renders nothing.
+const enactedPath = 'content/compliance/enacted-ai-laws.json';
+const enactedAll = existsSync(enactedPath) ? (JSON.parse(readFileSync(enactedPath, 'utf8')).laws || []) : [];
+const enactedHere = enactedAll
+  .filter((l: any) => l.state === d.code)
+  .sort((a: any, b: any) => String(b.status_date || '').localeCompare(String(a.status_date || '')));
 const recent = d.bills.slice(0, 8).map((b) => b.number).join(', ');
 const krTerms = matchTerms(d.bills.slice(0, 25).map((b: any) => b.title || '').join(' '));
 const desc = `${d.name} artificial intelligence legislation: ${d.count} AI bill${d.count === 1 ? '' : 's'} tracked with official links, updated daily from LegiScan.`;
@@ -86,6 +96,27 @@ const jsonld = JSON.stringify({
         </details>
       )}
       {d.context_updated_on && <p class="meta-line">This section written {d.context_updated_on}.</p>}
+    </section>
+  )}
+
+  {enactedHere.length > 0 && (
+    <section id="enacted">
+      <h2>Enacted into law in {d.name}</h2>
+      <p>{enactedHere.length} AI bill{enactedHere.length === 1 ? ' has' : 's have'} passed into law in {d.name}
+        in our tracker. Each links to the legislative record with the enrolled text.</p>
+      <table>
+        <thead><tr><th>Bill</th><th>Title</th><th>Enacted</th></tr></thead>
+        <tbody>
+          {enactedHere.map((l: any) => (
+            <tr>
+              <td><a href={l.url} rel="noopener">{d.code} {l.bill}</a></td>
+              <td>{l.title}</td>
+              <td>{l.status_date}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <h2>Every AI bill tracked in {d.name}</h2>
     </section>
   )}
 
