@@ -43,6 +43,22 @@ const theDate = generated ?? doc.generated ?? doc.refreshed ?? (theBuilt ? theBu
 // with its offset, so showing the clock time alongside the date is honest
 // without pretending to know the reader's timezone.
 const clock = theBuilt && theBuilt.length >= 19 ? theBuilt.slice(11, 16) : '';
+
+// IS IT CURRENT, IN WORDS. Stephen, 2026-09-17: stop making me check all the
+// time on existing pages; every page should have something that makes
+// certain it is up to date. A date is when the page was built. This is
+// whether it should have been rebuilt since. Every page document carries
+// refresh_every_days, its cadence, stamped by srj-pipeline; if the date on
+// the page is older than that, the stamp says so, here, where the reader and
+// Stephen both see it, rather than in a log nobody opens. Evaluated at build
+// time, so a site that has not rebuilt for a week shows a week-old date AND
+// the words "due for refresh", which is the honest state.
+const cadence = Number(doc.refresh_every_days ?? 0);
+const ageDays = theDate ? Math.floor((Date.now() - new Date(theDate + 'T00:00:00Z').getTime()) / 86400000) : NaN;
+const overdue = cadence > 0 && Number.isFinite(ageDays) && ageDays > cadence;
+const currentWord = cadence > 0 && Number.isFinite(ageDays)
+  ? (overdue ? `Due for refresh: expected every ${cadence} day${cadence === 1 ? '' : 's'}, this is ${ageDays} days old` : `Current: refreshed every ${cadence} day${cadence === 1 ? '' : 's'}`)
+  : '';
 ---
 {(theDate || theUid) && (
   <p class="datastamp">
@@ -52,6 +68,12 @@ const clock = theBuilt && theBuilt.length >= 19 ? theBuilt.slice(11, 16) : '';
         <time datetime={theBuilt || theDate} title={theBuilt || undefined}>
           {theDate}{clock && <span class="ds-clock"> at {clock}</span>}
         </time>
+      </>
+    )}
+    {currentWord && (
+      <>
+        <span class="ds-sep"> · </span>
+        <span class={overdue ? 'ds-overdue' : 'ds-current'}>{currentWord}</span>
       </>
     )}
     {theUid && (
@@ -82,6 +104,8 @@ const clock = theBuilt && theBuilt.length >= 19 ? theBuilt.slice(11, 16) : '';
   .datastamp time { color: inherit; }
   .ds-clock { opacity: .8; }
   .ds-sep { opacity: .55; }
+  .ds-current { color: #2f7a3f; }
+  .ds-overdue { color: var(--orange, #F07800); font-weight: 600; }
   .ds-uid code {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 12.5px;
