@@ -53,6 +53,11 @@ const stateCount = drawn.filter((s: any) => s.code !== 'DC').length;
           <g fill-rule="evenodd">
             {drawn.map((s: any) => (
               <a href={s.href} aria-label={`${s.name} AI laws`} data-state={s.name}>
+                {/* The <title> is the link's text: it names the state for screen
+                    readers and crawlers, and it is what empty-render-check reads.
+                    Without it the first push of this map failed the build with
+                    51 anchors holding a path and no words. */}
+                <title>{s.name} AI laws</title>
                 <path id={`map-${s.code}`} class="state" d={s.d} />
               </a>
             ))}
