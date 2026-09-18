@@ -1,0 +1,161 @@
+---
+/**
+ * AI and data center lawsuits by state. The same map as /ai-laws/, the design
+ * Stephen chose on 2026-09-17, pointed at the lawsuit tracker.
+ *
+ * Stephen, 2026-09-18: I want to use that same map again but I want it to
+ * point to AI and data center lawsuits by state, and make it the first thing
+ * you see on the AI Litigation page.
+ *
+ * A state is where the court sits, read from the court's name by
+ * src/lib/courtState.ts. A court of appeals covers several states, so appellate
+ * cases are counted beneath the map and never guessed into a state.
+ *
+ * Two differences from the laws map, both forced by the data. Every state has
+ * AI bills, so every state there is a link. Most states have no tracked AI
+ * lawsuit, so a state with none is drawn paler and is NOT a link: a link to an
+ * empty page is a thin page and a broken promise. And the tooltip carries the
+ * case count, because here the count is the information.
+ *
+ * DATA CENTER SUITS. The tracker holds none today. They are zoning, noise,
+ * water and power cases and they are filed in state and county courts, which
+ * CourtListener's free coverage does not reach. The map says so in words
+ * rather than implying coverage it does not have. When those cases enter
+ * ai_lawsuits they appear here with no change to this file.
+ */
+import { readFileSync, existsSync } from 'node:fs';
+import { STATE_SHAPES } from '../data/usStatesAlbers';
+import { STATES, stateSlug, casesByState } from '../lib/courtState';
+
+interface Props { title?: string }
+const { title = 'AI and Data Center Lawsuits by State' } = Astro.props;
+
+const doc = existsSync('content/lawsuits/lawsuits.json')
+  ? JSON.parse(readFileSync('content/lawsuits/lawsuits.json', 'utf8'))
+  : { cases: [] };
+const cases = doc.cases || [];
+const { byState, unplaced } = casesByState(cases);
+
+const states = STATES.filter(([code]) => STATE_SHAPES[code]).map(([code, name]) => {
+  const n = (byState[code] || []).length;
+  return {
+    code, name, n, d: STATE_SHAPES[code].d,
+    href: `/ai-lawsuits/state/${stateSlug(name)}/`,
+    meta: `${n} tracked lawsuit${n === 1 ? '' : 's'}`,
+  };
+});
+const withCases = states.filter((s) => s.n > 0);
+const dataCenter = cases.filter((c: any) => /data cent/i.test(`${c.category || ''} ${(c.tags || []).join(' ')}`)).length;
+---
+{cases.length > 0 && (
+  <div class="ai-laws-map" data-lawsuit-map>
+    <div class="ai-map-wrap">
+      <div class="ai-map-head"><div>
+        <div class="ai-map-eyebrow">AI Litigation · United States</div>
+        <h2 class="ai-map-title">{title}</h2>
+        <div class="ai-map-sub">Select a state to see the AI lawsuits filed in its federal courts.</div>
+      </div></div>
+      <div class="ai-map-stage">
+        <svg class="map-svg" viewBox="0 0 975 610" xmlns="http://www.w3.org/2000/svg" role="group"
+          aria-label="Map of the United States. States with tracked AI lawsuits link to their case list.">
+          <g fill-rule="evenodd">
+            {states.map((s) => s.n > 0 ? (
+              <a href={s.href} aria-label={`${s.name}: ${s.meta}`} data-state={s.name} data-meta={s.meta}>
+                <title>{s.name}: {s.meta}</title>
+                <path class="state has" d={s.d} />
+              </a>
+            ) : (
+              <path class="state none" d={s.d}><title>{s.name}: no tracked lawsuit yet</title></path>
+            ))}
+          </g>
+        </svg>
+        <div class="ai-map-info" aria-live="polite">
+          <div class="ai-map-state-name"></div>
+          <div class="ai-map-hint"></div>
+          <a class="ai-map-link" href="/ai-lawsuits/">View State Lawsuits →</a>
+        </div>
+      </div>
+      <div class="ai-map-footer">
+        <span class="ai-map-dot"></span>
+        <span>Darker states have tracked cases. Click one to open its list</span>
+        <span class="ai-map-count">{cases.length} cases · {withCases.length} states</span>
+      </div>
+    </div>
+    <p class="map-note">
+      {cases.length} lawsuits tracked across {withCases.length} states, placed by where the court sits.
+      {unplaced.length > 0 && <> {unplaced.length} more are in federal courts of appeals, which cover several states, and are listed on the <a href="/ai-lawsuits/">full tracker</a>.</>}
+      {dataCenter === 0
+        ? <> No data center suit is tracked yet. Those are zoning, noise, water and power cases filed in state and county courts, which our docket source does not reach.</>
+        : <> {dataCenter} of them concern data centers.</>}
+    </p>
+  </div>
+)}
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-lawsuit-map]').forEach((root) => {
+    const svg = root.querySelector<SVGSVGElement>('.map-svg');
+    const info = root.querySelector<HTMLElement>('.ai-map-info');
+    const nameEl = root.querySelector<HTMLElement>('.ai-map-state-name');
+    const hintEl = root.querySelector<HTMLElement>('.ai-map-hint');
+    const linkEl = root.querySelector<HTMLAnchorElement>('.ai-map-link');
+    const box = root.querySelector<HTMLElement>('.ai-map-stage');
+    if (!svg || !info || !nameEl || !hintEl || !linkEl || !box) return;
+    const move = (ev?: MouseEvent) => {
+      if (!ev || window.matchMedia('(max-width:650px)').matches) return;
+      const r = box.getBoundingClientRect();
+      let x = ev.clientX - r.left + 15;
+      let y = ev.clientY - r.top + 15;
+      if (x + 220 > r.width) x = ev.clientX - r.left - 225;
+      if (y + 105 > r.height) y = ev.clientY - r.top - 110;
+      info.style.left = `${x}px`;
+      info.style.right = 'auto';
+      info.style.top = `${y}px`;
+    };
+    const show = (a: Element, ev?: MouseEvent) => {
+      nameEl.textContent = a.getAttribute('data-state') || '';
+      hintEl.textContent = a.getAttribute('data-meta') || '';
+      linkEl.href = a.getAttribute('href') || '/ai-lawsuits/';
+      info.classList.add('show');
+      if (ev) move(ev);
+    };
+    const hide = () => info.classList.remove('show');
+    svg.querySelectorAll('a[data-state]').forEach((a) => {
+      a.addEventListener('mouseenter', (e) => show(a, e as MouseEvent));
+      a.addEventListener('mousemove', (e) => move(e as MouseEvent));
+      a.addEventListener('mouseleave', hide);
+      a.addEventListener('focus', () => { info.style.left = ''; info.style.right = ''; info.style.top = ''; show(a); });
+      a.addEventListener('blur', hide);
+    });
+  });
+</script>
+
+<style>
+  .ai-laws-map{width:100%;max-width:1100px;margin:6px auto 30px;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#172033}
+  .ai-map-wrap{background:#f7f8fb;border:1px solid #e2e5eb;border-radius:18px;padding:22px;overflow:hidden}
+  .ai-map-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:12px}
+  .ai-map-eyebrow{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#7a8a9e;margin-bottom:5px}
+  .ai-map-title{font-family:inherit;font-size:27px;line-height:1.15;margin:0;font-weight:750;letter-spacing:-.025em;color:#201868}
+  .ai-map-sub{font-size:14px;color:#667085;margin-top:6px}
+  .ai-map-stage{position:relative;background:#fff;border-radius:14px;border:1px solid #e6e8ed;min-height:390px;padding:8px}
+  .map-svg{display:block;width:100%;height:auto}
+  .map-svg a{outline:none}
+  .state{stroke:#fff;stroke-width:1.1;stroke-linejoin:round;transition:fill .16s ease,stroke .16s ease,filter .16s ease}
+  /* A state with cases is the laws map's grey, and it is a link. A state with
+     none is paler and inert, so the map shows at a glance where the suits are. */
+  .state.has{fill:#b9c0cc;cursor:pointer}
+  .state.none{fill:#eceff3}
+  .map-svg a:hover .state,.map-svg a:focus .state{fill:#f07800;stroke:#201868;stroke-width:1.7;outline:none;filter:drop-shadow(0 2px 2px rgba(32,24,104,.18))}
+  .map-svg a:focus-visible .state{stroke:#201868;stroke-width:2.2}
+  .ai-map-info{position:absolute;right:18px;top:18px;width:205px;background:#201868;color:#fff;border-radius:12px;padding:15px 16px;box-shadow:0 8px 25px rgba(32,24,104,.2);display:none;z-index:2;pointer-events:none}
+  .ai-map-info.show{display:block}
+  .ai-map-state-name{font-size:20px;font-weight:750}
+  .ai-map-hint{font-size:12px;opacity:.78;margin-top:3px}
+  .ai-map-info a{display:block;margin-top:12px;background:#f07800;color:#fff;text-decoration:none;text-align:center;padding:9px 11px;border-radius:7px;font-size:13px;font-weight:700}
+  .ai-map-footer{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:#7a8a9e}
+  .ai-map-dot{width:10px;height:10px;border-radius:50%;background:#b9c0cc;border:1px solid #9aa3b2;flex:0 0 auto}
+  .ai-map-count{margin-left:auto}
+  .map-note{font-size:13.5px;color:#5d6470;line-height:1.6;margin:12px 4px 0}
+  .map-note a{color:var(--navy,#201868)}
+  .map-note a:hover{color:var(--orange,#F07800)}
+  @media(max-width:650px){.ai-map-wrap{padding:14px}.ai-map-title{font-size:22px}.ai-map-stage{min-height:270px;padding:4px}.ai-map-info{position:relative;right:auto;top:auto;width:auto;margin:8px;pointer-events:auto}.ai-map-count{display:none}}
+</style>

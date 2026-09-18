@@ -1,0 +1,97 @@
+---
+/**
+ * AI lawsuits filed in one state's federal courts: /ai-lawsuits/state/{state}/.
+ *
+ * The destination of every link on StateLawsuitMap. A page is built only for a
+ * state that has at least one tracked case, because a state page with nothing
+ * on it is a thin page, and the map does not link to a state with none.
+ *
+ * Every case links to OUR page for it at /ai-lawsuits/{slug}/, never out to a
+ * docket site: the docket link lives on the case page, at the bottom, per the
+ * standing rule. The state's AI laws page is linked too, since a reader asking
+ * what is being litigated in Texas usually also wants what Texas has enacted.
+ */
+import Base from '../../../layouts/Base.astro';
+import { readFileSync, existsSync } from 'node:fs';
+import { STATES, stateSlug, casesByState } from '../../../lib/courtState';
+
+export function getStaticPaths() {
+  const p = 'content/lawsuits/lawsuits.json';
+  if (!existsSync(p)) return [];
+  const doc = JSON.parse(readFileSync(p, 'utf8'));
+  const { byState } = casesByState(doc.cases || []);
+  return STATES.filter(([code]) => (byState[code] || []).length > 0).map(([code, name]) => ({
+    params: { state: stateSlug(name) },
+    props: { code, name, cases: byState[code], doc },
+  }));
+}
+
+const { code, name, cases, doc } = Astro.props;
+const sorted = [...cases].sort((a: any, b: any) =>
+  String(b.latest_development_date || b.filed_date || '').localeCompare(String(a.latest_development_date || a.filed_date || '')));
+const courts = [...new Set(sorted.map((c: any) => c.court).filter(Boolean))].sort();
+const cats: Record<string, number> = {};
+for (const c of sorted) cats[c.category || 'unclassified'] = (cats[c.category || 'unclassified'] || 0) + 1;
+const catList = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+const n = sorted.length;
+const title = `AI Lawsuits in ${name}: ${n} case${n === 1 ? '' : 's'} tracked in federal court`;
+const description = `${n} AI lawsuit${n === 1 ? '' : 's'} filed in ${name} federal courts, with court, claim type, status and the latest docket development for each.`;
+const jsonld = {
+  '@context': 'https://schema.org', '@type': 'CollectionPage', name: title, description,
+  url: `https://theworldofai.org/ai-lawsuits/state/${stateSlug(name)}/`,
+  isPartOf: { '@type': 'WebSite', name: 'The World of AI', url: 'https://theworldofai.org/' },
+};
+---
+<Base title={title} description={description} current="/ai-lawsuits/" jsonld={jsonld} doc={doc} stampLabel="Dockets last checked">
+  <p class="crumb"><a href="/ai-ecosystem/enterprise-applications-governance-and-tools/de99d3d0/">AI Litigation</a> · <a href="/ai-lawsuits/">Lawsuit Tracker</a></p>
+  <h1>AI Lawsuits in {name}</h1>
+  <p class="answer">We track <b>{n} AI lawsuit{n === 1 ? '' : 's'}</b> filed in the federal court{courts.length === 1 ? '' : 's'} that sit in {name}.
+    Each one has its own page with the parties, the claims, the docket timeline and where the case stands today.</p>
+
+  <section>
+    <h2>The cases</h2>
+    <table>
+      <thead><tr><th>Case</th><th>Court</th><th>Claim type</th><th>Status</th><th>Latest</th></tr></thead>
+      <tbody>
+        {sorted.map((c: any) => (
+          <tr>
+            <td><a href={`/ai-lawsuits/${c.slug}/`}>{c.case_name}</a></td>
+            <td>{c.court}</td>
+            <td>{c.category || 'unclassified'}</td>
+            <td>{c.status_badge || ''}</td>
+            <td>{c.latest_development_date || c.filed_date || ''}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>What is being litigated in {name}</h2>
+    <p>By claim type: {catList.map(([k, v], i) => <>{i > 0 && ', '}{v} {k}</>)}.
+      A claim type is read from the docket record, so a case filed recently can show as unclassified until its first substantive filings are entered.</p>
+    <p>Courts represented: {courts.join('; ')}.</p>
+  </section>
+
+  <section>
+    <h2>How to read this page</h2>
+    <p>A case is placed in {name} because the court it was filed in sits here, not because the parties do.
+      A company based in California is often sued in New York or Texas, and the state on this page is the forum.
+      Appeals are heard by a circuit court that covers several states, so an appeal is listed on the full tracker and not under any one state.</p>
+    <p>This tracker reads federal dockets. A suit filed in a {name} state or county court is not visible to it yet, which matters most for
+      data center disputes over zoning, noise, water and power, and for some chatbot injury cases. Absence from this list is not proof that no such case exists.</p>
+    <p>For what {name} has enacted, as opposed to what is being argued in court, see <a href={`/ai-laws/${stateSlug(name)}/`}>AI laws in {name}</a>.
+      For every case in every state, see the <a href="/ai-lawsuits/">AI Lawsuit Tracker</a>.</p>
+  </section>
+</Base>
+
+<style>
+  .crumb { font-size: 13px; color: #7A8A9E; margin: 0 0 6px; }
+  .crumb a { color: var(--navy); }
+  .crumb a:hover { color: var(--orange); }
+  section { margin: 30px 0; }
+  h2 { font-family: Lora, Georgia, serif; font-size: 23px; color: var(--navy); margin: 0 0 12px; }
+  section p { line-height: 1.7; color: var(--ink); margin: 0 0 1em; }
+  td a { color: var(--navy); font-weight: 600; }
+  td a:hover { color: var(--orange); }
+</style>

@@ -9,6 +9,7 @@
 import Base from '../../../layouts/Base.astro';
 import { capParagraphs } from '../../../lib/prose';
 import Reading from '../../../components/Reading.astro';
+import StateLawsuitMap from '../../../components/StateLawsuitMap.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
 const CATEGORY = 'enterprise-applications-governance-and-tools';
@@ -524,6 +525,10 @@ const isDraft = Boolean((clx || law || secu || sec)?.draft);
           {sec.section_number && sec.item_number ? ` · Section ${sec.section_number}, item ${sec.item_number}` : ''}</p>
       )}
       <h1>{sec.name}</h1>
+      {/* AI Litigation, de99d3d0. Stephen, 2026-09-18: make the map the first
+          thing you see on that page. It sits directly under the headline and
+          above the summary. Keyed on the uid, which never moves. */}
+      {sec.uid === 'de99d3d0' && <StateLawsuitMap />}
       {sec.summary && <p class="answer">{sec.summary}</p>}
       <p class="meta-line">Last verified: {sec.generated}</p>
 
