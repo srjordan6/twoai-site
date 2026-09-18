@@ -261,7 +261,7 @@ function capParagraphsInHtml() {
         // on Stephen's PC died here with ENOENT after the pages had rendered.
         // Cloudflare's build path has no spaces, which is why it never showed.
         const root = decodeURIComponent(new URL(dir).pathname).replace(/^\/([A-Za-z]:)/, '$1');
-        let files = 0, split = 0;
+        let files = 0, split = 0, nowrapped = 0;
         const walk = (d) => {
           for (const f of readdirSync(d)) {
             const p = join(d, f);
@@ -279,15 +279,43 @@ function capParagraphsInHtml() {
               return r;
             });
             if (n > 0) {
+              split += n;
+            }
+            // SHORT CELLS DO NOT WRAP. Stephen, 2026-09-17, with a screenshot of a
+            // bills table: "GA HR43" broken over two lines and "2026-06-22" broken
+            // at its last hyphen, on every page with a table. Auto layout squeezes
+            // the short columns to give a long title room, and a bill number or an
+            // ISO date has a space or a hyphen to break at, so it does.
+            //
+            // Base.astro records why nowrap on a whole COLUMN was wrong: it forced
+            // "Amazon Web Services" onto one line and pushed a table off the page.
+            // So this is by cell, not by column, and only for a cell whose text is
+            // 14 characters or fewer: an identifier, a date, a count, a status.
+            // Nothing that short can make a table too wide, and anything longer
+            // keeps wrapping exactly as before. Done here, on the built HTML, so
+            // it reaches every table on the site, including ones inside stored
+            // body_html that no template touches. The rule itself is in Base.astro
+            // and only applies from 700px up, where there is room to honour it.
+            let cells = 0;
+            work = work.replace(/<(td|th)\b([^>]*)>([\s\S]*?)<\/\1>/gi, (m, tag, attrs, inner) => {
+              if (/<(table|p|ul|ol|div)\b/i.test(inner)) return m;
+              const text = inner.replace(/<[^>]+>/g, '').replace(/&[a-z#0-9]+;/gi, 'x').replace(/\s+/g, ' ').trim();
+              if (!text || text.length > 14) return m;
+              if (/\bclass="[^"]*\bnw\b/.test(attrs)) return m;
+              cells++;
+              const a = /\bclass="/.test(attrs) ? attrs.replace(/\bclass="/, 'class="nw ') : `${attrs} class="nw"`;
+              return `<${tag}${a}>${inner}</${tag}>`;
+            });
+            nowrapped += cells;
+            if (n > 0 || cells > 0) {
               work = work.replace(/\u0000PRE(\d+)\u0000/g, (_, i) => pres[+i]);
               writeFileSync(p, work);
-              split += n;
             }
             files++;
           }
         };
         walk(root);
-        console.log(`cap-paragraphs: ${files} pages scanned, ${split} paragraphs split to <=${MAX} sentences`);
+        console.log(`cap-paragraphs: ${files} pages scanned, ${split} paragraphs split to <=${MAX} sentences, ${nowrapped} short table cells kept on one line`);
       },
     },
   };
