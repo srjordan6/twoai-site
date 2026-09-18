@@ -26,9 +26,39 @@ const enactedHere = enactedAll
   .filter((l: any) => l.state === d.code)
   .sort((a: any, b: any) => String(b.status_date || '').localeCompare(String(a.status_date || '')));
 const recent = d.bills.slice(0, 8).map((b) => b.number).join(', ');
+
+// THE EXPLANATION, NOT JUST THE TABLE. Microsoft Clarity's citation report for
+// 2026-09-12 to 18: 549 citations in AI answers across the site, and the whole
+// /ai-laws/ section earned 2 of them. Asked "what is Texas doing about AI", the
+// answer engine cited /ai-compliance/texas-ai-act/, not this page, because that
+// page explains the law and this one lists bills. A reader has the same need.
+// So the state page now opens by saying what the state has enacted, in the
+// words of our own explainer, and sends the reader there.
+//
+// The explainer is found, not mapped by hand. A generated one is named
+// {state}-ai-laws; the hand-written ones predate that and are named for the
+// statute, texas-ai-act, colorado-ai-act, tennessee-elvis-act. Anything under
+// content/compliance/ that begins with this state's slug and is not a single
+// law page (law-xx-...) is a candidate, and the one that calls itself the
+// state's AI laws wins. No match renders nothing.
+const explainer = (() => {
+  const dir = 'content/compliance';
+  if (!existsSync(dir)) return null;
+  const cands = readdirSync(dir).filter((f) => f.endsWith('.json') && f.startsWith(`${d.slug}-`) && !f.startsWith('law-'));
+  const docs = cands.map((f) => { try { return JSON.parse(readFileSync(`${dir}/${f}`, 'utf8')); } catch { return null; } })
+    .filter((x) => x && x.slug && x.title && !x.draft);
+  // "virginia-" must not claim west-virginia's page, nor the reverse.
+  const mine = docs.filter((x) => String(x.slug).startsWith(`${d.slug}-`));
+  return mine.find((x) => String(x.slug) === `${d.slug}-ai-laws`) || mine.find((x) => x.parent === 'state-ai-laws') || mine[0] || null;
+})();
+const explainerLead = explainer ? String(explainer.short || explainer.subtitle || explainer.meta_description || '').trim() : '';
 const krTerms = matchTerms(d.bills.slice(0, 25).map((b: any) => b.title || '').join(' '));
 const desc = `${d.name} artificial intelligence legislation: ${d.count} AI bill${d.count === 1 ? '' : 's'} tracked with official links, updated daily from LegiScan.`;
 const faq = [
+  ...(enactedHere.length > 0 ? [{
+    q: `What AI laws has ${d.name} enacted?`,
+    a: `${d.name} has enacted ${enactedHere.length} AI measure${enactedHere.length === 1 ? '' : 's'} in our tracker as of ${d.generated}, including ${enactedHere.slice(0, 3).map((l: any) => `${l.bill || ''}${l.title ? ' (' + String(l.title).slice(0, 80) + ')' : ''}`).join('; ')}.${explainerLead ? ' ' + explainerLead : ''}`,
+  }] : []),
   {
     q: `How many AI bills does ${d.name} have?`,
     a: `${d.name} currently has ${d.count} artificial intelligence bill${d.count === 1 ? '' : 's'} tracked in the LegiScan legislative database, as of ${d.generated}.`,
@@ -65,6 +95,15 @@ const jsonld = JSON.stringify({
     links to its official page with full text, sponsors, and status history.</p>
   <p class="meta-line">Last verified: <time datetime={d.generated}>{d.generated}</time> · Source: LegiScan API ·
     <a href="/ai-laws/">All states</a></p>
+
+  {explainer && (
+    <aside class="explainer">
+      <p class="explainer-eyebrow">{d.name}, explained</p>
+      <h2><a href={`/ai-compliance/${explainer.slug}/`}>{explainer.title}</a></h2>
+      {explainerLead && <p>{explainerLead}</p>}
+      <p class="explainer-more"><a href={`/ai-compliance/${explainer.slug}/`}>Read what {d.name} requires, who it applies to and the penalties</a></p>
+    </aside>
+  )}
 
   {/* Hand-written context, joined from twoai_state_law_context at build time
       rather than stored on the page row: the LegiScan stage rewrites the whole
@@ -155,3 +194,16 @@ const jsonld = JSON.stringify({
     ] },
   ]} />
 </Base>
+
+<style>
+  /* The explainer card: what this state has enacted, in our own words, above
+     the bill table. Added 2026-09-18 from the AI citation report. */
+  .explainer { margin: 22px 0 28px; padding: 18px 22px; background: #faf8f3; border: 1px solid #e8e2d4;
+    border-left: 4px solid var(--orange); border-radius: 10px; }
+  .explainer-eyebrow { font: 600 12px/1.3 Poppins, sans-serif; letter-spacing: .12em; text-transform: uppercase;
+    color: #7A8A9E; margin: 0 0 6px; }
+  .explainer h2 { font-family: Lora, Georgia, serif; font-size: 22px; margin: 0 0 8px; }
+  .explainer h2 a { text-decoration: none; }
+  .explainer p { margin: 0 0 8px; line-height: 1.65; }
+  .explainer-more { font-weight: 600; margin: 0; }
+</style>

@@ -9,7 +9,38 @@ const caseUid = (c) => c.uid || createHash('sha256').update(`lawsuit:${c.slug}`)
 const s = existsSync('content/lawsuits/lawsuits.json')
   ? JSON.parse(readFileSync('content/lawsuits/lawsuits.json', 'utf8'))
   : { cases: [], count: 0, generated: '' };
-const desc = `Live tracker for ${s.count} major AI lawsuits: copyright, privacy, and safety cases against AI companies, with court dockets checked daily.`;
+const desc = `${s.count} AI lawsuits tracked in United States courts as of ${s.generated || 'today'}: copyright, privacy, hiring and safety cases against AI companies, with dockets checked daily.`;
+
+// THE ANSWER FIRST. Microsoft Clarity's citation report for 2026-09-12 to 18
+// showed this hub cited 85 times in AI answers in one week, and the questions
+// behind those citations were plain ones: "how many lawsuits against ai",
+// "ai lawsuits right now", "ai lawsuits september 2026 latest updates",
+// "list of ai lawsuits". The page opened with a sentence about what courts are
+// deciding, which answers none of them. An answer engine quotes the sentence
+// that answers the question, so the page now opens with the count, the date,
+// the breakdown by claim, and what moved in the last 30 days. Every figure is
+// computed from the tracker file at build time; nothing here is typed in.
+const allCases = s.cases || [];
+const asOf = String(s.generated || '').slice(0, 10);
+const asOfMs = asOf ? Date.parse(asOf + 'T00:00:00Z') : Date.now();
+const within = (d, days) => { const t = Date.parse(String(d || '').slice(0, 10) + 'T00:00:00Z'); return Number.isFinite(t) && asOfMs - t <= days * 86400000 && asOfMs - t >= 0; };
+const monthName = asOf ? new Date(asOfMs).toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }) : '';
+const byCat = {};
+for (const c of allCases) { const k = (c.category && c.category !== 'unclassified') ? c.category : 'not yet classified'; byCat[k] = (byCat[k] || 0) + 1; }
+const catList = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+const newlyFiled = allCases.filter((c) => within(c.filed_date, 30))
+  .sort((a, b) => String(b.filed_date).localeCompare(String(a.filed_date)));
+const moved = allCases.filter((c) => c.latest_development && within(c.latest_development_date, 30) && !within(c.filed_date, 30))
+  .sort((a, b) => String(b.latest_development_date).localeCompare(String(a.latest_development_date)));
+const defCount = {};
+for (const c of allCases) {
+  const d = String(c.case_name || '').split(/\sv\.?\s/i)[1] || '';
+  const m = d.match(/openai|anthropic|meta|google|microsoft|stability|midjourney|suno|udio|uncharted|perplexity|character|workday|clearview|x\.?ai|runway|minimax|hirevue/i);
+  if (m) { let k = m[0].toLowerCase(); if (k === 'uncharted') k = 'udio'; defCount[k] = (defCount[k] || 0) + 1; }
+}
+const DEF_NAME = { openai: 'OpenAI', anthropic: 'Anthropic', meta: 'Meta', google: 'Google', microsoft: 'Microsoft', stability: 'Stability AI', midjourney: 'Midjourney', suno: 'Suno', udio: 'Udio', perplexity: 'Perplexity', character: 'Character.AI', workday: 'Workday', clearview: 'Clearview AI', 'x.ai': 'xAI', xai: 'xAI', runway: 'Runway', minimax: 'MiniMax', hirevue: 'HireVue' };
+const topDefs = Object.entries(defCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
+const trunc = (t, n) => { const x = String(t || '').replace(/\s+/g, ' ').trim(); return x.length > n ? x.slice(0, n).replace(/\s+\S*$/, '') + '...' : x; };
 // Schema for the hub. Case pages already carry Article; the hub had none, so
 // the tracker was the one flagship factory page an answer engine could not read
 // as a structured collection. A @graph with the breadcrumb and an ItemList of
@@ -47,10 +78,42 @@ const jsonld = JSON.stringify({
 ---
 <Base title={`AI Lawsuit Tracker: ${s.count} cases followed live — The World of AI`} description={desc} current="/ai-lawsuits/" jsonld={jsonld} doc={s} stampLabel="Dockets last checked">
   <h1>The AI Lawsuit Tracker</h1>
-  <p class="answer">The courts are deciding what AI may legally learn from and say. This tracker
-    follows <b>{s.count} major AI lawsuits</b> as living pages, not one-time headlines: dockets
-    are checked against CourtListener daily and each case page carries its full timeline.</p>
-  {s.generated && <p class="meta-line">Last verified: {s.generated} · Source: CourtListener / RECAP</p>}
+  <p class="answer">As of {asOf || 'today'}, this tracker follows <b>{s.count} AI lawsuits</b> in United States courts.
+    {catList.length > 0 && <> By claim: {catList.slice(0, 5).map(([k, v], i) => <>{i > 0 && ', '}{v} {k}</>)}.</>}
+    {topDefs.length > 0 && <> The most sued companies are {topDefs.map(([k, v], i) => <>{i > 0 && (i === topDefs.length - 1 ? ' and ' : ', ')}{DEF_NAME[k] || k} ({v})</>)}.</>}
+    {' '}Every case is a living page: dockets are checked against CourtListener daily and each page carries its full timeline.</p>
+  {s.generated && <p class="meta-line">Last verified: {s.generated} · Source: CourtListener / RECAP ·
+    See the cases <a href="/ai-ecosystem/enterprise-applications-governance-and-tools/de99d3d0/">by state on the map</a></p>}
+
+  {(newlyFiled.length > 0 || moved.length > 0) && (
+    <section class="recent">
+      <h2>What changed in the last 30 days{monthName && <>, to {monthName}</>}</h2>
+      <p>{newlyFiled.length} new lawsuit{newlyFiled.length === 1 ? ' was' : 's were'} filed and {moved.length} existing case{moved.length === 1 ? '' : 's'} recorded a docket development in the 30 days to {asOf}.</p>
+      {newlyFiled.length > 0 && (
+        <>
+          <h3>Newly filed</h3>
+          <ul class="recent-list">
+            {newlyFiled.slice(0, 10).map((c) => (
+              <li><b>{c.filed_date}</b> · <a href={`/ai-lawsuits/${c.slug}/`}>{c.case_name}</a> · {c.court}</li>
+            ))}
+          </ul>
+          {newlyFiled.length > 10 && <p class="meta-line">And {newlyFiled.length - 10} more, all in the table below.</p>}
+        </>
+      )}
+      {moved.length > 0 && (
+        <>
+          <h3>Developments in existing cases</h3>
+          <ul class="recent-list">
+            {moved.slice(0, 8).map((c) => (
+              <li><b>{c.latest_development_date}</b> · <a href={`/ai-lawsuits/${c.slug}/`}>{c.case_name}</a>: {trunc(c.latest_development, 170)}</li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
+  )}
+
+  <h2 id="all-cases">All {s.count} cases</h2>
   {s.cases.length > 0 ? (
     <table>
       <thead><tr><th>Case</th><th>Category</th><th>Status</th><th>Latest development</th><th>uid</th></tr></thead>
@@ -83,6 +146,13 @@ const jsonld = JSON.stringify({
 </Base>
 
 <style>
+  .recent { margin: 26px 0 34px; padding: 18px 22px; background: #faf8f3; border: 1px solid #e8e2d4; border-radius: 12px; }
+  .recent h2 { font-family: Lora, Georgia, serif; font-size: 22px; color: var(--navy); margin: 0 0 8px; }
+  .recent h3 { font-size: 15px; color: var(--navy); margin: 16px 0 6px; }
+  .recent p { margin: 0 0 6px; line-height: 1.65; }
+  .recent-list { margin: 0; padding-left: 18px; }
+  .recent-list li { margin: 5px 0; line-height: 1.55; }
+  #all-cases { font-family: Lora, Georgia, serif; font-size: 23px; color: var(--navy); margin: 8px 0 4px; }
   .pending { color: #7A8A9E; font-style: italic; }
   .uid code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; color: #4a4a55; }
 </style>
