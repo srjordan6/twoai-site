@@ -38,10 +38,27 @@ interface Props {
   terms: number;
   cases: number;
   servers: number;
+  companies?: number;
+  tools?: number;
+  jobs?: number;
+  people?: number;
   generated?: string;
 }
-const { bills, terms, cases, servers, generated } = Astro.props;
-const total = bills + terms + cases + servers;
+const { bills, terms, cases, servers, companies = 0, tools = 0, jobs = 0, people = 0, generated } = Astro.props;
+const total = bills + terms + cases + servers + companies + tools + jobs + people;
+// THE STRIP UNDER THE HEADLINE. Eight things the site tracks, each linked to
+// the section that holds it. A figure of zero means its index did not reach
+// this build, and the entry is left out rather than shown as nothing.
+const strip = [
+  { n: bills, label: 'state AI bills', href: '/ai-laws/' },
+  { n: cases, label: 'lawsuits tracked live', href: '/ai-lawsuits/' },
+  { n: companies, label: 'companies profiled', href: '/companies/' },
+  { n: tools, label: 'AI tools reviewed', href: '/ai-tools/' },
+  { n: servers, label: 'MCP servers', href: '/mcp/' },
+  { n: jobs, label: 'AI jobs open now', href: '/ai-ecosystem/ecosystem-entities-market-and-operations/995676ef/' },
+  { n: people, label: 'people in the field', href: '/ai-ecosystem/ecosystem-entities-market-and-operations/c53153c4/' },
+  { n: terms, label: 'terms defined', href: '/ai-glossary/' },
+].filter((s) => s.n > 0);
 ---
 
 <section class="stage" aria-label="The World of AI">
@@ -51,18 +68,32 @@ const total = bills + terms + cases + servers;
   <div class="glow" aria-hidden="true"></div>
 
   <div class="stage-inner">
-    <p class="eyebrow">The AI ecosystem, rebuilt from primary sources every day</p>
-    <h1>Every AI law, lawsuit, model and tool.<br /><span class="accent">Traced to its source.</span></h1>
+    {/* THE HEADLINE, REWRITTEN 2026-09-18. Stephen: we are now much more than
+        what those few words say. "Every AI law, lawsuit, model and tool" was
+        the site in its first month. It now also holds companies and their
+        filings, data centers and the grid that feeds them, research, jobs and
+        pay, insurance, security, the people in the field and daily news, so a
+        list of four nouns undersold it and any longer list would be out of
+        date again by the next section. The headline names the whole and the
+        promise; the line under it carries the list, where it can grow.
+
+        No orange in the text. The old second line was orange, which the
+        no-orange-text-at-rest rule of 2026-09-16 forbids without exception,
+        and it had started rendering half white and half orange. The accent is
+        now a bar under the headline: orange as an object, not as text. */}
+    <p class="eyebrow">Rebuilt from primary sources every day</p>
+    <h1>The whole AI ecosystem, in one place.<br />Every fact traced to its source.</h1>
+    <span class="bar" aria-hidden="true"></span>
     <p class="lede">
-      {total.toLocaleString()} records from LegiScan, CourtListener, the Federal Register, SEC EDGAR
-      and the MCP registry. Each one dated, each one linked to the document it came from.
+      Laws and lawsuits. Companies, models and tools. Data centers and the power behind them.
+      Research, jobs, insurance and security. {total.toLocaleString()} records and growing, each one dated
+      and linked to the document it came from.
     </p>
 
     <div class="counts">
-      <a href="/ai-laws/"><b>{bills.toLocaleString()}</b><span>state AI bills</span></a>
-      <a href="/ai-lawsuits/"><b>{cases}</b><span>lawsuits tracked live</span></a>
-      <a href="/ai-glossary/"><b>{terms}</b><span>terms defined</span></a>
-      <a href="/mcp/"><b>{servers.toLocaleString()}</b><span>MCP servers</span></a>
+      {strip.map((s) => (
+        <a href={s.href}><b>{s.n.toLocaleString()}</b><span>{s.label}</span></a>
+      ))}
     </div>
 
     {/* The date was already here and already correct, but as bare text. A
@@ -93,7 +124,7 @@ const total = bills + terms + cases + servers;
        simply full width with no arithmetic and no scrollbar to reconcile. */
     width: 100%;
     position: relative;
-    min-height: 560px;
+    min-height: 640px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -101,7 +132,7 @@ const total = bills + terms + cases + servers;
     background: radial-gradient(120% 90% at 50% 15%, #2a2179 0%, #201868 42%, #16104a 100%);
     margin: 0 0 2.4em;
   }
-  @media (max-width: 720px) { .stage { min-height: 460px; } }
+  @media (max-width: 720px) { .stage { min-height: 620px; } }
 
   #field { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 
@@ -116,29 +147,30 @@ const total = bills + terms + cases + servers;
 
   .stage-inner {
     position: relative; z-index: 2; text-align: center;
-    max-width: 820px; padding: 68px 22px 56px;
+    max-width: 900px; padding: 68px 22px 56px;
   }
   .eyebrow {
     font-family: 'Poppins', system-ui, sans-serif;
     font-size: 12px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase;
-    color: #F07800; margin: 0 0 18px;
+    color: rgba(255,255,255,.78); margin: 0 0 18px;
   }
   h1 {
     font-family: 'Lora', Georgia, serif;
     font-size: clamp(2rem, 5.2vw, 3.4rem); line-height: 1.14;
-    color: #fff; margin: 0 0 20px; text-wrap: balance;
+    color: #fff; margin: 0 0 18px; text-wrap: balance;
   }
-  .accent { color: #F07800; }
+  .bar { display: block; width: 72px; height: 4px; border-radius: 2px; background: #F07800; margin: 0 auto 22px; }
   .lede {
     font-family: 'Poppins', system-ui, sans-serif;
     font-size: clamp(15px, 1.6vw, 17px); line-height: 1.7;
-    color: rgba(255,255,255,.82); max-width: 620px; margin: 0 auto 30px;
+    color: rgba(255,255,255,.82); max-width: 700px; margin: 0 auto 30px;
   }
   .counts {
-    display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 34px; margin: 0 0 18px;
+    display: grid; grid-template-columns: repeat(4, auto); justify-content: center; gap: 14px 38px; margin: 0 0 18px;
   }
+  @media (max-width: 720px) { .counts { grid-template-columns: repeat(2, auto); gap: 12px 28px; } }
   .counts a {
-    text-decoration: none; color: #fff; display: flex; flex-direction: column;
+    text-decoration: none; color: #fff; display: flex; flex-direction: column; align-items: center;
     padding: 6px 4px; border-bottom: 2px solid transparent; transition: border-color .18s ease;
   }
   .counts a:hover { border-bottom-color: #F07800; }

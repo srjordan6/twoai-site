@@ -34,6 +34,16 @@ const caseTotal = suits?.count ?? 0;
 // the hero cannot claim a number the directory contradicts.
 const mcpIdx = j('content/mcp/index.json');
 const mcpTotal = mcpIdx?.total ?? 0;
+// THE REST OF WHAT THE SITE HOLDS. Stephen, 2026-09-18: we are now much more
+// than what those few words say. The hero counted four things, bills, cases,
+// terms and MCP servers, from the week the site launched. Each figure below is
+// read from the index its own section renders, the same rule as the MCP count
+// above, so the front door cannot claim a number a section contradicts. A
+// missing file is a zero, and the hero leaves a zero out.
+const companyTotal = j('content/companies/index.json')?.total ?? 0;
+const toolTotal = j('content/tools/index.json')?.total ?? 0;
+const jobTotal = j('content/jobs/index.json')?.total ?? 0;
+const peopleTotal = j('content/people/index.json')?.total ?? 0;
 const totalPages = cats.reduce((n, c) => n + c.pages, 0);
 const generated = idx.generated || laws?.generated || '';
 
@@ -69,7 +79,8 @@ const jsonld = JSON.stringify({
 ---
 <Base rail={false} title="The World of AI — the AI Ecosystem, mapped and tracked daily" description={desc} jsonld={jsonld}>
   <Hero slot="bleed" bills={billTotal} terms={termTotal} cases={caseTotal}
-    servers={mcpTotal} generated={generated} />
+    servers={mcpTotal} companies={companyTotal} tools={toolTotal} jobs={jobTotal}
+    people={peopleTotal} generated={generated} />
 
 
   <AskBox />

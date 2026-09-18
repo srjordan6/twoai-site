@@ -660,6 +660,12 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
     .topbar a:hover, .topbar a:focus-visible,
     .search-panel a:hover, .search-panel a:focus-visible,
     .lang-panel a:hover, .lang-panel a:focus-visible { color: var(--orange) !important; }
+    /* The home page hero is navy too. Its count links carry the big numbers,
+       which inherit the link colour, so under the navy rule the numbers were
+       navy on navy while their grey labels stayed visible. Found 2026-09-18
+       when the strip was widened from four counts to eight. */
+    .stage a, .stage a:link, .stage a:visited { color: #fff !important; }
+    .stage a:hover, .stage a:focus-visible { color: var(--orange) !important; text-decoration: none; }
     /* The state maps carry a white-on-orange button inside their navy hover
        card. It is a button, so its text stays white in every state. */
     .ai-map-info a, .ai-map-info a:link, .ai-map-info a:visited,
