@@ -59,6 +59,23 @@ const catList = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 5);
 const desc = `State of AI Laws, ${monthYear}: ${n(idx.total)} AI bills tracked across ${withBills.length} US jurisdictions, ${n(stateLaws.length)} state measures enacted in ${enactedStates.size} states, and ${n(suits.count)} AI lawsuits in court. Free to cite and embed.`;
 const cite = `"State of AI Laws, ${monthYear}." The World of AI, theworldofai.org/state-of-ai-laws/. Data as of ${asOf}.`;
 
+// THIS PAGE'S OWN UID. My first version passed the laws index record to the
+// layout, which would have printed the /ai-laws/ hub's uid, 341de729, at the
+// foot of a different page: two pages, one identifier, the thing a uid exists
+// to prevent. Caught before it was ever noticed, on 2026-09-18, when Stephen
+// pointed out that /ai-laws/ itself showed none. This page has no record in
+// SQL, because it is computed, so its uid is derived the way the lawsuit case
+// pages derive theirs: the first eight hex characters of a SHA-256 of a fixed
+// key. It never changes, and it was checked against every uid in the
+// database for a collision. The date and cadence come from the data it reads.
+import { createHash } from 'node:crypto';
+const stampDoc = {
+  page_uid: createHash('sha256').update('page:state-of-ai-laws').digest('hex').slice(0, 8), // b22a2557
+  built_at: idx.built_at || '',
+  generated: asOf,
+  refresh_every_days: 1,
+};
+
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@graph': [
@@ -68,6 +85,7 @@ const jsonld = JSON.stringify({
       headline: `State of AI Laws, ${monthYear}`,
       description: desc,
       url: 'https://theworldofai.org/state-of-ai-laws/',
+      identifier: 'b22a2557',
       ...(asOf ? { dateModified: asOf, datePublished: asOf } : {}),
       publisher: { '@type': 'Organization', name: 'The World of AI', url: 'https://theworldofai.org/' },
       isAccessibleForFree: true,
@@ -87,7 +105,7 @@ const jsonld = JSON.stringify({
   ],
 });
 ---
-<Base title={`State of AI Laws, ${monthYear}: the numbers, the map and what changed — The World of AI`} description={desc.slice(0, 300)} current="/ai-laws/" jsonld={jsonld} doc={idx} stampLabel="Data as of">
+<Base title={`State of AI Laws, ${monthYear}: the numbers, the map and what changed — The World of AI`} description={desc.slice(0, 300)} current="/ai-laws/" jsonld={jsonld} doc={stampDoc} stampLabel="Data as of">
   <h1>State of AI Laws, {monthYear}</h1>
   <p class="answer">As of {asOf}, United States legislatures have <b>{n(idx.total)} artificial intelligence bills</b> on
     record across {withBills.length} jurisdictions. <b>{n(stateLaws.length)} state measures have been enacted in {enactedStates.size} states</b>,

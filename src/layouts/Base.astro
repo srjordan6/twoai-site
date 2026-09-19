@@ -14,13 +14,75 @@ import AmazonShelf from '../components/AmazonShelf.astro';
 import PillarBox from '../components/PillarBox.astro';
 import Topbar from '../components/Topbar.astro';
 import DataStamp from '../components/DataStamp.astro';
+import { readFileSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 
 interface Props { title: string; description: string; current?: string; jsonld?: string; canonicalOverride?: string; noindex?: boolean; ogType?: string; rail?: boolean; titleTail?: string; doc?: Record<string, any>; stampLabel?: string; redirect?: string; }
 /* rail=false drops the section-index card and lets the content run full width.
    The home page opts out: it IS the ecosystem map, so a card listing the same
    five categories beside it is the page repeating itself in miniature, and it
    pushed the hero, the ask box and everything below off centre. */
-const { title, description, current = '', jsonld, canonicalOverride, noindex = false, ogType = 'website', rail = true, titleTail, doc, stampLabel, redirect } = Astro.props;
+const { title, description, current = '', jsonld, canonicalOverride, noindex = false, ogType = 'website', rail = true, titleTail, doc: docProp, stampLabel, redirect } = Astro.props;
+
+// EVERY PAGE SHOWS ITS UID AND ITS DATE, INCLUDING THE HUBS. Stephen,
+// 2026-09-18: do not see a uid for /ai-laws/. He was right, and it was not
+// one page. A check of the live site that evening found 27 hub and tool pages
+// with no stamp at all: the home page, AI Compliance, the glossary, tools,
+// prompts, benchmarks, companies, compute, downloads, MCP, research, skills,
+// sources, this week, every news hub, the API index, the calculators and the
+// talent pages. The stamp only renders when a template hands this layout a
+// `doc`, and the item templates did while the hub templates never had.
+//
+// Every one of those hubs already HAS a record in SQL with a uid, stamped by
+// the pipeline on every write; the page just never read it. So the layout now
+// finds the record itself when a template passes none. Fixing it here rather
+// than in 27 templates is the DataStamp argument again: a convention repeated
+// 27 times drifts, and the next new hub would forget it.
+//
+// A page with no record anywhere, a calculator or the API index, is computed
+// rather than stored, so its uid is derived from its own path: the first eight
+// hex characters of a SHA-256, the way the lawsuit case pages do it. That is
+// stable for as long as the URL is, and URLs here never change. It is applied
+// ONLY to the listed paths, never as a general fallback: an item page whose
+// record carries a real uid must show that one, and a derived uid beside it
+// would give one page two identifiers.
+const HUB_RECORD: Record<string, string> = {
+  '/': 'ecosystem/index.json',
+  '/ai-laws/': 'laws/index.json',
+  '/ai-compliance/': 'compliance/index.json',
+  '/ai-glossary/': 'glossary/glossary.json',
+  '/ai-tools/': 'tools/index.json',
+  '/ai-prompts/': 'prompts/index.json',
+  '/benchmarks/': 'benchmarks/index.json',
+  '/companies/': 'companies/index.json',
+  '/compute/': 'compute/index.json',
+  '/downloads/': 'downloads/index.json',
+  '/mcp/': 'mcp/index.json',
+  '/research/': 'research/index.json',
+  '/research/watch/': 'research/watch.json',
+  '/skills/': 'skills/index.json',
+  '/sources/': 'sources/index.json',
+  '/this-week-in-ai/': 'week/index.json',
+  '/ai-news/archive/': 'news/archive.json',
+  '/ai-news/timeline/': 'timeline/index.json',
+};
+const DERIVED_UID = /^\/(api|talent|ai-news|ai-news\/daily|ai-news\/vendor)\/$|^\/calculators\/[a-z0-9-]+\/$|^\/talent\/[a-z0-9-]+\/$/;
+let doc = docProp;
+if (!doc && !redirect) {
+  const here = Astro.url.pathname.endsWith('/') ? Astro.url.pathname : Astro.url.pathname + '/';
+  const rec = HUB_RECORD[here];
+  if (rec && existsSync(`content/${rec}`)) {
+    try {
+      const r = JSON.parse(readFileSync(`content/${rec}`, 'utf8'));
+      // Only the four stamp fields are kept. Some of these files are large,
+      // and nothing else in the layout needs them.
+      if (r && (r.page_uid || r.uid)) doc = { page_uid: r.page_uid || r.uid, built_at: r.built_at, generated: r.generated, refresh_every_days: r.refresh_every_days };
+    } catch { /* a hub whose record cannot be read shows no stamp, as before */ }
+  } else if (DERIVED_UID.test(here)) {
+    const now = new Date().toISOString();
+    doc = { page_uid: createHash('sha256').update('page:' + here).digest('hex').slice(0, 8), generated: now.slice(0, 10) };
+  }
+}
 const nav = [
   { href: '/ai-ecosystem/technology-and-core-infrastructure/', label: 'Technology & Infrastructure', short: 'Technology' },
   { href: '/ai-ecosystem/ecosystem-entities-market-and-operations/', label: 'Market & Entities', short: 'Market' },

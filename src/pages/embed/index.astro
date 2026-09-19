@@ -11,6 +11,7 @@
  */
 import Base from '../../layouts/Base.astro';
 import { readFileSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 
 const laws = existsSync('content/laws/index.json') ? JSON.parse(readFileSync('content/laws/index.json', 'utf8')) : { total: 0, generated: '' };
 const suits = existsSync('content/lawsuits/lawsuits.json') ? JSON.parse(readFileSync('content/lawsuits/lawsuits.json', 'utf8')) : { count: 0 };
@@ -20,8 +21,17 @@ const mapCode = `<iframe src="https://theworldofai.org/embed/ai-laws-map/" title
 const badgeCode = `<iframe src="https://theworldofai.org/embed/ai-lawsuit-count/" title="AI lawsuits tracked, from The World of AI" width="352" height="215" style="border:0" loading="lazy"></iframe>
 <p>Source: <a href="https://theworldofai.org/ai-lawsuits/">The World of AI Lawsuit Tracker</a></p>`;
 const desc = 'Free embeddable widgets from The World of AI: a live map of AI laws by state and a live count of AI lawsuits. Copy one snippet, keep the credit line.';
+// Every page carries a uid and a date. This one is computed, not stored, so
+// its uid is derived from a fixed key the way the lawsuit case pages do it,
+// 082f9cb1, checked against the database for a collision on 2026-09-18.
+const stampDoc = {
+  page_uid: createHash('sha256').update('page:embed').digest('hex').slice(0, 8),
+  built_at: laws.built_at || '',
+  generated: String(laws.generated || '').slice(0, 10),
+  refresh_every_days: 1,
+};
 ---
-<Base title="Embed our data: a live AI laws map and lawsuit count — The World of AI" description={desc} current="/embed/">
+<Base title="Embed our data: a live AI laws map and lawsuit count — The World of AI" description={desc} current="/embed/" doc={stampDoc} stampLabel="Data as of">
   <h1>Embed our data</h1>
   <p class="answer">Two live widgets, free to use on any website: a map of AI laws by state covering
     <b>{Number(laws.total || 0).toLocaleString('en-US')} bills</b>, and a count of the

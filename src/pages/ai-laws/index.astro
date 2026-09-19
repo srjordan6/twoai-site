@@ -30,7 +30,11 @@ if (patternsHtml) {
   patternsHtml = patternsHtml.replace(/<span data-twoai="(\w+)">([^<]*)<\/span>/g, (_m, k, fb) => live[k] || fb);
 }
 ---
-<Base title="AI Laws by State: every US artificial intelligence bill, tracked daily" description={desc} current="/ai-laws/">
+{/* doc={idx}: the hub's record has carried a uid since the pipeline began
+    stamping every write, 341de729, and this page never passed it to the
+    layout, so it was the one page in the section with no uid and no date at
+    its foot. Stephen saw it on 2026-09-18. */}
+<Base title="AI Laws by State: every US artificial intelligence bill, tracked daily" description={desc} current="/ai-laws/" doc={idx} stampLabel="Last verified">
   <h1>AI Laws by State</h1>
   <p class="answer">United States AI legislation is written state by state, and this page tracks
     all of it: <b>{idx.total.toLocaleString()} artificial intelligence bills</b> across
