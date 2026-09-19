@@ -35,6 +35,7 @@
  */
 
 import { handleTalent, talentWeeklyDigest, talentMailAnswer } from "./talent";
+import { handleTranslate } from "./translate";
 import { webFallback, lastWebError } from "./websearch";
 import { wikidataLookup, lastWikidataError, subjectOf } from "./wikidata";
 import { openAlexAuthor, huggingFaceModel, recordLookup, cachedLookup, promoteFacts } from "./lookups";
@@ -167,6 +168,13 @@ export default {
       // The AI Talent Network write path lives in its own module so a bug in
       // it can never touch the assistant, and vice versa.
       return handleTalent(request, env as unknown as Parameters<typeof handleTalent>[1]);
+    }
+
+    if (url.pathname === "/api/translate") {
+      // Page translation through Microsoft Translator, in its own module for
+      // the same reason talent is: a fault in it cannot reach the assistant or
+      // the static site. See src/translate.ts for why it replaced Google.
+      return handleTranslate(request, env as unknown as Parameters<typeof handleTranslate>[1], ctx);
     }
 
     if (url.pathname === "/sitemap.xml") {

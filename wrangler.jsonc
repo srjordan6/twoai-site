@@ -99,9 +99,27 @@
         "type": "ratelimit",
         "namespace_id": "1002",
         "simple": { "limit": 5, "period": 60 }
+      },
+      // Page translation. A long page goes up in several batches, so this is
+      // looser than /api/ask: 40 a minute covers a reader moving between
+      // pages and still stops a script from emptying the monthly allowance.
+      {
+        "name": "TRANSLATE_RATE",
+        "type": "ratelimit",
+        "namespace_id": "1003",
+        "simple": { "limit": 40, "period": 60 }
       }
     ]
   },
+  // Translation cache: one entry per English string per language, so every
+  // string is sent to Microsoft once for the whole site. Also holds the
+  // monthly character counter. Created 2026-09-19. See src/translate.ts.
+  // The key itself is a secret, never in this file:
+  //   npx wrangler secret put MS_TRANSLATOR_KEY
+  //   npx wrangler secret put MS_TRANSLATOR_REGION
+  "kv_namespaces": [
+    { "binding": "TRANSLATE_KV", "id": "31aa9e645126427aa54312e06d4a618c" }
+  ],
   // The research index. Hyperdrive holds the credential and pools the
   // connection, so the Worker reaches srj_audit in Ohio without a secret in
   // the bundle and without a cold TCP handshake on every question. Bound
