@@ -961,6 +961,32 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
        moves to the wrapper so spacing is unchanged. */
     .tbl-scroll { overflow-x: auto; max-width: 100%; margin: 18px 0; -webkit-overflow-scrolling: touch; }
     .tbl-scroll > table { margin: 0; }
+    /* AND THE READER IS TOLD IT SCROLLS. Stephen, 2026-09-19, with a screenshot
+       of /mcp/: text on the right is cut off. The wrapper added on 2026-09-18
+       was doing its job, the All servers table scrolls inside its box rather
+       than sliding under the section menu, but a clipped sentence with no edge,
+       no shadow and no scrollbar until you touch it looks exactly like a bug.
+       The reader cannot tell a scroller from a broken layout.
+
+       Pure CSS, no script. Two background layers: a white pair pinned to each
+       end that hides the shadow when there is nothing more that way, and a
+       gradient pair on the table itself that shows through only while there is.
+       background-attachment:local on the shadows is what does it; they move
+       with the content, the covers do not. A table that fits shows neither.
+       The scrollbar is also made permanent where the platform allows it, so on
+       a trackpad Mac the bar does not fade out and leave the same doubt. */
+    .tbl-scroll {
+      background:
+        linear-gradient(to right, #fff 30%, rgba(255,255,255,0)) left center / 40px 100% no-repeat,
+        linear-gradient(to left, #fff 30%, rgba(255,255,255,0)) right center / 40px 100% no-repeat,
+        radial-gradient(farthest-side at 0 50%, rgba(32,24,104,.22), rgba(32,24,104,0)) left center / 16px 100% no-repeat,
+        radial-gradient(farthest-side at 100% 50%, rgba(32,24,104,.22), rgba(32,24,104,0)) right center / 16px 100% no-repeat;
+      background-attachment: local, local, scroll, scroll;
+      scrollbar-width: thin;
+    }
+    .tbl-scroll::-webkit-scrollbar { height: 10px; }
+    .tbl-scroll::-webkit-scrollbar-thumb { background: #c9cddc; border-radius: 6px; }
+    .tbl-scroll::-webkit-scrollbar-track { background: #f1f2f7; border-radius: 6px; }
     /* One long token with no space in it, a server id or a URL. Only these
        cells may break anywhere; every other cell keeps break-word, for the
        reason given in the long note above. */
