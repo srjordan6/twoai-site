@@ -35,8 +35,12 @@ interface Props {
   person: any;
   base: string;
   orgUid?: string | null;
+  /** Emit FAQPage markup. True ONLY where this profile is the whole page. A
+   *  category page renders many profiles, and many FAQPage blocks on one page
+   *  is a markup error, so the default is off. */
+  faqSchema?: boolean;
 }
-const { person, base, orgUid = null } = Astro.props as Props;
+const { person, base, orgUid = null, faqSchema = false } = Astro.props as Props;
 
 const quote = person?.quote
   ? (typeof person.quote === 'string'
@@ -72,6 +76,25 @@ const readingParas = String(person?.reading?.body ?? '')
 // Cross references to the person's other categories. The section they are
 // profiled in is this one, so it is dropped rather than linked back to itself.
 const otherCats = (person?.cats ?? []).filter((c) => c.uid && c.uid !== person?.home_uid);
+
+// THE PROFILE IS ALREADY WRITTEN AS QUESTIONS: "Who is X?", "What is X known
+// for?", "What is X's career timeline?" are its headings. What it never did was
+// say so to a parser. This emits FAQPage for the questions the page visibly
+// answers, with the answer text taken from the same fields the page prints, so
+// the markup describes what a reader sees and nothing else. No second copy of
+// the text is rendered: repeating the opening paragraph further down to look
+// like an FAQ would be padding. 2026-09-18, under the instruction to add FAQs
+// wherever the record supports one and not make Google mad.
+const pf: { q: string; a: string }[] = [];
+const hookText = String(person?.hook || '').replace(/\s+/g, ' ').trim();
+if (hookText.length >= 60) pf.push({ q: `Who is ${person.name}?`, a: hookText });
+const achTitles = achievements.map((a) => a.title).filter(Boolean).slice(0, 4);
+if (achTitles.length >= 2) pf.push({ q: `What is ${person.name} known for?`, a: achTitles.join('; ') + '.' });
+if (person?.born && person?.died) pf.push({ q: `When did ${person.name} live?`, a: `${person.name} was born in ${String(person.born).slice(0, 4)} and died in ${String(person.died).slice(0, 4)}.` });
+const personFaqLd = faqSchema && pf.length >= 2
+  ? JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage',
+      mainEntity: pf.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }).replace(/</g, '\\u003c')
+  : '';
 ---
 <section class="person" id={person.uid}>
   <h2>{person.name}</h2>
@@ -196,6 +219,7 @@ const otherCats = (person?.cats ?? []).filter((c) => c.uid && c.uid !== person?.
   <div class="cite-box">Cite this profile: <code>"{person.name}." AI People Directory,
     The World of AI, theworldofai.org{base}/{person.home_uid}/#{person.uid}.
     {person.generated ? ` Verified ${person.generated}.` : ''}</code></div>
+  {personFaqLd && <script type="application/ld+json" set:html={personFaqLd} />}
 </section>
 
 <style>

@@ -1520,7 +1520,7 @@ const jsonld = JSON.stringify(
   {legacyPerson && (
     <>
       <h1>{legacyPerson.name}</h1>
-      <PersonProfile person={{ ...legacyPerson, home_uid: legacyPerson.uid }} base={BASE}
+      <PersonProfile person={{ ...legacyPerson, home_uid: legacyPerson.uid }} base={BASE} faqSchema={true}
         orgUid={legacyPerson.org
           ? g2.__twoaiCompanyByName[String(legacyPerson.org).toLowerCase().replace(/[^a-z0-9]/g, '')] || null
           : null} />

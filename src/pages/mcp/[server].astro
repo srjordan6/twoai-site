@@ -95,6 +95,37 @@ const adoptSense = !weekly
         : ' Weekly downloads under a thousand mean early or niche use; expect to be one of the first to hit any bug.';
 const packageSense = licSense + maintSense + adoptSense;
 
+// QUESTIONS THIS RECORD CAN ANSWER, AND ONLY THOSE. Stephen, 2026-09-18: add
+// an FAQ wherever you can, but do not make Google mad. The rule that keeps it
+// on the right side of that line was learned the same afternoon, when Google
+// declined to index company pages whose FAQ said "No" twice on 368 pages:
+//
+//   a question is asked only when THIS record holds its answer, so the
+//   wording repeats across servers and no two answers do. There is no
+//   negative answer, no "not on record", and nothing on a page that is not
+//   indexable, where a block of questions would be padding on a thin page.
+//
+// Every answer is assembled from registry and package fields already shown
+// above. Nothing is written by a model.
+import Faq from '../../components/Faq.astro';
+const descText = String(s.description || '').trim();
+const faq: { q: string; a: string }[] = [];
+if (indexable) {
+  if (descText.length >= 40) faq.push({ q: `What does the ${label} MCP server do?`, a: descText.replace(/\s+/g, ' ') + (/[.!?]$/.test(descText) ? '' : '.') });
+  if (s.vendor) faq.push({ q: `Who publishes ${label}?`, a: `${s.vendor} publishes it to the official Model Context Protocol registry${s.namespace ? `, under the namespace ${s.namespace}` : ''}.` });
+  if (s.remote_url) faq.push({ q: `Is ${label} a remote or a local MCP server?`, a: `It is a remote server${s.remote_type ? ` using ${s.remote_type} transport` : ''}, hosted by its publisher at ${s.remote_url}, so there is nothing to install.` });
+  else if (s.package_id && s.package_registry) faq.push({ q: `How is ${label} installed?`, a: `It runs locally from the ${s.package_registry} package ${s.package_id}${s.package_latest ? `, latest version ${s.package_latest}` : ''}${s.transport ? `, and talks to the client over ${s.transport}` : ''}.` });
+  if (licRaw) faq.push({ q: `What licence is ${label} released under?`, a: licSense });
+  if (pubDays !== null && s.package_last_publish) faq.push({ q: `Is ${label} still maintained?`, a: `The package was last published on ${String(s.package_last_publish).slice(0, 10)}, as read on ${String(s.package_facts_on).slice(0, 10)}.${maintSense}` });
+  if (s.repo_url) faq.push({ q: `Where is the source code for ${label}?`, a: `The publisher lists its repository as ${s.repo_url}.` });
+}
+// The answers carry the record's facts and stop. An earlier draft ended three
+// of them with the same sentence of advice, which would have put identical
+// text on two thousand pages: the exact pattern this block exists to avoid.
+// The advice is already on the page once, in the paragraph above.
+// Fewer than three real answers is not an FAQ, it is two stray sentences.
+const faqItems = faq.length >= 3 ? faq : [];
+
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
@@ -212,6 +243,8 @@ const jsonld = JSON.stringify({
     says. An MCP server runs with whatever access you grant it, so read the repository, check
     when it was last updated, and understand what data it can reach before connecting it to a
     system that matters.</p>
+
+  <Faq items={faqItems} heading={`Questions about ${label}`} />
 
   <div class="cite-box">Cite this page: <code>"{label}." MCP Server Directory, The World of AI,
     theworldofai.org/mcp/{s.slug}/.{generated ? ` Verified ${generated}.` : ''}</code></div>

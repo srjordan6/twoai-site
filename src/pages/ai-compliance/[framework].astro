@@ -90,6 +90,32 @@ if (d.slug === 'state-ai-laws') {
   bodyBefore = fill(bodyBefore);
   bodyAfter = fill(bodyAfter);
 }
+// QUESTIONS THE PAGE ALREADY ANSWERS, READ FROM ITS OWN TEXT. This is the most
+// cited section of the site, 265 of 549 AI citations in the week to
+// 2026-09-18, and it emitted no FAQ markup at all. Nothing is written here.
+// Where an author has set a heading as a question, "What is the current
+// version of DCAM?", and answered it in the paragraph beneath, that pair is
+// already a question and an answer on the page, visible to the reader. This
+// reads those pairs out of the body and says so to a parser. A page whose
+// headings are not questions gets nothing, which is the point: the markup can
+// only ever describe text a reader can see, so it cannot drift from the page,
+// and it cannot put the same block on two pages. Stephen, 2026-09-18: add FAQs
+// wherever you can but do not make Google mad.
+const stripTags = (h) => String(h).replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ')
+  .replace(/&quot;/g, '"').replace(/&#39;|&rsquo;/g, "'").replace(/&[a-z#0-9]+;/gi, ' ').replace(/\s+/g, ' ').trim();
+const qaPairs = [];
+const qaRe = /<h[23][^>]*>([\s\S]*?)<\/h[23]>\s*<p[^>]*>([\s\S]*?)<\/p>/gi;
+let qm;
+while ((qm = qaRe.exec(`${bodyBefore}\n${bodyAfter || ''}`)) !== null) {
+  const q = stripTags(qm[1]);
+  const a = stripTags(qm[2]);
+  if (q.endsWith('?') && q.length >= 12 && q.length <= 160 && a.length >= 60) qaPairs.push({ q, a: a.slice(0, 900) });
+}
+const faqLd = qaPairs.length >= 2
+  ? JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage',
+      mainEntity: qaPairs.slice(0, 12).map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }).replace(/</g, '\\u003c')
+  : '';
+
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': steps.length ? 'HowTo' : 'Article',
@@ -170,6 +196,7 @@ const jsonld = JSON.stringify({
       pins its own text colour. A link inside still looks like a link; an
       unclosed one can no longer take the page with it. */}
   <div class="body" set:html={bodyBefore} />
+  {faqLd && <script type="application/ld+json" set:html={faqLd} />}
   {hasMap && <StateLawMap />}
   {hasMap && <div class="body" set:html={bodyAfter} />}
 
