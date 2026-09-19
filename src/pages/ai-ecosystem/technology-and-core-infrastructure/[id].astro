@@ -154,6 +154,22 @@ const facBasis = facSelfPublished
     ? 'Every figure here comes from the public records named at the foot of this page'
     : 'This facility is mapped in OpenStreetMap; its operator has published no specifications for it, and none are inferred here';
 
+// A FACILITY NAMED ONLY FOR ITS OPERATOR IS NOT A TITLE. Stephen's Screaming
+// Frog crawl of 2026-09-18 found 463 pages sharing a title with another page,
+// 327 of them here: "Amazon Web Services — The World of AI" on 136 different
+// pages, "Google" on 50, "Microsoft" on 39. OpenStreetMap contributors name a
+// building after whoever runs it, so sec.name is the operator and nothing
+// else, and 136 pages about 136 buildings all announced themselves as the same
+// thing. Where the name is only the operator, the heading gains the place the
+// record already holds. Several buildings share one town (two AWS sites in
+// Boardman, OR), so the <title> also carries the uid, which is this site's
+// citable identifier for the building and the one thing certain to differ.
+const facGenericName = sec.shape === 'dc-facility' && !!sec.name && !!sec.operator
+  && String(sec.name).trim().toLowerCase() === String(sec.operator).trim().toLowerCase();
+const facPlace = sec.shape === 'dc-facility'
+  ? [sec.city, sec.state || sec.country].filter(Boolean).join(', ')
+  : '';
+
 // The dc children carry no `name` field, and sec.name straight into the
 // <title> is what published "undefined — The World of AI" on every one of
 // those pages until 2026-08-30. Each shape knows its own headline.
@@ -162,7 +178,7 @@ const pageTitle =
   sec.shape === 'dc-facility'
     ? (sec.profile?.campus_buildings > 1
         ? `${sec.name}, building ${sec.profile.campus_building} of ${sec.profile.campus_buildings}`
-        : sec.name) :
+        : (facGenericName && facPlace ? `${sec.name} data center, ${facPlace}` : sec.name)) :
   sec.shape === 'dc-operator' ? `${sec.name}: every data center it operates` :
   sec.shape === 'dc-operators-index' ? 'Data centers by operator' :
   sec.shape === 'dc-states-index' ? 'Data centers by state' :
@@ -315,7 +331,7 @@ const facBare = sec.shape === 'dc-facility' && !(
   || (typeof sec.profile?.reading === 'string' && sec.profile.reading.length > 300)
 );
 ---
-<Base title={`${pageTitle} — The World of AI`} description={desc.slice(0, 300)}
+<Base title={`${pageTitle}${sec.shape === 'dc-facility' && sec.uid ? ` (${sec.uid})` : ''} — The World of AI`} description={desc.slice(0, 300)}
   current={`${BASE}/`} jsonld={jsonld} noindex={facBare || metricBare} doc={sec} stampLabel="Last verified">
   {/* THE FACT BOX LIVES IN THE RAIL, under the section navigation card.
       Stephen, 2026-09-06: not below the answer, to the right under the
