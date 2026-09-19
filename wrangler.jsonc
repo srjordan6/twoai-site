@@ -17,6 +17,20 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "twoai-site",
   "main": "src/worker.ts",
+  // THE SITE HAS ONE ADDRESS. Stephen, 2026-09-19: public access to
+  // twoai-site.srjordan.workers.dev cannot be allowed. That hostname served
+  // every page of this site with none of the zone's security in front of it,
+  // no Bot Fight Mode, no WAF rules, no rate limits, and as a second copy of
+  // the whole site for a crawler to find. wrangler leaves workers.dev ON unless
+  // told otherwise, so it had been open since the first deploy. Preview URLs
+  // are per-version hostnames under the same workers.dev subdomain and are the
+  // same hole, so they go too. theworldofai.org is a custom domain attached in
+  // the dashboard and is not affected by either setting.
+  //
+  // Nothing depends on it any more: the URL guard read through it for a few
+  // hours on 2026-09-19 and now reads its own ledger in KV instead.
+  "workers_dev": false,
+  "preview_urls": false,
   "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {

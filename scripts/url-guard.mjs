@@ -42,7 +42,13 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 // into dist/api/build.json, so it deploys with the site and the pipeline's
 // buildwatch can alert when a build shipped unguarded. Passing open is still
 // the policy, for the reason given above; passing open silently is not.
-const ORIGINS = ['https://theworldofai.org', 'https://twoai-site.srjordan.workers.dev'];
+// SINCE 2026-09-19 THE LEDGER BELOW IS THE GUARD'S SOURCE, and this origin is
+// only what it reads while the ledger is empty or unreachable. The workers.dev
+// hostname that used to be second in this list is gone: Stephen ruled that it
+// cannot be publicly reachable, and wrangler.jsonc now sets workers_dev false.
+// The public hostname stays because it costs nothing and did answer the build
+// runner on 2026-09-19 04:34 UTC, though Bot Fight Mode does not promise that.
+const ORIGINS = ['https://theworldofai.org'];
 const CANONICAL = 'https://theworldofai.org';
 const UA = 'twoai-url-guard/1.0 (+https://theworldofai.org/; build-time URL permanence check)';
 // The unlisted layer: pages that serve 200 and are linked but are kept out of
