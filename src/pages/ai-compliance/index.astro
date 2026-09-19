@@ -2,6 +2,15 @@
 /**
  * The governance framework library hub, grouped by top-level framework so the
  * hierarchy in the data is the hierarchy on the page.
+ *
+ * A HUB PAGE, IN THE SAME SHAPE AS EVERY OTHER HUB. Stephen, 2026-09-18: AI
+ * Governance Frameworks should be a hub page. It was a digest box followed by
+ * a flat list of headings, while its parent (4d0aabb4) and every sibling hub
+ * open with what the hub is, then a Sections list with a description and a
+ * count beside each. This now does the same: the answer, the intro, the
+ * sections, and only then what changed. The count beside a section is the
+ * pages it holds, the section's own page included, per the 2026-09-16 rule.
+ * The address stays /ai-compliance/, because a published URL never moves.
  */
 import Base from '../../layouts/Base.astro';
 import { readFileSync, existsSync } from 'node:fs';
@@ -15,6 +24,7 @@ const whatChanged = existsSync('content/compliance/what-changed.json')
 const all = idx.frameworks || [];
 const tops = all.filter((f) => !f.parent);
 const kidsOf = (slug) => all.filter((f) => f.parent === slug);
+const PARENT_HUB = '/ai-ecosystem/enterprise-applications-governance-and-tools/4d0aabb4/';
 const desc =
   `${idx.total} AI governance frameworks, standards, laws, and enforcement records explained in plain English: ` +
   `ISO 42001, the NIST AI RMF, the EU AI Act, SOC 2, sector rules, and the agencies actually bringing cases.`;
@@ -29,13 +39,49 @@ const jsonld = JSON.stringify({
 ---
 <Base title="AI governance frameworks, standards, and enforcement, explained" description={desc} current="/ai-compliance/" jsonld={jsonld}>
   <p class="meta-line"><a href="/">AI Ecosystem</a> ·
-    <a href="/ai-ecosystem/enterprise-applications-governance-and-tools/">Enterprise Applications, Governance and Tools</a></p>
+    <a href="/ai-ecosystem/enterprise-applications-governance-and-tools/">Enterprise Applications, Governance and Tools</a> ·
+    <a href={PARENT_HUB}>AI Compliance, Law and Regulation</a></p>
   <h1>AI Governance Frameworks</h1>
   <p class="answer">This library covers <b>{idx.total} frameworks, standards, laws, and
     enforcement records</b> that govern how organisations build and use AI, each explained in
     plain English with what it requires, who it applies to, and what to do about it. It is
     reference material rather than legal advice.</p>
   {idx.generated && <p class="meta-line">Last verified: {idx.generated}</p>}
+
+  {all.length > 0 && (
+    <section>
+      <p>This hub is the index to the framework library. It holds {tops.length} sections and
+        {' '}{idx.total} pages in all. A section is one framework, standard, body of law or
+        regulator, and the pages inside it are the parts a reader usually needs separately,
+        such as one statute applied to AI or one regulator's rules.</p>
+      <p>Each section below says what it covers and how many pages it holds. Every page
+        gives what the framework requires, who it applies to and what to do about it, with
+        its sources at the foot.</p>
+    </section>
+  )}
+
+  {tops.length > 0 && (
+    <section>
+      <h2>Sections</h2>
+      <ul class="sections">
+        {tops.map((f) => {
+          const kids = kidsOf(f.slug);
+          return (
+            <li>
+              <a href={`/ai-compliance/${f.slug}/`}>{f.title}</a>
+              {kids.length > 0 && <span class="hub-count"> {kids.length + 1} pages</span>}
+              {f.subtitle && <p>{f.subtitle}</p>}
+              {kids.length > 0 && (
+                <p class="kids">{kids.map((k, i) => (
+                  <>{i > 0 && ' · '}<a href={`/ai-compliance/${k.slug}/`}>{k.title}</a></>
+                ))}</p>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  )}
 
   {whatChanged && whatChanged.items && whatChanged.items.length > 0 && (
     <div class="changed">
@@ -56,29 +102,19 @@ const jsonld = JSON.stringify({
     </div>
   )}
 
-  {tops.map((f) => (
-    <div class="fw">
-      <h2><a href={`/ai-compliance/${f.slug}/`}>{f.title}</a></h2>
-      {f.subtitle && <p>{f.subtitle}</p>}
-      {kidsOf(f.slug).length > 0 && (
-        <p class="kids">{kidsOf(f.slug).map((k, i) => (
-          <>{i > 0 && ' · '}<a href={`/ai-compliance/${k.slug}/`}>{k.title}</a></>
-        ))}</p>
-      )}
-    </div>
-  ))}
-
   {all.length === 0 && <p>The framework library publishes on the next pipeline run.</p>}
 
   <p class="meta-line">Looking for legislation rather than frameworks? See
     <a href="/ai-laws/">AI laws by state</a>. For cases in court, see the
-    <a href="/ai-lawsuits/">lawsuit tracker</a>.</p>
+    <a href="/ai-lawsuits/">lawsuit tracker</a>. For what federal agencies have done lately, see
+    <a href="/ai-compliance/agency-enforcement/">agency enforcement</a>.</p>
 </Base>
 
 <style>
   .changed { background: #FFF6EC; border: 1px solid #F0D6B0; border-radius: 8px; padding: 22px 26px; margin: 22px 0 30px; }
   .changed-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-  .changed-label { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #F07800; margin: 0; }
+  /* Navy, not orange: no orange text at rest anywhere, 2026-09-17. */
+  .changed-label { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #201868; margin: 0; }
   .changed-date { font-size: 13px; color: #7A8A9E; margin: 0; }
   .changed-intro { font-size: 15px; color: #2C2C2A; margin: 10px 0 14px; }
   .changed ul { list-style: none; margin: 0; padding: 0; }
@@ -91,9 +127,11 @@ const jsonld = JSON.stringify({
   .flag.is-final { background: #0F7B4E; }
   .flag.is-new { background: #201868; }
 
-  .fw { padding: 1em 0; border-bottom: 1px solid #ececf2; }
-  .fw:last-of-type { border-bottom: 0; }
-  .fw h2 { margin: 0 0 .25em; font-size: 1.1rem; }
-  .fw p { margin: 0 0 .3em; color: #3d3d46; }
+  .sections { list-style: none; margin: 0; padding: 0; }
+  .sections li { padding: .9em 0; border-bottom: 1px solid #ececf2; }
+  .sections li:last-child { border-bottom: 0; }
+  .sections li > a { font-family: 'Lora', Georgia, serif; font-size: 1.1rem; font-weight: 600; }
+  .sections p { margin: .25em 0 0; color: #3d3d46; }
+  .hub-count { font-size: .85rem; color: #7A8A9E; white-space: nowrap; }
   .kids { font-size: .9rem; }
 </style>

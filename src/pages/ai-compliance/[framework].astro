@@ -56,6 +56,15 @@ const steps = d.howto?.steps || [];
 const stepsAlreadyInBody = steps.length > 0 && !!steps[0]?.name
   && String(d.body_html || '').replace(/<[^>]+>/g, ' ').includes(String(steps[0].name).trim());
 const cites = d.citations || [];
+// THE ACTIONS THEMSELVES, ON THE PAGE ABOUT THEM. Until 2026-09-18 the agency
+// watch published only into the framework library's What changed box, where
+// each item linked here, to a page that did not show it. They now publish as
+// compliance/agency-actions.json (no slug, so it is never a page of its own)
+// and render here. The pipeline leaves prosecutions of individuals out.
+const agencyActions = d.slug === 'agency-enforcement' && existsSync('content/compliance/agency-actions.json')
+  ? (JSON.parse(readFileSync('content/compliance/agency-actions.json', 'utf8')).actions || [])
+  : [];
+const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return ''; } };
 const kids = (d.children || []).filter((k) => titles[k]);
 
 // THE MAP IS DATA, NOT PROSE. Stephen, 2026-09-17: the state AI laws page
@@ -248,6 +257,27 @@ const jsonld = JSON.stringify({
     </>
   )}
 
+  {agencyActions.length > 0 && (
+    <section class="agency-actions">
+      <h2>Recent agency actions</h2>
+      <p>These are the {agencyActions.length} agency releases this site's watch has kept, newest
+        first. The watch reads the press feeds of the FTC, SEC, CFPB, DOJ, FDA, OCC and the
+        Colorado and New Jersey attorneys general each day and keeps a release when it names AI
+        or a practice that is algorithmic in substance. Criminal prosecutions of individuals are
+        not listed, because they say nothing about what an organisation must do.</p>
+      <ul>
+        {agencyActions.map((a) => (
+          <li>
+            <p class="aa-head"><b>{a.agency}</b> · {a.published} · <b>{a.title}</b></p>
+            {a.summary && <p>{a.summary}</p>}
+            <p class="meta-line">First seen {a.first_seen} · uid {a.uid}
+              {hostOf(a.url) && <> · Source: <a href={a.url} rel="noopener">{hostOf(a.url)}</a></>}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
+
   {kids.length > 0 && (
     <>
       <h2>Within this framework</h2>
@@ -323,6 +353,9 @@ const jsonld = JSON.stringify({
   }
   .steps li { margin-bottom: .7em; }
   .siting-watch { margin: 2em 0 1.5em; padding-top: 1.2em; border-top: 1px solid #e6e6ef; }
+  .agency-actions ul { list-style: none; padding: 0; margin: 1em 0 0; }
+  .agency-actions li { padding: .9em 0; border-top: 1px solid #ececf2; }
+  .agency-actions li p { margin: 0 0 .3em; }
   .siting-watch ul { list-style: none; padding: 0; margin: 1em 0 0; }
   .siting-watch li { padding: .6em 0; border-bottom: 1px solid #ececf2; }
   .siting-watch .sw-meta { display: block; font-size: 12.5px; color: #7A8A9E; margin-top: 2px; text-transform: capitalize; }
