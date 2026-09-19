@@ -14,6 +14,34 @@ const idx = existsSync('content/mcp/index.json')
   ? JSON.parse(readFileSync('content/mcp/index.json', 'utf8'))
   : { servers: [], total: 0, profiled: 0, remote: 0, local: 0, generated: '' };
 const servers = idx.servers || [];
+// A TO Z. Stephen, 2026-09-19: he wants an index above All servers. 2,347 rows
+// in one table is a scroll, not a directory, and the only way in was the
+// browser's own find.
+//
+// The index is keyed on what the Server column actually shows, the publisher's
+// title where there is one and the registry name where there is not, because an
+// index that sorts by something invisible sends the reader to the wrong place.
+// That is also why the table is now sorted by that same text: it was sorted by
+// slug, so ac.* came before Aard, and no letter index could have agreed with it.
+//
+// A holds 943 of the 2,347, and that is real rather than a bug: 728 of them are
+// untitled servers whose registry name begins with the ai. or agency. or app.
+// namespace convention. The count sits beside each letter so the reader knows
+// what they are jumping into. Anything not starting with a letter, digits and
+// the handful of Cyrillic and CJK names, groups under #.
+const LETTERS = ['#', ...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i))];
+const shown = (s) => s.title || s.name || '';
+const letterOf = (s) => {
+  const c = shown(s).trim().charAt(0).toUpperCase();
+  return c >= 'A' && c <= 'Z' ? c : '#';
+};
+const byLetter = new Map(LETTERS.map((l) => [l, []]));
+for (const s of servers) byLetter.get(letterOf(s)).push(s);
+for (const list of byLetter.values()) {
+  list.sort((a, b) => shown(a).localeCompare(shown(b), 'en', { sensitivity: 'base' }));
+}
+const groups = LETTERS.map((l) => ({ letter: l, id: l === '#' ? 'srv-other' : `srv-${l.toLowerCase()}`, list: byLetter.get(l) }))
+  .filter((g) => g.list.length > 0);
 const desc =
   `A browsable directory of ${idx.total} active Model Context Protocol servers from the official ` +
   `MCP registry: who publishes each one, what it does, and where to get it.`;
@@ -42,22 +70,41 @@ const jsonld = JSON.stringify({
     Nothing here says a server is safe, maintained, or does what it claims. Treat it as a
     catalog of what exists, then check the repository before you connect anything to your data.</p>
 
-  <h2>All servers</h2>
-  <table>
-    <thead><tr><th>Server</th><th>Publisher</th><th>What it does</th><th>Runs as</th></tr></thead>
-    <tbody>
-      {servers.map((s) => (
-        <tr>
-          <td>{s.description
-            ? <a href={`/mcp/${s.slug}/`}>{s.title || s.name}</a>
-            : (s.title || s.name)}</td>
-          <td>{s.vendor}</td>
-          <td>{s.description}</td>
-          <td>{s.transport}</td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
+  <h2 id="srv-index">All servers</h2>
+  {groups.length > 0 && (
+    <>
+      <nav class="az" aria-label="Servers by first letter">
+        {groups.map((g) => (
+          <a href={`#${g.id}`}>{g.letter}<span class="az-n">{g.list.length}</span></a>
+        ))}
+      </nav>
+      <p class="meta-line">Sorted by the name each publisher gave the server. Servers whose
+        name is not a letter, mostly numbers, are under the hash.</p>
+    </>
+  )}
+
+  {groups.map((g) => (
+    <section>
+      <h3 id={g.id}>{g.letter === '#' ? 'Other' : g.letter}
+        <span class="az-count">{g.list.length} server{g.list.length === 1 ? '' : 's'}</span>
+        <a class="az-back" href="#srv-index">Back to the index</a></h3>
+      <table>
+        <thead><tr><th>Server</th><th>Publisher</th><th>What it does</th><th>Runs as</th></tr></thead>
+        <tbody>
+          {g.list.map((s) => (
+            <tr>
+              <td>{s.description
+                ? <a href={`/mcp/${s.slug}/`}>{s.title || s.name}</a>
+                : (s.title || s.name)}</td>
+              <td>{s.vendor}</td>
+              <td>{s.description}</td>
+              <td>{s.transport}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  ))}
 
   {servers.length === 0 && <p>The directory publishes on the next pipeline run.</p>}
 
@@ -65,3 +112,21 @@ const jsonld = JSON.stringify({
     The protocol specification lives at
     <a href="https://modelcontextprotocol.io/" rel="noopener">modelcontextprotocol.io</a>.</p>
 </Base>
+
+<style>
+  /* The letter index. A row of targets big enough to hit on a phone, with the
+     count beside each so a reader knows A is 943 before they jump into it. */
+  .az { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 6px; }
+  .az a { display: inline-flex; align-items: baseline; gap: 5px; min-width: 2.4em;
+    justify-content: center; padding: 7px 10px; border: 1px solid #dcdce6; border-radius: 6px;
+    font-weight: 700; color: var(--navy); text-decoration: none; }
+  .az a:hover, .az a:focus-visible { border-color: var(--orange); color: var(--orange); }
+  .az-n { font-size: 11.5px; font-weight: 500; color: #7A8A9E; }
+  .az a:hover .az-n, .az a:focus-visible .az-n { color: var(--orange); }
+  /* scroll-margin so a letter heading does not land under the sticky topbar. */
+  h3[id^="srv-"] { scroll-margin-top: 90px; display: flex; align-items: baseline;
+    flex-wrap: wrap; gap: 12px; margin-top: 1.8em; }
+  .az-count { font-family: 'Poppins', system-ui, sans-serif; font-size: 12.5px;
+    font-weight: 500; color: #7A8A9E; }
+  .az-back { font-family: 'Poppins', system-ui, sans-serif; font-size: 12.5px; font-weight: 500; }
+</style>
