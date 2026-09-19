@@ -45,6 +45,16 @@ export function getStaticPaths() {
 const { d, titles, reviews, reviewedOn } = Astro.props;
 const desc = (d.meta_description || d.short || d.subtitle || d.title).slice(0, 300);
 const steps = d.howto?.steps || [];
+// THE STEPS ARE PRINTED ONCE. Stephen pasted the live DCAM page on 2026-09-18
+// and the five step path appeared twice: once inside the body, where the
+// author wrote it, and again at the foot, where this template renders
+// d.howto. 43 of the 64 compliance pages with a how-to carry it in both
+// places, so each printed the same 250 words twice. The structured HowTo
+// markup is unaffected, it is built from d.howto either way; only the second
+// visible copy goes. Detected by the first step's own name appearing in the
+// body, so a page whose body does not carry the steps still gets them.
+const stepsAlreadyInBody = steps.length > 0 && !!steps[0]?.name
+  && String(d.body_html || '').replace(/<[^>]+>/g, ' ').includes(String(steps[0].name).trim());
 const cites = d.citations || [];
 const kids = (d.children || []).filter((k) => titles[k]);
 
@@ -227,7 +237,7 @@ const jsonld = JSON.stringify({
     </section>
   )}
 
-  {steps.length > 0 && (
+  {steps.length > 0 && !stepsAlreadyInBody && (
     <>
       <h2>{d.howto?.name || 'How to comply'}</h2>
       <ol class="steps">
