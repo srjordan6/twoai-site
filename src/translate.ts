@@ -145,6 +145,7 @@ export async function handleTranslate(request: Request, env: TranslateEnv, ctx: 
 
   let translated: string[] | null = null;
   let reason = "";
+  let retryAfter = 0;
   try {
     // textType=html because a unit is a whole sentence WITH its inline markup:
     // the selector sends "covers <b>76 frameworks</b> that govern" as one
@@ -161,6 +162,12 @@ export async function handleTranslate(request: Request, env: TranslateEnv, ctx: 
       if (Array.isArray(data) && data.length === need.length) {
         translated = data.map((d, i) => d?.translations?.[0]?.text || need[i]);
       } else reason = "translator returned an unexpected shape";
+    } else if (res.status === 429) {
+      // The F0 tier is metered by the minute as well as the month: three
+      // pages in quick succession trip it. This is a wait, not a failure, and
+      // the selector sends the refused blocks again after the pause.
+      reason = "translator busy";
+      retryAfter = parseInt(res.headers.get("retry-after") || "", 10) || 20;
     } else {
       // 403 with code 403001 is the free tier's monthly stop.
       reason = res.status === 403 ? "monthly allowance used" : `translator answered ${res.status}`;
@@ -168,7 +175,9 @@ export async function handleTranslate(request: Request, env: TranslateEnv, ctx: 
   } catch {
     reason = "translator unreachable";
   }
-  if (!translated) return json({ to, translations: out, cached, fresh: 0, partial: true, reason });
+  if (!translated) {
+    return json({ to, translations: out, cached, fresh: 0, partial: true, reason, ...(retryAfter ? { retry_after: retryAfter } : {}) });
+  }
 
   const writes: Promise<unknown>[] = [];
   need.forEach((t, n) => {

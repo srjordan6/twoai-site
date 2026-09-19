@@ -246,26 +246,54 @@
       }
       if (cur.length) batches.push(cur);
 
-      var partial = "";
-      function next(b) {
+      var partial = "", later = [], wait = 20;
+      function finish() {
+        document.documentElement.lang = to;
+        if (RTL[to]) document.documentElement.setAttribute("dir", "rtl");
+        status(partial || (truncated ? "This is a long page, so only the first part is translated." : ""));
+      }
+      // MICROSOFT'S FREE TIER IS METERED BY THE MINUTE, NOT ONLY BY THE MONTH.
+      // Stephen, 2026-09-19: Czech does not work. It did, most of it: he had
+      // just tried Spanish and Kannada on the same page, and the third page
+      // inside a minute got a 429 from Microsoft for its second batch, so 22 of
+      // 106 blocks stayed English under a note saying the translator did not
+      // answer. That is a wait, not a failure. Blocks refused for that reason
+      // are kept and sent again after the pause Microsoft asks for, up to four
+      // times, and the note says the page is still being finished meanwhile.
+      function next(b, attempt) {
         if (mine !== run) return;   // the reader picked something else meanwhile
         if (b >= batches.length) {
-          document.documentElement.lang = to;
-          if (RTL[to]) document.documentElement.setAttribute("dir", "rtl");
-          status(partial || (truncated ? "This is a long page, so only the first part is translated." : ""));
+          if (later.length && attempt < 4) {
+            var again = later; later = [];
+            batches = []; cur = []; curChars = 0;
+            for (var a = 0; a < again.length; a++) {
+              if (cur.length >= BATCH_STRINGS || curChars + again[a].html.length > BATCH_CHARS) { batches.push(cur); cur = []; curChars = 0; }
+              cur.push(again[a]); curChars += again[a].html.length;
+            }
+            if (cur.length) batches.push(cur);
+            document.documentElement.lang = to;
+            if (RTL[to]) document.documentElement.setAttribute("dir", "rtl");
+            status("Still translating the rest of this page. The free translation service limits how fast it works.");
+            setTimeout(function () { next(0, attempt + 1); }, wait * 1000);
+            return;
+          }
+          if (later.length) partial = "Part of this page is still in English. The translation service is busy, try again in a minute.";
+          finish();
           return;
         }
         var batch = batches[b];
         post(to, batch.map(function (u) { return u.html; })).then(function (res) {
           if (mine !== run) return;
           var tr = res.translations || [];
+          var busy = res.partial && res.reason === "translator busy";
+          if (busy && res.retry_after) wait = Math.min(60, Math.max(5, res.retry_after));
           for (var k = 0; k < batch.length; k++) {
-            if (typeof tr[k] !== "string") continue;
+            if (typeof tr[k] !== "string") { if (busy) later.push(batch[k]); continue; }
             originals.push({ el: batch[k].el, html: batch[k].el.innerHTML });
             batch[k].el.innerHTML = tr[k];
           }
-          if (res.partial) partial = "Part of this page is still in English. " + (res.reason === "monthly allowance used" ? "This month's translation allowance is used up." : "The translator did not answer.");
-          next(b + 1);
+          if (res.partial && !busy) partial = "Part of this page is still in English. " + (res.reason === "monthly allowance used" ? "This month's translation allowance is used up." : "The translator did not answer.");
+          next(b + 1, attempt);
         }).catch(function () {
           if (mine !== run) return;
           // Nothing translated at all: say so, go back to English, and do not
@@ -274,7 +302,7 @@
           else status("Part of this page is still in English. The translator stopped answering.");
         });
       }
-      next(0);
+      next(0, 0);
     }
 
     function choose(n) {
