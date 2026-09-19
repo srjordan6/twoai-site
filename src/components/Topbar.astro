@@ -210,7 +210,10 @@
 
     function restore() {
       run++;
-      for (var i = 0; i < originals.length; i++) originals[i].el.innerHTML = originals[i].html;
+      for (var i = 0; i < originals.length; i++) {
+        originals[i].el.innerHTML = originals[i].html;
+        if (originals[i].dir === null) originals[i].el.removeAttribute("dir"); else originals[i].el.setAttribute("dir", originals[i].dir);
+      }
       originals = [];
       if (banner && banner.parentNode) banner.parentNode.removeChild(banner);
       banner = null;
@@ -247,9 +250,19 @@
       if (cur.length) batches.push(cur);
 
       var partial = "", later = [], wait = 20;
+      // RIGHT TO LEFT IS SET ON THE SENTENCE, NEVER ON THE PAGE. Stephen,
+      // 2026-09-19, with a screenshot: the whole screen is crazy. He had picked
+      // Persian. The first version set dir=rtl on <html> when it finished, which
+      // mirrors the entire layout: the section menu jumped to the left, the logo
+      // slid on top of the navigation, and because Microsoft had throttled most
+      // of the page the text was still English, now right aligned with its full
+      // stops at the front. This site's layout is not built to mirror and does
+      // not need to be. A block that really was translated into Arabic, Hebrew,
+      // Persian or Urdu gets dir=rtl itself, so its text reads correctly, and
+      // everything else, the grid, the menus, any block still in English, stays
+      // exactly where it was.
       function finish() {
         document.documentElement.lang = to;
-        if (RTL[to]) document.documentElement.setAttribute("dir", "rtl");
         status(partial || (truncated ? "This is a long page, so only the first part is translated." : ""));
       }
       // MICROSOFT'S FREE TIER IS METERED BY THE MINUTE, NOT ONLY BY THE MONTH.
@@ -272,7 +285,6 @@
             }
             if (cur.length) batches.push(cur);
             document.documentElement.lang = to;
-            if (RTL[to]) document.documentElement.setAttribute("dir", "rtl");
             status("Still translating the rest of this page. The free translation service limits how fast it works.");
             setTimeout(function () { next(0, attempt + 1); }, wait * 1000);
             return;
@@ -289,8 +301,9 @@
           if (busy && res.retry_after) wait = Math.min(60, Math.max(5, res.retry_after));
           for (var k = 0; k < batch.length; k++) {
             if (typeof tr[k] !== "string") { if (busy) later.push(batch[k]); continue; }
-            originals.push({ el: batch[k].el, html: batch[k].el.innerHTML });
+            originals.push({ el: batch[k].el, html: batch[k].el.innerHTML, dir: batch[k].el.getAttribute("dir") });
             batch[k].el.innerHTML = tr[k];
+            if (RTL[to]) batch[k].el.setAttribute("dir", "rtl");
           }
           if (res.partial && !busy) partial = "Part of this page is still in English. " + (res.reason === "monthly allowance used" ? "This month's translation allowance is used up." : "The translator did not answer.");
           next(b + 1, attempt);
