@@ -82,7 +82,7 @@ const down = entry ? entry.change < 0 : false;
       <p class="stock-hist">{entry.history_points.toLocaleString()} daily closes held since <time datetime={entry.history_since}>{entry.history_since}</time></p>
     )}
     {entry.note && !compact && <p class="stock-note">{entry.note}</p>}
-    <p class="stock-src">Prices: <a href={entry.source_url} rel="noopener nofollow">{entry.source}</a> \u00b7 uid <code>{entry.uid}</code></p>
+    <p class="stock-src">Prices: <a href={entry.source_url} rel="noopener nofollow">{entry.source}</a> · uid <code>{entry.uid}</code></p>
   </aside>
 )}
 {!entry && untracked && (
