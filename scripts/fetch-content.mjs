@@ -39,12 +39,32 @@ const dirs = ['laws', 'glossary', 'lawsuits', 'caselaw', 'static', 'tools', 'wee
 mkdirSync('content', { recursive: true });
 for (const d of dirs) mkdirSync(`content/${d}`, { recursive: true });
 
+// FILES, COUNTED ALL THE WAY DOWN. Until 2026-09-18 this counted the entries
+// at the top of each directory, so research/paper/, which holds 135 files,
+// counted as one. The manifest counts files, so every build since the paper
+// pages shipped logged "WARNING 134 file(s) in the bundle were not copied"
+// while cpSync, which is recursive, had copied every one of them. Checked
+// against bundle 07894daf: 5,796 declared, 5,796 files in the tar, 5,662
+// top-level entries, no unknown directory. A warning that is always there is
+// a warning nobody reads, and this one exists to catch a real dropped
+// directory, so the count now matches what the manifest counts.
+function countFiles(dir) {
+  let n = 0;
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    n += e.isDirectory() ? countFiles(`${dir}/${e.name}`) : 1;
+  }
+  return n;
+}
+
 function copyDirs(from) {
   let total = 0;
   for (const d of dirs) {
     if (existsSync(`${from}/${d}`)) {
       cpSync(`${from}/${d}`, `content/${d}`, { recursive: true });
-      const n = readdirSync(`content/${d}`).length;
+      // Counted at the source, not in content/: the GitHub fallback and the
+      // news briefing also write into content/, and a build container that
+      // kept an older content/ would inflate the figure.
+      const n = countFiles(`${from}/${d}`);
       total += n;
       console.log(`content/${d}: ${n} file(s)`);
     }
@@ -119,7 +139,7 @@ function fromR2() {
     const known = new Set(dirs);
     const extra = readdirSync('/tmp/twoai-r2').filter((d) => !known.has(d));
     console.warn(`fetch-content: WARNING ${m.files - n} file(s) in the bundle were not copied` +
-      (extra.length ? `; unknown content directories: ${extra.join(', ')}` : ''));
+      (extra.length ? `; unknown content directories: ${extra.join(', ')}` : '; no unknown directory, so the manifest and the tar disagree'));
   }
 }
 

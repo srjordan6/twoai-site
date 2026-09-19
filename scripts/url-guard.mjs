@@ -22,14 +22,56 @@
 // SKIP_URL_GUARD=1 to bypass in a genuine emergency; the bypass prints
 // loudly so it cannot be quiet.
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 
-const LIVE_INDEX = 'https://theworldofai.org/sitemap-index.xml';
+// THE GUARD WAS BLIND AND SAID NOTHING USEFUL ABOUT IT. Found 2026-09-18 in
+// the build log: "live sitemap has only 0 URLs (< 500); treating as a fetch
+// problem and passing open." Reproduced the same hour: Node's fetch sends the
+// user agent "node", and Bot Fight Mode on theworldofai.org answers that with
+// 403 and cf-mitigated: challenge. The challenge page is HTML with no <loc>
+// in it, so the guard counted zero URLs, called it a network blip and passed.
+// fetch() does not throw on a 403, so the catch never ran either. From the
+// day Bot Fight Mode went on, no build was guarded.
+//
+// Three changes. (1) Every response is checked for its status, so a refusal
+// is reported as a refusal. (2) The live site is read from more than one
+// origin: the public hostname first, then the Worker's own workers.dev
+// hostname, which serves the same deployment and is not behind the zone's bot
+// rules. Verified 2026-09-18: "node" gets 403 from the first and 200 from the
+// second, same sitemap, same 9,592 unlisted URLs. (3) The verdict is written
+// into dist/api/build.json, so it deploys with the site and the pipeline's
+// buildwatch can alert when a build shipped unguarded. Passing open is still
+// the policy, for the reason given above; passing open silently is not.
+const ORIGINS = ['https://theworldofai.org', 'https://twoai-site.srjordan.workers.dev'];
+const CANONICAL = 'https://theworldofai.org';
+const UA = 'twoai-url-guard/1.0 (+https://theworldofai.org/; build-time URL permanence check)';
 // The unlisted layer: pages that serve 200 and are linked but are kept out of
 // the sitemap. The site publishes this set itself, so the guard can protect it
 // without any new plumbing.
-const LIVE_UNLISTED = 'https://theworldofai.org/unlisted-urls.json';
+const UNLISTED_PATH = '/unlisted-urls.json';
 const MIN_LIVE = 500;
+
+async function get(url) {
+  const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: '*/*' } });
+  if (!res.ok) {
+    const why = res.headers.get('cf-mitigated') ? `, cf-mitigated: ${res.headers.get('cf-mitigated')}` : '';
+    throw new Error(`${url} answered ${res.status}${why}`);
+  }
+  return res;
+}
+
+// The verdict travels with the build. build.json is written by
+// fetch-content.mjs into public/api and copied to dist by Astro.
+function record(verdict) {
+  const p = 'dist/api/build.json';
+  try {
+    const j = existsSync(p) ? JSON.parse(readFileSync(p, 'utf8')) : {};
+    j.url_guard = { ...verdict, checked_at: new Date().toISOString() };
+    writeFileSync(p, JSON.stringify(j, null, 2));
+  } catch (e) {
+    console.error(`url-guard: could not record the verdict in ${p} (${e.message})`);
+  }
+}
 
 function pathsFromSitemapXML(xml) {
   const out = [];
@@ -43,13 +85,17 @@ function pathsFromSitemapXML(xml) {
   return out;
 }
 
-async function fetchLivePaths() {
-  const idx = await (await fetch(LIVE_INDEX)).text();
-  const subs = [...idx.matchAll(/<loc>\s*([^<]+?\.xml)\s*<\/loc>/g)].map((m) => m[1]);
-  const sources = subs.length ? subs : [LIVE_INDEX];
+// The sitemap index names its parts on the public hostname whichever origin
+// served it, so each part is re-addressed to the origin being read.
+async function fetchLivePaths(origin) {
+  const index = `${origin}/sitemap-index.xml`;
+  const idx = await (await get(index)).text();
+  const subs = [...idx.matchAll(/<loc>\s*([^<]+?\.xml)\s*<\/loc>/g)]
+    .map((m) => m[1].replace(CANONICAL, origin));
+  const sources = subs.length ? subs : [index];
   const paths = [];
   for (const s of sources) {
-    paths.push(...pathsFromSitemapXML(await (await fetch(s)).text()));
+    paths.push(...pathsFromSitemapXML(await (await get(s)).text()));
   }
   return paths;
 }
@@ -66,8 +112,8 @@ async function fetchLivePaths() {
 // unlisted set the site already publishes and holds every URL to the same
 // standard. Failure to fetch the unlisted list falls back to sitemap-only
 // with a loud warning rather than blocking every deploy.
-async function fetchLiveUnlistedPaths() {
-  const j = await (await fetch(LIVE_UNLISTED)).json();
+async function fetchLiveUnlistedPaths(origin) {
+  const j = await (await get(`${origin}${UNLISTED_PATH}`)).json();
   const out = [];
   for (const u of j?.urls ?? []) {
     try { out.push(new URL(u).pathname); } catch { /* skip malformed */ }
@@ -112,27 +158,42 @@ function retired() {
 
 if (process.env.SKIP_URL_GUARD === '1') {
   console.error('url-guard: SKIPPED via SKIP_URL_GUARD=1. Every live URL this build drops will 404.');
+  record({ guarded: false, reason: 'SKIP_URL_GUARD=1' });
   process.exit(0);
 }
 
-let live;
-try {
-  live = await fetchLivePaths();
-} catch (e) {
-  console.error(`url-guard: could not fetch the live sitemap (${e.message}); passing open. The pipeline registry still audits daily.`);
-  process.exit(0);
+let live = null;
+let origin = null;
+const refusals = [];
+for (const o of ORIGINS) {
+  try {
+    const got = await fetchLivePaths(o);
+    if (got.length < MIN_LIVE) {
+      refusals.push(`${o}: only ${got.length} URLs (< ${MIN_LIVE})`);
+      continue;
+    }
+    live = got;
+    origin = o;
+    break;
+  } catch (e) {
+    refusals.push(e.message);
+  }
 }
-if (live.length < MIN_LIVE) {
-  console.error(`url-guard: live sitemap has only ${live.length} URLs (< ${MIN_LIVE}); treating as a fetch problem and passing open.`);
+for (const r of refusals) console.error(`url-guard: ${r}`);
+if (!live) {
+  console.error('url-guard: UNGUARDED BUILD. No origin gave a usable live sitemap, so this deploy is NOT checked for dropped URLs. Passing open; the verdict is recorded in /api/build.json and buildwatch will alert.');
+  record({ guarded: false, reason: refusals.join(' | ').slice(0, 500) });
   process.exit(0);
 }
 
 let liveUnlisted = [];
+let unlistedNote = null;
 try {
-  liveUnlisted = await fetchLiveUnlistedPaths();
-  console.log(`url-guard: guarding ${live.length} sitemap + ${liveUnlisted.length} unlisted live URLs`);
+  liveUnlisted = await fetchLiveUnlistedPaths(origin);
+  console.log(`url-guard: guarding ${live.length} sitemap + ${liveUnlisted.length} unlisted live URLs, read from ${origin}`);
 } catch (e) {
-  console.error(`url-guard: WARNING could not fetch ${LIVE_UNLISTED} (${e.message}); guarding the sitemap layer only this run. Unlisted pages are unprotected until this is fixed.`);
+  unlistedNote = e.message;
+  console.error(`url-guard: WARNING could not fetch the unlisted list (${e.message}); guarding the sitemap layer only this run. Unlisted pages are unprotected until this is fixed.`);
 }
 
 const next = new Set(localPaths());
@@ -174,6 +235,9 @@ const uniq = [...new Set([...dropped, ...unlistedDropped])].sort();
 
 if (uniq.length === 0) {
   console.log(`url-guard: ok. live=${live.length} unlisted=${liveUnlisted.length} next=${next.size} dropped=0`);
+  // Sitemap-only is half a guard, and the record says so.
+  record({ guarded: !unlistedNote, reason: unlistedNote ? `unlisted layer unread: ${unlistedNote}`.slice(0, 500) : null,
+    origin, live: live.length, unlisted: liveUnlisted.length, dropped: 0 });
   process.exit(0);
 }
 
