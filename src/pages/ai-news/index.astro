@@ -162,14 +162,14 @@ const jsonld = JSON.stringify({
         <b>{digest.length} {digest.length === 1 ? 'story' : 'stories'}</b> today, drawn from
         {' '}{articleTotal} articles across {outletTotal} outlets worldwide
         {widest && <>. The most widely carried is
-          {' '}<a href={`/ai-news/${widest.Slug}/`}>{widest.Headline}</a>, reported by
+          {' '}<a href={`/ai-news/${(widest as any).uid || widest.Slug}/`}>{widest.Headline}</a>, reported by
           {' '}{widest.DomainCount} independent outlets</>}. Stories rank by how many outlets
         carried them, which measures how far a story travelled rather than how much it matters.
       </p>
       <ol class="today-list">
         {digest.map((d) => (
           <li>
-            <a href={`/ai-news/${d.slug}/`}>{d.headline}</a>
+            <a href={`/ai-news/${d.uid || d.slug}/`}>{d.headline}</a>
             <span class="pmeta">{d.category} &middot; {d.outlets} {d.outlets === 1 ? 'outlet' : 'outlets'}
               &middot; {news.date} &middot; <span class="uid" title="This story's identifier on theworldofai.org">uid {d.uid}</span></span>
             {d.line && <p>{d.line}</p>}
@@ -194,7 +194,7 @@ const jsonld = JSON.stringify({
         <ol class="preview">
           {top3.map((s) => (
             <li>
-              <a href={`/ai-news/${s.Slug}/`}>{s.Headline}</a>
+              <a href={`/ai-news/${(s as any).uid || s.Slug}/`}>{s.Headline}</a>
               <span class="pmeta">{categoryOf(s).name} · {s.DomainCount} outlets · {news.date} · <span class="uid" title="This story's identifier on theworldofai.org">uid {(s as any).uid}</span></span>
             </li>
           ))}

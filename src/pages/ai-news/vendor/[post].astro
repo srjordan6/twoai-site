@@ -56,10 +56,35 @@ export function getStaticPaths() {
       out.push({ params: { post: it.slug }, props: { it, vendor: v.vendor } });
     }
   }
+  // TWO POSTS MUST NOT SHARE A TITLE. Stephen's crawl of 2026-09-18 found 120
+  // vendor pages sharing a title with another. Two causes, neither a duplicate
+  // record: a vendor reuses one headline for a series (Replit ran "Showcasing
+  // Startups on Replit" seven times in 2023, seven real posts), and the 65
+  // character clamp below cuts AWS's long headlines at the same word, so
+  // "Amazon Bedrock AgentCore Memory now supports X" and "...now supports Y"
+  // both become "Amazon Bedrock AgentCore Memory now…". Every title is computed
+  // here exactly as the page computes it, and a post whose title is not unique
+  // is told so, so that it can carry its date. Posts with a unique title are
+  // left exactly as they were. This function is hoisted, so the clamp is
+  // repeated here and cannot be shared with the code below.
+  const clampHead = (title: string, vendor: string) => {
+    const max = 65 - ` — ${vendor}`.length;
+    const t = String(title || '');
+    return t.length <= max ? t : `${t.slice(0, max - 1).replace(/\s+\S*$/, '')}…`;
+  };
+  const counts = new Map<string, number>();
+  for (const p of out) {
+    const k = `${p.props.vendor}|${clampHead(p.props.it.title, p.props.vendor)}`;
+    counts.set(k, (counts.get(k) || 0) + 1);
+  }
+  for (const p of out) {
+    const k = `${p.props.vendor}|${clampHead(p.props.it.title, p.props.vendor)}`;
+    p.props.titleCollides = (counts.get(k) || 0) > 1;
+  }
   return out;
 }
 
-const { it, vendor, thin = false } = Astro.props;
+const { it, vendor, thin = false, titleCollides = false } = Astro.props;
 
 /* Onward links come from src/lib/related.ts, shared by every page type, so the
  * matching rule lives in one place. The outbound link to the vendor stays
@@ -72,8 +97,13 @@ const host = new URL(it.url).hostname.replace(/^www\./, '');
 // that would push past it is cut at a word boundary with an ellipsis, because
 // search engines truncate long titles anyway and do it worse.
 const suffix = ` — ${vendor}`;
-const headMax = 65 - suffix.length;
-const head = it.title.length <= headMax ? it.title : `${it.title.slice(0, headMax - 1).replace(/\s+\S*$/, '')}…`;
+// A post whose title another post shares carries its date, which is the one
+// thing that tells the seven Replit showcases apart. The date comes out of the
+// headline's share of the 65 characters, not on top of it.
+const dateTag = titleCollides && (it.posted_on || it.date) ? ` (${String(it.posted_on || it.date).slice(0, 10)})` : '';
+const headMax = 65 - suffix.length - dateTag.length;
+const headCut = it.title.length <= headMax ? it.title : `${it.title.slice(0, headMax - 1).replace(/\s+\S*$/, '')}…`;
+const head = `${headCut}${dateTag}`;
 // Vendors title posts as bluntly as "GPT-4" or "Jukebox", which composes to a
 // 14-character title that wastes most of the SERP line and says nothing about
 // what the page is. Where the short form is under 30 characters, say what the

@@ -56,6 +56,42 @@ const CROSS: Record<string, { intro: string; links: { name: string; href: string
 };
 
 const live = (c.domains || []).filter((d) => d.status === 'live');
+
+// A DOMAIN HEADING LINKS ONLY TO A PAGE THAT WILL EXIST. Stephen's Screaming
+// Frog crawl of 2026-09-18 found nine internal 404s that were all the same
+// defect. The pipeline writes a hub record for every domain into
+// content/industries/ and gives the domain a path under its own category, for
+// example /ai-ecosystem/technology-and-core-infrastructure/70d363c9/ for
+// Foundation Models. But only the Enterprise route reads content/industries/,
+// so a hub under Technology, Market or Research was linked here and built
+// nowhere. The sections beneath each heading were always fine; only the
+// heading's own link was dead.
+//
+// This does not build the missing pages. It stops this page advertising an
+// address that returns 404: a heading whose hub no route builds renders as
+// text, exactly as a planned domain does. The real fix is for the other three
+// category routes to render hub records, and the day they do, this test
+// should be deleted so the headings link again. It is deliberately a list of
+// what IS built, so a new route fails safe to "no link" rather than to a 404.
+const ENTERPRISE_SLUG = 'enterprise-applications-governance-and-tools';
+const industryHubUids = new Set<string>();
+if (existsSync('content/industries')) {
+  for (const f of readdirSync('content/industries')) {
+    if (!f.endsWith('.json')) continue;
+    try {
+      const d = JSON.parse(readFileSync(`content/industries/${f}`, 'utf8'));
+      if (d?.uid) industryHubUids.add(String(d.uid));
+    } catch { /* an unreadable file is not evidence of a page */ }
+  }
+}
+const domainHref = (d: any): string | null => {
+  if (!d?.path) return null;
+  const m = /^\/ai-ecosystem\/([^/]+)\/([0-9a-f]{8})\/?$/.exec(String(d.path));
+  if (!m) return d.path; // not a uid address under a category: leave it alone
+  const [, cat, uid] = m;
+  if (industryHubUids.has(uid) && cat !== ENTERPRISE_SLUG) return null;
+  return d.path;
+};
 const rest = (c.domains || []).filter((d) => d.status !== 'live');
 const desc = `${c.name}: ${c.live} of ${c.total} domains live, ${c.pages} pages published. ${c.blurb}`.slice(0, 300);
 const jsonld = JSON.stringify({
@@ -89,7 +125,7 @@ const jsonld = JSON.stringify({
       <h2>Live now</h2>
       {live.map((d) => (
         <div class="dom">
-          <h3>{d.path ? <a href={d.path}>{d.name}</a> : d.name}
+          <h3>{domainHref(d) ? <a href={domainHref(d)}>{d.name}</a> : d.name}
             {d.pages > 0 && <span class="n">{d.pages.toLocaleString()}</span>}</h3>
           <p>{d.blurb}</p>
           {d.sections?.length > 0 && (

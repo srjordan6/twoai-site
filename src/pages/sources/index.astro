@@ -25,6 +25,19 @@ const sections = hub.sections || [];
 const total = hub.total || 0;
 const dataSources = hub.data_sources || [];
 const vendorFeeds = hub.vendor_feeds || [];
+// A FEED'S ENTITY IS NOT ALWAYS A COMPANY. The list below linked every
+// entity_uid as /companies/{uid}/. Stephen's crawl of 2026-09-18 found two that
+// 404: 7785d228 is the AI Insurance hub and 25c8dabc is its insurtech capital
+// section, feeds attached to a section, not to a company. The link is now
+// built from what actually exists in this build: a company file means a
+// company page, and anything else is shown as text, because a name with no
+// link is honest and a link to a 404 is not.
+const feedEntityHref = (uid: any): string | null => {
+  const u = String(uid || '');
+  if (!/^[0-9a-f]{8}$/.test(u)) return null;
+  if (existsSync(`content/companies/${u}.json`)) return `/companies/${u}/`;
+  return null;
+};
 const books = hub.books || [];
 
 // Group the live sources by what they are for, so the list reads as an
@@ -167,8 +180,8 @@ const jsonld = JSON.stringify({
       <ul class="src-list feeds">
         {vendorFeeds.map((v: any) => (
           <li>
-            {v.entity_uid
-              ? <a href={`/companies/${v.entity_uid}/`}>{v.vendor}</a>
+            {feedEntityHref(v.entity_uid)
+              ? <a href={feedEntityHref(v.entity_uid)}>{v.vendor}</a>
               : <b>{v.vendor}</b>}
             {' — '}<a href={v.url} rel="noopener" class="feedurl">{v.url.replace(/^https?:\/\//, '')}</a>
             {!v.healthy && <span class="meta"> (not yet fetched)</span>}

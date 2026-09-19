@@ -350,3 +350,7 @@
 /prompts/*  /ai-prompts/:splat  301
 /books/*  https://srjconsultingservices.com/books/:splat  301
 /services/*  https://srjconsultingservices.com/services/:splat  301
+# A short address two templates linked to before the registry had one
+# (found as a 404 in the Screaming Frog crawl of 2026-09-18). The templates
+# now link to the uid address directly; this catches anyone who kept the old one.
+/data-centers/  /ai-ecosystem/technology-and-core-infrastructure/b441a27b/  301

@@ -33,6 +33,50 @@ export function getStaticPaths() {
 }
 const { sec } = Astro.props;
 
+// A WEBSITE FIELD IS SOMEBODY'S TYPING, NOT A URL. Stephen's crawl of
+// 2026-09-18 found a 404 at .../0480b377/www%2Cmicrosoft.com/es-pr. An
+// OpenStreetMap contributor typed "www,microsoft.com/es-pr", comma for dot and
+// no scheme, and this template put it straight into href, where a browser reads
+// it as a path on this site. The source data stays as it was given; what
+// becomes a link is only what parses as a real web address. A bare domain
+// gains https://, and anything else renders as text with no link.
+const safeUrl = (raw: any): string => {
+  const s = String(raw || '').trim();
+  if (!s) return '';
+  const withScheme = /^https?:\/\//i.test(s) ? s : (/^[a-z0-9-]+(\.[a-z0-9-]+)+(\/|$|\?|#)/i.test(s) ? `https://${s}` : '');
+  if (!withScheme) return '';
+  try {
+    const u = new URL(withScheme);
+    return /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(u.hostname) ? u.toString() : '';
+  } catch { return ''; }
+};
+
+// A LINK TO A RECORD IS ONLY A LINK IF THE RECORD HAS A PAGE. The same crawl
+// found two more 404s here. The operators index listed "Spanberger" with uid
+// 705842de, an operator that exists only because a headline about Virginia's
+// governor was read as a company name; it has no facilities and no page. And a
+// facility linked an operator_uid, 034eca6d, that no file carries. Both are
+// data problems upstream, and both will happen again in some other form, so
+// the template stops trusting a uid it has not seen: every uid this route
+// builds is collected once per build, and a uid outside that set renders as a
+// name, not as a dead link.
+const gTech = globalThis as any;
+if (!gTech.__twoaiTechUids) {
+  const set = new Set<string>();
+  for (const dir of ['models', 'repos', 'status', 'tech']) {
+    if (!existsSync(`content/${dir}`)) continue;
+    for (const f of readdirSync(`content/${dir}`)) {
+      if (!f.endsWith('.json')) continue;
+      try {
+        const d = JSON.parse(readFileSync(`content/${dir}/${f}`, 'utf8'));
+        if (d?.uid) set.add(String(d.uid));
+      } catch { /* unreadable is not a page */ }
+    }
+  }
+  gTech.__twoaiTechUids = set;
+}
+const hasPage = (uid: any): boolean => !!uid && gTech.__twoaiTechUids.has(String(uid));
+
 const isPricing = sec.tax === 'api-pricing';
 const isAPI = sec.source === 'openrouter' && !isPricing && sec.shape !== 'serving-providers';
 const hf = sec.source === 'huggingface';
@@ -383,7 +427,7 @@ const facBare = sec.shape === 'dc-facility' && !(
           <dl>
             <dt>Address</dt><dd>{addr || (sec.city ? `${sec.city}${sec.state ? ', ' + sec.state : ''} (street address not published)` : NP)}</dd>
             <dt>Phone</dt><dd>{phone || NP}</dd>
-            <dt>Operator</dt><dd>{op ? (sec.operator_uid ? <a href={`${BASE}/${sec.operator_uid}/`}>{op}</a> : op) : NP}</dd>
+            <dt>Operator</dt><dd>{op ? (hasPage(sec.operator_uid) ? <a href={`${BASE}/${sec.operator_uid}/`}>{op}</a> : op) : NP}</dd>
             {asPublished
               ? <><dt>Space, as published</dt><dd>{fmtN(asPublished)} sq ft</dd></>
               : <><dt>Total space</dt><dd>{totalSqft ? `${fmtN(totalSqft)} sq ft` : NP}</dd>
@@ -858,7 +902,7 @@ const facBare = sec.shape === 'dc-facility' && !(
                                 <>{i > 0 && ' '}{r.uid ? <a href={`${BASE}/${r.uid}/`}>{i + 1}</a> : <span>{i + 1}</span>}</>
                               ))}</>
                           : f.uid ? <a href={`${BASE}/${f.uid}/`}>{f.name}</a>
-                          : f.website ? <a href={f.website} rel="noopener">{f.name}</a> : f.name}
+                          : safeUrl(f.website) ? <a href={safeUrl(f.website)} rel="noopener">{f.name}</a> : f.name}
                       </td>
                       <td>{f.operator || '—'}</td>
                       <td>{f.city || '—'}</td>
@@ -922,8 +966,8 @@ const facBare = sec.shape === 'dc-facility' && !(
             {sec.operator && <> · Operator: {sec.operator}</>} ·
             {sec.state_page?.uid && <> Directory:
             {' '}<a href={`${BASE}/${sec.state_page.uid}/`}>data centers in {sec.state || sec.country}</a> ·</>}
-            {(sec.profile?.source?.page || sec.website) && <>
-            {' '}Source: <a href={sec.profile?.source?.page || sec.website} rel="noopener" target="_blank">
+            {(sec.profile?.source?.page || safeUrl(sec.website)) && <>
+            {' '}Source: <a href={sec.profile?.source?.page || safeUrl(sec.website)} rel="noopener" target="_blank">
             {facPublisher || sec.operator || 'operator'}</a>.</>}</p>
 
           {/* The fact box used to sit here, floated right into the article.
@@ -1183,7 +1227,7 @@ const facBare = sec.shape === 'dc-facility' && !(
                   <thead><tr><th>Operator</th><th class="num">Facilities</th><th>States</th><th class="num">Known IT MW</th><th>Headquarters</th></tr></thead>
                   <tbody>{g.rows.map((o) => (
                     <tr>
-                      <td><a href={`${BASE}/${o.uid}/`}>{o.name}</a></td>
+                      <td>{hasPage(o.uid) ? <a href={`${BASE}/${o.uid}/`}>{o.name}</a> : o.name}</td>
                       <td class="num">{o.facilities}</td>
                       <td>{(o.states || []).join(' ')}</td>
                       <td class="num">{o.known_mw ? Math.round(o.known_mw) : <span class="muted">—</span>}</td>
@@ -1205,7 +1249,7 @@ const facBare = sec.shape === 'dc-facility' && !(
                       <thead><tr><th>Operator</th><th>State</th><th>Headquarters</th></tr></thead>
                       <tbody>{rows.map((o) => (
                         <tr>
-                          <td><a href={`${BASE}/${o.uid}/`}>{o.name}</a></td>
+                          <td>{hasPage(o.uid) ? <a href={`${BASE}/${o.uid}/`}>{o.name}</a> : o.name}</td>
                           <td>{(o.states || []).join(' ') || <span class="muted">—</span>}</td>
                           <td>{o.headquarters || <span class="muted">—</span>}</td>
                         </tr>
@@ -1219,7 +1263,7 @@ const facBare = sec.shape === 'dc-facility' && !(
                     <div class="tbl-scroll"><table class="op-idx">
                       <thead><tr><th>Operator</th><th>State</th><th>Headquarters</th></tr></thead>
                       <tbody>{left.map((o) => (
-                        <tr><td><a href={`${BASE}/${o.uid}/`}>{o.name}</a></td><td>{(o.states || []).join(' ')}</td><td>{o.headquarters || ''}</td></tr>
+                        <tr><td>{hasPage(o.uid) ? <a href={`${BASE}/${o.uid}/`}>{o.name}</a> : o.name}</td><td>{(o.states || []).join(' ')}</td><td>{o.headquarters || ''}</td></tr>
                       ))}</tbody>
                     </table></div>
                   </>
@@ -1332,8 +1376,8 @@ const facBare = sec.shape === 'dc-facility' && !(
               publication or a public filing. Where an address, capacity or campus is shown, the
               operator or a public record states it; where it is absent, it was not published.
               Nothing here is estimated.</p>
-            {sec.website && (
-              <p class="op-outlink">Operator: <a href={sec.website} rel="noopener nofollow" target="_blank">{sec.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}</a></p>
+            {safeUrl(sec.website) && (
+              <p class="op-outlink">Operator: <a href={safeUrl(sec.website)} rel="noopener nofollow" target="_blank">{sec.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}</a></p>
             )}
           </section>
         </>

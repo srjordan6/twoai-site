@@ -42,7 +42,7 @@ const description = `Every AI news story published on this site, newest first, $
     first. The <a href="/ai-news/">daily briefing</a> holds today; this page holds everything.</p>
   <ul class="sections">
     {items.map((it) => (
-      <li><a href={`/ai-news/${it.slug}/`}>{it.headline}</a><span class="n">{it.date}{it.date && ' · '}<span class="uid" title="This story's identifier on theworldofai.org">uid {it.uid}</span></span></li>
+      <li><a href={`/ai-news/${it.uid || it.slug}/`}>{it.headline}</a><span class="n">{it.date}{it.date && ' · '}<span class="uid" title="This story's identifier on theworldofai.org">uid {it.uid}</span></span></li>
     ))}
   </ul>
 </Base>

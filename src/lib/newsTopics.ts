@@ -57,7 +57,7 @@ const CATEGORIES: { name: string; slug: string; blurb: string; hub: string; patt
     // and what it costs belong with the facility registry they feed.
     name: 'Data Centres & Infrastructure',
     slug: 'datacenters',
-    hub: '/data-centers/',
+    hub: '/ai-ecosystem/technology-and-core-infrastructure/b441a27b/',
     blurb: 'Campuses, capacity, power, cooling, siting, and the operators building them.',
     patterns: [
       String.raw`data.cent(er|re)s?`, 'hyperscale', String.raw`hyperscalers?`, 'colocation',
