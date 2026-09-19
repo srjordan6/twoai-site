@@ -30,8 +30,44 @@ const stampDoc = {
   generated: String(laws.generated || '').slice(0, 10),
   refresh_every_days: 1,
 };
+
+// QUESTIONS A PERSON ASKS BEFORE PASTING SOMEONE ELSE'S CODE INTO THEIR SITE.
+// Added 2026-09-18 after an audit tool scored this page 63 and listed, among
+// ten suggestions, no structured data, no FAQ, no author and no date. Four of
+// the ten were fair and are fixed here. The sizes quoted are measured from the
+// live widgets that evening, 2,336 and 32,346 bytes, not estimated. Rendered
+// on the page AND emitted as FAQPage, from this one array, so they cannot
+// disagree.
+const faq = [
+  { q: 'Is it free to embed these widgets?', a: 'Yes. Any website may use them, commercial or not, with no account, no key and no limit. The one condition is that the credit line under the widget stays in place with its link.' },
+  { q: 'How often do the numbers update?', a: 'Every day. The bills come from LegiScan and the lawsuits from CourtListener through a pipeline that runs daily, and each widget prints the date of its data, so a reader can always see how current it is.' },
+  { q: 'Will it slow my page down?', a: 'Very little. The lawsuit count is about 2 KB and the map about 32 KB before compression. Both snippets use lazy loading, so a browser fetches them only as the reader scrolls near. The widgets carry no analytics and no advertising.' },
+  { q: 'Which platforms does it work on?', a: 'Any platform that accepts an HTML iframe. WordPress has a Custom HTML block and Squarespace has a Code block. Email newsletters and platforms that strip iframes will not display it, so link to the State of AI Laws report there instead.' },
+  { q: 'Can I quote the numbers in my own article?', a: 'Yes. Give the figure with its date and credit The World of AI with a link. The State of AI Laws report has a ready made citation line.' },
+  { q: 'Can I have a different size, or a widget for other data?', a: 'Ask. The site tracks companies, tools, jobs, data centers and more, and a widget for any of it is possible. Use the contact page.' },
+];
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebPage',
+      name: 'Embed our data: a live AI laws map and lawsuit count',
+      description: desc,
+      url: 'https://theworldofai.org/embed/',
+      identifier: stampDoc.page_uid,
+      ...(stampDoc.generated ? { dateModified: stampDoc.generated } : {}),
+      author: { '@type': 'Organization', name: 'SRJ Consulting & Services LLC', url: 'https://srjconsultingservices.com/' },
+      publisher: { '@type': 'Organization', name: 'The World of AI', url: 'https://theworldofai.org/' },
+      isAccessibleForFree: true,
+    },
+    {
+      '@type': 'FAQPage',
+      mainEntity: faq.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
+    },
+  ],
+});
 ---
-<Base title="Embed our data: a live AI laws map and lawsuit count — The World of AI" description={desc} current="/embed/" doc={stampDoc} stampLabel="Data as of">
+<Base title="Embed our data: a live AI laws map and lawsuit count — The World of AI" description={desc} current="/embed/" jsonld={jsonld} doc={stampDoc} stampLabel="Data as of">
   <h1>Embed our data</h1>
   <p class="answer">Two live widgets, free to use on any website: a map of AI laws by state covering
     <b>{Number(laws.total || 0).toLocaleString('en-US')} bills</b>, and a count of the
@@ -65,6 +101,19 @@ const stampDoc = {
   <p>The same data is published as open JSON for developers. <a href="/api/">The API index</a> describes
     every endpoint in plain words, including the laws and lawsuits feeds.
     For a written summary to cite, see <a href="/state-of-ai-laws/">the State of AI Laws report</a>.</p>
+
+  <h2>Questions before you embed</h2>
+  {faq.map((f) => (
+    <>
+      <h3>{f.q}</h3>
+      <p>{f.a}</p>
+    </>
+  ))}
+
+  <h2>Who publishes this</h2>
+  <p>The World of AI is published by SRJ Consulting &amp; Services LLC of Frisco, Texas. How the site
+    gathers and checks its data is set out on <a href="/about/">About and method</a>, and every
+    source it draws on is listed on <a href="/sources/">Sources and References</a>.</p>
 
   <p class="meta-line">Trouble embedding, or want a different size or a widget for something else we track?
     <a href="/contact/">Tell us</a>.</p>
