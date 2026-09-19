@@ -83,7 +83,8 @@ const jsonld = JSON.stringify({
     {topDefs.length > 0 && <> The most sued companies are {topDefs.map(([k, v], i) => <>{i > 0 && (i === topDefs.length - 1 ? ' and ' : ', ')}{DEF_NAME[k] || k} ({v})</>)}.</>}
     {' '}Every case is a living page: dockets are checked against CourtListener daily and each page carries its full timeline.</p>
   {s.generated && <p class="meta-line">Last verified: {s.generated} · Source: CourtListener / RECAP ·
-    See the cases <a href="/ai-ecosystem/enterprise-applications-governance-and-tools/de99d3d0/">by state on the map</a></p>}
+    See the cases <a href="/ai-ecosystem/enterprise-applications-governance-and-tools/de99d3d0/">by state on the map</a> ·
+    {' '}<a href="/embed/">Embed this count on your site</a></p>}
 
   {(newlyFiled.length > 0 || moved.length > 0) && (
     <section class="recent">

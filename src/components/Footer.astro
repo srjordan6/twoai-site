@@ -129,11 +129,20 @@ try {
       <nav aria-label="For developers and researchers">
         <h3>Data and citation</h3>
         <ul>
-          <li class="sub"><a href="/api/laws.json">AI laws API</a></li>
-          <li class="sub"><a href="/api/glossary.json">Glossary API</a></li>
-          <li class="sub"><a href="/api/lawsuits.json">Lawsuits API</a></li>
-          <li class="sub"><a href="/api/tools.json">Tools API</a></li>
-          <li class="sub"><a href="/api/weeks.json">Weekly digest API</a></li>
+          {/* The two pages built to be linked to, first in the list. Stephen,
+              2026-09-18, the evening they shipped: I see /embed/ but how do you
+              get here if you do not know the URL. You could not. It was linked
+              from one line on /ai-laws/ and nowhere else. The footer is on
+              every page, so a journalist on any page is one click away. */}
+          <li class="sub"><a href="/state-of-ai-laws/">State of AI Laws report</a></li>
+          <li class="sub"><a href="/embed/">Embed our map and data</a></li>
+          <li class="sub"><a href="/api/">Open data API</a></li>
+          {/* Five links to raw .json files stood here. The standing rule of
+              2026-09-18 is that no link on this site hands a reader raw XML or
+              code, and a footer link is as reader-facing as a link gets. The
+              API index describes every endpoint in words and links to each, so
+              a developer loses one click and a reader no longer lands on a
+              wall of brackets. */}
         </ul>
         <h3 class="spaced">This publication</h3>
         <ul>
