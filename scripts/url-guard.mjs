@@ -73,6 +73,84 @@ function record(verdict) {
   }
 }
 
+// THE LEDGER: THE GUARD'S OWN RECORD OF EVERY URL THIS SITE HAS PUBLISHED.
+//
+// Stephen, 2026-09-19: twoai-site.srjordan.workers.dev cannot stay open, and
+// Bot Fight Mode stays on. Those two together rule out asking the internet
+// what is live. Bot Fight Mode challenges anything that does not run
+// JavaScript, the build runner included, and Cloudflare documents that no WAF
+// rule can except it. The workers.dev hostname answered only because it has no
+// security in front of it at all, which is exactly why it has to close.
+//
+// So the guard stops asking. It keeps a ledger in Workers KV (namespace
+// twoai-url-ledger) of every path a guarded build has published, reads it
+// through the Cloudflare API with the token Workers Builds already gives the
+// build (the generated token carries Workers KV Storage edit), and after a
+// build passes it writes back the union of the ledger and this build.
+//
+// This is a stronger guard than the one it replaces, not only a reachable one.
+// Comparing against the live site can only catch what the last deploy still
+// had: a URL lost while the guard was blind was forgotten the moment it went.
+// The ledger only grows, so a published URL is held to the rule for good, and
+// the only ways out remain a redirect or a named retirement.
+//
+// The ledger seeds itself. While it is empty the guard reads the live site
+// the old way, and writes what it found.
+const LEDGER_NS = '7a70aa90957143cf80ef7fcd4f69ee07';
+const LEDGER_KEY = 'published-paths.json';
+const CF_API = 'https://api.cloudflare.com/client/v4';
+
+async function cfApi(path, init = {}) {
+  const token = process.env.CLOUDFLARE_API_TOKEN;
+  if (!token) throw new Error('CLOUDFLARE_API_TOKEN is not visible to the build step');
+  return fetch(`${CF_API}${path}`, { ...init, headers: { Authorization: `Bearer ${token}`, ...(init.headers || {}) } });
+}
+
+let ledgerAccount = null;
+async function ledgerUrl() {
+  if (!ledgerAccount) {
+    ledgerAccount = process.env.CLOUDFLARE_ACCOUNT_ID || null;
+    if (!ledgerAccount) {
+      const res = await cfApi('/accounts?per_page=5');
+      if (!res.ok) throw new Error(`account lookup answered ${res.status}`);
+      const j = await res.json();
+      if (!j.result || j.result.length !== 1) throw new Error(`account lookup returned ${j.result ? j.result.length : 0} accounts, need exactly 1 or CLOUDFLARE_ACCOUNT_ID`);
+      ledgerAccount = j.result[0].id;
+    }
+  }
+  return `/accounts/${ledgerAccount}/storage/kv/namespaces/${LEDGER_NS}/values/${LEDGER_KEY}`;
+}
+
+// Returns the ledger's paths, or [] when the key has never been written.
+// Throws when the ledger cannot be reached, which is a different thing.
+async function ledgerRead() {
+  const res = await cfApi(await ledgerUrl());
+  if (res.status === 404) return [];
+  if (!res.ok) throw new Error(`ledger read answered ${res.status}`);
+  const j = await res.json();
+  return Array.isArray(j.paths) ? j.paths : [];
+}
+
+async function ledgerWrite(paths) {
+  const body = JSON.stringify({ updated: new Date().toISOString(), commit: process.env.WORKERS_CI_COMMIT_SHA || null, count: paths.length, paths });
+  const res = await cfApi(await ledgerUrl(), { method: 'PUT', headers: { 'Content-Type': 'text/plain' }, body });
+  if (!res.ok) throw new Error(`ledger write answered ${res.status}`);
+}
+
+// What this build publishes, by the site's own account of itself: the sitemap
+// as built, before the noindex prune runs, plus the unlisted list.
+function builtPaths() {
+  const out = new Set(localPaths());
+  if (existsSync('dist/unlisted-urls.json')) {
+    try {
+      for (const u of JSON.parse(readFileSync('dist/unlisted-urls.json', 'utf8')).urls ?? []) {
+        try { out.add(new URL(u).pathname); } catch { /* skip malformed */ }
+      }
+    } catch { /* an unreadable list adds nothing */ }
+  }
+  return out;
+}
+
 function pathsFromSitemapXML(xml) {
   const out = [];
   for (const m of xml.matchAll(/<loc>\s*([^<]+?)\s*<\/loc>/g)) {
@@ -162,38 +240,59 @@ if (process.env.SKIP_URL_GUARD === '1') {
   process.exit(0);
 }
 
+// The ledger first. The live site only while the ledger is empty or cannot
+// be reached.
+let ledger = null;
+let ledgerNote = null;
+try {
+  ledger = await ledgerRead();
+} catch (e) {
+  ledgerNote = e.message;
+  console.error(`url-guard: WARNING the ledger could not be read (${e.message}).`);
+}
+const useLedger = Array.isArray(ledger) && ledger.length >= MIN_LIVE;
+
 let live = null;
 let origin = null;
-const refusals = [];
-for (const o of ORIGINS) {
-  try {
-    const got = await fetchLivePaths(o);
-    if (got.length < MIN_LIVE) {
-      refusals.push(`${o}: only ${got.length} URLs (< ${MIN_LIVE})`);
-      continue;
-    }
-    live = got;
-    origin = o;
-    break;
-  } catch (e) {
-    refusals.push(e.message);
-  }
-}
-for (const r of refusals) console.error(`url-guard: ${r}`);
-if (!live) {
-  console.error('url-guard: UNGUARDED BUILD. No origin gave a usable live sitemap, so this deploy is NOT checked for dropped URLs. Passing open; the verdict is recorded in /api/build.json and buildwatch will alert.');
-  record({ guarded: false, reason: refusals.join(' | ').slice(0, 500) });
-  process.exit(0);
-}
-
 let liveUnlisted = [];
 let unlistedNote = null;
-try {
-  liveUnlisted = await fetchLiveUnlistedPaths(origin);
-  console.log(`url-guard: guarding ${live.length} sitemap + ${liveUnlisted.length} unlisted live URLs, read from ${origin}`);
-} catch (e) {
-  unlistedNote = e.message;
-  console.error(`url-guard: WARNING could not fetch the unlisted list (${e.message}); guarding the sitemap layer only this run. Unlisted pages are unprotected until this is fixed.`);
+if (useLedger) {
+  // One set, one rule: a ledger path must still build, or be redirected or
+  // retired. Whether it was ever in a sitemap does not matter to permanence.
+  live = [];
+  liveUnlisted = ledger;
+  origin = 'ledger';
+  console.log(`url-guard: guarding ${ledger.length} published URLs from the ledger`);
+} else {
+  if (Array.isArray(ledger)) console.log(`url-guard: the ledger holds ${ledger.length} URLs, too few to guard with; reading the live site to seed it.`);
+  const refusals = [];
+  for (const o of ORIGINS) {
+    try {
+      const got = await fetchLivePaths(o);
+      if (got.length < MIN_LIVE) {
+        refusals.push(`${o}: only ${got.length} URLs (< ${MIN_LIVE})`);
+        continue;
+      }
+      live = got;
+      origin = o;
+      break;
+    } catch (e) {
+      refusals.push(e.message);
+    }
+  }
+  for (const r of refusals) console.error(`url-guard: ${r}`);
+  if (!live) {
+    console.error('url-guard: UNGUARDED BUILD. Neither the ledger nor any origin gave a usable URL set, so this deploy is NOT checked for dropped URLs. Passing open; the verdict is recorded in /api/build.json and buildwatch will alert.');
+    record({ guarded: false, reason: [ledgerNote && `ledger: ${ledgerNote}`, ...refusals].filter(Boolean).join(' | ').slice(0, 500) });
+    process.exit(0);
+  }
+  try {
+    liveUnlisted = await fetchLiveUnlistedPaths(origin);
+    console.log(`url-guard: guarding ${live.length} sitemap + ${liveUnlisted.length} unlisted live URLs, read from ${origin}`);
+  } catch (e) {
+    unlistedNote = e.message;
+    console.error(`url-guard: WARNING could not fetch the unlisted list (${e.message}); guarding the sitemap layer only this run. Unlisted pages are unprotected until this is fixed.`);
+  }
 }
 
 const next = new Set(localPaths());
@@ -235,13 +334,32 @@ const uniq = [...new Set([...dropped, ...unlistedDropped])].sort();
 
 if (uniq.length === 0) {
   console.log(`url-guard: ok. live=${live.length} unlisted=${liveUnlisted.length} next=${next.size} dropped=0`);
-  // Sitemap-only is half a guard, and the record says so.
+  // The ledger only grows: what it held, what was live, and what this build
+  // publishes. Talent profiles stay out, they are lifecycle URLs. Written only
+  // on a pass, and never when the unlisted layer went unread, because a
+  // partial picture must not become the record.
+  let ledgerWritten = null;
+  if (!ledgerNote && !unlistedNote) {
+    const union = [...new Set([...(ledger || []), ...live, ...liveUnlisted, ...builtPaths()])].filter((p) => !isTransient(p)).sort();
+    try {
+      await ledgerWrite(union);
+      ledgerWritten = union.length;
+      console.log(`url-guard: ledger written, ${union.length} published URLs on record`);
+    } catch (e) {
+      ledgerNote = e.message;
+      console.error(`url-guard: WARNING the ledger could not be written (${e.message}).`);
+    }
+  }
+  // Sitemap-only is half a guard, and the record says so. A pass that could
+  // not reach the ledger is still guarded this once, by the live site, and
+  // says why the ledger was not used.
   record({ guarded: !unlistedNote, reason: unlistedNote ? `unlisted layer unread: ${unlistedNote}`.slice(0, 500) : null,
-    origin, live: live.length, unlisted: liveUnlisted.length, dropped: 0 });
+    source: origin, ledger_read: Array.isArray(ledger) ? ledger.length : null, ledger_written: ledgerWritten,
+    ledger_note: ledgerNote, live: live.length, unlisted: liveUnlisted.length, dropped: 0 });
   process.exit(0);
 }
 
-console.error(`url-guard: BLOCKING DEPLOY. This build drops ${uniq.length} URL(s) that are live right now.`);
+console.error(`url-guard: BLOCKING DEPLOY. This build drops ${uniq.length} URL(s) that ${useLedger ? 'this site has published' : 'are live right now'}.`);
 console.error('Each must either come back, gain a redirect in public/_redirects, or be');
 console.error('retired by name in url-retirements.txt with a reason. The site keeps serving');
 console.error('the previous build until then.');
