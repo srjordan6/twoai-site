@@ -100,6 +100,14 @@ const currentWord = cadence > 0 && Number.isFinite(ageDays)
         {sourceUrl ? <a href={sourceUrl} rel="noopener">{source}</a> : source}
       </>
     )}
+    {/* WHO PUBLISHES THE PAGE, on the page. Added 2026-09-18. An audit run
+        across the site reported "no author information" on page after page,
+        and it was right: the publisher was named only in the footer, which
+        the same day was marked so search engines do not quote it. The stamp
+        is on every page, so this one line puts the publisher in the body of
+        all of them, linked to the page that explains method and ownership. */}
+    <span class="ds-sep"> · </span>
+    <span class="ds-by">Published by <a href="/about/" rel="author">The World of AI</a></span>
   </p>
 )}
 

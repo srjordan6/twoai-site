@@ -96,6 +96,65 @@ const nav = [
 // competing with each other in the meantime.
 const canonical = canonicalOverride || new URL(Astro.url.pathname, Astro.site).href;
 
+// A BASELINE OF STRUCTURED DATA ON EVERY PAGE. Stephen, 2026-09-18, after
+// running an answer engine audit across the site: I am seeing the same things
+// missing everywhere, what can you apply to all pages. Three of the things it
+// names are true of most pages and can be fixed once, here:
+//
+//   no structured data   jsonld is emitted only when a template builds some,
+//                        and most hubs and many item templates never did.
+//   no author            nothing in the head or the schema said who publishes
+//                        the page.
+//   no date              hubs showed none until the stamp fix earlier today,
+//                        and no page said so in machine readable form.
+//
+// So every page now declares, as one @graph: the publishing Organization, the
+// WebSite, and a WebPage for itself with its uid, its date when the record
+// has one, author and publisher, and a short breadcrumb. A template's own
+// jsonld is still emitted beside it and is the richer statement; this is the
+// floor under it. Two guards stop the floor contradicting the template: no
+// WebPage node when the template already declares one, and no breadcrumb when
+// the template has its own, since two trails for one page is worse than none.
+//
+// WHAT THIS DELIBERATELY DOES NOT DO. The same audit asks every page for an
+// FAQ, expert quotations and more statistics. Those cannot be applied from a
+// layout without inventing them, and an invented FAQ on 5,800 pages is the
+// boilerplate Google declined to index on the company pages this same day.
+const ORG_ID = 'https://theworldofai.org/#publisher';
+const SITE_ID = 'https://theworldofai.org/#website';
+const stampDate = doc ? String(doc.built_at || doc.generated || '').slice(0, 10) : '';
+const pageUid = doc ? String(doc.page_uid || doc.uid || '') : '';
+const humanize = (seg: string) => seg.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  .replace(/\bAi\b/g, 'AI').replace(/\bMcp\b/g, 'MCP').replace(/\bApi\b/g, 'API');
+const herePath = Astro.url.pathname.endsWith('/') ? Astro.url.pathname : Astro.url.pathname + '/';
+const crumbs: { name: string; url: string }[] = [{ name: 'The World of AI', url: 'https://theworldofai.org/' }];
+if (current && current !== '/' && current !== herePath) {
+  const seg = current.replace(/\/$/, '').split('/').pop() || '';
+  if (seg) crumbs.push({ name: humanize(seg), url: new URL(current, Astro.site).href });
+}
+if (herePath !== '/') crumbs.push({ name: String(title).replace(/\s+[\u2014|-]\s+The World of AI.*$/, '').slice(0, 110), url: canonical });
+const tplLd = typeof jsonld === 'string' ? jsonld : '';
+const baseGraph: Record<string, any>[] = [
+  { '@type': 'Organization', '@id': ORG_ID, name: 'The World of AI', url: 'https://theworldofai.org/',
+    logo: 'https://theworldofai.org/brand/icon-512.png',
+    parentOrganization: { '@type': 'Organization', name: 'SRJ Consulting & Services LLC', url: 'https://srjconsultingservices.com/' } },
+  { '@type': 'WebSite', '@id': SITE_ID, name: 'The World of AI', url: 'https://theworldofai.org/', inLanguage: 'en', publisher: { '@id': ORG_ID } },
+];
+if (!/"@type"\s*:\s*"WebPage"/.test(tplLd)) {
+  baseGraph.push({
+    '@type': 'WebPage', '@id': canonical + '#webpage', url: canonical, name: String(title).slice(0, 200), description: String(description).slice(0, 300),
+    inLanguage: 'en', isPartOf: { '@id': SITE_ID }, author: { '@id': ORG_ID }, publisher: { '@id': ORG_ID }, isAccessibleForFree: true,
+    ...(pageUid ? { identifier: pageUid } : {}),
+    ...(stampDate ? { dateModified: stampDate } : {}),
+  });
+}
+if (!/BreadcrumbList/.test(tplLd) && crumbs.length > 1) {
+  baseGraph.push({ '@type': 'BreadcrumbList', itemListElement: crumbs.map((c, i) => ({ '@type': 'ListItem', position: i + 1, name: c.name, item: c.url })) });
+}
+// \u003c for every "<": the JSON sits inside a <script> element, and a page
+// title containing a tag would otherwise be able to close it.
+const baseLd = JSON.stringify({ '@context': 'https://schema.org', '@graph': baseGraph }).replace(/</g, '\\u003c');
+
 // Final safety net on the two tags every page emits, applied here so no
 // individual template can ship a tag outside the band the audits check.
 // Descriptions clamp to 158, and anything under 110 gains a true site-wide
@@ -209,6 +268,10 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
   <title>{pageTitle}</title>
   <meta name="description" content={metaDesc} />
   <link rel="canonical" href={canonical} />
+  <meta name="author" content="The World of AI, published by SRJ Consulting &amp; Services LLC" />
+  <link rel="author" href="https://theworldofai.org/about/" />
+  {stampDate && <meta property="article:modified_time" content={stampDate} />}
+  {stampDate && <meta property="og:updated_time" content={stampDate} />}
   {noindex && <meta name="robots" content="noindex,follow" />}
   {/* A page that has moved. Static hosting cannot issue a 301 for a URL
       that is not in the redirects file, and that file is capped at two
@@ -376,6 +439,7 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
       document.head.appendChild(sc);
     }
   </script>
+  {!redirect && <script type="application/ld+json" set:html={baseLd} />}
   {jsonld && <script type="application/ld+json" set:html={jsonld} />}
 </head>
 <body>
