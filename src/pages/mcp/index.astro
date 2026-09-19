@@ -42,6 +42,84 @@ for (const list of byLetter.values()) {
 }
 const groups = LETTERS.map((l) => ({ letter: l, id: l === '#' ? 'srv-other' : `srv-${l.toLowerCase()}`, list: byLetter.get(l) }))
   .filter((g) => g.list.length > 0);
+
+// A SECOND LEVEL, BECAUSE A IS 943. Stephen, 2026-09-19. One letter holding
+// 40% of the directory is a scroll with a label on it, so a letter that runs
+// past TARGET is cut into ranges the way a dictionary is, and the ranges carry
+// guide words rather than a number.
+//
+// The cut follows the data instead of a fixed depth. Entries are grouped by a
+// prefix of the sorted text, consecutive prefix groups are run together while
+// they fit, and a single prefix group that is too big on its own is cut again
+// one character deeper. That matters here: ai.smithery/ alone publishes 213
+// servers and ai.getvda/ another 95, so a fixed two-character rule would have
+// produced one bucket of 666 and called it AI.
+//
+// Guide words are the shortest prefix that tells a range from its neighbours,
+// which is what a dictionary header does and why "ai.smithery/f to
+// ai.smithery/p" is the right label rather than a wrong-but-tidy "Ai".
+const TARGET = 90;
+const MAX_DEPTH = 24;
+const LABEL_CAP = 18;
+const sortText = (s) => shown(s).trim();
+const sortKey = (s) => sortText(s).toLowerCase();
+
+function splitRuns(items, depth) {
+  if (items.length <= TARGET || depth > MAX_DEPTH) return [items];
+  const runs = new Map();
+  for (const s of items) {
+    const k = sortKey(s).slice(0, depth);
+    if (!runs.has(k)) runs.set(k, []);
+    runs.get(k).push(s);
+  }
+  // Every entry shares this prefix, so cutting here buys nothing; go deeper.
+  if (runs.size === 1) return splitRuns(items, depth + 1);
+  const out = [];
+  let cur = [];
+  for (const run of runs.values()) {
+    if (run.length > TARGET) {
+      if (cur.length) { out.push(cur); cur = []; }
+      out.push(...splitRuns(run, depth + 1));
+      continue;
+    }
+    if (cur.length && cur.length + run.length > TARGET) { out.push(cur); cur = []; }
+    cur = cur.concat(run);
+  }
+  if (cur.length) out.push(cur);
+  // A range of one or two entries beside a big one reads as a mistake. Fold a
+  // stray back into the range before it where the two still fit.
+  const merged = [];
+  for (const b of out) {
+    const prev = merged[merged.length - 1];
+    if (prev && prev.length + b.length <= TARGET && Math.min(prev.length, b.length) < TARGET / 3) {
+      merged[merged.length - 1] = prev.concat(b);
+    } else merged.push(b);
+  }
+  return merged;
+}
+
+const commonLen = (a, b) => {
+  let n = 0;
+  while (n < Math.min(a.length, b.length) && a[n].toLowerCase() === b[n].toLowerCase()) n++;
+  return n;
+};
+
+for (const g of groups) {
+  const buckets = splitRuns(g.list, 2);
+  g.ranges = buckets.length < 2 ? null : buckets.map((b, i) => {
+    const first = sortText(b[0]);
+    const last = sortText(b[b.length - 1]);
+    const prevLast = i > 0 ? sortText(buckets[i - 1][buckets[i - 1].length - 1]) : '';
+    const nextFirst = i + 1 < buckets.length ? sortText(buckets[i + 1][0]) : '';
+    const a = first.slice(0, Math.min(LABEL_CAP, Math.max(2, commonLen(first, prevLast) + 1)));
+    const z = last.slice(0, Math.min(LABEL_CAP, Math.max(2, a.length, commonLen(last, nextFirst) + 1)));
+    return {
+      id: `${g.id}-${i + 1}`,
+      label: a.toLowerCase() === z.toLowerCase() ? a : `${a} to ${z}`,
+      list: b,
+    };
+  });
+}
 const desc =
   `A browsable directory of ${idx.total} active Model Context Protocol servers from the official ` +
   `MCP registry: who publishes each one, what it does, and where to get it.`;
@@ -88,21 +166,35 @@ const jsonld = JSON.stringify({
       <h3 id={g.id}>{g.letter === '#' ? 'Other' : g.letter}
         <span class="az-count">{g.list.length} server{g.list.length === 1 ? '' : 's'}</span>
         <a class="az-back" href="#srv-index">Back to the index</a></h3>
-      <table>
-        <thead><tr><th>Server</th><th>Publisher</th><th>What it does</th><th>Runs as</th></tr></thead>
-        <tbody>
-          {g.list.map((s) => (
-            <tr>
-              <td>{s.description
-                ? <a href={`/mcp/${s.slug}/`}>{s.title || s.name}</a>
-                : (s.title || s.name)}</td>
-              <td>{s.vendor}</td>
-              <td>{s.description}</td>
-              <td>{s.transport}</td>
-            </tr>
+      {g.ranges && (
+        <nav class="az az-sub" aria-label={`${g.letter} by range`}>
+          {g.ranges.map((r) => (
+            <a href={`#${r.id}`}>{r.label}<span class="az-n">{r.list.length}</span></a>
           ))}
-        </tbody>
-      </table>
+        </nav>
+      )}
+      {(g.ranges || [{ id: null, label: null, list: g.list }]).map((r) => (
+        <>
+          {r.id && <h4 id={r.id} class="az-range">{r.label}
+            <span class="az-count">{r.list.length} servers</span>
+            <a class="az-back" href={`#${g.id}`}>Back to {g.letter === '#' ? 'Other' : g.letter}</a></h4>}
+          <table>
+            <thead><tr><th>Server</th><th>Publisher</th><th>What it does</th><th>Runs as</th></tr></thead>
+            <tbody>
+              {r.list.map((s) => (
+                <tr>
+                  <td>{s.description
+                    ? <a href={`/mcp/${s.slug}/`}>{s.title || s.name}</a>
+                    : (s.title || s.name)}</td>
+                  <td>{s.vendor}</td>
+                  <td>{s.description}</td>
+                  <td>{s.transport}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      ))}
     </section>
   ))}
 
@@ -129,4 +221,12 @@ const jsonld = JSON.stringify({
   .az-count { font-family: 'Poppins', system-ui, sans-serif; font-size: 12.5px;
     font-weight: 500; color: #7A8A9E; }
   .az-back { font-family: 'Poppins', system-ui, sans-serif; font-size: 12.5px; font-weight: 500; }
+  /* The second level. Ranges read as guide words, so the chips are wider and
+     lighter than the letter row above and sit left-aligned rather than centred. */
+  .az-sub { margin: 10px 0 4px; }
+  .az-sub a { min-width: 0; justify-content: flex-start; font-weight: 600; font-size: 13.5px;
+    background: #fafaff; }
+  h4[id^="srv-"] { scroll-margin-top: 90px; display: flex; align-items: baseline;
+    flex-wrap: wrap; gap: 12px; margin-top: 1.4em; font-size: 1rem; }
+  .az-range { color: var(--navy); }
 </style>
