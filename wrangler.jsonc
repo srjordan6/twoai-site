@@ -41,7 +41,21 @@
     // at all, which is what keeps the site up when the Worker has a bug. The
     // embeddable widgets are the exception: the Worker has to run to lift the
     // sitewide ban on framing for those paths only. See src/worker.ts.
-    "run_worker_first": ["/embed/*"]
+    //
+    // EVERY ROUTE THE WORKER ANSWERS MUST BE LISTED HERE. Found 2026-09-19:
+    // POST /api/ask, /api/talent/* and the new /api/translate all returned an
+    // empty 405, and /sitemap.xml returned the 404 page instead of its 301,
+    // while /embed/* still carried the Worker's headers. So the script was
+    // running for the paths in this list and for nothing else: a request that
+    // matched no asset was answered by not_found_handling and never reached
+    // src/worker.ts. answer_log shows /api/ask last answered 2026-09-18 17:00
+    // UTC, so this list used to be a hint and at some point became the whole
+    // routing table. The deploy command is `npx wrangler deploy`, unpinned,
+    // so a wrangler or platform change is the likely cause; not verified.
+    // Listed by exact path rather than /api/* on purpose: /api/build.json and
+    // the other /api/*.json files are static and must keep serving if the
+    // Worker ever has a bug.
+    "run_worker_first": ["/embed/*", "/api/ask", "/api/translate", "/api/talent/*", "/sitemap.xml"]
   },
   "ai": {
     "binding": "AI"
