@@ -338,7 +338,17 @@ const jsonld = JSON.stringify({
      scoping attributes, which is why the first version of this rule compiled
      to nothing at all. */
   .body { color: var(--ink); }
-  .body :global(p), .body :global(li), .body :global(td), .body :global(th),
+  /* DARK TEXT ON A NAVY HEADER. Stephen, 2026-09-19, with a screenshot of the
+     DOJ inventory table: cannot read the headers and the style is ugly. This
+     block sets every element inside .body to --ink so a page's own prose reads
+     as the site's ink rather than whatever the sitewide sheet says, and it
+     listed th alongside p, li and td. The sitewide rule gives th white text on
+     navy, but this one is more specific, so the header cells kept the navy
+     background and took ink for their text. Navy on navy.
+
+     th comes out of that list. A header cell's colour belongs to whatever
+     styles the header, and a rule about body prose should not reach into it. */
+  .body :global(p), .body :global(li), .body :global(td),
   .body :global(h2), .body :global(h3), .body :global(h4), .body :global(strong) { color: var(--ink); }
   .body :global(a) { color: var(--orange); }
   .lede { font-size: 1.08rem; color: #3d3d46; margin: 0 0 .6em; }
@@ -347,10 +357,22 @@ const jsonld = JSON.stringify({
   .body :global(p) { margin: 0 0 .9em; }
   .body :global(ul), .body :global(ol) { margin: 0 0 1em; padding-left: 1.2em; }
   .body :global(li) { margin-bottom: .4em; }
-  .body :global(table) { width: 100%; border-collapse: collapse; margin: 0 0 1.2em; }
+  .body :global(table) { width: 100%; border-collapse: collapse; margin: 0 0 1.2em;
+    font-variant-numeric: tabular-nums; }
   .body :global(th), .body :global(td) {
     border: 1px solid #e7e7ee; padding: 8px 10px; text-align: left; font-size: .93rem;
   }
+  /* And it reads like the rest of the site. The header keeps its navy ground
+     and white text from the sitewide sheet; here it only gains the letter
+     spacing the site uses on small caps labels. Rows alternate on a very light
+     tint so the eye tracks across a seven row table, numbers line up because
+     the figures are tabular, and a numeric column is right aligned where the
+     author marks it .num. */
+  .body :global(thead th) { font-size: 12.5px; letter-spacing: .04em; border-color: var(--navy); }
+  .body :global(tbody tr:nth-child(even) td) { background: #fafaff; }
+  .body :global(tbody tr:hover td) { background: #f4f4fb; }
+  .body :global(td.num), .body :global(th.num) { text-align: right; }
+  .body :global(tbody td:first-child) { font-weight: 500; }
   .steps li { margin-bottom: .7em; }
   .siting-watch { margin: 2em 0 1.5em; padding-top: 1.2em; border-top: 1px solid #e6e6ef; }
   .agency-actions ul { list-style: none; padding: 0; margin: 1em 0 0; }
