@@ -88,15 +88,42 @@ ${generated}.
 ## Sections
 - [AI Laws by State](https://theworldofai.org/ai-laws/): every tracked AI bill
   in all 50 US states, DC, Puerto Rico, and Congress, one page per jurisdiction.
+  Each state page opens with a link to this site's plain-English explanation of
+  that state's enacted AI law where one exists (Texas, Colorado, Illinois,
+  California, Connecticut and Tennessee among them).
+- [State of AI Laws](https://theworldofai.org/state-of-ai-laws/): the monthly
+  data release. Bills tracked, measures enacted, how many jurisdictions have
+  enacted at least one, the ten most active legislatures, the most recent
+  enactments, and the lawsuit count beside them, every figure computed from the
+  trackers in the same build. One permanent address that always carries the
+  current figures, with a ready-made citation line. Published to be cited.
 - [AI Glossary](https://theworldofai.org/ai-glossary/): ${fmt(termCount)} AI terms defined
   in plain English with origin, example, and related terms.
 - [AI Lawsuit Tracker](https://theworldofai.org/ai-lawsuits/): ${fmt(caseCount)} living case
   pages with daily docket checks, full timelines, and both the CourtListener
-  docket record and the govinfo opinion text where available.
+  docket record and the govinfo opinion text where available. The tracker opens
+  with the answer: how many cases, as of what date, how they divide by the law
+  they are brought under, which companies are named most often, and what was
+  filed or moved on a docket in the trailing thirty days.
 - [AI Compliance Frameworks](https://theworldofai.org/ai-compliance/): ${fmt(compCount)}
   framework pages covering the EU AI Act, NIST AI RMF, ISO/IEC 42001, sector
   regulators, and agency enforcement, each with scope, obligations, deadlines,
-  and what changed most recently. Includes
+  and what changed most recently. The security and assurance certifications a
+  buyer asks an AI vendor for each have a page written from the issuing body's
+  own publications:
+  [HITRUST CSF](https://theworldofai.org/ai-compliance/hitrust-csf/) and its AI
+  Security Certification,
+  [FedRAMP and AI](https://theworldofai.org/ai-compliance/fedramp/) including
+  the AI services certified in 2026, FedRAMP 20x and the 2026 rule dates,
+  [PCI DSS and AI](https://theworldofai.org/ai-compliance/pci-dss-ai/) from the
+  PCI Security Standards Council's AI principles, and
+  [DCAM](https://theworldofai.org/ai-compliance/dcam/), the EDM Council's data
+  management capability model, with its six-level scoring scale and published
+  benchmark scores. Financial regulation is covered at the level of the rule:
+  [AI adverse action notices](https://theworldofai.org/ai-compliance/ai-adverse-action-notices/)
+  under Regulation B and the FCRA, and
+  [AI vendor due diligence under GLBA](https://theworldofai.org/ai-compliance/glba-ai-vendor-due-diligence/).
+  Includes
   [Data Centre Siting, Power and Local Regulation](https://theworldofai.org/ai-compliance/datacenter-siting-and-power/):
   the five regimes that decide where AI compute may be built and who pays for
   its power - state siting boards, municipal zoning, utility commissions,
@@ -278,6 +305,14 @@ per minute per IP and a global daily ceiling; over either limit it declines
 quietly. Answers are generated, so treat the cited pages as the authoritative
 record.
 
+## Embed our data
+Two figures from this site can be placed on any other site, free, with one
+pasted line: the [US state AI laws map](https://theworldofai.org/embed/) and
+the AI lawsuit count. Both are rebuilt daily from the same trackers as the
+pages, carry their date and a link back, load no tracking or advertising, and
+need no account. Instructions and terms are at
+https://theworldofai.org/embed/.
+
 ## Machine-readable data
 - https://theworldofai.org/api/laws.json (per-state counts and index)
 - https://theworldofai.org/api/glossary.json (all terms)
@@ -332,7 +367,15 @@ source that stops resolving is marked stale on the page rather than removed
 silently. Nothing is deleted: a superseded fact or a duplicate record is
 marked and kept, and a published page is never removed. Computed figures
 (counts, censuses, live statistics) are verified against production data
-before they ship. Corrections are welcomed at info@srjconsultingservices.com.
+before they ship. Where a page carries question-and-answer markup, the markup
+describes only questions and answers a reader can see on that page: it is read
+out of the page's own text or assembled from that page's own record, never
+written to fill a template, and a page that holds no answer carries no
+question. A figure a vendor or standards body publishes about its own product
+is reported as that body's statement, not as an independent finding. Every page
+names its publisher in its markup: The World of AI, an independent publication
+of SRJ Consulting & Services LLC. Corrections are welcomed at
+info@srjconsultingservices.com.
 
 ## Citation format
 "{Page title}." The World of AI, {URL}. Verified {date}.
