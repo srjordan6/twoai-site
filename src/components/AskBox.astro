@@ -27,7 +27,7 @@ const {
   <section class="ask" id="ask">
     <h2 class="ask-h">{heading}</h2>
     <div class="ask-row">
-      <input id="ask-q" type="text" autocomplete="off"
+      <input id="ask-q" type="text" autocomplete="off" size="1"
         placeholder={placeholder}
         aria-label="Ask Stephen a question about AI, answered from this site" maxlength="500" />
       <button id="ask-go" type="button">Ask</button>
@@ -240,11 +240,30 @@ const {
   .ask { max-width: 860px; margin: 0 auto 2.6em; padding: 26px 26px 22px; text-align: center;
     background: #fcfbf7; border: 1px solid #e3e6ee; border-radius: 12px; }
   .ask-h { font-size: 1.25rem; margin: 0 0 14px; }
-  .ask-row { display: flex; gap: 10px; max-width: 640px; margin: 0 auto; }
-  #ask-q { flex: 1; font-family: 'Poppins', system-ui, sans-serif; font-size: 15px;
+  /* THE INPUT RAN OFF THE RIGHT OF THE SCREEN ON A PHONE. Stephen, 2026-09-20,
+     with a screenshot: the field extended past the card and past the viewport,
+     and the Ask button was pushed off-screen entirely.
+
+     `flex: 1` sets the basis to 0, so the field looks like it should shrink to
+     fit. It does not. A flex item also gets `min-width: auto`, which floors it
+     at its own intrinsic width, and for an <input> that is derived from the
+     `size` attribute, about 20 characters by default. Below that width the
+     item stops shrinking and overflows its container instead.
+
+     Two changes, because either alone leaves a way for it to come back:
+     `min-width: 0` lets the item shrink, and `size="1"` on the input removes
+     the intrinsic width so CSS alone decides. size="1" looks wrong and is
+     correct: the width is set here, not by a character count in the markup.
+
+     The row also wraps now. On a narrow phone with a large system font the
+     button drops below the field rather than squeezing it to nothing, and
+     box-sizing keeps the padding inside the measured width. */
+  .ask-row { display: flex; flex-wrap: wrap; gap: 10px; max-width: 640px; margin: 0 auto; }
+  #ask-q { flex: 1 1 12em; min-width: 0; box-sizing: border-box;
+    font-family: 'Poppins', system-ui, sans-serif; font-size: 15px;
     padding: 12px 14px; border: 1px solid #cfd4e4; border-radius: 8px; color: #201868; background: #fff; }
   #ask-q:focus { outline: 2px solid #F07800; outline-offset: 1px; border-color: #F07800; }
-  #ask-go { font-family: 'Poppins', system-ui, sans-serif; font-size: 15px; font-weight: 600;
+  #ask-go { flex: 0 0 auto; font-family: 'Poppins', system-ui, sans-serif; font-size: 15px; font-weight: 600;
     color: #fff; background: #201868; border: 0; border-radius: 8px; padding: 12px 24px; cursor: pointer; }
   #ask-go:hover { background: #F07800; }
   #ask-go:disabled { background: #7A8A9E; cursor: default; }
@@ -299,4 +318,10 @@ const {
   .ask-src a { color: #201868; text-decoration: none; font-weight: 600; }
   .ask-src a:hover { color: #F07800; }
   .ask-src-meta { color: #7A8A9E; font-weight: 400; font-size: 13px; }
+  /* The card's own padding was 26px a side, which on a 360px phone spends 52px
+     of a narrow screen on whitespace before the field gets any. */
+  @media (max-width: 520px) {
+    .ask { padding: 18px 14px 16px; }
+    #ask-go { flex: 1 1 100%; }
+  }
 </style>
