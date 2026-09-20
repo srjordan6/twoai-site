@@ -98,6 +98,19 @@ export function getStaticPaths() {
 
 const { hub, topic, section, hubUid, learn } = Astro.props;
 
+// A PAGE FOR ONE CERTIFICATION OR COURSE. Stephen, 2026-09-19: every one of
+// these should have its own web page, with the link to the issuer buried at
+// the very bottom. The pipeline emits learn/entry-*.json with shape
+// 'learning-entry'; getStaticPaths above already builds a page for every
+// learn/*.json that carries a uid, so the route needed nothing, only a branch
+// to render. `entry` is the curated row. `reading` is what the model wrote
+// from the issuer's own page, and is absent until that page has been read.
+const isEntry = !!(learn && learn.shape === 'learning-entry');
+const entry = isEntry ? (learn.entry || {}) : null;
+const rd = isEntry ? (learn.reading || null) : null;
+const entryKind = isEntry ? (learn.section === 'courses' ? 'course' : 'certification') : '';
+const entryRetired = isEntry && (/^retired/i.test(entry.level || '') || !!(rd && rd.status));
+
 // True only when the URL points at an actual page, not at a bare hostname.
 // See the books block below for why this distinction matters.
 const hasPage = (u) => {
@@ -105,7 +118,9 @@ const hasPage = (u) => {
   try { return new URL(u, 'https://theworldofai.org').pathname.replace(/\/+$/, '') !== ''; }
   catch { return false; }
 };
-const _descRaw = learn
+const _descRaw = isEntry
+  ? `${entry.name} from ${entry.provider}: ${(rd && (rd.status || rd.summary)) || entry.note || ''}`
+  : learn
   ? `${learn.total} ${(learn.name || 'entries').toLowerCase()}, ${learn.free} free, curated by level and audience with a verified source each${learn.with_code ? `, ${learn.with_code} with companion code` : ''}, re-verified daily.`
   : section
   ? String(section.answer || '').slice(0, 300)
@@ -114,7 +129,9 @@ const _descRaw = learn
   : `${topic.count} papers on ${topic.name.toLowerCase()} in AI, ${(topic.citations || 0).toLocaleString()} citations between them. ${topic.blurb || ''}`.slice(0, 300);
 const desc = _descRaw.length <= 158 ? _descRaw : `${_descRaw.slice(0, 157).replace(/\s+\S*$/, '')}…`;
 
-const title = learn
+const title = isEntry
+  ? `${entry.name}, ${entry.provider} | The World of AI`
+  : learn
   ? `${learn.name} — The World of AI`
   : section
   ? `${section.title}: how this site is structured`
@@ -125,7 +142,25 @@ const title = learn
 const refreshed = (hub || topic || section || {}).refreshed;
 
 const jsonld = JSON.stringify(
-  learn
+  isEntry
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'WebPage',
+        name: `${entry.name}, ${entry.provider}`,
+        description: desc,
+        url: `https://theworldofai.org${BASE}/${learn.uid}/`,
+        dateModified: learn.reading_written_on || learn.generated,
+        about: {
+          '@type': entryKind === 'course' ? 'Course' : 'EducationalOccupationalCredential',
+          name: entry.name,
+        },
+        isPartOf: {
+          '@type': 'CollectionPage',
+          name: learn.section_name,
+          url: `https://theworldofai.org${BASE}/${learn.section_uid}/`,
+        },
+      }
+    : learn
     ? {
         '@context': 'https://schema.org',
         '@type': 'CollectionPage',
@@ -172,7 +207,93 @@ const jsonld = JSON.stringify(
     <a href="/">AI Ecosystem</a> &middot;
     <a href={`/ai-ecosystem/${CATEGORY}/`}>Research, Knowledge and Learning</a>
     {topic && <> &middot; <a href={`${BASE}/${hubUid}/`}>AI Research Library</a></>}
+    {isEntry && <> &middot; <a href={`${BASE}/${learn.section_uid}/`}>{learn.section_name}</a></>}
   </p>
+
+  {isEntry && (
+    <>
+      <h1>{entry.name}</h1>
+      {rd && rd.status ? (
+        <p class="answer"><b>Status, from the issuer's own page:</b> {rd.status}</p>
+      ) : entryRetired ? (
+        <p class="answer"><b>This {entryKind} has been retired by {entry.provider}.</b> {entry.note}.</p>
+      ) : (
+        <p class="answer">{rd ? rd.summary : <>{entry.note}.</>}</p>
+      )}
+      <p class="meta-line">{entry.provider} · Level: {entry.level} · {learn.section_name} ·
+        uid {learn.uid} · page built {learn.generated}
+        {learn.reading_written_on && <> · issuer's page read and written up {learn.reading_written_on}</>}</p>
+
+      {rd && rd.status && rd.summary && (
+        <>
+          <h2>What it is</h2>
+          <p>{rd.summary}</p>
+        </>
+      )}
+      {rd && rd.audience && (
+        <>
+          <h2>Who it is for</h2>
+          <p>{rd.audience}</p>
+        </>
+      )}
+      {rd && (rd.covers || []).length > 0 && (
+        <>
+          <h2>What it covers</h2>
+          <ul>{rd.covers.map((c) => <li>{c}</li>)}</ul>
+        </>
+      )}
+      {rd && rd.format && (
+        <>
+          <h2>How it is {entryKind === 'course' ? 'delivered' : 'assessed'}</h2>
+          <p>{rd.format}</p>
+        </>
+      )}
+      {rd && rd.prerequisites && (
+        <>
+          <h2>Before you start</h2>
+          <p>{rd.prerequisites}</p>
+        </>
+      )}
+      {rd && (
+        <>
+          <h2>Cost</h2>
+          <p>{rd.cost || "Not stated on the issuer's page as we read it. We do not carry a price from anywhere else, because third-party figures go stale."}</p>
+          <h2>How long it lasts</h2>
+          <p>{rd.validity || "Not stated on the issuer's page as we read it."}</p>
+        </>
+      )}
+
+      <h2>Our entry</h2>
+      <div class="dom">
+        <p>{entry.note}.</p>
+        <p class="meta-line">Level: {entry.level} · For: {entry.audience} · Cost: {entry.cost}
+          {entry.renewal && <> · Renewal: {entry.renewal}</>} · curated row last checked {entry.verified}</p>
+      </div>
+      <p>This is the line we wrote when we chose to list this {entryKind}. Membership of the list is
+        editorial: significance, not sponsorship, and nothing here is paid placement. Everything above
+        it on this page is a reading of the issuer's own page, not our opinion of the {entryKind}.</p>
+
+      <h2>How this page is kept current</h2>
+      {rd ? (
+        <p>The issuer's page is fetched once a day. This reading was written on {learn.reading_written_on}
+          {learn.reading_model && <> by {learn.reading_model}</>} from the page as it then stood
+          {learn.source_changed_on && <>, which last changed on {learn.source_changed_on}</>}. When the issuer
+          changes the page, the reading is rewritten on the next run, and a page that says a credential is
+          retired, replaced or renamed is reported at the top of this one. A resolving link is not treated as
+          a verified fact: three of nine certifications here were found retired or renamed by their issuers
+          on 2026-09-19 while their links still worked.</p>
+      ) : (
+        <p>The issuer's page has not been read yet{learn.source_read_on && <> (last fetch {learn.source_read_on},
+          status {learn.source_http_status})</>}. Until it has, this page shows only our curated entry above,
+          and says so instead of filling the space.</p>
+      )}
+
+      <p><a href={`${BASE}/${learn.section_uid}/`}>All {(learn.section_name || '').toLowerCase()}</a></p>
+      <div class="cite-box">Cite this page: <code>"{entry.name}." The World of AI,
+        theworldofai.org{BASE}/{learn.uid}/. Retrieved {learn.generated}.</code></div>
+      <p class="meta-line">Official page, {entry.provider}: <a href={entry.source_url} rel="noopener">{entry.source_url}</a></p>
+    </>
+  )}
 
   {learn && learn.shape === 'graph-nodes' && (
     <>
@@ -331,7 +452,9 @@ const jsonld = JSON.stringify(
 
       {learn.items.map((l) => (
         <div class="dom">
-          <h3><a href={l.source_url} rel="noopener">{l.name}</a></h3>
+          {/* An entry with its own page links there, and the issuer's link
+              lives at the foot of that page. No hub may only link out. */}
+          <h3><a href={l.page || l.source_url} rel={l.page ? undefined : 'noopener'}>{l.name}</a></h3>
           <p>{l.note}.</p>
           <p class="meta-line">{l.provider} · Level: {l.level} · For: {l.audience} ·
             Cost: {l.cost}
