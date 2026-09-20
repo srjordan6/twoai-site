@@ -1384,23 +1384,36 @@ const jsonld = JSON.stringify(
       <p class="answer"><b>{cma.completed.length}</b> completed acquisitions or dispositions (8-K Item 2.01)
         and <b>{cma.agreements.length}</b> recent material definitive agreements (Item 1.01) across
         {' '}{cma.registrants} tracked SEC registrants since January 2024, from the EDGAR submissions API.</p>
-      <p class="meta-line">Last verified: {cma.generated} · An 8-K item says an event class occurred —
-        it does not name the deal. Each row links the filing itself rather than summarizing it; read
-        the filing for parties and terms. Deals between two private companies produce no 8-K and are
-        invisible to this method — that gap is stated, not filled with press coverage.</p>
+      <p class="meta-line">Last verified: {cma.generated} · An 8-K item is an event class, not a deal
+        name. Where the filing has been read, the three paragraphs below it are written from the
+        filing text alone, with the document linked underneath; where it has not been read yet, the
+        row carries the item codes and the link. Deals between two private companies produce no 8-K
+        and are invisible to this method — that gap is stated, not filled with press coverage.</p>
 
       {cma.completed.length > 0 && (
         <div class="dom"><h3>Completed acquisitions and dispositions (Item 2.01)</h3>
           {cma.completed.map((f) => (
-            <p class="meta-line">{f.company} · filed {f.filed} · items {f.items} ·
-              {' '}<a href={f.url} rel="noopener">filing</a></p>
+            <div class="ma-row">
+              <p class="meta-line"><b>{f.company}</b> · filed {f.filed} · items {f.items}</p>
+              {f.reading
+                ? <>{f.reading.split(/\n\s*\n/).map((para) => <p>{para}</p>)}
+                   <p class="meta-line">Read from the filing {f.read_on} ·
+                     {' '}<a href={f.doc_url || f.url} rel="noopener">the filing itself</a></p></>
+                : <p class="meta-line"><a href={f.url} rel="noopener">filing</a> · not yet read</p>}
+            </div>
           ))}
         </div>
       )}
       <div class="dom"><h3>Material definitive agreements (Item 1.01, most recent)</h3>
         {cma.agreements.map((f) => (
-          <p class="meta-line">{f.company} · filed {f.filed} · items {f.items} ·
-            {' '}<a href={f.url} rel="noopener">filing</a></p>
+          <div class="ma-row">
+            <p class="meta-line"><b>{f.company}</b> · filed {f.filed} · items {f.items}</p>
+            {f.reading
+              ? <>{f.reading.split(/\n\s*\n/).map((para) => <p>{para}</p>)}
+                 <p class="meta-line">Read from the filing {f.read_on} ·
+                   {' '}<a href={f.doc_url || f.url} rel="noopener">the filing itself</a></p></>
+              : <p class="meta-line"><a href={f.url} rel="noopener">filing</a> · not yet read</p>}
+          </div>
         ))}
       </div>
       <Reading reading={cma.reading} heading="What do these filings show about AI consolidation?" />
