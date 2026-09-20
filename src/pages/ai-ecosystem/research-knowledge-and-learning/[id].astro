@@ -110,6 +110,40 @@ const entry = isEntry ? (learn.entry || {}) : null;
 const rd = isEntry ? (learn.reading || null) : null;
 const entryKind = isEntry ? (learn.section === 'courses' ? 'course' : 'certification') : '';
 const entryRetired = isEntry && (/^retired/i.test(entry.level || '') || !!(rd && rd.status));
+// Everything below the reading is built by the pipeline from this site's own
+// table, because a template cannot query. See twoai_learning_pages.go for why
+// these exist: the first published set was the thinnest thirty pages on the
+// site, and the reading is all the issuer's page has to give.
+const entrySameLevel = isEntry ? (learn.same_level || []) : [];
+const entrySameProvider = isEntry ? (learn.same_provider || []) : [];
+const entryRelated = isEntry ? (learn.related || []) : [];
+// The FAQ is answered from the reading, and says plainly where the issuer's
+// page did not state something rather than leaving a gap or inventing a
+// figure. A question with no honest answer is not asked.
+const entryFaq = !isEntry ? [] : [
+  {
+    q: `What does ${entry.name} cost?`,
+    a: (rd && rd.cost)
+      ? rd.cost
+      : `The issuer's page does not state a price where we read it. We do not carry a figure from anywhere else, because third-party prices go stale. ${entry.cost || ''}`.trim(),
+  },
+  {
+    q: `Does ${entry.name} expire?`,
+    a: (rd && rd.validity)
+      ? rd.validity
+      : entry.renewal
+        ? entry.renewal
+        : "The issuer's page does not state a validity period where we read it.",
+  },
+  ...((rd && rd.prerequisites) ? [{
+    q: `What do you need before taking ${entry.name}?`,
+    a: rd.prerequisites,
+  }] : []),
+  ...(entryRetired ? [{
+    q: `Is ${entry.name} still available?`,
+    a: (rd && rd.status) ? rd.status : `${entry.provider} has retired this ${entryKind}. ${entry.note}.`,
+  }] : []),
+];
 
 // True only when the URL points at an actual page, not at a bare hostname.
 // See the books block below for why this distinction matters.
@@ -145,20 +179,32 @@ const jsonld = JSON.stringify(
   isEntry
     ? {
         '@context': 'https://schema.org',
-        '@type': 'WebPage',
-        name: `${entry.name}, ${entry.provider}`,
-        description: desc,
-        url: `https://theworldofai.org${BASE}/${learn.uid}/`,
-        dateModified: learn.reading_written_on || learn.generated,
-        about: {
-          '@type': entryKind === 'course' ? 'Course' : 'EducationalOccupationalCredential',
-          name: entry.name,
-        },
-        isPartOf: {
-          '@type': 'CollectionPage',
-          name: learn.section_name,
-          url: `https://theworldofai.org${BASE}/${learn.section_uid}/`,
-        },
+        '@graph': [
+          {
+            '@type': 'WebPage',
+            name: `${entry.name}, ${entry.provider}`,
+            description: desc,
+            url: `https://theworldofai.org${BASE}/${learn.uid}/`,
+            dateModified: learn.reading_written_on || learn.generated,
+            about: {
+              '@type': entryKind === 'course' ? 'Course' : 'EducationalOccupationalCredential',
+              name: entry.name,
+            },
+            isPartOf: {
+              '@type': 'CollectionPage',
+              name: learn.section_name,
+              url: `https://theworldofai.org${BASE}/${learn.section_uid}/`,
+            },
+          },
+          {
+            '@type': 'FAQPage',
+            mainEntity: entryFaq.map((f) => ({
+              '@type': 'Question',
+              name: f.q,
+              acceptedAnswer: { '@type': 'Answer', text: f.a },
+            })),
+          },
+        ],
       }
     : learn
     ? {
@@ -272,6 +318,55 @@ const jsonld = JSON.stringify(
       <p>This is the line we wrote when we chose to list this {entryKind}. Membership of the list is
         editorial: significance, not sponsorship, and nothing here is paid placement. Everything above
         it on this page is a reading of the issuer's own page, not our opinion of the {entryKind}.</p>
+
+      <h2>Common questions</h2>
+      {entryFaq.map((f) => (
+        <>
+          <h3>{f.q}</h3>
+          <p>{f.a}</p>
+        </>
+      ))}
+
+      {entryRelated.length > 0 && (
+        <>
+          <h2>What this {entryKind} is a credential in</h2>
+          <p>The standard or framework itself, covered on this site. A credential proves a person
+            has been assessed against it; these pages set out what it actually requires.</p>
+          <ul>
+            {entryRelated.map((r) => <li><a href={r.href}>{r.title}</a></li>)}
+          </ul>
+        </>
+      )}
+
+      {entrySameProvider.length > 0 && (
+        <>
+          <h2>Others from {entry.provider}</h2>
+          <ul class="co-list">
+            {entrySameProvider.map((s) => (
+              <li>
+                <b><a href={`${BASE}/${s.uid}/`}>{s.name}</a></b>
+                <p>{s.level}{s.note ? `. ${s.note}` : ''}.</p>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {entrySameLevel.length > 0 && (
+        <>
+          <h2>Others at this level</h2>
+          <p>Same {learn.section_name.toLowerCase().replace(/^ai /, '')} section, comparable level.
+            Listed so the choice can be made on this page rather than by searching.</p>
+          <ul class="co-list">
+            {entrySameLevel.map((s) => (
+              <li>
+                <b><a href={`${BASE}/${s.uid}/`}>{s.name}</a></b>
+                <p>{s.provider}{s.note ? `. ${s.note}` : ''}.</p>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
 
       <h2>How this page is kept current</h2>
       {rd ? (
