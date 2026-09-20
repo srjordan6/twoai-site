@@ -196,7 +196,11 @@ const jsonld = JSON.stringify({
 
   <Reading reading={reading} heading={`Why does ${c.case_name} matter?`} />
 
-  <div class="cite-box">Cite this page: <code>"{c.case_name}." The World of AI Lawsuit Tracker,
+  {/* A case name that already ends in a full stop does not get a second one.
+     "Noel v. Perplexity AI, Inc." was rendering as "Noel v. Perplexity AI,
+     Inc.." on 2026-09-20, and most defendants in this tracker are an Inc.,
+     an LLC or a Corp., so it was most of them. */}
+  <div class="cite-box">Cite this page: <code>"{c.case_name}{/\.$/.test(c.case_name) ? '' : '.'}" The World of AI Lawsuit Tracker,
     theworldofai.org/ai-lawsuits/{c.slug}/.{generated ? ` Verified ${generated}.` : ''}</code></div>
   <KeepReading blocks={[
     { label: 'Companies named in this case',

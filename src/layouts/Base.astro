@@ -1058,6 +1058,36 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
        reader can see it is not a link, and the title says why. */
     .dead-link { color: var(--gray); text-decoration: underline dotted; cursor: help; }
     .cite-box code { color: var(--ink); font-size: 13px; }
+    /* CITE THIS PAGE, WITH A SCHEME. Stephen, 2026-09-20, having landed on
+       /ai-lawsuits/noel-v-perplexity-ai/theworldofai.org/ai-lawsuits/noel-v-perplexity-ai/
+       which 404s.
+
+       The page's links were all correct. The cite box was the problem. It
+       printed the URL with no scheme, as theworldofai.org/ai-lawsuits/slug/.
+       Phone browsers, mail clients and chat apps auto-linkify a bare domain,
+       and with no scheme they resolve it RELATIVE to the page being read, so
+       the current URL plus that text gives the doubled path.
+
+       Every cite box on this site had it: lawsuits, laws, companies,
+       compliance, benchmarks, downloads, skills, sources, compute, the
+       state-of-AI-laws report, and the two written on 2026-09-19 for the
+       learning entries and the hub pages, which inherited it by copying the
+       pattern. Roughly thirty templates.
+
+       ONE RULE HERE RATHER THAN THIRTY EDITS. Every box already writes the
+       bare domain in the same shape, so the scheme is added on render. A
+       template that later writes a full URL itself would double it, so the
+       convention is now: cite boxes carry the domain and path, never the
+       scheme. Stated here because this is where it is enforced.
+
+       It also makes the citation work as a citation. A reader pastes it and a
+       model resolves it without guessing the protocol, so the missing scheme
+       was costing citations as well as producing 404s.
+
+       Copy behaviour is the reason this is ::before on the code element and
+       not a wrapper span: selecting the line and copying takes the generated
+       text along with it in every current browser. */
+    .cite-box code::before { content: "https://"; }
     .btn { display: inline-block; background: var(--orange); color: var(--navy); font-weight: 700;
       padding: 12px 22px; font-size: 14px; letter-spacing: .04em; }
     .btn:hover { background: #ff8c1a; text-decoration: none; }
