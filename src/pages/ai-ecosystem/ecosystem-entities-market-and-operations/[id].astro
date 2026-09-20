@@ -127,9 +127,34 @@ export function getStaticPaths() {
     }
   }
 
+  // HUB LANDING PAGES. A level-2 taxonomy row is a hub: a named group of
+  // sections, which the category page links to. The pipeline writes those to
+  // content/ecosystem/, the one folder every category route can share, and
+  // each document names its category so the three routes do not fight over
+  // them. Before this the pipeline wrote them to content/industries/, which
+  // this route never opened: the AI Observatory and AI Tools Directory hub
+  // links 404'd from 2026-09-17 until the link audit found them two days
+  // later. index.json is the category index, not a page.
+  if (existsSync('content/ecosystem')) {
+    for (const f of readdirSync('content/ecosystem')) {
+      if (!f.endsWith('.json') || f === 'index.json') continue;
+      let d;
+      try {
+        d = JSON.parse(readFileSync(`content/ecosystem/${f}`, 'utf8'));
+      } catch {
+        continue;
+      }
+      if (!d?.uid || d.category !== 'ecosystem-entities-market-and-operations') continue;
+      paths.push({ params: { id: d.uid }, props: { ehub: d } });
+    }
+  }
+
   return paths;
 }
-const { hub, hubUid, chub, company, generated, chubUid, jhub, jdisc, jhubUid, pcat, csec, funds = [], fundsGenerated = null, cpat, cpriv, corg, cfund, obs, cma, website, profileText, companyReading, legacyPerson } = Astro.props;
+const { hub, hubUid, chub, company, generated, chubUid, jhub, jdisc, jhubUid, pcat, csec, funds = [], fundsGenerated = null, cpat, cpriv, corg, cfund, obs, cma, website, profileText, companyReading, legacyPerson, ehub } = Astro.props;
+// A generated hub landing page. Its own prop, so no other branch on this
+// route can see it and every one of them stays false.
+const ehubKids = ehub ? (ehub.children || []) : [];
 // NEVER TRUST A LIST FROM THE PIPELINE TO BE A LIST. A Go nil slice marshals
 // to JSON null, and on 2026-09-11 the first build carrying profile-only
 // companies (ETF constituents with no product in the catalog) died three
@@ -185,7 +210,9 @@ const money = (n) => n >= 1e9 ? `$${(n/1e9).toFixed(1)}B` : n >= 1e6 ? `$${(n/1e
 // Meta descriptions are cut at a word boundary to 158 characters; search
 // engines truncate around 160 and the audit tooling flags anything longer.
 const clampDesc = (s) => s.length <= 158 ? s : `${s.slice(0, 157).replace(/\s+\S*$/, '')}…`;
-const desc = clampDesc(cma
+const desc = clampDesc(ehub
+  ? `${ehub.title || ehub.name}: ${ehubKids.length} section${ehubKids.length === 1 ? '' : 's'} on The World of AI. ${ehub.answer || ehub.blurb || ''}`
+  : cma
   ? `${cma.completed.length + cma.agreements.length} SEC 8-K filings - completed acquisitions (Item 2.01) and material definitive agreements (Item 1.01) - across ${cma.registrants} tracked AI registrants since 2024, each linked to the filing itself.`
   : obs
   ? (obsDescs || '')
@@ -214,7 +241,9 @@ const desc = clampDesc(cma
   : legacyPerson
   ? `${legacyPerson.name}${legacyPerson.moniker ? `, ${legacyPerson.moniker}` : ''}. ${legacyPerson.hook || ''}`.slice(0, 300)
   : '');
-const title = cma
+const title = ehub
+  ? `${ehub.title || ehub.name} — The World of AI`
+  : cma
   ? 'AI Acquisitions and Partnerships: SEC 8-K Filings — The World of AI'
   : obs
   ? `${obs.name} — AI Observatory — The World of AI`
@@ -383,7 +412,17 @@ const otherByType: Array<[string, any[]]> = Object.keys(TYPE_LABEL)
   .map((t) => [t, privOther.filter((c: any) => c.type === t).sort((a: any, b: any) => a.name.localeCompare(b.name))] as [string, any[]])
   .filter(([, list]) => list.length > 0);
 const jsonld = JSON.stringify(
-  cma
+  ehub
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: `${ehub.title || ehub.name} — The World of AI`,
+        description: desc.slice(0, 300),
+        url: `https://theworldofai.org${BASE}/${ehub.uid}/`,
+        dateModified: ehub.generated,
+        isPartOf: { '@type': 'CollectionPage', name: CATEGORY_NAME, url: `https://theworldofai.org${BASE}/` },
+      }
+    : cma
     ? {
         '@context': 'https://schema.org',
         '@type': 'Dataset',
@@ -523,6 +562,26 @@ const jsonld = JSON.stringify(
     {pcat && <> · <a href={`${BASE}/${hubUid}/`}>AI People</a></>}
     {secHub && <> · <a href={`${BASE}/${chubUid}/`}>AI Companies</a></>}
     {company && <> · <a href={`${BASE}/${chubUid}/`}>AI Companies</a></>}</p>
+
+  {ehub && (
+    <>
+      <h1>{ehub.title || ehub.name}</h1>
+      <p class="answer">{ehub.answer || ehub.blurb}</p>
+      <p class="meta-line">{ehubKids.length} section{ehubKids.length === 1 ? '' : 's'} &middot;
+        uid {ehub.uid} &middot; generated {ehub.generated}</p>
+      <h2>Sections in {ehub.title || ehub.name}</h2>
+      <ul class="co-list">
+        {ehubKids.map((c) => (
+          <li>
+            <b><a href={c.href}>{c.name}</a></b>
+            {c.desc && <p>{c.desc}</p>}
+          </li>
+        ))}
+      </ul>
+      <div class="cite-box">Cite this page: <code>"{ehub.title || ehub.name}." The World of AI,
+        theworldofai.org{BASE}/{ehub.uid}/. Retrieved {ehub.generated}.</code></div>
+    </>
+  )}
 
   {jhub && (
     <>

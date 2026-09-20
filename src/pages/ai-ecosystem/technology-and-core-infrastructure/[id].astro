@@ -29,6 +29,28 @@ export function getStaticPaths() {
       paths.push({ params: { id: d.uid }, props: { sec: d } });
     }
   }
+  // HUB LANDING PAGES. A level-2 taxonomy row is a hub: a named group of
+  // sections. The category page links to it and a reader expects a page that
+  // lists what is inside. The pipeline writes those to content/ecosystem/,
+  // which is the one folder every category route can share, and each document
+  // names the category it belongs to so the three routes do not fight over
+  // them. Before this, the pipeline wrote them to content/industries/ and
+  // this route never opened that folder: six hub links under this category
+  // 404'd from 2026-09-17 until the link audit found them on 2026-09-19.
+  // index.json is the category index and is not a page here.
+  if (existsSync('content/ecosystem')) {
+    for (const f of readdirSync('content/ecosystem')) {
+      if (!f.endsWith('.json') || f === 'index.json') continue;
+      let d;
+      try {
+        d = JSON.parse(readFileSync(`content/ecosystem/${f}`, 'utf8'));
+      } catch {
+        continue;
+      }
+      if (!d?.uid || d.category !== 'technology-and-core-infrastructure') continue;
+      paths.push({ params: { id: d.uid }, props: { sec: d } });
+    }
+  }
   return paths;
 }
 const { sec } = Astro.props;
@@ -73,11 +95,27 @@ if (!gTech.__twoaiTechUids) {
       } catch { /* unreadable is not a page */ }
     }
   }
+  // The hub pages this route also builds, from the same folder and the same
+  // category test as getStaticPaths above. A uid this route serves must be in
+  // this set or hasPage() calls it dead and renders it as plain text.
+  if (existsSync('content/ecosystem')) {
+    for (const f of readdirSync('content/ecosystem')) {
+      if (!f.endsWith('.json') || f === 'index.json') continue;
+      try {
+        const d = JSON.parse(readFileSync(`content/ecosystem/${f}`, 'utf8'));
+        if (d?.uid && d.category === 'technology-and-core-infrastructure') set.add(String(d.uid));
+      } catch { /* unreadable is not a page */ }
+    }
+  }
   gTech.__twoaiTechUids = set;
 }
 const hasPage = (uid: any): boolean => !!uid && gTech.__twoaiTechUids.has(String(uid));
 
 const isPricing = sec.tax === 'api-pricing';
+// A hub landing page, generated from the taxonomy. It carries no shape, so
+// every branch below is false for it and it renders only its own block.
+const isHub = sec.is_hub === true;
+const hubKids = isHub ? (sec.children || []) : [];
 const isAPI = sec.source === 'openrouter' && !isPricing && sec.shape !== 'serving-providers';
 const hf = sec.source === 'huggingface';
 const isRepo = sec.source === 'github';
@@ -218,6 +256,7 @@ const facPlace = sec.shape === 'dc-facility'
 // <title> is what published "undefined — The World of AI" on every one of
 // those pages until 2026-08-30. Each shape knows its own headline.
 const pageTitle =
+  isHub ? secName :
   sec.shape === 'dc-state' ? `Data centers in ${sec.state}` :
   sec.shape === 'dc-facility'
     ? (sec.profile?.campus_buildings > 1
@@ -232,7 +271,9 @@ const pageTitle =
   sec.shape === 'dc-grid' ? 'The Grid Observatory' :
   secName;
 
-const _descRaw = isDCChild
+const _descRaw = isHub
+  ? `${secName}: ${hubKids.length} section${hubKids.length === 1 ? '' : 's'} on The World of AI. ${sec.answer || sec.blurb || ''}`
+  : isDCChild
   ? (sec.shape === 'dc-facility'
       ? `${sec.name}: ${sec.mw ? `${sec.mw} MW IT capacity, ` : ''}operator-published facility specifications with source and retrieval date, in the ${sec.state || sec.country} directory of the data center registry.`
       : sec.shape === 'dc-operators-index'
@@ -453,6 +494,26 @@ const facBare = sec.shape === 'dc-facility' && !(
       );
     })()}
   </Fragment>
+  {isHub && (
+    <>
+      <h1>{secName}</h1>
+      <p class="answer">{sec.answer || sec.blurb}</p>
+      <p class="meta-line">{hubKids.length} section{hubKids.length === 1 ? '' : 's'} &middot;
+        uid {sec.uid} &middot; generated {sec.generated}</p>
+      <h2>Sections in {secName}</h2>
+      <ul class="co-list">
+        {hubKids.map((c: any) => (
+          <li>
+            <b><a href={c.href}>{c.name}</a></b>
+            {c.desc && <p>{c.desc}</p>}
+          </li>
+        ))}
+      </ul>
+      <div class="cite-box">Cite this page: <code>"{secName}." The World of AI,
+        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
+    </>
+  )}
+
   {isVibe && (
     <>
       {sec.blocks.map((b: any) => (
