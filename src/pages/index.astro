@@ -89,8 +89,19 @@ const jsonld = JSON.stringify({
     <div class="cat">
       <h2><a href={`/ai-ecosystem/${c.slug}/`}>{c.name}</a></h2>
       <p>{c.blurb}</p>
+      {/* RECORDS, NOT PAGES. Stephen, 2026-09-20, after another assistant
+          quoted these figures back at him as evidence of how complete the
+          site is. The number is correct and the word was not: it is
+          GREATEST(a page's declared total, the page count), which is how it
+          was asked to work on 2026-09-16, so the count beside a section is
+          how many of the THING it holds. Technology reports 21,533, which is
+          2,353 MCP servers, 447 models, 1,852 datacenter facilities and the
+          rest, against about 5,087 URLs in the whole sitemap. Calling that
+          "pages published" invited a reader to check it against the sitemap
+          and conclude the site inflates its numbers sevenfold, on a site
+          whose whole claim is that every record is dated and countable. */}
       <p class="meta-line">{c.live} of {c.total} domains live
-        {c.pages > 0 && <> · {c.pages.toLocaleString()} pages published</>}</p>
+        {c.pages > 0 && <> · {c.pages.toLocaleString()} records tracked</>}</p>
     </div>
   ))}
 

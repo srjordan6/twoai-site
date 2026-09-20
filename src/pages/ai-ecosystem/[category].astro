@@ -93,7 +93,7 @@ const domainHref = (d: any): string | null => {
   return d.path;
 };
 const rest = (c.domains || []).filter((d) => d.status !== 'live');
-const desc = `${c.name}: ${c.live} of ${c.total} domains live, ${c.pages} pages published. ${c.blurb}`.slice(0, 300);
+const desc = `${c.name}: ${c.live} of ${c.total} domains live, ${c.pages} records tracked. ${c.blurb}`.slice(0, 300);
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',
