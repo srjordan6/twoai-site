@@ -14,7 +14,12 @@ export function getStaticPaths() {
     .map((f) => {
       const d = JSON.parse(readFileSync(`content/static/${f}`, 'utf8'));
       return { params: { page: d.slug }, props: { d } };
-    });
+    })
+    // 2026-09-21: static/gaps.json (the twoai_gaps measures) landed in this
+    // folder with no slug and no sections. It is data, not a page, and one
+    // file without a slug failed getStaticPaths, and with it every Workers
+    // Build from at least 11:49 UTC. Only a file that is a page becomes a route.
+    .filter((p) => p.params.page && Array.isArray(p.props.d.sections));
 }
 const { d } = Astro.props;
 const jsonld = JSON.stringify({
