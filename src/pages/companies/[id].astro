@@ -44,11 +44,17 @@ export function getStaticPaths() {
     .map((d) => ({
       params: { id: d.company.uid },
       props: { company: d.company, generated: d.generated, profileText: d.profile_text || null, siteUrl: d.website || '', reading: d.reading || null,
+        lobbying: d.lobbying || null,
         stock: (stocks.by_company || {})[d.company.uid] || null,
         stockPending: pendingByCompany[d.company.uid] || null },
     }));
 }
-const { company, generated, profileText, siteUrl, reading, stock, stockPending } = Astro.props;
+const { company, generated, profileText, siteUrl, reading, stock, stockPending, lobbying } = Astro.props;
+// Federal lobbying on AI, patched in by srj-pipeline twoai_politics_pages for
+// a company whose Lobbying Disclosure Act client record Stephen confirmed as
+// this company. Absent for every other company, so the section never renders
+// empty. 2026-09-21.
+const lobby = lobbying && Array.isArray(lobbying.filings) && lobbying.filings.length > 0 ? lobbying : null;
 const profile = company.profile || {};
 const products = company.products || [];
 const cases = company.cases || [];
@@ -93,7 +99,7 @@ const paras = capParagraphs(profileText?.body);
 // profile, a reading, a lawsuit or an MCP server. Products alone no longer
 // count. Nothing is deleted: a thin page stays published and linked, carries
 // noindex, and the sitemap step drops it by reading the built HTML.
-const thin = cases.length === 0 && mcp.length === 0 && paras.length === 0 && !reading;
+const thin = cases.length === 0 && mcp.length === 0 && paras.length === 0 && !reading && !lobby;
 
 function fmtRevenue(usd) {
   if (typeof usd !== 'number') return null;
@@ -272,6 +278,29 @@ const jsonld = JSON.stringify({
     </>
   )}
 
+  {lobby && (
+    <>
+      <h2>Does {n} report lobbying the federal government on AI?</h2>
+      <p>{n} is named as the client in <b>{plural(lobby.total, 'Lobbying Disclosure Act filing')}</b> reporting
+        lobbying on artificial intelligence or machine learning, the latest posted {lobby.latest}.
+        The most recent are below, each linked to the filing itself on lda.gov. A filing records that
+        lobbying happened and on what issue; it does not record the position taken. See every client on
+        {' '}<a href={lobby.section_href}>Lobbying on AI</a>.</p>
+      <ul>{lobby.filings.map((f) => (
+        <li>
+          <a href={f.url} rel="noopener">{f.period} filing, posted {f.posted}</a>, by {f.registrant}
+          {f.bills && f.bills.length > 0 && <>. Bills named: {f.bills.join(', ')}</>}
+          {f.lobbyists && f.lobbyists.length > 0 && <>. Lobbyists: {f.lobbyists.map((l, i) => (
+            <>{i > 0 && ', '}{l.href ? <a href={l.href}>{l.name}</a> : l.name}</>
+          ))}</>}.
+          <span class="meta-line"> uid {f.uid}</span>
+        </li>
+      ))}</ul>
+      <p class="meta-line">Filed under LDA client id {lobby.client_ids.join(', ')}. Matched to this company
+        by a confirmed crosswalk, not by name alone.</p>
+    </>
+  )}
+
   {mcp.length > 0 && (
     <>
       <h2>Does {n} publish MCP servers?</h2>
@@ -311,6 +340,7 @@ const jsonld = JSON.stringify({
     {mcp.map((m) => (
       <li><a href={`/mcp/${m.slug}/`}>{m.name}</a> — MCP server published by {n}</li>
     ))}
+    {lobby && <li><a href={lobby.section_href}>Lobbying on AI</a> — the federal lobbying record naming {n}</li>}
   </ul>
 
   <h2>Frequently asked questions</h2>

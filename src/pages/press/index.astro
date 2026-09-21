@@ -1,0 +1,80 @@
+---
+// /press/: the press room for The Politics of AI. Stephen, 2026-09-21: one
+// place for reporters covering AI policy, with the data, a daily feed, and
+// how it is collected and cited. Numbers come from content/politics/press.json,
+// written by srj-pipeline twoai_politics_pages on every run; the prose below is
+// method and contact text only, so nothing here goes stale by hand.
+//
+// DRAFT until Stephen publishes it: noindex, out of the sitemap, reachable.
+// Publishing is setting DRAFT to false.
+import Base from '../../layouts/Base.astro';
+import { readFileSync } from 'node:fs';
+
+const DRAFT = true;
+let p: any = {};
+try { p = JSON.parse(readFileSync('content/politics/press.json', 'utf8')); } catch { p = {}; }
+const n = (v: unknown) => (typeof v === 'number' ? v.toLocaleString('en-US') : '0');
+const sets = [
+  { key: 'lobbying', name: 'AI lobbying filings', what: 'Every Lobbying Disclosure Act filing whose own activity description is about artificial intelligence or machine learning: client, filing firm, period, bills named, agencies contacted, and the filing on lda.gov.' },
+  { key: 'money', name: 'Money from AI committees', what: 'Contributions to campaign committees and independent expenditures by the political committees of AI companies and AI-focused committees, from Federal Election Commission filings, each linked to its filing page.' },
+  { key: 'bills', name: 'AI bills in Congress', what: 'Every bill in the current Congress whose title or description is about AI, with its status, issue tags, the preemption flag and a link to congress.gov.' },
+  { key: 'members', name: 'Members with AI activity', what: 'Members of Congress who sponsored an AI bill or cast a recorded vote on one, with their Bioguide and FEC candidate ids for joining to other data.' },
+];
+const title = 'Press Room: The Politics of AI Data — The World of AI';
+const desc = 'Downloadable data on AI lobbying, political money, bills and votes in Congress, a daily RSS feed, and how every record is sourced and cited.';
+---
+
+<Base title={title} description={desc} noindex={DRAFT}>
+  {DRAFT && (
+    <p class="meta-line" style="border-left:3px solid var(--orange); padding-left:12px">
+      Draft. This page is being reviewed and is not in the search index yet.
+    </p>
+  )}
+  <article class="doc">
+    <h1>Press room</h1>
+    <p class="answer">The data behind <a href={p.hub_href || '/'}>The Politics of AI</a>, free to download
+      and free to cite: {n(p.lobbying)} AI lobbying filings, {n(p.money)} records of money from AI company and
+      AI-focused political committees, {n(p.bills)} AI bills in Congress and {n(p.members)} members with AI
+      activity. Rebuilt from the public record on every pipeline run.</p>
+    <p class="meta-line">Last generated: {p.generated || 'not yet'}</p>
+
+    <h2>Download the data</h2>
+    <ul class="sections">
+      {sets.map((s) => (
+        <li>
+          <b>{s.name}</b>: <a href={`/api/politics-${s.key}.json`}>JSON</a> · <a href={`/api/politics-${s.key}.csv`}>CSV</a>
+          <p>{s.what}</p>
+        </li>
+      ))}
+    </ul>
+
+    <h2>Follow what is new</h2>
+    <p>The <a href="/press/feed.xml">RSS feed</a> carries every new record from the last 72 hours: lobbying
+      filings, contributions, bill updates and roll calls, each with its source link. {n(p.digest)} records are in
+      it now. It works in any feed reader and in a newsroom Slack channel through the RSS app. The same records are
+      available as <a href="/api/politics-digest.json">JSON</a>.</p>
+
+    <h2>Where the data comes from</h2>
+    <p>Lobbying filings come from lda.gov, the official Lobbying Disclosure Act database. Political money comes from
+      the Federal Election Commission. Bills, sponsors and roll call votes come from LegiScan's record of Congress.
+      Members are matched across these sources by Vote Smart, OpenSecrets and FEC identifiers from the public
+      congress-legislators dataset, never by name alone.</p>
+    <p>A political committee is read for money only after a person has confirmed it belongs to the company or cause
+      it appears to. A company name that happens to match, such as a committee that only contains the word, is
+      rejected rather than counted.</p>
+
+    <h2>What the data does and does not show</h2>
+    <p>A lobbying filing shows that lobbying happened on an issue. It does not show the position taken. A
+      contribution placed beside a vote on a <a href={p.hub_href || '/'}>member timeline</a> is there so the two can
+      be read together. It is not a claim that one caused the other, and this site draws no conclusion about any
+      person's motives.</p>
+
+    <h2>How to cite it</h2>
+    <p>Each record carries a uid and the URL of the filing it comes from. Cite the original filing for the fact and
+      this site for the compilation: <code>The World of AI, theworldofai.org, The Politics of AI. Retrieved [date].</code></p>
+
+    <h2>Contact</h2>
+    <p>Questions or a correction: <a href="mailto:theworldofai@inkboxmail.com">theworldofai@inkboxmail.com</a>.
+      A correction to a record is made in the underlying data and appears on the next run.</p>
+  </article>
+</Base>

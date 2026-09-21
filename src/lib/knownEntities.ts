@@ -128,6 +128,27 @@ export function resolveEntity(name: string, known: Map<string, KnownEntity>): Kn
 }
 
 /**
+ * COMPANY NAMES THAT ARE ALSO ORDINARY WORDS. 2026-09-21: the story on
+ * Newsom's AI "kill switch" order chipped Switch, the data centre operator,
+ * because the headline contains the word switch. Every name here is a
+ * published company whose name is a common English word, a place, or a first
+ * name, taken from the single-word company names in SQL on that date. Such a
+ * name never chips from the text scan, and from the extractor list only when
+ * the extractor gave more than the bare word ("Switch Inc", "Zoom Video").
+ * Losing an occasional true chip is the right trade: a wrong one tells the
+ * reader the site knows something it does not. Add to this list when a new
+ * company with a dictionary name is published.
+ */
+const AMBIGUOUS = new Set([
+  'altered', 'arm', 'box', 'captions', 'chroma', 'cognition', 'comet', 'consensus',
+  'elicit', 'ellis', 'fathom', 'gamma', 'glean', 'grain', 'harvey', 'headliner',
+  'loom', 'make', 'mila', 'modular', 'munch', 'neptune', 'obsidian', 'paradox',
+  'perplexity', 'phrase', 'pitch', 'read', 'repurpose', 'rev', 'runway', 'saul',
+  'sierra', 'sketch', 'splice', 'surfer', 'switch', 'tempus', 'tome', 'typeface',
+  'writer', 'zoom',
+]);
+
+/**
  * Resolve a list of raw names, dedupe by destination page (the extractor often
  * yields "Google" and "Google LLC" in one story), and cap.
  */
@@ -135,6 +156,8 @@ export function resolveEntities(names: string[], known: Map<string, KnownEntity>
   const out: KnownEntity[] = [];
   const seen = new Set<string>();
   for (const raw of names) {
+    const bare = (raw || '').trim().toLowerCase();
+    if (AMBIGUOUS.has(bare)) continue;
     const hit = resolveEntity(raw, known);
     if (!hit || seen.has(hit.href)) continue;
     seen.add(hit.href);
@@ -164,7 +187,9 @@ export function entitiesInText(text: string, known: Map<string, KnownEntity>, n 
   const seen = new Set<string>();
   // Longest keys first, so a two-word lab name is not shadowed by one word of
   // it matching something shorter.
-  const keys = [...known.keys()].filter((k) => k.length >= 4).sort((a, b) => b.length - a.length);
+  const keys = [...known.keys()]
+    .filter((k) => k.length >= 4 && !AMBIGUOUS.has(k))
+    .sort((a, b) => b.length - a.length);
   for (const k of keys) {
     if (!hay.includes(' ' + k + ' ')) continue;
     const hit = known.get(k)!;
