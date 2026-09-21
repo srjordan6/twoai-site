@@ -1418,6 +1418,29 @@ const facBare = sec.shape === 'dc-facility' && !(
             </section>
           ))}
 
+          {sec.lobbying && Array.isArray(sec.lobbying.filings) && sec.lobbying.filings.length > 0 && (
+            <section>
+              {/* Federal lobbying on AI and data centers, patched in by srj-pipeline
+                  twoai_politics_companies for an operator whose Lobbying Disclosure
+                  Act client record Stephen confirmed, 2026-09-21. Rendered WITHOUT
+                  anchors, because this page carries no links in the body by his
+                  rule of 2026-09-01. The Lobbying on AI section and the firm and
+                  lobbyist pages link here instead. */}
+              <h2>Does {sec.name} report lobbying the federal government?</h2>
+              <p>{sec.name} is named as the client in <b>{sec.lobbying.total}</b> Lobbying Disclosure Act
+                filing{sec.lobbying.total === 1 ? '' : 's'} on AI or data centers, the latest posted {sec.lobbying.latest}.
+                A filing records that lobbying happened and on what issue, not the position taken. The full
+                record, with a link to each filing, is in the Lobbying on AI section of The Politics of AI.</p>
+              <ul class="sources">
+                {sec.lobbying.filings.slice(0, 12).map((f) => (
+                  <li>{f.period} filing, posted {f.posted}, by {f.registrant}
+                    {f.bills && f.bills.length > 0 && <>. Bills named: {f.bills.join(', ')}</>}
+                    <span class="src-meta">uid {f.uid}</span></li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           {Array.isArray(sec.sources) && sec.sources.length > 0 && (
             <section>
               <h2>Sources</h2>

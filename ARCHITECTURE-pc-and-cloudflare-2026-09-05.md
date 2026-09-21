@@ -387,3 +387,17 @@ Tables, owner `srj_mcp`, select to `twoai_reader`, ledger triggers on all: `twoa
 - The 21 September `twoai_embed` reindex cause.
 - `twoai_gaps` reports `relation "twoai_feed_candidates" does not exist`.
 - The Ollama key was pasted into a terminal as a secret name on 21 September; rotation advised.
+
+### 10.7 Bills, lobbying firms and lobbyists as pages (changelog 1150, 1151)
+
+Stephen reversed the earlier decision: lobbying firms and lobbyists get pages, cross referenced with AI bills, AI people and companies. `twoai_politics_directory.go`, called from `twoai_politics_pages` after the exports.
+
+| Page family | Path | Keyed on | Links to |
+|---|---|---|---|
+| AI bill | `industries/pol-bill-<uid>.json` | LegiScan bill_id | sponsors' member timelines, roll calls, clients whose 2025 or later filings name it (company page when confirmed), congress.gov |
+| Lobbying firm | `industries/pol-firm-<uid>.json` | LDA registrant id | clients, its lobbyists, AI bills named |
+| Lobbyist | `industries/pol-lobbyist-<uid>.json` | LDA lobbyist id, never name | firms, clients, AI bills named, prior government positions as disclosed, AI People profile only when confirmed |
+| Member timeline | `industries/pol-member-<uid>.json` | LegiScan people_id | bill pages, votes, committee money, AI People profile by Wikidata id |
+| Indexes | `pol-bills` 928bd470, `pol-firms` ef995158, `pol-lobbyists` b954389e | | the 300 largest of each |
+
+Bill references in filings map H.R. to HB, S. to SB, H.Res. to HR, S.Res. to SR, and only for filings reporting on 2025 or later, since the same number in an earlier filing is a 118th Congress bill. On 21 September, 112 of 889 such references matched an AI bill already held. Company pages link each filing's firm and lobbyists to their pages. New tables `twoai_pol_firms`, `twoai_pol_lobbyists`, `twoai_pol_filing_lobbyists`; press room tables `twoai_pol_legislators`, `twoai_pol_candidate_committees`. All pages are drafts.

@@ -288,7 +288,7 @@ const jsonld = JSON.stringify({
         {' '}<a href={lobby.section_href}>Lobbying on AI</a>.</p>
       <ul>{lobby.filings.map((f) => (
         <li>
-          <a href={f.url} rel="noopener">{f.period} filing, posted {f.posted}</a>, by {f.registrant}
+          <a href={f.url} rel="noopener">{f.period} filing, posted {f.posted}</a>, by {f.registrant_href ? <a href={f.registrant_href}>{f.registrant}</a> : f.registrant}
           {f.bills && f.bills.length > 0 && <>. Bills named: {f.bills.join(', ')}</>}
           {f.lobbyists && f.lobbyists.length > 0 && <>. Lobbyists: {f.lobbyists.map((l, i) => (
             <>{i > 0 && ', '}{l.href ? <a href={l.href}>{l.name}</a> : l.name}</>
