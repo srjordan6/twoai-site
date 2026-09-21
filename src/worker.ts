@@ -62,6 +62,11 @@ interface Env {
   // entirely. Set with `wrangler secret put ANTHROPIC_API_KEY` or in the
   // dashboard; the same key already lives on the srj-pipeline Render cron.
   ANTHROPIC_API_KEY?: string;
+  // Ollama Cloud, the answer model since 2026-09-21, matching the pipeline.
+  // Set with `npx wrangler secret put OLLAMA_API_KEY` (the same cloud key as
+  // pipeline.env). OLLAMA_MODEL is an optional override, default below.
+  OLLAMA_API_KEY?: string;
+  OLLAMA_MODEL?: string;
 }
 
 const EMBED_MODEL = "@cf/baai/bge-m3";
@@ -91,6 +96,14 @@ const GUARD_MODEL = "@cf/meta/llama-guard-3-8b";
 // page, and the response records which model answered so a silent downgrade is
 // visible rather than assumed.
 const FALLBACK_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
+// The answer model, 2026-09-21. Stephen: the Ask box is supposed to be asking
+// Ollama. It never was: on 2026-09-17 the Anthropic calls came out and the
+// Cloudflare model above was left as the only attempt, billed in Workers AI
+// neurons. Same model and same no-fallback rule as the pipeline: if Ollama
+// cannot answer, the box says so rather than quietly answering from Workers
+// AI. FALLBACK_MODEL stays defined and uncalled; restoring it is a code change.
+const OLLAMA_URL = "https://ollama.com/api/chat";
+const OLLAMA_DEFAULT_MODEL = "deepseek-v4-pro";
 
 /**
  * Below this cosine score the site genuinely does not cover the question.
@@ -590,8 +603,9 @@ export default {
     // Dedupe is by link, because the same work can arrive from both paths.
     if (env.WORKS_VECTORIZE && papers.length < 5) {
       try {
-        const emb2 = await env.AI.run(EMBED_MODEL, { text: [question] });
-        const wres = await env.WORKS_VECTORIZE.query(emb2.data[0], {
+        // Same question, same model: reuse the vector computed for page
+        // retrieval instead of paying for a second identical embedding.
+        const wres = await env.WORKS_VECTORIZE.query(qVec!, {
           topK: 5, returnMetadata: "all",
         });
         const have = new Set(papers.map((p) => p.url));
@@ -824,8 +838,33 @@ export default {
     // model is the Cloudflare-hosted one, which was already serving whenever
     // Anthropic failed. askAnthropicDirect stays defined and uncalled; putting
     // it back is a code change, not a secret.
+    const askOllama = async (model: string): Promise<string> => {
+      if (!env.OLLAMA_API_KEY) throw new Error("OLLAMA_API_KEY is not set on the Worker");
+      const r = await fetch(OLLAMA_URL, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${env.OLLAMA_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model,
+          stream: false,
+          think: false,
+          options: { num_predict: 700 },
+          messages: [
+            { role: "system", content: SYSTEM },
+            { role: "user", content: userContent },
+          ],
+        }),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}: ${(await r.text()).slice(0, 300)}`);
+      const out: any = await r.json();
+      return String(out?.message?.content ?? "").trim();
+    };
+
+    const ollamaModel = env.OLLAMA_MODEL || OLLAMA_DEFAULT_MODEL;
     const attempts: Array<[string, () => Promise<string>]> = [];
-    attempts.push([FALLBACK_MODEL, () => askWorkersAI(FALLBACK_MODEL)]);
+    attempts.push([`ollama/${ollamaModel}`, () => askOllama(ollamaModel)]);
 
     let answer = "";
     let lastError = "";
