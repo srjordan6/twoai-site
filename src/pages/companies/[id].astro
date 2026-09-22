@@ -65,6 +65,13 @@ export function getStaticPaths() {
 }
 const { company, generated, profileText, siteUrl, reading, stock, stockPending, lobbying, operator } = Astro.props;
 const op = operator && (operator.reading || operator.facilities > 0) ? operator : null;
+// A company record that was superseded by another: AMD was tracked twice, as
+// AMD (b54d3e84) and as ADVANCED MICRO DEVICES INC (6b518abb, the SEC
+// registrant). The retired URL still answers, carries a canonical and a meta
+// refresh to the record that stays, and drops out of the index. Not in
+// public/_redirects, which Cloudflare capped at 100 rules of this kind.
+const MOVED_TO = { b54d3e84: '6b518abb' };
+const movedTo = MOVED_TO[company.uid] || '';
 // Federal lobbying on AI, patched in by srj-pipeline twoai_politics_pages for
 // a company whose Lobbying Disclosure Act client record Stephen confirmed as
 // this company. Absent for every other company, so the section never renders
@@ -201,7 +208,9 @@ const jsonld = JSON.stringify({
   ],
 });
 ---
-<Base title={`${n}: AI products, lawsuits, and MCP servers`} description={desc.slice(0, 300)} current="/companies/" jsonld={jsonld} noindex={thin}>
+<Base title={`${n}: AI products, lawsuits, and MCP servers`} description={desc.slice(0, 300)} current="/companies/" jsonld={jsonld} noindex={thin || Boolean(movedTo)}
+  canonicalOverride={movedTo ? `https://theworldofai.org/companies/${movedTo}/` : undefined}
+  redirect={movedTo ? `/companies/${movedTo}/` : undefined}>
   {/* The stock box lives in the rail, beside the prose, not in it. A public
       company with a tracked instrument gets its close, change, range and a
       sparkline; a public company whose listing the free feed cannot cover

@@ -178,6 +178,18 @@ const ownedMcp = company ? ownedServers(company.mcp, company.name) : [];
 // rule the MCP attribution uses, and for the same reason. When the organisation
 // is not a tracked company the name renders as plain text rather than pointing
 // at a page that says nothing about them.
+// EVERY COMPANY HAD TWO URLS. The ecosystem copy has carried noindex and a
+// canonical to /companies/{uid}/ since 2026-09-01; from 2026-09-22 it also
+// carries a meta refresh, the same retirement pattern the story routes use.
+// It is not done in public/_redirects: Cloudflare rejected 421 rules there
+// ("Maximum number of dynamic _redirects rules limit of 100 exceeded") and
+// failed the 16:43 UTC build.
+//
+// COMPANY_MOVED sends a retired company record to the one that replaced it.
+// AMD was tracked twice, as AMD and as ADVANCED MICRO DEVICES INC, the SEC
+// registrant; the registrant is the one that stays.
+const COMPANY_MOVED = { b54d3e84: '6b518abb' };
+
 const companyIndexPath = 'content/companies/index.json';
 const g2 = globalThis;
 if (!g2.__twoaiCompanyByName) {
@@ -545,7 +557,8 @@ const jsonld = JSON.stringify(
   description={desc} current={`${BASE}/`} jsonld={jsonld}
   doc={legacyPerson || pcat || hub || company || chub || obs || jhub || jdisc || csec || cpat || cpriv || corg || cfund || cma}
   stampLabel="Last verified"
-  canonicalOverride={company ? `https://theworldofai.org/companies/${company.uid}/` : undefined}>
+  canonicalOverride={company ? `https://theworldofai.org/companies/${COMPANY_MOVED[company.uid] || company.uid}/` : undefined}
+  redirect={company ? `/companies/${COMPANY_MOVED[company.uid] || company.uid}/` : undefined}>
   {/* EVERY COMPANY WAS PUBLISHED AT TWO SELF-CANONICAL URLS. This route builds a
       company page under the ecosystem path and src/pages/companies/[id].astro
       builds the same company under /companies/, both declared canonical to

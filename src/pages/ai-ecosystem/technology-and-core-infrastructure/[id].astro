@@ -134,6 +134,13 @@ const isDSLic = sec.shape === 'ds-licensing';
 const isVibe = sec.shape === 'vibe-coding';
 const isProv = sec.shape === 'serving-providers';
 const isDC = sec.shape === 'datacenters';
+// A facility filed twice from two reports of the same project: HyperVault
+// Telangana and TCS-HyperVault Hyderabad are the one TCS 1 GW Hyderabad
+// project. The sources were merged into the record that stays; the retired
+// URL still answers, canonicals and refreshes to it, and leaves the index.
+const FACILITY_MOVED = { a2e4b607: 'ec499e52' };
+const facMovedTo = FACILITY_MOVED[sec.uid] || '';
+
 const isDCChild = ['dc-state', 'dc-metric', 'dc-builder', 'dc-smr', 'dc-grid', 'dc-facility', 'dc-operator', 'dc-operators-index', 'dc-states-index'].includes(sec.shape);
 const metricUID = isDC ? Object.fromEntries((sec.metric_pages || []).map((m) => [m.label, m.uid])) : {};
 const builderUID = isDC ? Object.fromEntries((sec.builder_pages || []).map((b) => [b.label, b.uid])) : {};
@@ -417,7 +424,9 @@ const facBare = sec.shape === 'dc-facility' && !(
 );
 ---
 <Base title={`${pageTitle}${sec.shape === 'dc-facility' && sec.uid ? ` (${sec.uid})` : ''} — The World of AI`} description={desc.slice(0, 300)}
-  current={`${BASE}/`} jsonld={jsonld} noindex={facBare || metricBare} doc={sec} stampLabel="Last verified">
+  current={`${BASE}/`} jsonld={jsonld} noindex={facBare || metricBare || Boolean(facMovedTo)} doc={sec} stampLabel="Last verified"
+  canonicalOverride={facMovedTo ? `https://theworldofai.org${BASE}/${facMovedTo}/` : undefined}
+  redirect={facMovedTo ? `${BASE}/${facMovedTo}/` : undefined}>
   {/* THE FACT BOX LIVES IN THE RAIL, under the section navigation card.
       Stephen, 2026-09-06: not below the answer, to the right under the
       navigation box.

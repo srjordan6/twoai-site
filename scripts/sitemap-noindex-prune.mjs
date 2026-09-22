@@ -106,7 +106,16 @@ for (const f of sitemapFiles()) {
 // A prune that removes nearly everything means the noindex test matched
 // something it should not have, and a silently emptied sitemap is worse than a
 // contradictory one. Say so loudly rather than shipping it.
-if (scanned > 0 && pruned / scanned > 0.5) {
+//
+// THE CEILING MOVED ON 2026-09-22, from half to three quarters. Publishing the
+// Politics of AI section put 5,792 entity pages on the site at once, live and
+// linked but held out of search until their data grows, which took the share
+// to 51 percent and failed the build. The share is now mostly a fact about how
+// much of the site is data waiting to be written up, not a signal of a broken
+// noindex rule. The breakdown below is printed on every run either way, so a
+// rule that starts matching the wrong pages still shows up as a jump in one
+// reason rather than in the total.
+if (scanned > 0 && pruned / scanned > 0.75) {
   console.error(`sitemap-prune: ABORT SIGNAL, ${pruned} of ${scanned} URLs were excluded. ` +
     'That is not plausible; check the robots meta and the canonical tag in ' +
     'src/layouts/Base.astro before deploying.');
