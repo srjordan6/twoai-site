@@ -445,6 +445,14 @@ const isDraft = Boolean((clx || law || secu || sec)?.draft);
               {p.refs && p.refs.length > 0 && (
                 <p class="meta-line">Source: {p.refs.map((r) => `Volume ${r.volume}, ${r.title || ''}, ${r.chapter}`).join('; ')}</p>
               )}
+              {p.refs && p.refs.some((r) => r.book_url || r.amazon_url) && (
+                <p class="from-book"><b>From the book:</b>{' '}
+                  {[...new Map(p.refs.filter((r) => r.book_url || r.amazon_url).map((r) => [r.volume, r])).values()].map((r, j) => (
+                    <>{j > 0 && ' · '}<a href={r.book_url || r.amazon_url} rel="noopener">{r.title}</a>
+                      {r.book_url && r.amazon_url && <> (<a href={r.amazon_url} rel="noopener">buy on Amazon</a>)</>}</>
+                  ))}
+                </p>
+              )}
             </div>
           ))}
         </section>
