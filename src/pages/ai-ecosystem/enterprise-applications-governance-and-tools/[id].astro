@@ -407,7 +407,7 @@ const isDraft = Boolean((clx || law || secu || sec)?.draft);
 
       {secu.domains.map((d) => (
         <section id={d.slug} class="secdom-group">
-          <h2>{d.label}</h2>
+          <h2>{d.href ? <a href={d.href}>{d.label}</a> : d.label}</h2>
           <p>{d.blurb}</p>
           <ul class="sections">
             {d.topics.map((t) => (
@@ -425,7 +425,34 @@ const isDraft = Boolean((clx || law || secu || sec)?.draft);
     </>
   )}
 
-  {secu && secu.shape !== 'security-hub' && (
+  {secu && secu.shape === 'security-domain' && (
+    <>
+      <h1>{secu.name}</h1>
+      <p class="answer">{secu.blurb}</p>
+      <p class="meta-line">Last verified: {secu.generated} · One of the six domains of a security
+        program in <a href={secu.hub_path}>{secu.hub_name}</a>. How each of {secu.topic_count} AI
+        security topics lands for this domain, and what this part of the program has to do about it.</p>
+      {secu.topics.map((t) => (
+        <section class="dom">
+          <h2><a href={t.path}>{t.name}</a></h2>
+          <p>{t.body}</p>
+          {t.blurb && <p class="meta-line">{t.blurb}</p>}
+        </section>
+      ))}
+      {secu.other_domains && secu.other_domains.length > 0 && (
+        <>
+          <h2>The other five domains</h2>
+          <ul class="sections">
+            {secu.other_domains.map((o) => <li><a href={o.href}>{o.label}</a></li>)}
+          </ul>
+        </>
+      )}
+      <div class="cite-box">Cite this page: <code>"{secu.name}." The World of AI,
+        theworldofai.org{BASE}/{secu.uid}/. Retrieved {secu.generated}.</code></div>
+    </>
+  )}
+
+  {secu && secu.shape !== 'security-hub' && secu.shape !== 'security-domain' && (
     <>
       <h1>{secu.name}</h1>
       <p class="answer">{secu.blurb}</p>
