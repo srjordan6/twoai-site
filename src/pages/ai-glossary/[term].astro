@@ -106,6 +106,16 @@ const jsonld = JSON.stringify({
   <h1>{t.term}</h1>
   <p class="meta-line"><span class="badge">{t.category}</span>{generated && <> · Last verified: <time datetime={generated}>{generated}</time></>}{t.uid && <> · <span class="uid" title="This term's identifier on theworldofai.org">uid {t.uid}</span></>}</p>
   <p class="answer">{t.definition}</p>
+  {Array.isArray(t.also_called) && t.also_called.length > 0 && (
+    <p class="meta-line">Also called: {t.also_called.join(', ')}.</p>
+  )}
+  {Array.isArray(t.see_also) && t.see_also.length > 0 && (
+    <div class="see-also">
+      {t.see_also.map((x) => (
+        <p><b>{x.label || 'See also'}:</b> <a href={x.href}>{x.name}</a>{x.note && <> · {x.note}</>}</p>
+      ))}
+    </div>
+  )}
   {t.example && (<><h2>Example</h2><p>{t.example}</p></>)}
 
   {t.lenses && t.lenses.length > 0 && (
@@ -163,3 +173,8 @@ const jsonld = JSON.stringify({
     ] },
   ]} />
 </Base>
+
+<style>
+  .see-also { margin: .8em 0 1.2em; padding: 10px 14px; border-left: 3px solid #201868; background: #f7f7fb; }
+  .see-also p { margin: .2em 0; }
+</style>

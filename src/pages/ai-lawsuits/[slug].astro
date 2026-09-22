@@ -123,6 +123,26 @@ const jsonld = JSON.stringify({
 
   {c.why_it_matters && (<><h2>Why this case matters</h2><p>{c.why_it_matters}</p></>)}
 
+  {/* HOW INSURANCE WOULD RESPOND. Stephen, 2026-09-21: whether insurers pay
+      the defense or back the plaintiffs is almost never public, so each case
+      explains how coverage typically works for its type of claim. One reviewed
+      text per category in twoai_lawsuit_insurance, attached by srj-pipeline
+      only once Stephen sets it to published. It never says what a defendant
+      actually carries. */}
+  {c.insurance && Array.isArray(c.insurance.body) && (
+    <section class="ins-resp">
+      <h2>{c.insurance.heading}</h2>
+      <p class="ins-pol">Policies that typically respond: {c.insurance.policies}</p>
+      {c.insurance.body.map((p) => <p>{p}</p>)}
+      <p class="meta-line">This describes how coverage typically works for a {c.category} claim. It is
+        not a statement about what {c.defendants || 'the defendant'} carries: a defendant's insurance is
+        disclosed to the other side in discovery, not on the public docket, and no insurer funding of
+        either side is recorded for this case.
+        {c.insurance.hub_href && <> More in <a href={c.insurance.hub_href}>{c.insurance.hub_name}</a> in the AI Insurance hub.</>}
+        {c.insurance.reviewed_on && <> Reviewed {c.insurance.reviewed_on}.</>}</p>
+    </section>
+  )}
+
   {claims.length > 0 && (
     <>
       <h2>Claims</h2>
@@ -216,6 +236,9 @@ const jsonld = JSON.stringify({
 </Base>
 
 <style>
+  .ins-resp { margin: 1.6em 0; padding: 14px 18px; border-left: 4px solid #201868; background: #f7f7fb; }
+  .ins-resp h2 { margin-top: 0; }
+  .ins-pol { font-weight: 600; color: #201868; }
   .related-cases { list-style: none; margin: .6em 0 0; padding: 0; }
   .related-cases li { padding: .5em 0; border-bottom: 1px solid #ececf2; display: flex;
     align-items: baseline; justify-content: space-between; gap: 1em; }

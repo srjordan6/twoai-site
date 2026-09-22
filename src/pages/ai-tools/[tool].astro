@@ -74,14 +74,19 @@ const jsonld = JSON.stringify({
   }] : [])],
 });
 ---
-<Base title={`${t.name}: what it does, what it costs, and where it falls short`} description={desc} current="/ai-tools/" jsonld={jsonld}>
+<Base title={`${t.name}: what it does, what it costs, and where it falls short`} description={desc} current="/ai-tools/" jsonld={jsonld}
+  doc={t.uid ? { page_uid: t.uid, built_at: t.generated, generated: t.generated } : undefined}>
   <h1>{t.name}</h1>
   {t.tagline && <p class="answer">{t.tagline}</p>}
   <p class="meta-line">
     {t.vendor && <>Vendor: {t.vendor} · </>}
     {t.status && <>Status: {t.status} · </>}
     {t.generated && <>Last verified: <time datetime={t.generated}>{t.generated}</time></>}
+    {t.uid && <> · <span class="uid">uid {t.uid}</span></>}
   </p>
+  {Array.isArray(t.see_also) && t.see_also.map((x) => (
+    <p class="meta-line">Not to be confused with <a href={x.href}>{x.name}</a>. {x.note}</p>
+  ))}
   {t.url && <p><a href={t.url} rel="noopener nofollow">Visit the {t.name} site</a></p>}
 
   {t.value && (<><h2>What it is for</h2><p>{t.value}</p></>)}

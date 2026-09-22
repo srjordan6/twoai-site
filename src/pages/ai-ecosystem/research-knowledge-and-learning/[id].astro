@@ -168,7 +168,7 @@ const title = isEntry
   : learn
   ? `${learn.name} — The World of AI`
   : section
-  ? `${section.title}: how this site is structured`
+  ? (section.shape === 'learning-path' ? `${section.name}: the ideas behind AI, in the order they build — The World of AI` : `${section.title}: how this site is structured`)
   : hub
   ? 'AI Research Library — The World of AI'
   : `${topic.name}: AI research reading list`;
@@ -216,14 +216,24 @@ const jsonld = JSON.stringify(
         dateModified: learn.generated,
       }
     : section
-    ? {
+    ? (Array.isArray(section.faqs) && section.faqs.length > 0
+      ? {
+          '@context': 'https://schema.org',
+          '@graph': [
+            { '@type': 'TechArticle', headline: section.title, description: desc,
+              url: `https://theworldofai.org${BASE}/${section.uid}/`, dateModified: section.generated },
+            { '@type': 'FAQPage', mainEntity: section.faqs.map((f) => ({ '@type': 'Question', name: f.q,
+              acceptedAnswer: { '@type': 'Answer', text: f.a } })) },
+          ],
+        }
+      : {
         '@context': 'https://schema.org',
         '@type': 'TechArticle',
         headline: section.title,
         description: desc,
         url: `https://theworldofai.org${BASE}/${section.uid}/`,
         dateModified: section.generated,
-      }
+      })
     : hub
     ? {
         '@context': 'https://schema.org',
@@ -635,7 +645,7 @@ const jsonld = JSON.stringify(
       <h1>{section.title}</h1>
       <p class="answer">{section.answer}</p>
       {section.generated && (
-        <p class="meta-line">Last reviewed: {section.generated}.</p>
+        <p class="meta-line">uid {section.uid} · Last reviewed: {section.built_at ? String(section.built_at).replace('T', ' ').slice(0, 16) : section.generated}.</p>
       )}
 
       {section.chain && (
@@ -675,13 +685,84 @@ const jsonld = JSON.stringify(
         </>
       )}
 
+      {section.shape === 'learning-path' && Array.isArray(section.steps) && (
+        <>
+          {/* Understand AI, built by srj-pipeline twoai_understand_ai.go from the
+              glossary and the live section documents every run. Each term and
+              each destination shows its uid, per the standing rule. */}
+          {section.steps.map((s) => (
+            <section class="lp-step">
+              <h2>{s.n}. {s.title}</h2>
+              <p>{s.why}</p>
+              {s.terms.map((t) => (
+                <div class="lp-term">
+                  <p><b><a href={t.href}>{t.name}</a></b> <span class="lp-uid">uid {t.uid}</span></p>
+                  <p>{t.definition}</p>
+                  {t.example && <p class="lp-ex">Example: {t.example}</p>}
+                </div>
+              ))}
+              {s.meet && s.meet.length > 0 && (
+                <>
+                  <h3>Where you meet this on the site</h3>
+                  <ul class="co-list">
+                    {s.meet.map((m) => (
+                      <li><b><a href={m.href}>{m.name}</a></b>{m.uid && <span class="lp-uid"> uid {m.uid}</span>}<p>{m.fact}</p></li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </section>
+          ))}
+          {section.example && (
+            <section class="lp-example">
+              <h2>{section.example.title}</h2>
+              <ol>
+                {section.example.steps.map((e) => (<li><b>{e.step}.</b> {e.text}</li>))}
+              </ol>
+              <p class="meta-line">{section.example.assumption}
+                {section.example.assumption_source && <> <a href={section.example.assumption_source} rel="noopener">Source</a>.</>}
+                Prices are today's medians from this site's API pricing tracker.</p>
+            </section>
+          )}
+          {Array.isArray(section.faqs) && section.faqs.length > 0 && (
+            <section>
+              <h2>Frequently asked questions</h2>
+              {section.faqs.map((f) => (<div class="faq"><h3>{f.q}</h3><p>{f.a}</p></div>))}
+            </section>
+          )}
+          <Reading reading={section.reading} heading="What does this path add up to?" />
+        </>
+      )}
+
       {section.built && (
         <>
           <h2>What is built</h2>
+          {/* Each entry may carry the uids and pages of what it names, so a
+              reader can follow it and every item shows its uid, per the
+              standing rule that every piece of data displays its uid. */}
           <ul class="co-list">
-            {section.built.map((b) => (<li><b>{b.name}</b><p>{b.detail}</p></li>))}
+            {section.built.map((b) => (
+              <li><b>{b.href ? <a href={b.href}>{b.name}</a> : b.name}</b>
+                <p>{b.detail}</p>
+                {Array.isArray(b.terms) && b.terms.length > 0 && (
+                  <p class="meta-line">{b.terms.map((t, i) => (
+                    <>{i > 0 && ' · '}<a href={t.href}>{t.name}</a> uid {t.uid}</>
+                  ))}</p>
+                )}
+                {b.uid && !b.terms && <p class="meta-line">uid {b.uid}</p>}
+              </li>
+            ))}
           </ul>
         </>
+      )}
+
+      {Array.isArray(section.points) && section.points.length > 0 && (
+        <ul class="co-list">
+          {section.points.map((p) => (
+            <li><b>{p.name}</b><p>{p.detail}</p>
+              {p.source && <p class="meta-line"><a href={p.source}>{p.source}</a></p>}</li>
+          ))}
+        </ul>
       )}
 
       {section.planned && (
@@ -772,6 +853,14 @@ const jsonld = JSON.stringify(
 </Base>
 
 <style>
+  .lp-step { margin: 1.8em 0 0; }
+  .lp-term { margin: .6em 0 .9em; padding-left: 14px; border-left: 3px solid #e6e6ef; }
+  .lp-term p { margin: .25em 0; }
+  .lp-uid { font-size: 12px; color: #7A8A9E; font-weight: 400; }
+  .lp-ex { color: #4a5568; font-size: .95rem; }
+  .lp-example ol { padding-left: 1.2em; }
+  .lp-example li { margin: 0 0 .6em; line-height: 1.6; }
+  .faq h3 { margin: 1.1em 0 .3em; font-size: 1.05rem; }
   .bk-list { list-style: none; padding: 0; margin: 0 0 1.4rem; }
   .bk-list li { padding: .55rem 0; border-bottom: 1px solid #eceff3; }
   .bk-yr { color: #7A8A9E; }
