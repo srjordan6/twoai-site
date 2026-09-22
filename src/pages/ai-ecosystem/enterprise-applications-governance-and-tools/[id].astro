@@ -209,7 +209,7 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
       <p class="answer">{art.answer}</p>
       <p class="meta-line">uid {art.uid} &middot; generated {art.generated}
         {art.parent_path && <> &middot; {' '}<a href={art.parent_path}>{art.parent_name}</a></>}
-        {art.hub_path && art.hub_path !== `${BASE}/${art.uid}/` && <>, in {' '}<a href={art.hub_path}>The AI Lawyer</a></>}</p>
+        {art.hub_path && art.hub_path !== `${BASE}/${art.uid}/` && <>, in {' '}<a href={art.hub_path}>{art.hub_name || 'this section'}</a></>}</p>
       {artSections.map((s) => (
         <section>
           <h2>{s.heading}</h2>
@@ -226,8 +226,14 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
           </ul>
         </>
       )}
-      <p class="meta-line">Nothing on this page is legal advice. It describes how the
-        work is done and where the risk sits, for people who then take proper advice.</p>
+      {artSections.length > 0 && art.hub_name === 'The AI Lawyer' && (
+        <p class="meta-line">Nothing on this page is legal advice. It describes how the
+          work is done and where the risk sits, for people who then take proper advice.</p>
+      )}
+      {artSections.length > 0 && art.hub_name === 'The AI Accountant' && (
+        <p class="meta-line">Nothing on this page is accounting, tax or audit advice. It
+          describes how the work is done and where the risk sits.</p>
+      )}
       {artSiblings.length > 0 && (
         <>
           <h2>Also in {art.parent_name}</h2>
