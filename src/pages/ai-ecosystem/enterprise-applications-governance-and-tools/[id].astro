@@ -22,7 +22,15 @@ export function getStaticPaths() {
     for (const f of readdirSync('content/industries')) {
       if (!f.endsWith('.json')) continue;
       const d = JSON.parse(readFileSync(`content/industries/${f}`, 'utf8'));
-      if (d.uid) paths.push({ params: { id: d.uid }, props: { sec: d } });
+      if (!d.uid) continue;
+      // THE AI LAWYER, 2026-09-22. Its hub, its ten sub-hubs and its fifty
+      // topics all get their own prop, so the generic section renderer below
+      // never sees a document shaped unlike the ones it was written for.
+      if (d.shape === 'art-topic' || d.shape === 'art-hub') {
+        paths.push({ params: { id: d.uid }, props: { art: d } });
+        continue;
+      }
+      paths.push({ params: { id: d.uid }, props: { sec: d } });
     }
   }
   if (existsSync('content/security')) {
@@ -52,7 +60,7 @@ export function getStaticPaths() {
   }
   return paths;
 }
-const { sec, secu, law, clx, clc } = Astro.props;
+const { sec, secu, law, clx, clc, art } = Astro.props;
 // Compliance pages written from the statute: a map from "STATE BILL" to the
 // page slug, so the enacted-laws list can link each law to its own reading.
 // srj-pipeline's twoai_enacted_laws writes one per passed bill under
@@ -138,7 +146,12 @@ const hasUnderwriter = isCoverage && nonEmpty(sec.underwriter_wants_to_know);
 const hasInsured = isCoverage && (nonEmpty(needs.part_1_core_third_party_liability_exposures)
   || Object.values(p2).some(nonEmpty) || nonEmpty(needs.part_3_high_value_red_flags)
   || Object.values(p4).some(nonEmpty) || nonEmpty(needs.manuscript_wording_and_carve_backs));
-const desc = clamp158(clc
+const artSections = art ? (art.sections || []) : [];
+const artSiblings = art ? (art.siblings || []) : [];
+const artKids = art ? (art.children || []) : [];
+const desc = clamp158(art
+  ? `${art.name}: ${art.answer || ''}`
+  : clc
   ? `${dcase.case_name}, ${dcase.citation}: what it held, why AI ${dcase.posture === 'plaintiff' ? 'plaintiffs' : 'defendants'} cite it, and where the analogy to machine learning breaks down. With the full five-pillar dissection.`
   : clx
   ? `${clx.total} pre-AI court decisions that current AI litigation is argued from: the holding, why AI parties cite each one, and where the analogy fails, every citation verified against the court record.`
@@ -161,10 +174,10 @@ const jsonld = JSON.stringify(clc ? {
 } : {
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',
-  name: clx ? `AI Case Law: The Precedents Behind the Defenses — The World of AI` : law ? `Enacted AI Laws — The World of AI` : secu ? `${secu.name} — AI Security and Risk — The World of AI` : (sec.shape === 'industry-hub' || isCases || isCoverage || isInsHub ? `${sec.name} — The World of AI` : `AI in ${sec.name} — The World of AI`),
+  name: art ? `${art.name} — The World of AI` : clx ? `AI Case Law: The Precedents Behind the Defenses — The World of AI` : law ? `Enacted AI Laws — The World of AI` : secu ? `${secu.name} — AI Security and Risk — The World of AI` : (sec.shape === 'industry-hub' || isCases || isCoverage || isInsHub ? `${sec.name} — The World of AI` : `AI in ${sec.name} — The World of AI`),
   description: desc,
-  url: `https://theworldofai.org${BASE}/${(clx || law || secu || sec).uid}/`,
-  dateModified: (clx || law || secu || sec).generated,
+  url: `https://theworldofai.org${BASE}/${(art || clx || law || secu || sec).uid}/`,
+  dateModified: (art || clx || law || secu || sec).generated,
   isPartOf: { '@type': 'CollectionPage', name: CATEGORY_NAME, url: `https://theworldofai.org${BASE}/` },
 });
 // DRAFT PAGES ARE BUILT, REACHABLE, AND NOT IN THE INDEX.
@@ -180,13 +193,55 @@ const jsonld = JSON.stringify(clc ? {
 // keeps the same pages out of the sitemap. Remove the flag when a section is
 // ready and it enters the index on the next build, with the URL it always
 // had - which is what makes it safe to decide the shape later.
-const isDraft = Boolean((clx || law || secu || sec)?.draft);
+const isDraft = Boolean((art || clx || law || secu || sec)?.draft);
 // A live page can still be kept out of search while its data is thin, the
 // politics entity pages from 2026-09-22 (noindex set by the pipeline).
-const isThin = Boolean((clx || law || secu || sec)?.noindex);
+const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
 ---
-<Base noindex={isDraft || isThin} title={clc ? `${dcase.case_name} — AI Case Law — The World of AI` : clx ? 'AI Case Law: The Precedents Behind the Defenses — The World of AI' : law ? 'Enacted AI Laws: US Bills That Became Law — The World of AI' : secu ? `${secu.name} — AI Security and Risk — The World of AI` : isCases ? `AI Case Studies: Real Deployments, Indexed — The World of AI` : (isCoverage || isInsHub) ? `${sec.name} — ${(sec.tax || '').startsWith('ins-') || sec.tax === 'ai-insurance' || isCoverage ? 'AI Insurance' : (sec.parent_name || CATEGORY_NAME)} — The World of AI` : `AI in ${sec.name} — The World of AI`} description={desc}
+<Base noindex={isDraft || isThin} title={art ? `${art.name} — The World of AI` : clc ? `${dcase.case_name} — AI Case Law — The World of AI` : clx ? 'AI Case Law: The Precedents Behind the Defenses — The World of AI' : law ? 'Enacted AI Laws: US Bills That Became Law — The World of AI' : secu ? `${secu.name} — AI Security and Risk — The World of AI` : isCases ? `AI Case Studies: Real Deployments, Indexed — The World of AI` : (isCoverage || isInsHub) ? `${sec.name} — ${(sec.tax || '').startsWith('ins-') || sec.tax === 'ai-insurance' || isCoverage ? 'AI Insurance' : (sec.parent_name || CATEGORY_NAME)} — The World of AI` : `AI in ${sec.name} — The World of AI`} description={desc}
   current={`${BASE}/`} jsonld={jsonld}>
+
+  {art && (
+    <>
+      <p class="meta-line"><a href="/">AI Ecosystem</a> ·
+        <a href={`${BASE}/`}>{CATEGORY_NAME}</a></p>
+      <h1>{art.name}</h1>
+      <p class="answer">{art.answer}</p>
+      <p class="meta-line">uid {art.uid} &middot; generated {art.generated}
+        {art.parent_path && <> &middot; {' '}<a href={art.parent_path}>{art.parent_name}</a></>}
+        {art.hub_path && art.hub_path !== `${BASE}/${art.uid}/` && <>, in {' '}<a href={art.hub_path}>The AI Lawyer</a></>}</p>
+      {artKids.length > 0 && (
+        <>
+          <h2>Sections in {art.name}</h2>
+          <ul class="sections">
+            {artKids.map((k) => (
+              <li><a href={k.path}>{k.name}</a>{k.blurb && <> {k.blurb}</>}</li>
+            ))}
+          </ul>
+        </>
+      )}
+      {artSections.map((s) => (
+        <section>
+          <h2>{s.heading}</h2>
+          {capParagraphs(s.body).map((t) => <p>{t}</p>)}
+        </section>
+      ))}
+      {artSections.length > 0 && (
+        <p class="meta-line">Nothing on this page is legal advice. It describes how the
+          work is done and where the risk sits, for people who then take proper advice.</p>
+      )}
+      {artSiblings.length > 0 && (
+        <>
+          <h2>Also in {art.parent_name}</h2>
+          <ul class="sections">
+            {artSiblings.map((k) => <li><a href={k.path}>{k.name}</a></li>)}
+          </ul>
+        </>
+      )}
+      <div class="cite-box">Cite this page: <code>"{art.name}." The World of AI,
+        theworldofai.org{BASE}/{art.uid}/. Retrieved {art.generated}.</code></div>
+    </>
+  )}
 
   {isDraft && (
     <p class="meta-line" style="border-left:3px solid var(--orange); padding-left:12px">
