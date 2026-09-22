@@ -181,8 +181,11 @@ const jsonld = JSON.stringify(clc ? {
 // ready and it enters the index on the next build, with the URL it always
 // had - which is what makes it safe to decide the shape later.
 const isDraft = Boolean((clx || law || secu || sec)?.draft);
+// A live page can still be kept out of search while its data is thin, the
+// politics entity pages from 2026-09-22 (noindex set by the pipeline).
+const isThin = Boolean((clx || law || secu || sec)?.noindex);
 ---
-<Base noindex={isDraft} title={clc ? `${dcase.case_name} — AI Case Law — The World of AI` : clx ? 'AI Case Law: The Precedents Behind the Defenses — The World of AI' : law ? 'Enacted AI Laws: US Bills That Became Law — The World of AI' : secu ? `${secu.name} — AI Security and Risk — The World of AI` : isCases ? `AI Case Studies: Real Deployments, Indexed — The World of AI` : (isCoverage || isInsHub) ? `${sec.name} — ${(sec.tax || '').startsWith('ins-') || sec.tax === 'ai-insurance' || isCoverage ? 'AI Insurance' : (sec.parent_name || CATEGORY_NAME)} — The World of AI` : `AI in ${sec.name} — The World of AI`} description={desc}
+<Base noindex={isDraft || isThin} title={clc ? `${dcase.case_name} — AI Case Law — The World of AI` : clx ? 'AI Case Law: The Precedents Behind the Defenses — The World of AI' : law ? 'Enacted AI Laws: US Bills That Became Law — The World of AI' : secu ? `${secu.name} — AI Security and Risk — The World of AI` : isCases ? `AI Case Studies: Real Deployments, Indexed — The World of AI` : (isCoverage || isInsHub) ? `${sec.name} — ${(sec.tax || '').startsWith('ins-') || sec.tax === 'ai-insurance' || isCoverage ? 'AI Insurance' : (sec.parent_name || CATEGORY_NAME)} — The World of AI` : `AI in ${sec.name} — The World of AI`} description={desc}
   current={`${BASE}/`} jsonld={jsonld}>
 
   {isDraft && (
