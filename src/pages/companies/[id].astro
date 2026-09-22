@@ -46,10 +46,25 @@ export function getStaticPaths() {
       props: { company: d.company, generated: d.generated, profileText: d.profile_text || null, siteUrl: d.website || '', reading: d.reading || null,
         lobbying: d.lobbying || null,
         stock: (stocks.by_company || {})[d.company.uid] || null,
-        stockPending: pendingByCompany[d.company.uid] || null },
+        stockPending: pendingByCompany[d.company.uid] || null,
+        operator: (() => {
+          // DATA CENTER OPERATORS, Stephen 2026-09-22: "if it is thin, fix it".
+          // Thirteen operators had a bare company page while the same uid carried
+          // a full operator page in the data center atlas. The company page now
+          // carries that record's summary, so it has something to say, and links
+          // to the operator page for the facilities.
+          const f = `content/tech/dc-op-${d.company.uid}.json`;
+          if (!existsSync(f)) return null;
+          try {
+            const o = JSON.parse(readFileSync(f, 'utf8'));
+            return { name: o.name, reading: o.reading || '', facilities: o.facility_count || 0, mw: o.known_mw || 0,
+              hq: o.headquarters || '', type: o.operator_type || '', href: `/ai-ecosystem/technology-and-core-infrastructure/${o.uid}/` };
+          } catch { return null; }
+        })() },
     }));
 }
-const { company, generated, profileText, siteUrl, reading, stock, stockPending, lobbying } = Astro.props;
+const { company, generated, profileText, siteUrl, reading, stock, stockPending, lobbying, operator } = Astro.props;
+const op = operator && (operator.reading || operator.facilities > 0) ? operator : null;
 // Federal lobbying on AI, patched in by srj-pipeline twoai_politics_pages for
 // a company whose Lobbying Disclosure Act client record Stephen confirmed as
 // this company. Absent for every other company, so the section never renders
@@ -99,7 +114,7 @@ const paras = capParagraphs(profileText?.body);
 // profile, a reading, a lawsuit or an MCP server. Products alone no longer
 // count. Nothing is deleted: a thin page stays published and linked, carries
 // noindex, and the sitemap step drops it by reading the built HTML.
-const thin = cases.length === 0 && mcp.length === 0 && paras.length === 0 && !reading && !lobby;
+const thin = cases.length === 0 && mcp.length === 0 && paras.length === 0 && !reading && !lobby && !op;
 
 function fmtRevenue(usd) {
   if (typeof usd !== 'number') return null;
@@ -276,6 +291,16 @@ const jsonld = JSON.stringify({
       <p class="meta-line">Matched on the defendant field of the tracker. Being named as a
         defendant is not a finding of wrongdoing.</p>
     </>
+  )}
+
+  {op && (
+    <section>
+      <h2>What does {n} operate?</h2>
+      <p>{n} is tracked in the data center atlas as {op.type ? `a ${op.type} operator` : 'a data center operator'}{op.hq ? `, headquartered in ${op.hq}` : ''},
+        with <b>{op.facilities.toLocaleString()} {op.facilities === 1 ? 'facility' : 'facilities'}</b> on record{op.mw > 0 ? <>, {op.mw.toLocaleString()} MW of known capacity</> : ''}.
+        See every site on <a href={op.href}>the {op.name} operator page</a>.</p>
+      {op.reading && capParagraphs(op.reading).slice(0, 3).map((t) => <p>{t}</p>)}
+    </section>
   )}
 
   {lobby && (
