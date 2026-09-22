@@ -148,7 +148,7 @@ export function getStaticPaths() {
       // THE ART OF AI, 2026-09-22. Its hub and ten sub-hubs render as hub
       // landing pages like any other; its fifty topics carry five sections and
       // get their own prop, so no other branch on this route can see them.
-      if (d.shape === 'art-topic') {
+      if (d.shape === 'art-topic' || d.shape === 'art-hub') {
         paths.push({ params: { id: d.uid }, props: { art: d } });
         continue;
       }
@@ -231,6 +231,7 @@ const money = (n) => n >= 1e9 ? `$${(n/1e9).toFixed(1)}B` : n >= 1e6 ? `$${(n/1e
 const clampDesc = (s) => s.length <= 158 ? s : `${s.slice(0, 157).replace(/\s+\S*$/, '')}…`;
 const artSections = art ? (art.sections || []) : [];
 const artSiblings = art ? (art.siblings || []) : [];
+const artKids = art ? (art.children || []) : [];
 const desc = clampDesc(art
   ? `${art.name}: ${art.answer || ''}`
   : ehub
@@ -568,6 +569,7 @@ const jsonld = JSON.stringify(
 ---
 <Base title={title}
   description={desc} current={`${BASE}/`} jsonld={jsonld}
+  noindex={Boolean(art?.noindex)}
   doc={legacyPerson || pcat || hub || company || chub || obs || jhub || jdisc || csec || cpat || cpriv || corg || cfund || cma}
   stampLabel="Last verified"
   canonicalOverride={company ? `https://theworldofai.org/companies/${COMPANY_MOVED[company.uid] || company.uid}/` : undefined}
@@ -593,15 +595,25 @@ const jsonld = JSON.stringify(
     <>
       <h1>{art.name}</h1>
       <p class="answer">{art.answer}</p>
-      <p class="meta-line">uid {art.uid} &middot; generated {art.generated} &middot;
-        {' '}<a href={art.parent_path}>{art.parent_name}</a>, in
-        {' '}<a href={art.hub_path}>The Art of AI</a></p>
+      <p class="meta-line">uid {art.uid} &middot; generated {art.generated}
+        {art.parent_path && <> &middot; {' '}<a href={art.parent_path}>{art.parent_name}</a></>}
+        {art.hub_path && art.hub_path !== `${BASE}/${art.uid}/` && <>, in {' '}<a href={art.hub_path}>The Art of AI</a></>}</p>
       {artSections.map((sec) => (
         <section>
           <h2>{sec.heading}</h2>
           {capParagraphs(sec.body).map((t) => <p>{t}</p>)}
         </section>
       ))}
+      {artKids.length > 0 && (
+        <>
+          <h2>The {artKids.length} pages in {art.name}</h2>
+          <ul class="sections">
+            {artKids.map((k) => (
+              <li><a href={k.path}>{k.name}</a>{k.blurb && <> {k.blurb}</>}</li>
+            ))}
+          </ul>
+        </>
+      )}
       {artSiblings.length > 0 && (
         <>
           <h2>Also in {art.parent_name}</h2>

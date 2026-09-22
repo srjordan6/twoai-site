@@ -210,9 +210,15 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
       <p class="meta-line">uid {art.uid} &middot; generated {art.generated}
         {art.parent_path && <> &middot; {' '}<a href={art.parent_path}>{art.parent_name}</a></>}
         {art.hub_path && art.hub_path !== `${BASE}/${art.uid}/` && <>, in {' '}<a href={art.hub_path}>The AI Lawyer</a></>}</p>
+      {artSections.map((s) => (
+        <section>
+          <h2>{s.heading}</h2>
+          {capParagraphs(s.body).map((t) => <p>{t}</p>)}
+        </section>
+      ))}
       {artKids.length > 0 && (
         <>
-          <h2>Sections in {art.name}</h2>
+          <h2>The {artKids.length} pages in {art.name}</h2>
           <ul class="sections">
             {artKids.map((k) => (
               <li><a href={k.path}>{k.name}</a>{k.blurb && <> {k.blurb}</>}</li>
@@ -220,16 +226,8 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
           </ul>
         </>
       )}
-      {artSections.map((s) => (
-        <section>
-          <h2>{s.heading}</h2>
-          {capParagraphs(s.body).map((t) => <p>{t}</p>)}
-        </section>
-      ))}
-      {artSections.length > 0 && (
-        <p class="meta-line">Nothing on this page is legal advice. It describes how the
-          work is done and where the risk sits, for people who then take proper advice.</p>
-      )}
+      <p class="meta-line">Nothing on this page is legal advice. It describes how the
+        work is done and where the risk sits, for people who then take proper advice.</p>
       {artSiblings.length > 0 && (
         <>
           <h2>Also in {art.parent_name}</h2>
