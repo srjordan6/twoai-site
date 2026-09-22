@@ -145,13 +145,20 @@ export function getStaticPaths() {
         continue;
       }
       if (!d?.uid || d.category !== 'ecosystem-entities-market-and-operations') continue;
+      // THE ART OF AI, 2026-09-22. Its hub and ten sub-hubs render as hub
+      // landing pages like any other; its fifty topics carry five sections and
+      // get their own prop, so no other branch on this route can see them.
+      if (d.shape === 'art-topic') {
+        paths.push({ params: { id: d.uid }, props: { art: d } });
+        continue;
+      }
       paths.push({ params: { id: d.uid }, props: { ehub: d } });
     }
   }
 
   return paths;
 }
-const { hub, hubUid, chub, company, generated, chubUid, jhub, jdisc, jhubUid, pcat, csec, funds = [], fundsGenerated = null, cpat, cpriv, corg, cfund, obs, cma, website, profileText, companyReading, legacyPerson, ehub } = Astro.props;
+const { hub, hubUid, chub, company, generated, chubUid, jhub, jdisc, jhubUid, pcat, csec, funds = [], fundsGenerated = null, cpat, cpriv, corg, cfund, obs, cma, website, profileText, companyReading, legacyPerson, ehub, art } = Astro.props;
 // A generated hub landing page. Its own prop, so no other branch on this
 // route can see it and every one of them stays false.
 const ehubKids = ehub ? (ehub.children || []) : [];
@@ -222,7 +229,11 @@ const money = (n) => n >= 1e9 ? `$${(n/1e9).toFixed(1)}B` : n >= 1e6 ? `$${(n/1e
 // Meta descriptions are cut at a word boundary to 158 characters; search
 // engines truncate around 160 and the audit tooling flags anything longer.
 const clampDesc = (s) => s.length <= 158 ? s : `${s.slice(0, 157).replace(/\s+\S*$/, '')}…`;
-const desc = clampDesc(ehub
+const artSections = art ? (art.sections || []) : [];
+const artSiblings = art ? (art.siblings || []) : [];
+const desc = clampDesc(art
+  ? `${art.name}: ${art.answer || ''}`
+  : ehub
   ? `${ehub.title || ehub.name}: ${ehubKids.length} section${ehubKids.length === 1 ? '' : 's'} on The World of AI. ${ehub.answer || ehub.blurb || ''}`
   : cma
   ? `${cma.completed.length + cma.agreements.length} SEC 8-K filings - completed acquisitions (Item 2.01) and material definitive agreements (Item 1.01) - across ${cma.registrants} tracked AI registrants since 2024, each linked to the filing itself.`
@@ -253,7 +264,9 @@ const desc = clampDesc(ehub
   : legacyPerson
   ? `${legacyPerson.name}${legacyPerson.moniker ? `, ${legacyPerson.moniker}` : ''}. ${legacyPerson.hook || ''}`.slice(0, 300)
   : '');
-const title = ehub
+const title = art
+  ? `${art.name} — The World of AI`
+  : ehub
   ? `${ehub.title || ehub.name} — The World of AI`
   : cma
   ? 'AI Acquisitions and Partnerships: SEC 8-K Filings — The World of AI'
@@ -575,6 +588,32 @@ const jsonld = JSON.stringify(
     {pcat && <> · <a href={`${BASE}/${hubUid}/`}>AI People</a></>}
     {secHub && <> · <a href={`${BASE}/${chubUid}/`}>AI Companies</a></>}
     {company && <> · <a href={`${BASE}/${chubUid}/`}>AI Companies</a></>}</p>
+
+  {art && (
+    <>
+      <h1>{art.name}</h1>
+      <p class="answer">{art.answer}</p>
+      <p class="meta-line">uid {art.uid} &middot; generated {art.generated} &middot;
+        {' '}<a href={art.parent_path}>{art.parent_name}</a>, in
+        {' '}<a href={art.hub_path}>The Art of AI</a></p>
+      {artSections.map((sec) => (
+        <section>
+          <h2>{sec.heading}</h2>
+          {capParagraphs(sec.body).map((t) => <p>{t}</p>)}
+        </section>
+      ))}
+      {artSiblings.length > 0 && (
+        <>
+          <h2>Also in {art.parent_name}</h2>
+          <ul class="sections">
+            {artSiblings.map((k) => <li><a href={k.path}>{k.name}</a></li>)}
+          </ul>
+        </>
+      )}
+      <div class="cite-box">Cite this page: <code>"{art.name}." The World of AI,
+        theworldofai.org{BASE}/{art.uid}/. Retrieved {art.generated}.</code></div>
+    </>
+  )}
 
   {ehub && (
     <>
