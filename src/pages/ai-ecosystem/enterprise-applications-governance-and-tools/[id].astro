@@ -432,6 +432,24 @@ const isDraft = Boolean((clx || law || secu || sec)?.draft);
       <p class="meta-line">Last verified: {secu.generated} · One of the six domains of a security
         program in <a href={secu.hub_path}>{secu.hub_name}</a>. How each of {secu.topic_count} AI
         security topics lands for this domain, and what this part of the program has to do about it.</p>
+      {secu.program && secu.program.length > 0 && (
+        <section class="secprog">
+          <h2>The program: what this domain has to run</h2>
+          <p class="meta-line">Written from The Operating Discipline for AI Library, Volumes VI to VIII,
+            by Stephen Jordan. Each topic names the volume and chapter it draws on.</p>
+          {secu.program.map((p, i) => (
+            <div class="dom">
+              <h3>{i + 1}. {p.name}</h3>
+              <p class="meta-line">{p.scope}</p>
+              <p>{p.body}</p>
+              {p.refs && p.refs.length > 0 && (
+                <p class="meta-line">Source: {p.refs.map((r) => `Volume ${r.volume}, ${r.title || ''}, ${r.chapter}`).join('; ')}</p>
+              )}
+            </div>
+          ))}
+        </section>
+      )}
+      {secu.program && secu.program.length > 0 && <h2>How each AI security topic lands here</h2>}
       {secu.topics.map((t) => (
         <section class="dom">
           <h2><a href={t.path}>{t.name}</a></h2>
