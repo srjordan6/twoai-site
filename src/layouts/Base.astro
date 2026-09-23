@@ -715,6 +715,18 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
            first paint is right even before the inline script runs. */
         top: calc(var(--sticky-h, 132px) + 1.2rem);
         transform: translateX(clamp(0px, calc((100vw - 1080px) / 2 - 40px), 260px));
+        /* A STICKY RAIL TALLER THAN THE WINDOW HIDES ITS OWN BOTTOM. Stephen,
+           2026-09-22: Enterprise and Governance grew to twelve sections, the
+           card grew past the bottom of the window, and because the rail is
+           sticky it never scrolled up to show items eleven and twelve, The
+           Politics of AI and Knowledge Based Professions and their Future.
+           They were in the page and could not be reached. The rail is now
+           capped at the window height below the header and scrolls inside
+           itself when it is longer. */
+        max-height: calc(100vh - var(--sticky-h, 132px) - 2.4rem);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
       }
     }
     @media (min-width: 1400px) {
