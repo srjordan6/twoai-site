@@ -234,6 +234,11 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
         <p class="meta-line">Nothing on this page is accounting, tax or audit advice. It
           describes how the work is done and where the risk sits.</p>
       )}
+      {artSections.length > 0 && art.hub_name === 'The AI Physician' && (
+        <p class="meta-line">Nothing on this page is medical advice. It describes how AI is
+          used in medicine and where the risk sits; decisions about your own health belong
+          with a clinician who knows you.</p>
+      )}
       {artSiblings.length > 0 && (
         <>
           <h2>Also in {art.parent_name}</h2>
