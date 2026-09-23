@@ -239,6 +239,11 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
           used in medicine and where the risk sits; decisions about your own health belong
           with a clinician who knows you.</p>
       )}
+      {artSections.length > 0 && art.hub_name === 'The AI Economist' && (
+        <p class="meta-line">Nothing on this page is investment advice or a recommendation to
+          buy, sell or hold anything. It describes how AI is used in economics and investing
+          and where the risk sits.</p>
+      )}
       {artSiblings.length > 0 && (
         <>
           <h2>Also in {art.parent_name}</h2>
