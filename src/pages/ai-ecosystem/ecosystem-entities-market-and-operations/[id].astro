@@ -589,7 +589,8 @@ const jsonld = JSON.stringify(
     <a href={`${BASE}/`}>{CATEGORY_NAME}</a>
     {pcat && <> · <a href={`${BASE}/${hubUid}/`}>AI People</a></>}
     {secHub && <> · <a href={`${BASE}/${chubUid}/`}>AI Companies</a></>}
-    {company && <> · <a href={`${BASE}/${chubUid}/`}>AI Companies</a></>}</p>
+    {company && <> · <a href={`${BASE}/${chubUid}/`}>AI Companies</a></>}
+    {art && (art.crumbs || []).map((c) => <> · <a href={c.path}>{c.name}</a></>)}</p>
 
   {art && (
     <>

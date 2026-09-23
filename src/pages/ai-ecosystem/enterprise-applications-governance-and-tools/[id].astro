@@ -204,7 +204,8 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
   {art && (
     <>
       <p class="meta-line"><a href="/">AI Ecosystem</a> ·
-        <a href={`${BASE}/`}>{CATEGORY_NAME}</a></p>
+        <a href={`${BASE}/`}>{CATEGORY_NAME}</a>
+        {(art.crumbs || []).map((c) => <> · <a href={c.path}>{c.name}</a></>)}</p>
       <h1>{art.name}</h1>
       <p class="answer">{art.answer}</p>
       <p class="meta-line">uid {art.uid} &middot; generated {art.generated}
