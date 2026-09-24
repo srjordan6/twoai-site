@@ -178,6 +178,22 @@ const jsonld = JSON.stringify({
       record, it appears here automatically.</p>
   )}
 
+  {/* NEWS ABOUT THIS STATE'S AI POLICY. Stephen, 2026-09-24: executive
+      orders, governors' actions and enforcement do not arrive as bills, so a
+      page built from bills alone missed them. The pipeline picks the stories
+      that name the state and concern government action on AI. */}
+  {Array.isArray(d.news) && d.news.length > 0 && (
+    <>
+      <h2>{d.name} AI policy in the news</h2>
+      <ul class="state-news">
+        {d.news.map((n) => (
+          <li><a href={n.url}>{String(n.headline).split(' - ')[0]}</a>
+            <span class="meta-line"> {n.date}</span></li>
+        ))}
+      </ul>
+    </>
+  )}
+
   {/* Ask box before this page's own questions. Stephen, 2026-09-23. */}
   <AskBox heading={`Ask a question about AI law in ${d.name}`}
     placeholder={`Does ${d.name} regulate AI in hiring?`} />
