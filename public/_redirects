@@ -6,6 +6,13 @@
 /ai-ecosystem/  /  301
 /ai-ecosystem   /  301
 
+# KARRIE G. DIXON, 2026-09-24. Her record was published at d1111429 under the
+# name Karrie Dixon, and at b6beaa7f after the name gained its middle initial;
+# person uids hash the name, so the rename minted a second uid and for a while
+# both pages were live. The build that retired the old one was held by the
+# deploy gate until the address had somewhere to go.
+/ai-ecosystem/ecosystem-entities-market-and-operations/d1111429/  /ai-ecosystem/ecosystem-entities-market-and-operations/b6beaa7f/  301
+
 # THE FIRST AI LAWYER PAGES, 2026-09-22. The first version of twoai_art wrote
 # the AI Lawyer section under ecosystem-entities before it had its own section
 # and category. Those 61 empty copies were removed on 2026-09-23 and the deploy
