@@ -188,7 +188,7 @@ const jsonld = JSON.stringify({
       <ul class="state-news">
         {d.news.map((n) => (
           <li><a href={n.url}>{String(n.headline).split(' - ')[0]}</a>
-            <span class="meta-line"> {n.date}</span></li>
+            <span class="meta-line"> {n.date}{n.also_reported > 0 && <>, also reported by {n.also_reported} other {n.also_reported === 1 ? 'outlet' : 'outlets'}</>}</span></li>
         ))}
       </ul>
     </>
