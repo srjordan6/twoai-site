@@ -54,6 +54,12 @@ const COVERS = [
   // ordering rule this list is built on. It is safe below 'security audit'
   // because Volume VIII's title carries neither 'audit' nor 'implementation'.
   ['application security', '/covers/application-security.jpg', 512],
+  // Volume IX, added 2026-09-24, the THIRD time this gap shipped: press_books
+  // had the book available since the 23rd, the caption and link rendered,
+  // and the slot showed no art until this line existed. The cover file is
+  // the same 600x960 art the SRJ book page uses. 'cloud and infrastructure'
+  // is narrow enough not to collide with a later title carrying either word.
+  ['cloud and infrastructure', '/covers/cloud-infrastructure-security.jpg', 512],
 ];
 function coverFor(title) {
   const t = (title || '').toLowerCase();
