@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import AskBox from '../../components/AskBox.astro';
 import StateLawMap from '../../components/StateLawMap.astro';
 import { readFileSync, existsSync } from 'node:fs';
 
@@ -50,6 +51,10 @@ if (patternsHtml) {
         <a href="/ai-compliance/state-ai-law-patterns/">What State AI Laws Have in Common</a>.</p>
     </section>
   )}
+  {/* Ask box before the state list. Stephen, 2026-09-23. */}
+  <AskBox heading="Ask a question about state AI laws"
+    placeholder="Which states regulate deepfakes in elections?" />
+
   <h2 id="states">Every state</h2>
   <ul class="grid">
     {idx.states.map((s) => (

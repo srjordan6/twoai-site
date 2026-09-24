@@ -118,7 +118,7 @@ const {
         fetch('/api/ask', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question: text })
+          body: JSON.stringify({ question: text, from: location.pathname })
         }).then(function (r) { return r.json(); }).then(function (d) {
           if (d.error) { out.innerHTML = '<p class="ask-wait">' + esc(d.error) + '</p>'; return; }
           var html = '<div class="ask-answer">' + render(d.answer) + '</div>';

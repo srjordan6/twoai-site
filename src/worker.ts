@@ -259,9 +259,16 @@ export default {
     }
 
     let question = "";
+    // The page the question was asked from, so placements can be judged by the
+    // questions they earn. Stephen, 2026-09-23. Only a site path is kept: it
+    // must start with a single slash, carries no query or fragment, and is
+    // capped, so nothing a visitor types here can become anything but a path.
+    let fromPath: string | null = null;
     try {
-      const body = (await request.json()) as { question?: string };
+      const body = (await request.json()) as { question?: string; from?: string };
       question = (body.question || "").trim();
+      const f = typeof body.from === "string" ? body.from.split(/[?#]/)[0] : "";
+      if (/^\/(?!\/)[\w\-./]{0,200}$/.test(f)) fromPath = f;
     } catch {
       return json({ error: "Bad request" }, 400);
     }
@@ -682,12 +689,15 @@ export default {
       try {
         await env.ASSISTANT_DB.exec("ALTER TABLE answer_log ADD COLUMN model_errors TEXT");
       } catch {}
+      try {
+        await env.ASSISTANT_DB.exec("ALTER TABLE answer_log ADD COLUMN from_path TEXT");
+      } catch {}
       const verdict = await guard;
       const unsafe = verdict.toLowerCase().startsWith("unsafe");
       await env.ASSISTANT_DB.prepare(
         `INSERT INTO answer_log (question, question_norm, answered, best_score, top_url,
-           guard_verdict, guard_categories, model_used, model_errors)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+           guard_verdict, guard_categories, model_used, model_errors, from_path)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
         .bind(
           question, norm, answered ? 1 : 0, best,
@@ -695,7 +705,8 @@ export default {
           unsafe ? "unsafe" : verdict === "error" ? "error" : "safe",
           unsafe ? verdict.split("\n").slice(1).join(" ").trim() : null,
           answered ? usedModel : null,
-          modelErrors.length ? modelErrors.join(" | ") : null
+          modelErrors.length ? modelErrors.join(" | ") : null,
+          fromPath
         )
         .run()
         .catch(() => {

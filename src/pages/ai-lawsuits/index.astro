@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import AskBox from '../../components/AskBox.astro';
 import { readFileSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 // Same key the pipeline and twoai_entities use, so the uid shown here is the
@@ -113,6 +114,13 @@ const jsonld = JSON.stringify({
       )}
     </section>
   )}
+
+  {/* THE ASK BOX WHERE QUESTIONS ARE. Stephen, 2026-09-23: on the home page
+      and /sources/ only, it was seen by almost nobody, since visitors land on
+      pages like this one straight from search. Placed after the summary and
+      the month's changes, before the full list. */}
+  <AskBox heading="Ask a question about AI lawsuits"
+    placeholder="Which lawsuits are there against OpenAI?" />
 
   <h2 id="all-cases">All {s.count} cases</h2>
   {s.cases.length > 0 ? (
