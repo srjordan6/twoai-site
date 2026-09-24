@@ -6,6 +6,74 @@
 /ai-ecosystem/  /  301
 /ai-ecosystem   /  301
 
+# THE FIRST AI LAWYER PAGES, 2026-09-22. The first version of twoai_art wrote
+# the AI Lawyer section under ecosystem-entities before it had its own section
+# and category. Those 61 empty copies were removed on 2026-09-23 and the deploy
+# gate held the build until they were accounted for; each uid lives on at the
+# same id under enterprise-applications-governance-and-tools. Static rules,
+# placed above every splat so Cloudflare counts them as static, not dynamic.
+/ai-ecosystem/ecosystem-entities-market-and-operations/9f88eb66/  /ai-ecosystem/enterprise-applications-governance-and-tools/9f88eb66/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/c505ed19/  /ai-ecosystem/enterprise-applications-governance-and-tools/c505ed19/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/9bb8cede/  /ai-ecosystem/enterprise-applications-governance-and-tools/9bb8cede/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/252b852c/  /ai-ecosystem/enterprise-applications-governance-and-tools/252b852c/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/55216728/  /ai-ecosystem/enterprise-applications-governance-and-tools/55216728/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/c0e4db9b/  /ai-ecosystem/enterprise-applications-governance-and-tools/c0e4db9b/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/5e014172/  /ai-ecosystem/enterprise-applications-governance-and-tools/5e014172/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/a984d0fe/  /ai-ecosystem/enterprise-applications-governance-and-tools/a984d0fe/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/71c4b6b0/  /ai-ecosystem/enterprise-applications-governance-and-tools/71c4b6b0/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/e8c11c2d/  /ai-ecosystem/enterprise-applications-governance-and-tools/e8c11c2d/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/c1c1e3b7/  /ai-ecosystem/enterprise-applications-governance-and-tools/c1c1e3b7/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/5e8cabea/  /ai-ecosystem/enterprise-applications-governance-and-tools/5e8cabea/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/15ee72f8/  /ai-ecosystem/enterprise-applications-governance-and-tools/15ee72f8/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/13b812f2/  /ai-ecosystem/enterprise-applications-governance-and-tools/13b812f2/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/9c675c0d/  /ai-ecosystem/enterprise-applications-governance-and-tools/9c675c0d/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/7538bb28/  /ai-ecosystem/enterprise-applications-governance-and-tools/7538bb28/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/29e4cda8/  /ai-ecosystem/enterprise-applications-governance-and-tools/29e4cda8/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/54e6104d/  /ai-ecosystem/enterprise-applications-governance-and-tools/54e6104d/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/0646d38d/  /ai-ecosystem/enterprise-applications-governance-and-tools/0646d38d/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/d5db973b/  /ai-ecosystem/enterprise-applications-governance-and-tools/d5db973b/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/529cb0b0/  /ai-ecosystem/enterprise-applications-governance-and-tools/529cb0b0/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/34d11a53/  /ai-ecosystem/enterprise-applications-governance-and-tools/34d11a53/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/f72335ce/  /ai-ecosystem/enterprise-applications-governance-and-tools/f72335ce/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/1cf47162/  /ai-ecosystem/enterprise-applications-governance-and-tools/1cf47162/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/29fec7a3/  /ai-ecosystem/enterprise-applications-governance-and-tools/29fec7a3/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/a8c5c053/  /ai-ecosystem/enterprise-applications-governance-and-tools/a8c5c053/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/ae3d246b/  /ai-ecosystem/enterprise-applications-governance-and-tools/ae3d246b/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/74c151e2/  /ai-ecosystem/enterprise-applications-governance-and-tools/74c151e2/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/6e6668cd/  /ai-ecosystem/enterprise-applications-governance-and-tools/6e6668cd/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/2fe1daf5/  /ai-ecosystem/enterprise-applications-governance-and-tools/2fe1daf5/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/84f71c60/  /ai-ecosystem/enterprise-applications-governance-and-tools/84f71c60/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/160df48c/  /ai-ecosystem/enterprise-applications-governance-and-tools/160df48c/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/55da470b/  /ai-ecosystem/enterprise-applications-governance-and-tools/55da470b/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/767a50e1/  /ai-ecosystem/enterprise-applications-governance-and-tools/767a50e1/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/9915fd63/  /ai-ecosystem/enterprise-applications-governance-and-tools/9915fd63/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/0d656174/  /ai-ecosystem/enterprise-applications-governance-and-tools/0d656174/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/d79d7641/  /ai-ecosystem/enterprise-applications-governance-and-tools/d79d7641/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/07678e3f/  /ai-ecosystem/enterprise-applications-governance-and-tools/07678e3f/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/87f92b4e/  /ai-ecosystem/enterprise-applications-governance-and-tools/87f92b4e/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/79290bc8/  /ai-ecosystem/enterprise-applications-governance-and-tools/79290bc8/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/981ec578/  /ai-ecosystem/enterprise-applications-governance-and-tools/981ec578/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/15ac5afd/  /ai-ecosystem/enterprise-applications-governance-and-tools/15ac5afd/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/309be830/  /ai-ecosystem/enterprise-applications-governance-and-tools/309be830/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/2148d228/  /ai-ecosystem/enterprise-applications-governance-and-tools/2148d228/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/a43be8a9/  /ai-ecosystem/enterprise-applications-governance-and-tools/a43be8a9/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/5abf4bd2/  /ai-ecosystem/enterprise-applications-governance-and-tools/5abf4bd2/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/cfe76c83/  /ai-ecosystem/enterprise-applications-governance-and-tools/cfe76c83/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/d22e2b49/  /ai-ecosystem/enterprise-applications-governance-and-tools/d22e2b49/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/9c211ae3/  /ai-ecosystem/enterprise-applications-governance-and-tools/9c211ae3/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/270eca81/  /ai-ecosystem/enterprise-applications-governance-and-tools/270eca81/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/2e80378c/  /ai-ecosystem/enterprise-applications-governance-and-tools/2e80378c/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/14063a1f/  /ai-ecosystem/enterprise-applications-governance-and-tools/14063a1f/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/9af9fe46/  /ai-ecosystem/enterprise-applications-governance-and-tools/9af9fe46/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/8ba66378/  /ai-ecosystem/enterprise-applications-governance-and-tools/8ba66378/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/ec657b26/  /ai-ecosystem/enterprise-applications-governance-and-tools/ec657b26/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/18681873/  /ai-ecosystem/enterprise-applications-governance-and-tools/18681873/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/3d58d041/  /ai-ecosystem/enterprise-applications-governance-and-tools/3d58d041/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/244fa447/  /ai-ecosystem/enterprise-applications-governance-and-tools/244fa447/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/afbbe52e/  /ai-ecosystem/enterprise-applications-governance-and-tools/afbbe52e/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/0fbf943c/  /ai-ecosystem/enterprise-applications-governance-and-tools/0fbf943c/  301
+/ai-ecosystem/ecosystem-entities-market-and-operations/1bbfe89c/  /ai-ecosystem/enterprise-applications-governance-and-tools/1bbfe89c/  301
+
 # SRJ-ERA GOVERNANCE PATHS.
 # /ai-governance/* is srjconsultingservices.com's URL structure and was never
 # a path on this site, but internal links carried it here and Search Console
