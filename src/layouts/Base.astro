@@ -14,6 +14,7 @@ import AmazonShelf from '../components/AmazonShelf.astro';
 import PillarBox from '../components/PillarBox.astro';
 import Topbar from '../components/Topbar.astro';
 import DataStamp from '../components/DataStamp.astro';
+import AskBox from '../components/AskBox.astro';
 import { readFileSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
@@ -23,6 +24,41 @@ interface Props { title: string; description: string; current?: string; jsonld?:
    five categories beside it is the page repeating itself in miniature, and it
    pushed the hero, the ask box and everything below off centre. */
 const { title, description, current = '', jsonld, canonicalOverride, noindex = false, ogType = 'website', rail = true, titleTail, doc: docProp, stampLabel, redirect } = Astro.props;
+
+// THE ASK BOX ON EVERY PAGE. Stephen, 2026-09-23: put it on as many pages as
+// possible. Visitors land deep in the site from search and answer engines, so
+// a box on the home page alone was seen by almost nobody. The layout adds it
+// at the foot of the content on every page, with an example question suited
+// to the section. It is left off where a page already places its own copy
+// (the component binds fixed ids, so two on one page would break both), on a
+// page that exists only to redirect, and on embeds and the talent sign-in.
+const askPath = Astro.url.pathname;
+const ASK_OWN = [/^\/$/, /^\/sources\/?$/, /^\/ai-lawsuits\/?$/, /^\/ai-lawsuits\/(?!state\/)[^/]+\/?$/, /^\/ai-laws(\/[^/]+)?\/?$/];
+const ASK_NEVER = [/^\/embed\//, /^\/talent\/login\//, /^\/404/];
+const showAsk = !redirect && !ASK_OWN.some((r) => r.test(askPath)) && !ASK_NEVER.some((r) => r.test(askPath));
+const ASK_EXAMPLES: [RegExp, string][] = [
+  [/^\/ai-lawsuits\/state\//, 'Which AI lawsuits have been filed in this state?'],
+  [/^\/ai-glossary\//, 'What is the difference between RAG and fine tuning?'],
+  [/^\/ai-compliance\//, 'Does the EU AI Act apply to a US company?'],
+  [/^\/state-of-ai-laws\//, 'Which states passed AI laws this year?'],
+  [/^\/companies\//, 'Which AI companies are building data centers in Texas?'],
+  [/^\/ai-news\//, 'What happened in AI regulation this week?'],
+  [/^\/this-week-in-ai\//, 'What were the biggest AI stories this week?'],
+  [/^\/ai-tools\//, 'What AI tools help a small accounting firm?'],
+  [/^\/research\//, 'What papers cover AI governance?'],
+  [/^\/mcp\//, 'What does an MCP server do?'],
+  [/^\/benchmarks\//, 'Which models lead on coding benchmarks?'],
+  [/^\/calculators\//, 'How much does it cost to run an AI model?'],
+  [/^\/ai-prompts\//, 'How do I write a good prompt for a contract review?'],
+  [/^\/compute\//, 'What does GPU compute cost per hour?'],
+  [/^\/skills\//, 'What skills does an AI engineer need?'],
+  [/^\/talent\//, 'Which AI jobs are open in Texas?'],
+  [/^\/ai-ecosystem\/enterprise-applications-governance-and-tools\//, 'How is AI changing legal and accounting work?'],
+  [/^\/ai-ecosystem\/technology-and-core-infrastructure\//, 'Which data centers are planned in Georgia?'],
+  [/^\/ai-ecosystem\/ecosystem-entities-market-and-operations\//, 'Who are the leading AI companies in healthcare?'],
+  [/^\/ai-ecosystem\/research-knowledge-and-learning\//, 'What is the best way to start learning AI?'],
+];
+const askExample = (ASK_EXAMPLES.find(([r]) => r.test(askPath)) || [null, 'What are the AI laws in Texas?'])[1];
 
 // EVERY PAGE SHOWS ITS UID AND ITS DATE, INCLUDING THE HUBS. Stephen,
 // 2026-09-18: do not see a uid for /ai-laws/. He was right, and it was not
@@ -582,6 +618,9 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
         the query. data-pagefind-body limits the index to this column. */}
     <div class="main-col" data-pagefind-body>
       <slot />
+      {/* data-pagefind-ignore: the box reads the same on every page, and
+          indexing it would make every page match its words in site search. */}
+      {showAsk && <div class="ask-foot" data-pagefind-ignore><AskBox placeholder={askExample} /></div>}
       {/* EVERY PAGE CARRIES A DATE, A TIME AND A UID. Stephen's standing rule
           of 2026-09-06. Rendering it here rather than in each of the 65 page
           templates is the only way it stays true: a convention repeated 65
