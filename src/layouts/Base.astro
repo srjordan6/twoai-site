@@ -363,6 +363,19 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
         else if(q==='0')localStorage.removeItem('twoai_noanalytics');
         window.__twoaiNoAnalytics=localStorage.getItem('twoai_noanalytics')==='1';
       }catch(e){window.__twoaiNoAnalytics=false;}
+      // THE SQUARE SCREEN BOTS, 2026-09-24. Stephen: numbers went way up
+      // again. GA4 for Sep 17 to 23 showed 11,825 users, 11,377 of them in
+      // Singapore, nearly all direct, one page, about six seconds. On Sep 18
+      // their fingerprint was a 1366 x 1366 screen (7,047 of 7,374 users),
+      // with 1280 x 1280 and 800 x 600 behind it. No real desktop or laptop
+      // reports a square screen, so a square screen of 1000 pixels or more
+      // loads no analytics and no ads. Blocking at Cloudflare stops most of
+      // them; this keeps the ones that slip through out of the numbers, and
+      // keeps them from being served ads AdSense would count as invalid.
+      try{
+        var sw=screen.width, sh=screen.height;
+        if((sw===sh && sw>=1000) || (sw===800 && sh===600)) window.__twoaiNoAnalytics=true;
+      }catch(e){}
     })();
   </script>
   <script is:inline define:vars={{ PILLAR: gaPillar, SECTION: gaSection }}>
