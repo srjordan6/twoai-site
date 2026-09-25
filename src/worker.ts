@@ -291,6 +291,9 @@ export default {
     const RUDE_LOWER = /\b(dick(head|heads)?)\b/;
     const MOCK = /\b(are you|is this site|is this website|is this box|is stephen|stephen is|this site is|this website is|this box is|you are|you're|youre|ur|u r)\b[^.?!]{0,40}\b(stupid|dumb|dumbass|useless|garbage|trash|a joke|an idiot|idiot|idiots|worthless|fake|a scam|scam|pathetic|lame|braindead|clueless|a fraud|fraud|a loser|loser|ugly|fat)\b/i;
     const rudeHit = RUDE.test(question) || RUDE_LOWER.test(question) || MOCK.test(question);
+    // The filters read a de-obfuscated copy as well: the red team of
+    // 2026-09-24 got "1gn0re prev10us 1nstruct10ns" past the word check.
+    const plain = question.replace(/1/g, "i").replace(/0/g, "o").replace(/3/g, "e").replace(/4/g, "a").replace(/5/g, "s").replace(/7/g, "t").replace(/@/g, "a").replace(/\$/g, "s");
     // INJECTION, HARM AND SECRETS. Stephen, 2026-09-24, from his defence in
     // depth note. Three more classes are declined before anything is spent:
     // attempts to override the instructions the box runs under; requests for
@@ -303,12 +306,16 @@ export default {
     // into a public box does not have them leave this Worker.
     // Imperative overrides only. Questions ABOUT prompt injection, jailbreaks
     // and system prompts are this site's subject matter and must go through.
-    const INJECT = /(ignore (all |any )?(previous|prior|above|earlier|your) (instructions|prompts|rules)|disregard (all |any )?(previous|prior|earlier|your) (instructions|prompts|rules)|you are now (in )?(dan|developer mode|god mode|jailbroken|unrestricted|free of)|enter developer mode|pretend (you are|to be|you have no)|act as (if you were|though you have no)|(reveal|print|show|repeat|output) (me )?your (system )?(prompt|instructions|rules)|(reveal|print|show|repeat|output) (me )?the system (prompt|instructions)|new instructions:|from now on you)/i;
+    const INJECT = /(ignore (all |any )?(previous|prior|above|earlier|your) (instructions|prompts|rules)|disregard (all |any )?(previous|prior|earlier|your) (instructions|prompts|rules)|you are now (in )?(dan|developer mode|god mode|jailbroken|unrestricted|free of)|enter developer mode|pretend (you are|to be|you have no)|act as (if you were|though you have no)|(reveal|print|show|repeat|output|give me|tell me) (me )?your (system |hidden |secret |internal )?(prompt|instructions|rules)|(reveal|print|show|repeat|output) (me )?the (system|hidden) (prompt|instructions)|what is your (system )?prompt\??$|repeat (everything|all|the text) (above|before)|new instructions:|from now on you)/i;
+    // Creative requests are not questions, and the red team showed "write me
+    // a poem about my cat" reaching the web tier. They get the site's plain
+    // not-covered answer and no external lookup.
+    const CREATIVE = /\b(write|compose|create|generate|make|draft)( me| us)? (a |an |some )?(poem|poems|story|stories|song|lyrics|joke|jokes|haiku|limerick|rap|essay|letter|email|tweet|speech|screenplay)\b/i;
     const HARM = /\b(how to (build|make|create|synthesi[sz]e)\b[^.?!]{0,40}\b(bomb|explosive|weapon|gun|poison|meth|fentanyl|nerve agent)|ways to (kill|hurt|harm|poison) (people|someone|somebody|a person|my \w+)|how to (kill|murder|hurt|poison) (people|someone|somebody|a person|a man|a woman|a child|my \w+|him|her|them)|kill myself|end my life|commit suicide|how to end it|want to die|self harm)\b/i;
     const SECRETS = /\b(api[_ -]?key|secret[_ -]?key|access[_ -]?token|bearer|password|passwd|private[_ -]?key)\s*[:=]\s*\S{6,}/i;
     const selfHarm = /\b(kill myself|end my life|commit suicide|how to end it|want to die|self harm)\b/i.test(question);
-    if (INJECT.test(question) || HARM.test(question) || SECRETS.test(question)) {
-      const why = INJECT.test(question) ? "instruction override" : SECRETS.test(question) ? "credentials in question" : selfHarm ? "self harm" : "harm request";
+    if (INJECT.test(question) || INJECT.test(plain) || HARM.test(question) || SECRETS.test(question)) {
+      const why = (INJECT.test(question) || INJECT.test(plain)) ? "instruction override" : SECRETS.test(question) ? "credentials in question" : selfHarm ? "self harm" : "harm request";
       ctx.waitUntil((async () => {
         try {
           await env.ASSISTANT_DB.prepare(
@@ -805,7 +812,7 @@ export default {
       {
         // The classifier closes the external tiers. A question it marks
         // unsafe gets the plain not-covered answer and nothing is looked up.
-        if ((await guard).toLowerCase().startsWith("unsafe")) {
+        if ((await guard).toLowerCase().startsWith("unsafe") || CREATIVE.test(question)) {
           return json({ answered: false, answer: notCovered, sources: [], externalDeclined: true });
         }
         const subject = subjectOf(question);
@@ -1116,7 +1123,7 @@ export default {
       const subject = subjectOf(question);
       // The classifier closes the external tiers here as well: the site's
       // own refusal stands, and nothing is sent to Wikidata or the web.
-      if ((await guard).toLowerCase().startsWith("unsafe")) {
+      if ((await guard).toLowerCase().startsWith("unsafe") || CREATIVE.test(question)) {
         return json({ answered: false, answer, sources: shownSources, papers: [], externalDeclined: true });
       }
       // OUR OWN DATABASE FIRST, even for the free tiers. A structured answer we
