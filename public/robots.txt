@@ -21,3 +21,4 @@ Allow: /
 # https://theworldofai.org/llms.txt
 # https://theworldofai.org/api/
 Sitemap: https://theworldofai.org/sitemap-index.xml
+Sitemap: https://theworldofai.org/sitemap-news.xml

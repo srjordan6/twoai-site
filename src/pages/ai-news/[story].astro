@@ -174,6 +174,27 @@ const description = _fullDesc.length <= 158 ? _fullDesc : `${_fullDesc.slice(0, 
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@graph': [
+    // GOOGLE NEWS SIGNALS. Stephen, 2026-09-25: the story page carried only a
+    // CollectionPage, so Google had no article, no author and no publisher
+    // to read. The NewsArticle names the site as author (the briefing is
+    // compiled from the coverage by the pipeline, not written by a person)
+    // and Stephen as editor, which is what he is.
+    {
+      '@type': 'NewsArticle',
+      '@id': `https://theworldofai.org${storyPath}#article`,
+      headline: story.Headline,
+      description,
+      url: `https://theworldofai.org${storyPath}`,
+      mainEntityOfPage: `https://theworldofai.org${storyPath}`,
+      datePublished: date,
+      dateModified: generated,
+      isAccessibleForFree: true,
+      author: { '@type': 'Organization', name: 'The World of AI', url: 'https://theworldofai.org/about/' },
+      editor: { '@type': 'Person', name: 'Stephen Jordan', url: 'https://theworldofai.org/about/' },
+      publisher: { '@type': 'Organization', name: 'The World of AI', url: 'https://theworldofai.org/',
+        logo: { '@type': 'ImageObject', url: 'https://theworldofai.org/brand/og.png', width: 1200, height: 630 } },
+      image: 'https://theworldofai.org/brand/og.png',
+    },
     {
       '@type': 'CollectionPage',
       name: story.Headline,
@@ -207,6 +228,7 @@ const jsonld = JSON.stringify({
     <strong>Daily briefing</strong> · {date}
     {stamp && <> · compiled {stamp}</>}
     · {minutes}-minute read
+    · <span class="byline">Compiled by The World of AI, editor <a href="/about/">Stephen Jordan</a></span>
   </p>
   <div class="pills">
     {/* Every section this story belongs to, then every entity on this site it

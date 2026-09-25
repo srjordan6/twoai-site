@@ -49,22 +49,28 @@ if (c.total === 0) {
 const desc = lede.length <= 158 ? lede : `${lede.slice(0, 157).replace(/\s+\S*$/, '')}\u2026`;
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
-  '@type': 'Article',
+  '@type': 'NewsArticle',
   headline: `AI policy and litigation, ${w.start} to ${w.end}`,
   description: desc,
   url: `https://theworldofai.org/this-week-in-ai/${w.slug}/`,
+  mainEntityOfPage: `https://theworldofai.org/this-week-in-ai/${w.slug}/`,
   datePublished: w.end,
   dateModified: w.generated,
   isAccessibleForFree: true,
+  author: { '@type': 'Organization', name: 'The World of AI', url: 'https://theworldofai.org/about/' },
+  editor: { '@type': 'Person', name: 'Stephen Jordan', url: 'https://theworldofai.org/about/' },
+  image: 'https://theworldofai.org/brand/og.png',
   publisher: {
     '@type': 'Organization',
-    name: 'SRJ Consulting & Services LLC',
-    url: 'https://srjconsultingservices.com/',
+    name: 'The World of AI',
+    url: 'https://theworldofai.org/',
+    logo: { '@type': 'ImageObject', url: 'https://theworldofai.org/brand/og.png', width: 1200, height: 630 },
   },
 });
 ---
 <Base title={`This Week in AI: ${w.start} to ${w.end}`} description={desc} current="/this-week-in-ai/" jsonld={jsonld}>
   <h1>{w.label}</h1>
+  <p class="meta-line byline">Compiled by The World of AI · editor <a href="/about/">Stephen Jordan</a> · <time datetime={w.end}>{w.end}</time></p>
   <p class="answer">{lede}</p>
   {w.recap && (
     <div class="recap">

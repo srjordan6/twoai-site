@@ -335,6 +335,10 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
   <meta property="og:url" content={canonical} />
   <meta property="og:site_name" content="The World of AI" />
   <meta property="og:image" content="https://theworldofai.org/brand/og.png" />
+  {/* Feed discovery for readers and for Google News, 2026-09-25. */}
+  <link rel="alternate" type="application/rss+xml" title="The World of AI, daily AI news" href="https://theworldofai.org/ai-news/feed.xml" />
+  <link rel="alternate" type="application/rss+xml" title="The World of AI, vendor announcements" href="https://theworldofai.org/ai-news/vendor/feed.xml" />
+  <link rel="alternate" type="application/rss+xml" title="This Week in AI" href="https://theworldofai.org/this-week-in-ai/feed.xml" />
   <meta name="twitter:card" content="summary_large_image" />
   {/* Google AdSense. The tag is sitewide because AdSense verification and ad
       serving both require it on every page. Auto ads stay OFF in the AdSense
