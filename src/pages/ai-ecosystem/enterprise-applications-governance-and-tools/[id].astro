@@ -198,7 +198,7 @@ const isDraft = Boolean((art || clx || law || secu || sec)?.draft);
 // politics entity pages from 2026-09-22 (noindex set by the pipeline).
 const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
 ---
-<Base noindex={isDraft || isThin} title={art ? `${art.name} — The World of AI` : clc ? `${dcase.case_name} — AI Case Law — The World of AI` : clx ? 'AI Case Law: The Precedents Behind the Defenses — The World of AI' : law ? 'Enacted AI Laws: US Bills That Became Law — The World of AI' : secu ? `${secu.name} — AI Security and Risk — The World of AI` : isCases ? `AI Case Studies: Real Deployments, Indexed — The World of AI` : (isCoverage || isInsHub) ? `${sec.name} — ${(sec.tax || '').startsWith('ins-') || sec.tax === 'ai-insurance' || isCoverage ? 'AI Insurance' : (sec.parent_name || CATEGORY_NAME)} — The World of AI` : `AI in ${sec.name} — The World of AI`} description={desc}
+<Base noindex={isDraft || isThin} title={art ? `${art.name} — The World of AI` : clc ? `${dcase.case_name} — AI Case Law — The World of AI` : clx ? 'AI Case Law: The Precedents Behind the Defenses — The World of AI' : law ? 'Enacted AI Laws: US Bills That Became Law — The World of AI' : secu ? `${secu.name} — AI Security and Risk — The World of AI` : isCases ? `AI Case Studies: Real Deployments, Indexed — The World of AI` : (isCoverage || isInsHub) ? (sec.name === 'AI Insurance' ? `AI Insurance: Coverage for AI Risk — The World of AI` : `${sec.name} — ${(sec.tax || '').startsWith('ins-') || sec.tax === 'ai-insurance' || isCoverage ? 'AI Insurance' : (sec.parent_name || CATEGORY_NAME)} — The World of AI`) : `AI in ${sec.name} — The World of AI`} description={desc}
   current={`${BASE}/`} jsonld={jsonld}>
 
   {art && (
