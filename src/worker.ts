@@ -277,6 +277,33 @@ export default {
 
     const norm = question.toLowerCase().split(/\s+/).join(" ");
 
+    // NOT EVERY QUESTION GETS LOOKED UP. Stephen, 2026-09-24, on opening the
+    // web tier: obscene questions, and questions typed to mock the site or
+    // its author, must not be sent to Wikidata or the internet, and must not
+    // be answered. Two checks. This cheap one catches the obvious wording
+    // before any search or model call is spent; the Llama Guard verdict
+    // below, which until today only recorded, now closes the external tiers
+    // to anything it marks unsafe (the site's own pages still answer, since
+    // this corpus is about deepfakes, extremism policy and abuse cases and
+    // the classifier reacts to those words). Both are logged as declined.
+    const RUDE = /\b(fuck(ing|er|ers|ed|s)?|shit(ty|s)?|bitch(es|y)?|asshole(s)?|cunt(s)?|pussy|cocks?ucker|bastard(s)?|whore(s)?|slut(s|ty)?|twat(s)?|wanker(s)?|n[i1]gg(er|ers|a|as)|fag(got|gots|s)?|retard(ed|s)?|motherfuck(er|ers|ing)?|blowjob(s)?|jerk ?off)\b/i;
+    // Lowercase only: Philip K. Dick and Moby Dick are questions, not insults.
+    const RUDE_LOWER = /\b(dick(head|heads)?)\b/;
+    const MOCK = /\b(are you|is this site|is this website|is this box|is stephen|stephen is|this site is|this website is|this box is|you are|you're|youre|ur|u r)\b[^.?!]{0,40}\b(stupid|dumb|dumbass|useless|garbage|trash|a joke|an idiot|idiot|idiots|worthless|fake|a scam|scam|pathetic|lame|braindead|clueless|a fraud|fraud|a loser|loser|ugly|fat)\b/i;
+    const rudeHit = RUDE.test(question) || RUDE_LOWER.test(question) || MOCK.test(question);
+    if (rudeHit) {
+      ctx.waitUntil((async () => {
+        try {
+          await env.ASSISTANT_DB.prepare(
+            `INSERT INTO answer_log (question, question_norm, answered, best_score, top_url, guard_verdict, guard_categories, model_used, model_errors, from_path)
+             VALUES (?, ?, 0, NULL, NULL, 'declined', ?, NULL, NULL, ?)`
+          ).bind(question, norm, (RUDE.test(question) || RUDE_LOWER.test(question)) ? "obscene wording" : "mockery of the site", fromPath).run();
+        } catch {}
+      })());
+      return json({ answered: false, sources: [],
+        answer: "This box answers questions about artificial intelligence, from this site's pages and the sources it checks. That is not one it will look up." });
+    }
+
     // Screening runs in SHADOW MODE: recorded, never blocking. This corpus is
     // ABOUT deepfakes, extremism policy and abuse litigation, so a classifier
     // reading surface terms would refuse the site's own tracker to the audience
@@ -734,6 +761,11 @@ export default {
       // The path for unknown entities was the one path that skipped the free
       // encyclopaedia. Same tiers, same order, same recording and promotion.
       {
+        // The classifier closes the external tiers. A question it marks
+        // unsafe gets the plain not-covered answer and nothing is looked up.
+        if ((await guard).toLowerCase().startsWith("unsafe")) {
+          return json({ answered: false, answer: notCovered, sources: [], externalDeclined: true });
+        }
         const subject = subjectOf(question);
         const cached = await cachedLookup(env, norm, qVec);
         if (cached && (cached.wikidata || cached.lookup)) {
@@ -1021,6 +1053,11 @@ export default {
       // question never gets an author profile and vice versa - a confident
       // profile of the wrong subject is worse than no answer.
       const subject = subjectOf(question);
+      // The classifier closes the external tiers here as well: the site's
+      // own refusal stands, and nothing is sent to Wikidata or the web.
+      if ((await guard).toLowerCase().startsWith("unsafe")) {
+        return json({ answered: false, answer, sources: shownSources, papers: [], externalDeclined: true });
+      }
       // OUR OWN DATABASE FIRST, even for the free tiers. A structured answer we
       // have already stored is served from Postgres rather than fetched again:
       // once we have looked something up and kept it, the answer comes from
