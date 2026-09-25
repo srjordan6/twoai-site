@@ -437,19 +437,16 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
         s.onerror = function () {};
         document.head.appendChild(s);
       }
-      var fire = function () { loadAds(); cleanup(); };
-      function cleanup() {
-        ['scroll', 'pointerdown', 'keydown', 'touchstart'].forEach(function (e) {
-          window.removeEventListener(e, fire, { passive: true });
-        });
-      }
-      ['scroll', 'pointerdown', 'keydown', 'touchstart'].forEach(function (e) {
-        window.addEventListener(e, fire, { passive: true, once: true });
-      });
+      // INP, 2026-09-24. Clarity measured Interaction to Next Paint at 632 ms,
+      // "poor". Starting the AdSense load ON a visitor's first tap, key or
+      // scroll put Google's largest script to work at the exact moment the
+      // visitor was waiting for the page to respond, which is what INP
+      // measures. The load now waits only for the browser to be idle, never
+      // for an interaction; the timeout still guarantees it within seconds.
       if ('requestIdleCallback' in window) {
-        requestIdleCallback(loadAds, { timeout: 4000 });
+        requestIdleCallback(loadAds, { timeout: 5000 });
       } else {
-        setTimeout(loadAds, 2500);
+        setTimeout(loadAds, 3000);
       }
     })();
   </script>
@@ -463,6 +460,27 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
       t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
       y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
     })(window, document, "clarity", "script", "y1u43mf09w");
+  </script>
+  {/* CLARITY CONSENT OUTSIDE THE CONSENT REGIONS, 2026-09-24. Clarity reported
+      366 sessions and 0 returning users over three days. Its Consent Mode
+      integration reads the gtag defaults above, and the first of those is the
+      denied default for Europe; a script that does not resolve the visitor's
+      region can take that as the answer everywhere and run without cookies,
+      which makes every visit look new. This tells Clarity directly, for a
+      visitor outside those regions only, what the site already grants there.
+      The country comes from Cloudflare's own trace endpoint on this domain.
+      Europe, the UK and Switzerland are untouched and still wait for the
+      visitor's answer to Google's consent message. */}
+  <script is:inline>
+    if(!window.__twoaiNoAnalytics && window.fetch)(function(){
+      var held=['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE','IS','LI','NO','GB','CH'];
+      fetch('/cdn-cgi/trace').then(function(r){return r.text();}).then(function(t){
+        var m=/(?:^|\n)loc=([A-Z]{2})/.exec(t);
+        if(m && held.indexOf(m[1])===-1 && window.clarity){
+          window.clarity('consentv2',{ad_Storage:'granted',analytics_Storage:'granted'});
+        }
+      }).catch(function(){});
+    })();
   </script>
   {/* StatCounter, project 13342610, invisible counter. */}
   <script is:inline>
@@ -618,6 +636,53 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
         the query. data-pagefind-body limits the index to this column. */}
     <div class="main-col" data-pagefind-body>
       <slot />
+      {/* READ NEXT, NEAR THE TOP. Stephen, 2026-09-24: Clarity showed one page
+          per session and 25 percent scroll depth. Visitors take the opening
+          answer and leave before reaching Keep reading at the foot. This
+          copies the first three of those links into a short line placed after
+          the page's opening paragraph, so the next page is in view while the
+          reader still is. It runs as the page is parsed, before first paint
+          on almost every load, so it does not shift the layout, and it only
+          acts on pages that have a Keep reading block and a real opening. */}
+      <script is:inline>
+        (function(){
+          var kr=document.querySelector('main .keep-reading');
+          if(!kr) return;
+          var links=[].slice.call(kr.querySelectorAll('a')).slice(0,3);
+          if(links.length<2) return;
+          var ps=document.querySelectorAll('main p');
+          var first=null;
+          for(var i=0;i<ps.length;i++){
+            if(kr.contains(ps[i])) break;
+            if((ps[i].textContent||'').length>=160){first=ps[i];break;}
+          }
+          if(!first) return;
+          var box=document.createElement('p');
+          box.className='read-next';
+          box.setAttribute('data-nosnippet','');
+          box.setAttribute('data-pagefind-ignore','');
+          var lab=document.createElement('span');
+          lab.className='read-next-label';
+          lab.textContent='Read next';
+          box.appendChild(lab);
+          links.forEach(function(a){
+            var c=document.createElement('a');
+            c.href=a.getAttribute('href');
+            c.textContent=(a.textContent||'').trim();
+            box.appendChild(c);
+          });
+          first.parentNode.insertBefore(box, first.nextSibling);
+        })();
+      </script>
+      <style is:inline>
+        .read-next { margin: 14px 0 22px; padding: 10px 14px; border-left: 3px solid #F07800;
+          background: #f7f7fb; font-size: 14px; line-height: 1.6; }
+        .read-next-label { font-family: Poppins, system-ui, sans-serif; font-size: 11px; font-weight: 700;
+          letter-spacing: .14em; text-transform: uppercase; color: #F07800; margin-right: 10px; }
+        .read-next a { color: #201868; font-weight: 600; text-decoration: none; margin-right: 14px; display: inline-block; }
+        .read-next a:hover { color: #F07800; }
+        @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .read-next { background: rgba(255,255,255,.05); } }
+      </style>
       {/* data-pagefind-ignore: the box reads the same on every page, and
           indexing it would make every page match its words in site search. */}
       {showAsk && <div class="ask-foot" data-pagefind-ignore><AskBox placeholder={askExample} /></div>}
