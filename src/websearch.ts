@@ -34,7 +34,7 @@ import postgres from "postgres";
 // never be able to starve the pipeline, so this cap is deliberately low: 15 a
 // day is roughly $13 a month all-in. The cache is what makes that number
 // workable, because a repeat question costs nothing.
-export const DAILY_SEARCH_CAP = 15;
+export const DAILY_SEARCH_CAP = 40;
 
 export type WebAnswer = {
   text: string;
@@ -58,7 +58,12 @@ export type WebAnswer = {
 // OFF. Stephen, 2026-09-17: cut all ties with the Anthropic API. This tier was
 // the Anthropic web-search tool, so it is switched off here and the key is no
 // longer read. Gap recording still runs, so unanswered questions stay ranked.
-const WEB_SEARCH_ENABLED = false;
+// ON AGAIN, THROUGH OLLAMA. Stephen, 2026-09-24: the order is SQL, Wikidata,
+// then Hugging Face and OpenAlex, then the internet, with the reader's exact
+// words searched at every step. The Anthropic web tool stays cut; the search
+// is Ollama's web search API with the same key the answers already use, and
+// the summary is written by the same Ollama model, so no new vendor.
+const WEB_SEARCH_ENABLED = true;
 
 // VOCABULARY GATE. Stephen's request: only spend a search when the question
 // is actually about something this site covers, using the published glossary
@@ -98,7 +103,7 @@ const VOCAB_SQL = `
 // and had it contradicted by the first measurement. So the score is RECORDED
 // on every row now and the floor stays at zero until a week of real questions
 // says where the separation is. Instrument first, then gate.
-const MIN_QUESTION_WORDS = 3;
+const MIN_QUESTION_WORDS = 1;
 const RELEVANCE_FLOOR = 0;
 
 // How close two questions must be, by embedding cosine similarity, to count
@@ -200,8 +205,11 @@ export async function webFallback(
     }
 
     // VOCABULARY CHECK, deliberately AFTER the row above so the demand signal
-    // survives a question the gate declines to spend on.
-    try {
+    // survives a question the gate declines to spend on. RETIRED 2026-09-24:
+    // Stephen wants whatever a reader types searched in every location, and
+    // a gate that drops questions whose words are not in our glossary is the
+    // opposite of that. The daily cap below is still the ceiling.
+    if (false) try {
       const vocab: any[] = await sql.unsafe(VOCAB_SQL, [question]);
       if (!vocab.length) {
         lastWebError = "gate: no glossary vocabulary in question";
@@ -272,51 +280,60 @@ export async function webFallback(
       return null;
     }
 
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
+    // THE EXACT WORDS, SEARCHED. The query sent to the web is the reader's
+    // question exactly as typed, trimmed, nothing extracted or rewritten.
+    const ollamaKey = env.OLLAMA_API_KEY;
+    if (!ollamaKey) {
+      lastWebError = "OLLAMA_API_KEY is not set on the Worker";
+      return null;
+    }
+    const sr = await fetch("https://ollama.com/api/web_search", {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
+      headers: { "content-type": "application/json", authorization: `Bearer ${ollamaKey}` },
+      body: JSON.stringify({ query: question.trim(), max_results: 5 }),
+    });
+    if (!sr.ok) {
+      lastWebError = `ollama web_search HTTP ${sr.status}: ${(await sr.text()).slice(0, 300)}`;
+      return null;
+    }
+    const found: any = await sr.json();
+    const results: Array<{ title: string; url: string; content: string }> = (found?.results ?? [])
+      .filter((x: any) => x?.url)
+      .slice(0, 5)
+      .map((x: any) => ({ title: String(x.title ?? x.url), url: String(x.url), content: String(x.content ?? "").slice(0, 2500) }));
+    if (!results.length) {
+      lastWebError = "ollama web_search returned no results";
+      return null;
+    }
+    const numbered = results.map((x, i) => `[${i + 1}] ${x.title}\n${x.url}\n${x.content}`).join("\n\n");
+    const r = await fetch("https://ollama.com/api/chat", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${ollamaKey}` },
       body: JSON.stringify({
-        model,
-        max_tokens: 600,
-        system:
-          "You are answering a question that theworldofai.org does not cover. Search the web and give a brief factual answer in at most 120 words. Begin immediately with the answer: never narrate what you are about to do, and never write a sentence like 'I will search for that'. Name the sources you used. Do not claim this site covers the topic and do not mention theworldofai.org. If the search finds nothing solid, say so plainly rather than guessing.",
-        messages: [{ role: "user", content: question }],
-        tools: [{ type: "web_search_20250305", name: "web_search" }],
+        model: env.OLLAMA_MODEL || "deepseek-v4-pro",
+        stream: false,
+        think: false,
+        options: { num_predict: 500 },
+        messages: [
+          { role: "system", content:
+            "You are answering a question that theworldofai.org does not cover, using ONLY the numbered web results provided. Give a brief factual answer in at most 120 words, in plain English, and put the number of each result you relied on in square brackets, like [2]. Begin immediately with the answer. Do not claim this site covers the topic and do not mention theworldofai.org. Do not add anything the results do not say. If the results do not answer the question, say plainly that the web results found do not answer it." },
+          { role: "user", content: `Question: ${question.trim()}\n\nWeb results:\n${numbered}` },
+        ],
       }),
     });
     if (!r.ok) {
-      lastWebError = `anthropic HTTP ${r.status}: ${(await r.text()).slice(0, 300)}`;
+      lastWebError = `ollama chat HTTP ${r.status}: ${(await r.text()).slice(0, 300)}`;
       return null;
     }
     const out: any = await r.json();
-
-    // Pull prose and citation URLs out of the block list. Citations ride on
-    // text blocks; server tool result blocks nest their own content, so both
-    // shapes are walked rather than assuming one.
-    let text = "";
+    let text = String(out?.message?.content ?? "");
+    // Only the results the answer actually cites are shown as its sources.
     const srcMap = new Map<string, string>();
-    const walk = (blocks: any[]) => {
-      for (const b of blocks ?? []) {
-        if (b?.type === "text") {
-          text += String(b.text ?? "");
-          for (const c of b.citations ?? []) {
-            const u = String(c?.url ?? "");
-            if (u) srcMap.set(u, String(c?.title ?? u));
-          }
-        }
-        if (Array.isArray(b?.content)) walk(b.content);
-      }
-    };
-    walk(out?.content ?? []);
-    // Strip tool-use narration. Verified live 2026-09-01: the first working
-    // answer opened "I'll search for information on how Einstein's theory of
-    // relativity influenced artificial intelligence." before the substance.
-    // The prompt now forbids it, and this catches the model that does it
-    // anyway, because a reader wants the answer, not the process.
+    for (const m of text.matchAll(/\[(\d)\]/g)) {
+      const x = results[Number(m[1]) - 1];
+      if (x) srcMap.set(x.url, x.title);
+    }
+    if (!srcMap.size) for (const x of results.slice(0, 3)) srcMap.set(x.url, x.title);
     text = text.replace(/^\s*(i(?:'|\u2019)?ll|i will|let me|i'm going to|i am going to)\b[^.!?\n]*[.!?\n]\s*/i, "");
     text = text.trim();
     if (!text) {
@@ -337,7 +354,7 @@ export async function webFallback(
 
     await sql`
       UPDATE twoai_web_answers
-         SET provider = 'anthropic-web-search',
+         SET provider = 'ollama-web-search',
              fetched_at = now(),
              results = ${sql.json({ text, sources } as any)},
              provenance = 'cite_only'

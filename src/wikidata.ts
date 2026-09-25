@@ -107,7 +107,14 @@ export async function wikidataLookup(question: string): Promise<WikidataAnswer |
     // SELECT * FROM users mean in SQL" capitalises the code as well as the
     // subject, and the subject usually comes last. At most three searches.
     const words = subject.split(/\s+/).filter(Boolean);
-    const tries = [subject, ...(words.length > 1 ? words.slice().reverse() : [])].slice(0, 3);
+    // THE READER'S EXACT WORDS FIRST. Stephen, 2026-09-24: whatever is typed
+    // is searched as typed in every location. Wikidata searches names, so the
+    // whole question rarely matches anything, but when it does (someone types
+    // just "PostgreSQL") that is the most faithful answer, and it costs one
+    // request. Then the extracted subject, then its words from the end.
+    const exact = question.trim().replace(/[?!.]+$/, "");
+    const tries = [exact, subject, ...(words.length > 1 ? words.slice().reverse() : [])]
+      .filter((t, i, a) => t && a.indexOf(t) === i).slice(0, 4);
     // WHICH OF WIKIDATA'S MATCHES. Its search ranks by popularity, not by this
     // site's subject: "lakehouse" ranks a video game first, "rice" a family
     // name. Five candidates are read per search and one is taken only if it
