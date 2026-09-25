@@ -31,7 +31,7 @@ const UA = "theworldofai.org (https://theworldofai.org; srj@srjconsultingservice
 // back as QIDs and get resolved to labels in one batched second call.
 const PROPS: Array<{ pid: string; field: string; label: string; isEntity: boolean }> = [
   { pid: "P112", field: "founders", label: "Founded by", isEntity: true },
-  { pid: "P571", field: "founded", label: "Founded", isEntity: false },
+  { pid: "P571", field: "founded", label: "Founded or introduced", isEntity: false },
   { pid: "P159", field: "headquarters", label: "Headquarters", isEntity: true },
   { pid: "P169", field: "ceo", label: "Chief executive", isEntity: true },
   { pid: "P749", field: "parent", label: "Parent organisation", isEntity: true },
@@ -41,6 +41,20 @@ const PROPS: Array<{ pid: string; field: string; label: string; isEntity: boolea
   // name alone; domain equality is the check. Carrying the official website
   // back from Wikidata is what makes safe promotion possible at all.
   { pid: "P856", field: "website", label: "Official website", isEntity: false },
+  // CONCEPTS AND TECHNOLOGIES, 2026-09-24. Stephen asked the box about SQL and
+  // got nothing, though Wikidata holds SQL as Q47607. Every property above
+  // describes a company, so a language, a technique or a standard matched
+  // and then carried "none of the properties we read". These describe what a
+  // thing is and who made it. None of them feeds promotion, which still
+  // needs a website and a domain match to one of our company records.
+  { pid: "P31", field: "instance_of", label: "What it is", isEntity: true },
+  { pid: "P178", field: "developer", label: "Developer", isEntity: true },
+  { pid: "P287", field: "designed_by", label: "Designed by", isEntity: true },
+  { pid: "P61", field: "inventor", label: "Invented by", isEntity: true },
+  { pid: "P170", field: "creator", label: "Created by", isEntity: true },
+  { pid: "P577", field: "first_released", label: "First released", isEntity: false },
+  { pid: "P737", field: "influenced_by", label: "Influenced by", isEntity: true },
+  { pid: "P275", field: "licence", label: "Licence", isEntity: true },
 ];
 
 export type WikidataFact = { field: string; label: string; value: string };
@@ -75,7 +89,7 @@ export function subjectOf(question: string): string {
   const LEAD = new Set(["who", "what", "when", "where", "why", "how", "is", "was", "are",
     "were", "does", "did", "do", "the", "a", "an", "tell", "me", "about"]);
   const words = question.replace(/[?!.,]/g, "").split(/\s+/).filter(Boolean);
-  const caps = words.filter((w, i) => /^[A-Z]/.test(w) && !(i === 0 && LEAD.has(w.toLowerCase())));
+  const caps = words.filter((w, i) => /^[A-Z]/.test(w) && w.length > 1 && !(i === 0 && LEAD.has(w.toLowerCase())));
   if (caps.length) return caps.join(" ");
   return words.filter((w) => !LEAD.has(w.toLowerCase()) && w.length > 2).slice(0, 4).join(" ");
 }
@@ -88,11 +102,36 @@ export async function wikidataLookup(question: string): Promise<WikidataAnswer |
     return null;
   }
   try {
-    // 1. Find the entity.
-    const search = await wdFetch(
-      "https://www.wikidata.org/w/api.php?action=wbsearchentities&format=json&language=en&limit=1&origin=*&search=" +
-        encodeURIComponent(subject));
-    const top = search?.search?.[0];
+    // 1. Find the entity. The whole capitalised run first, then each
+    // capitalised word from the end, because a question like "what does
+    // SELECT * FROM users mean in SQL" capitalises the code as well as the
+    // subject, and the subject usually comes last. At most three searches.
+    const words = subject.split(/\s+/).filter(Boolean);
+    const tries = [subject, ...(words.length > 1 ? words.slice().reverse() : [])].slice(0, 3);
+    // WHICH OF WIKIDATA'S MATCHES. Its search ranks by popularity, not by this
+    // site's subject: "lakehouse" ranks a video game first, "rice" a family
+    // name. Five candidates are read per search and one is taken only if it
+    // plausibly IS what was searched (its label or matched alias contains the
+    // term, or the term contains the label), preferring one whose description
+    // is about technology, data, a company or a person in the field. A
+    // candidate with no such description is accepted only when the subject
+    // was a capitalised name, never from a lowercase guess at content words.
+    const TECH = /(software|database|program|language|comput|data|artificial intelligence|machine learning|algorithm|company|corporation|technolog|model|framework|library|protocol|standard|organi[sz]ation|business|internet|cloud|semiconductor|neural|startup|scientist|engineer|researcher)/i;
+    const named = /[A-Z]/.test(subject);
+    let top: any = null;
+    for (const t of tries) {
+      const search = await wdFetch(
+        "https://www.wikidata.org/w/api.php?action=wbsearchentities&format=json&language=en&limit=5&origin=*&search=" +
+          encodeURIComponent(t));
+      const tl = t.toLowerCase();
+      const plausible = (search?.search ?? []).filter((h: any) => {
+        const lab = String(h?.label ?? "").toLowerCase();
+        const on = String(h?.match?.text ?? "").toLowerCase();
+        return h?.id && tl.length >= 2 && (lab.includes(tl) || on.includes(tl) || (lab.length >= 2 && tl.includes(lab)));
+      });
+      top = plausible.find((h: any) => TECH.test(String(h?.description ?? ""))) ?? (named ? plausible[0] : null);
+      if (top) break;
+    }
     if (!top?.id) {
       lastWikidataError = "no wikidata match for: " + subject;
       return null;
@@ -154,9 +193,17 @@ export async function wikidataLookup(question: string): Promise<WikidataAnswer |
         .map((v) => (r.isEntity ? labels.get(v) ?? "" : v))
         .filter(Boolean)
         .join(", "),
-    })).filter((f) => f.value);
+    })).filter((f) => f.value)
+      // "What it is: human" is true of every person and tells the reader nothing.
+      .filter((f) => !(f.field === "instance_of" && f.value === "human"));
 
-    if (!facts.length) {
+    // A description with no facts is accepted only when the thing Wikidata
+    // matched is named in the question itself, so a loose search on the
+    // content words of an unrelated question cannot put a confident profile
+    // of the wrong subject in front of the reader.
+    const describedOnly = !facts.length
+      && String(ent?.entities?.[top.id]?.descriptions?.en?.value ?? top.description ?? "").trim() !== "";
+    if (!facts.length && !describedOnly) {
       lastWikidataError = "matched " + top.id + " but it carries none of the properties we read";
       return null;
     }
