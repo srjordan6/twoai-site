@@ -255,6 +255,14 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
       )}
       <div class="cite-box">Cite this page: <code>"{art.name}." The World of AI,
         theworldofai.org{BASE}/{art.uid}/. Retrieved {art.generated}.</code></div>
+      {art.source_url && (
+        /* SOURCE SUMMARY PAGES, 2026-09-25. The whole page is our reading of
+           one outside source; the link to that source sits at the very
+           bottom, as Stephen asked, with the date its text was read. */
+        <p class="meta-line source-line">This page summarises one source, read {art.source_read_on}: {' '}
+          <a href={art.source_url} rel="nofollow noopener">{art.source_name || art.source_url}</a>.
+          The words above are ours; the source and its contents belong to its publisher.</p>
+      )}
     </>
   )}
 
@@ -837,7 +845,7 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
         </>
       )}
       {f.source && ownHref(f.source) ? null : f.source ? (
-        <p class="meta-line"><a href={f.source} rel="noopener">Source</a></p>
+        <p class="meta-line"><a href={f.source} rel="noopener">Source</a>{f.reading_path && <> &middot; <a href={f.reading_path}>Our summary of this source</a></>}</p>
       ) : (
         /* NO SOURCE, NO LINK. This rendered <a href="">Source</a>
            unconditionally, so a point still being researched emitted a link
