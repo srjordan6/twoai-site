@@ -1179,6 +1179,20 @@ export default {
     // attempts were writing BUILD variables, not runtime secrets. The working
     // path was `wrangler secret put ANTHROPIC_API_KEY`. Failures stay
     // queryable in answer_log.model_errors.
-    return json({ answered: true, answer, beyond: beyond || undefined, sources: shownSources, papers: citedPapers, model: usedModel });
+    // HALF-COVERED ANSWERS, 2026-09-25. Asked about Einstein and AI, the site
+    // answered from the John von Neumann page and said plainly it does not
+    // cover Einstein, but because that came out as an answer rather than the
+    // not-covered line, the outside sources never ran. When the answer says
+    // the site does not cover the thing asked about, the Wikidata step runs
+    // for the question's own subject and rides along as "From Wikidata, not
+    // this site", so the reader gets the named subject as well as the nearest
+    // page. One free request, no model call, and the same guard as the
+    // not-covered path.
+    let sideWikidata: any = undefined;
+    if (/\b(does not|doesn't|do not|don't) (cover|credit|hold|have|include|track|list|record)\b|\bnot covered\b|\bno (page|record|entry|coverage) (on|for|of)\b/i.test(answer)
+        && !CREATIVE.test(question) && !(await guard).toLowerCase().startsWith("unsafe")) {
+      try { sideWikidata = (await wikidataLookup(question)) ?? undefined; } catch { sideWikidata = undefined; }
+    }
+    return json({ answered: true, answer, beyond: beyond || undefined, sources: shownSources, papers: citedPapers, model: usedModel, wikidata: sideWikidata });
   },
 };

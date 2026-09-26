@@ -113,8 +113,14 @@ export async function wikidataLookup(question: string): Promise<WikidataAnswer |
     // just "PostgreSQL") that is the most faithful answer, and it costs one
     // request. Then the extracted subject, then its words from the end.
     const exact = question.trim().replace(/[?!.]+$/, "");
-    const tries = [exact, subject, ...(words.length > 1 ? words.slice().reverse() : [])]
-      .filter((t, i, a) => t && a.indexOf(t) === i).slice(0, 4);
+    // Generic AI words are not the subject: "Did Albert Einstein contribute
+    // to AI" resolved to the Wikidata item for artificial intelligence
+    // because "AI" was tried as a name before "Einstein". They are dropped
+    // from the subject, and a multi-word remainder is tried before its parts.
+    const AIWORDS = /^(ai|artificial|intelligence|llm|llms|model|models|chatbot|chatbots|machine|learning)$/i;
+    const keep = words.filter((w) => !AIWORDS.test(w));
+    const tries = [exact, subject, keep.join(" "), ...(keep.length > 1 ? keep.slice().reverse() : [])]
+      .filter((t, i, a) => t && a.indexOf(t) === i).slice(0, 5);
     // WHICH OF WIKIDATA'S MATCHES. Its search ranks by popularity, not by this
     // site's subject: "lakehouse" ranks a video game first, "rice" a family
     // name. Five candidates are read per search and one is taken only if it
@@ -134,7 +140,11 @@ export async function wikidataLookup(question: string): Promise<WikidataAnswer |
       const plausible = (search?.search ?? []).filter((h: any) => {
         const lab = String(h?.label ?? "").toLowerCase();
         const on = String(h?.match?.text ?? "").toLowerCase();
-        return h?.id && tl.length >= 2 && (lab.includes(tl) || on.includes(tl) || (lab.length >= 2 && tl.includes(lab)));
+        if (!h?.id || tl.length < 2) return false;
+        // The exact-words try must match exactly: "What is AI" is not the
+        // paper "What Is AIDS in the Amazon and the Guianas".
+        if (t === exact) return lab === tl || on === tl;
+        return lab.includes(tl) || on.includes(tl) || (lab.length >= 2 && tl.includes(lab));
       });
       top = plausible.find((h: any) => TECH.test(String(h?.description ?? ""))) ?? (named ? plausible[0] : null);
       if (top) break;
