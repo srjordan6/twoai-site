@@ -956,8 +956,13 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
        It stays navy, one step heavier, with an orange underline as the marker:
        orange as a line, never as resting text. */
     .site-head .main-nav a[aria-current="page"] { color: var(--navy) !important; font-weight: 600;
-      text-decoration: underline; text-decoration-color: var(--orange);
-      text-decoration-thickness: 2px; text-underline-offset: 6px; }
+      /* ONE LINE UNDER THE WHOLE LABEL. Stephen, 2026-09-25, with a screenshot:
+         at a large text size the labels wrap ("Enterprise &" over
+         "Governance") and text-decoration underlined each line separately,
+         two orange dashes instead of one marker. A bottom border on the
+         inline-block link draws once beneath the block however it wraps. */
+      display: inline-block; text-decoration: none; padding-bottom: 3px;
+      border-bottom: 2px solid var(--orange); }
     .mobile-panel a[aria-current="page"] { color: #fff !important; }
     main { min-height: 55vh; padding: 34px 22px 64px; }
 
