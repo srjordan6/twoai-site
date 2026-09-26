@@ -376,7 +376,7 @@ export default {
         const today = new Date().toISOString().slice(0, 10);
         const row: any = await env.ASSISTANT_DB.prepare(
           `SELECT count(*) AS n FROM answer_log WHERE model_used = 'research' AND asked_at >= ?`).bind(today).first();
-        if (Number(row?.n ?? 0) >= 80) {
+        if (Number(row?.n ?? 0) >= 25) {
           return json({ answered: false, answer: "Research mode has reached its daily limit. The quick answer is still available; try again tomorrow.", sources: [], mode: "research" });
         }
       } catch {}
