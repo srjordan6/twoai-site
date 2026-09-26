@@ -39,6 +39,7 @@ import { handleTranslate } from "./translate";
 import { webFallback, lastWebError } from "./websearch";
 import { wikidataLookup, lastWikidataError, subjectOf } from "./wikidata";
 import { openAlexAuthor, huggingFaceModel, recordLookup, cachedLookup, promoteFacts } from "./lookups";
+import { researchAnswer } from "./research";
 import postgres from "postgres";
 
 interface Env {
@@ -264,9 +265,11 @@ export default {
     // must start with a single slash, carries no query or fragment, and is
     // capped, so nothing a visitor types here can become anything but a path.
     let fromPath: string | null = null;
+    let mode = "";
     try {
-      const body = (await request.json()) as { question?: string; from?: string };
+      const body = (await request.json()) as { question?: string; from?: string; mode?: string };
       question = (body.question || "").trim();
+      mode = body.mode === "research" ? "research" : "";
       const f = typeof body.from === "string" ? body.from.split(/[?#]/)[0] : "";
       if (/^\/(?!\/)[\w\-./]{0,200}$/.test(f)) fromPath = f;
     } catch {
@@ -360,6 +363,34 @@ export default {
     const guard = env.AI.run(GUARD_MODEL, {
       messages: [{ role: "user", content: question }],
     }).then((r: any) => String(r?.response ?? "")).catch(() => "error");
+
+    // RESEARCH MODE, 2026-09-25. Asked for by the reader (a second request
+    // from the front end, after a fast answer or in place of one). Runs after
+    // every filter above and behind the same safety check as the outside
+    // tiers; capped per day because each one is several model calls.
+    if (mode === "research") {
+      if ((await guard).toLowerCase().startsWith("unsafe") || CREATIVE.test(question)) {
+        return json({ answered: false, answer: "This box answers questions about artificial intelligence, from this site's pages and the sources it checks. That is not one it will research.", sources: [], mode: "research" });
+      }
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        const row: any = await env.ASSISTANT_DB.prepare(
+          `SELECT count(*) AS n FROM answer_log WHERE model_used = 'research' AND asked_at >= ?`).bind(today).first();
+        if (Number(row?.n ?? 0) >= 80) {
+          return json({ answered: false, answer: "Research mode has reached its daily limit. The quick answer is still available; try again tomorrow.", sources: [], mode: "research" });
+        }
+      } catch {}
+      const r = await researchAnswer(env, question);
+      ctx.waitUntil((async () => {
+        try {
+          await env.ASSISTANT_DB.prepare(
+            `INSERT INTO answer_log (question, question_norm, answered, best_score, top_url, guard_verdict, guard_categories, model_used, model_errors, from_path)
+             VALUES (?, ?, ?, NULL, ?, ?, NULL, 'research', ?, ?)`
+          ).bind(question, norm, r.answered ? 1 : 0, r.sources[0]?.url ?? null, (await guard).slice(0, 40), r.answered ? null : r.answer.slice(0, 200), fromPath).run();
+        } catch {}
+      })());
+      return json(r);
+    }
 
     const researchExcerpts: string[] = [];
     // The question embedding is hoisted out of the retrieval block so the web

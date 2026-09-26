@@ -105,22 +105,34 @@ const {
         if (inList) html += '</ul>';
         return html;
       }
-      function ask() {
+      function ask(mode) {
         var text = q.value.trim();
         if (!text || busy) return;
         busy = true;
         go.disabled = true;
-        go.textContent = 'Reading';
+        go.textContent = mode === 'research' ? 'Researching' : 'Reading';
         out.hidden = false;
-        out.innerHTML = '<p class="ask-wait">Searching this site\u2026</p>';
+        // RESEARCH MODE, 2026-09-25: several searches and model calls, 20 to
+        // 40 seconds, so the reader is told what is happening as it happens.
+        var stepsTimer = null;
+        if (mode === 'research') {
+          var steps = ['Breaking the question into parts\u2026', 'Searching this site, the research index, Wikidata and the web\u2026', 'Reading the pages found\u2026', 'Writing a sourced answer\u2026'];
+          var si = 0;
+          out.innerHTML = '<p class="ask-wait">' + steps[0] + '</p>';
+          stepsTimer = setInterval(function () { si = Math.min(si + 1, steps.length - 1); out.innerHTML = '<p class="ask-wait">' + steps[si] + '</p>'; }, 7000);
+        } else {
+          out.innerHTML = '<p class="ask-wait">Searching this site\u2026</p>';
+        }
         // The question travels through the hero. See Hero.astro.
         if (window.__twoaiRipple) window.__twoaiRipple();
         fetch('/api/ask', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question: text, from: location.pathname })
+          body: JSON.stringify({ question: text, from: location.pathname, mode: mode || undefined })
         }).then(function (r) { return r.json(); }).then(function (d) {
+          if (stepsTimer) clearInterval(stepsTimer);
           if (d.error) { out.innerHTML = '<p class="ask-wait">' + esc(d.error) + '</p>'; return; }
+          if (d.mode === 'research') { out.innerHTML = renderResearch(d); return; }
           var html = '<div class="ask-answer">' + render(d.answer) + '</div>';
           // General-knowledge context, when the model offers it, renders in
           // its own labelled block. It is not from our sources and the label
@@ -224,15 +236,45 @@ const {
             }
             html += '</ul>';
           }
-          out.innerHTML = html;
+          out.innerHTML = html + '<p class="ask-more"><button type="button" class="ask-research">Research this more thoroughly</button> <span class="ask-more-note">Checks this site, the research index, Wikidata and the web together. About 30 seconds.</span></p>';
+          var rb = out.querySelector('.ask-research');
+          if (rb) rb.addEventListener('click', function () { ask('research'); });
         }).catch(function () {
+          if (stepsTimer) clearInterval(stepsTimer);
           out.innerHTML = '<p class="ask-wait">The assistant is unavailable right now.</p>';
         }).then(function () {
           busy = false; go.disabled = false; go.textContent = 'Ask';
         });
       }
-      go.addEventListener('click', ask);
-      q.addEventListener('keydown', function (e) { if (e.key === 'Enter') ask(); });
+      // Research results: the answer with its [S1] [W2] keys, then each list
+      // of sources under its own label, site sources never mixed with outside
+      // ones. Every value escaped; the web list is the least trusted input.
+      function renderResearch(d) {
+        var html = '<p class="ask-mode">Researched answer</p><div class="ask-answer">' + render(d.answer) + '</div>';
+        if (d.unconfirmed) html += '<p class="ask-unconfirmed"><strong>Not confirmed:</strong> ' + esc(d.unconfirmed) + '</p>';
+        function list(label, items, external) {
+          if (!items || !items.length) return '';
+          var h = '<p class="ask-src-label">' + label + '</p><ul class="ask-src">';
+          items.forEach(function (s) {
+            var u = safeUrl(s.url);
+            h += '<li>' + (s.key ? '<span class="ask-key">[' + esc(s.key) + ']</span> ' : '') +
+              (u ? '<a href="' + u + '"' + (external ? ' rel="nofollow noopener" target="_blank"' : '') + '>' + esc(s.title || s.url) + '</a>' : esc(s.title || '')) +
+              (s.year ? ' <span class="ask-src-meta">' + esc(s.year) + '</span>' : '') + '</li>';
+          });
+          return h + '</ul>';
+        }
+        html += list('Sources on this site', d.sources, false);
+        html += list('Research papers (not pages on this site)', d.papers, true);
+        if (d.wikidata) html += list('From Wikidata, not this site', [{ key: d.wikidata.key, title: d.wikidata.title, url: d.wikidata.url }], true);
+        html += list('From the open web, not this site', d.outside, true);
+        if (d.parts && d.parts.length > 1) {
+          html += '<p class="ask-parts-label">Researched as</p><ul class="ask-parts">' + d.parts.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ul>';
+        }
+        html += '<p class="ask-web-note">Outside sources are not verified or published by us. Every sentence carries the key of the source it came from.</p>';
+        return html;
+      }
+      go.addEventListener('click', function () { ask(''); });
+      q.addEventListener('keydown', function (e) { if (e.key === 'Enter') ask(''); });
     })();
   </script>
 
@@ -270,6 +312,16 @@ const {
   .ask-note { font-size: 13px; color: #7A8A9E; margin: 12px auto 0; max-width: 600px; line-height: 1.6; }
   .ask-out { margin: 20px auto 0; max-width: 640px; text-align: left; }
   .ask-wait { font-size: 14px; color: #7A8A9E; font-style: italic; }
+  .ask-more { margin: 12px 0 0; font-size: 13px; color: #7A8A9E; }
+  .ask-research { font: inherit; font-weight: 600; color: #201868; background: #fff; border: 1px solid #201868;
+    border-radius: 6px; padding: 5px 12px; cursor: pointer; }
+  .ask-research:hover { background: #201868; color: #fff; }
+  .ask-mode { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #F07800; margin: 0 0 6px; }
+  .ask-unconfirmed { font-size: 14px; color: #33404f; margin: 8px 0 0; padding: 8px 12px; border-left: 3px solid #F07800; background: #fff8f0; }
+  .ask-key { font-family: ui-monospace, monospace; font-size: 12px; color: #7A8A9E; }
+  .ask-parts-label { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #7A8A9E; margin: 12px 0 4px; }
+  .ask-parts { margin: 0; padding-left: 18px; }
+  .ask-parts li { font-size: 13px; color: #7A8A9E; line-height: 1.5; }
   .ask-answer p { font-size: 15px; line-height: 1.7; margin: 0 0 .8em; }
   /* The assistant answers in Markdown and it is now rendered as such. These
      keep a heading inside an answer subordinate to the section it sits in:
