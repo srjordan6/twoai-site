@@ -93,6 +93,12 @@ const domainHref = (d: any): string | null => {
   return d.path;
 };
 const rest = (c.domains || []).filter((d) => d.status !== 'live');
+// PLACEHOLDERS OUT OF THE LIVE LISTS. Stephen, 2026-09-25: a section still
+// being built was listed, unlinked and grey, among a live domain's sections,
+// and read as a page with no content. Building sections now leave the live
+// lists and are named in the Coverage Roadmap block below with their domain.
+const pendingSections = (c.domains || []).filter((d) => d.status === 'live')
+  .flatMap((d) => (d.sections || []).filter((s) => !(s.status === 'live' && s.path)).map((s) => ({ ...s, domain: d.name })));
 const desc = `${c.name}: ${c.live} of ${c.total} domains live, ${c.pages} records tracked. ${c.blurb}`.slice(0, 300);
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
@@ -128,13 +134,11 @@ const jsonld = JSON.stringify({
           <h3>{domainHref(d) ? <a href={domainHref(d)}>{d.name}</a> : d.name}
             {d.pages > 0 && <span class="n">{d.pages.toLocaleString()}</span>}</h3>
           <p>{d.blurb}</p>
-          {d.sections?.length > 0 && (
+          {d.sections?.filter((s) => s.status === 'live' && s.path).length > 0 && (
             <ul class="sections">
-              {d.sections.map((s) => (
+              {d.sections.filter((s) => s.status === 'live' && s.path).map((s) => (
                 <li>
-                  {s.status === 'live' && s.path
-                    ? <a href={s.path}>{s.name}</a>
-                    : <span class="muted">{s.name}</span>}
+                  <a href={s.path}>{s.name}</a>
                   {s.pages > 0 && <span class="n">{s.pages.toLocaleString()}</span>}
                   {s.blurb && <p>{s.blurb}</p>}
                 </li>
@@ -157,11 +161,19 @@ const jsonld = JSON.stringify({
     </>
   )}
 
-  {rest.length > 0 && (
+  {(rest.length > 0 || pendingSections.length > 0) && (
     <>
       <h2>Coverage roadmap</h2>
       <p class="meta-line">Coverage this atlas has mapped and not yet published. Every section here
         ships only when a traceable source backs it.</p>
+      {pendingSections.length > 0 && (
+        <div class="dom planned">
+          <h3>Sections in progress <span class="tag">building</span></h3>
+          <p class="planned-sections">{pendingSections.map((s, i) => (
+            <>{i > 0 && ' · '}{s.name} <span class="muted">({s.domain})</span></>
+          ))}</p>
+        </div>
+      )}
       {rest.map((d) => (
         <div class="dom planned">
           <h3>{d.name} <span class="tag">{d.status}</span></h3>
