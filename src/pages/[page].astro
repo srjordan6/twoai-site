@@ -68,6 +68,9 @@ const jsonld = JSON.stringify({
   .doc :global(p) { margin: 0 0 .9em; }
   .doc :global(ul) { margin: 0 0 .9em; padding-left: 1.2em; }
   .doc :global(li) { margin-bottom: .4em; }
+  .doc :global(ol.path) { padding-left: 1.4em; margin: 0 0 1em; }
+  .doc :global(ol.path > li) { margin-bottom: 1em; padding-left: .2em; }
+  .doc :global(ol.path > li p) { margin: 0 0 .25em; }
   /* Tables, first used by /data-quality/ (2026-09-28). Wide tables scroll
      inside their own box so the page never scrolls sideways on a phone. */
   .doc :global(table) { width: 100%; border-collapse: collapse; margin: 0 0 1.2em;
