@@ -9,6 +9,7 @@
 import Base from '../../../layouts/Base.astro';
 import { capParagraphs } from '../../../lib/prose';
 import Reading from '../../../components/Reading.astro';
+import PinnedNews from '../../../components/PinnedNews.astro';
 import StateLawsuitMap from '../../../components/StateLawsuitMap.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
@@ -208,6 +209,7 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
         {(art.crumbs || []).map((c) => <> · <a href={c.path}>{c.name}</a></>)}</p>
       <h1>{art.name}</h1>
       <p class="answer">{art.answer}</p>
+      <PinnedNews pins={art.pinned_news} />
       <p class="meta-line">uid {art.uid} &middot; generated {art.generated}
         {art.parent_path && <> &middot; {' '}<a href={art.parent_path}>{art.parent_name}</a></>}
         {art.hub_path && art.hub_path !== `${BASE}/${art.uid}/` && <>, in {' '}<a href={art.hub_path}>{art.hub_name || 'this section'}</a></>}</p>

@@ -1,0 +1,37 @@
+---
+/**
+ * NEWS PINNED TO A PAGE.
+ *
+ * twoai_page_news holds stories chosen for one page: by Stephen, or by the
+ * accounting feed (twoai_accounting_news.go), which pins the accounting trade
+ * press to the AI Accountant section. Until 2026-09-28 nothing read that table,
+ * so every pin, including one Stephen placed on 2026-09-10, was invisible. Both
+ * publishers now merge the pins onto the page as `pinned_news`, newest first,
+ * at most twelve, and this renders them.
+ *
+ * Renders nothing when a page has no pins, which is almost every page.
+ */
+interface Pin { headline?: string; date?: string; url?: string; reason?: string }
+interface Props { pins?: Pin[] | null; heading?: string }
+const { pins, heading = 'In the news' } = Astro.props as Props;
+const list = (pins || []).filter((p) => p && p.headline && p.url);
+---
+{list.length > 0 && (
+  <section class="pinned-news">
+    <h2>{heading}</h2>
+    <ul>
+      {list.map((p) => (
+        <li>
+          <a href={p.url}>{p.headline}</a>
+          {p.date && <span class="meta-line"> · {p.date}</span>}
+        </li>
+      ))}
+    </ul>
+  </section>
+)}
+
+<style>
+  .pinned-news ul { list-style: none; padding: 0; margin: 0 0 1.2em; }
+  .pinned-news li { padding: 0.45em 0; border-bottom: 1px solid var(--rule, #e6e8ef); }
+  .pinned-news li:last-child { border-bottom: 0; }
+</style>
