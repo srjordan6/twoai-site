@@ -68,6 +68,14 @@ const jsonld = JSON.stringify({
   .doc :global(p) { margin: 0 0 .9em; }
   .doc :global(ul) { margin: 0 0 .9em; padding-left: 1.2em; }
   .doc :global(li) { margin-bottom: .4em; }
+  /* Tables, first used by /data-quality/ (2026-09-28). Wide tables scroll
+     inside their own box so the page never scrolls sideways on a phone. */
+  .doc :global(table) { width: 100%; border-collapse: collapse; margin: 0 0 1.2em;
+    font-size: .88rem; display: block; overflow-x: auto; }
+  .doc :global(th) { text-align: left; font-weight: 600; color: var(--navy);
+    border-bottom: 2px solid var(--orange); padding: .5em .6em; white-space: nowrap; }
+  .doc :global(td) { border-bottom: 1px solid #e7e7ee; padding: .5em .6em; vertical-align: top; }
+  .doc :global(tbody tr:nth-child(even)) { background: #f7f7fb; }
   .doc-foot { margin-top: 2.6em; padding-top: 1.2em; border-top: 1px solid #e7e7ee;
     font-size: .9rem; color: var(--gray); }
 </style>
