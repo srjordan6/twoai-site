@@ -10,6 +10,7 @@
  */
 import Base from '../../layouts/Base.astro';
 import StateLawMap from '../../components/StateLawMap.astro';
+import PinnedNews from '../../components/PinnedNews.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
 export function getStaticPaths() {
@@ -162,6 +163,7 @@ const jsonld = JSON.stringify({
   <h1>{d.title}</h1>
   {d.subtitle && <p class="lede">{d.subtitle}</p>}
   {d.short && <p class="answer">{d.short}</p>}
+  <PinnedNews pins={d.pinned_news} />
   {/* TWO DATES, HONESTLY LABELLED. generated is the build date and moves
       every run; on its own it read "Last verified: today" over guidance
       nobody had touched in weeks. reviewedOn is site_content.updated_at,
