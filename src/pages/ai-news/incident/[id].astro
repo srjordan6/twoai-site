@@ -100,9 +100,16 @@ const jsonld = JSON.stringify({
     <>
       <h2>What happened</h2>
       {paras(inc.summary).map((p) => <p>{p}</p>)}
+      {inc.summary_domain === 'incidentdatabase.ai' ? (
+        <p class="meta-line">Written here in our own words from the AI Incident Database's own
+          description of this incident, because the reporting listed at the foot of this page sits
+          behind a paywall or blocks automated reading. The articles and the database's write-up
+          belong to their authors.</p>
+      ) : (
       <p class="meta-line">Written here from the reporting listed at the foot of this page,
         first published by {inc.summary_domain}. We publish the facts in our own words; the
         articles and the database's own write-ups belong to their authors.</p>
+      )}
     </>
   )}
 
