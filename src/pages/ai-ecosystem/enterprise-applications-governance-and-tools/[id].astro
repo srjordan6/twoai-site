@@ -257,13 +257,27 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
       )}
       <div class="cite-box">Cite this page: <code>"{art.name}." The World of AI,
         theworldofai.org{BASE}/{art.uid}/. Retrieved {art.generated}.</code></div>
-      {art.source_url && (
+      {art.source_url && !(art.site_pages && art.site_pages.length) && (
         /* SOURCE SUMMARY PAGES, 2026-09-25. The whole page is our reading of
            one outside source; the link to that source sits at the very
            bottom, as Stephen asked, with the date its text was read. */
         <p class="meta-line source-line">This page summarises one source, read {art.source_read_on}: {' '}
           <a href={art.source_url} rel="nofollow noopener">{art.source_name || art.source_url}</a>.
           The words above are ours; the source and its contents belong to its publisher.</p>
+      )}
+      {art.site_pages && art.site_pages.length > 0 && (
+        /* WRITTEN FROM A WHOLE-SITE READING, 2026-09-29. Stephen: crawl the
+           website, digest all it has to offer, and only then write the page.
+           The pages the writing drew on are listed here, at the very bottom. */
+        <div class="meta-line source-line">
+          <p>Written from a reading of {art.site_pages_read} pages on {art.site_domain}, read {art.source_read_on}. The pages this summary draws on:</p>
+          <ul class="site-pages">
+            {art.site_pages.map((p) => (
+              <li><a href={p.url} rel="nofollow noopener">{p.title || p.url}</a>{p.date ? ` (${p.date})` : ''}</li>
+            ))}
+          </ul>
+          <p>The words above are ours; the website and its contents belong to its publisher.</p>
+        </div>
       )}
     </>
   )}
