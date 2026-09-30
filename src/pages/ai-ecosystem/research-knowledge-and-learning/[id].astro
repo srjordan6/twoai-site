@@ -89,6 +89,12 @@ export function getStaticPaths() {
         continue;
       }
       if (!s || !s.uid || s.category !== 'research-knowledge-and-learning') continue;
+      // Reference sections built by twoai_art (AI in Education, 2026-09-29)
+      // share this route with their own art layout.
+      if (s.shape === 'art-hub' || s.shape === 'art-topic') {
+        paths.push({ params: { id: s.uid }, props: { art: s } });
+        continue;
+      }
       paths.push({ params: { id: s.uid }, props: { section: s, hubUid: idx.uid } });
     }
   }
@@ -96,7 +102,12 @@ export function getStaticPaths() {
   return paths;
 }
 
-const { hub, topic, section, hubUid, learn } = Astro.props;
+const { hub, topic, section, hubUid, learn, art } = Astro.props;
+const artSections = art ? (art.sections || []) : [];
+const artKids = art ? (art.children || []) : [];
+const artSiblings = art ? (art.siblings || []) : [];
+// Paragraphs as the model wrote them, split on blank lines.
+const artParas = (t) => String(t || '').split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean);
 
 // A PAGE FOR ONE CERTIFICATION OR COURSE. Stephen, 2026-09-19: every one of
 // these should have its own web page, with the link to the issuer buried at
@@ -152,7 +163,9 @@ const hasPage = (u) => {
   try { return new URL(u, 'https://theworldofai.org').pathname.replace(/\/+$/, '') !== ''; }
   catch { return false; }
 };
-const _descRaw = isEntry
+const _descRaw = art
+  ? `${art.name}: ${art.answer || ''}`
+  : isEntry
   ? `${entry.name} from ${entry.provider}: ${(rd && (rd.status || rd.summary)) || entry.note || ''}`
   : learn
   ? `${learn.total} ${(learn.name || 'entries').toLowerCase()}, ${learn.free} free, curated by level and audience with a verified source each${learn.with_code ? `, ${learn.with_code} with companion code` : ''}, re-verified daily.`
@@ -163,7 +176,9 @@ const _descRaw = isEntry
   : `${topic.count} papers on ${topic.name.toLowerCase()} in AI, ${(topic.citations || 0).toLocaleString()} citations between them. ${topic.blurb || ''}`.slice(0, 300);
 const desc = _descRaw.length <= 158 ? _descRaw : `${_descRaw.slice(0, 157).replace(/\s+\S*$/, '')}…`;
 
-const title = isEntry
+const title = art
+  ? `${art.name} — The World of AI`
+  : isEntry
   ? `${entry.name}, ${entry.provider} | The World of AI`
   : learn
   ? `${learn.name} — The World of AI`
@@ -176,7 +191,17 @@ const title = isEntry
 const refreshed = (hub || topic || section || {}).refreshed;
 
 const jsonld = JSON.stringify(
-  isEntry
+  art
+    ? {
+        '@context': 'https://schema.org',
+        '@type': art.shape === 'art-hub' ? 'CollectionPage' : 'TechArticle',
+        headline: art.name,
+        name: art.name,
+        description: desc,
+        url: `https://theworldofai.org${BASE}/${art.uid}/`,
+        dateModified: art.generated,
+      }
+    : isEntry
     ? {
         '@context': 'https://schema.org',
         '@graph': [
@@ -258,13 +283,53 @@ const jsonld = JSON.stringify(
       }
 );
 ---
-<Base title={title} description={desc} current="/ai-ecosystem/research-knowledge-and-learning/" jsonld={jsonld}>
+<Base title={title} description={desc} current="/ai-ecosystem/research-knowledge-and-learning/" jsonld={jsonld} noindex={Boolean(art?.noindex)}>
   <p class="meta-line" id="top">
     <a href="/">AI Ecosystem</a> &middot;
     <a href={`/ai-ecosystem/${CATEGORY}/`}>Research, Knowledge and Learning</a>
     {topic && <> &middot; <a href={`${BASE}/${hubUid}/`}>AI Research Library</a></>}
     {isEntry && <> &middot; <a href={`${BASE}/${learn.section_uid}/`}>{learn.section_name}</a></>}
+    {art && (art.crumbs || []).map((c) => <> &middot; <a href={c.path}>{c.name}</a></>)}
   </p>
+
+  {art && (
+    <>
+      <h1>{art.name}</h1>
+      <p class="answer">{art.answer}</p>
+      <p class="meta-line">uid {art.uid} &middot; generated {art.generated}
+        {art.parent_path && <> &middot; {' '}<a href={art.parent_path}>{art.parent_name}</a></>}</p>
+      {artSections.map((sec) => (
+        <section>
+          <h2>{sec.heading}</h2>
+          {artParas(sec.body).map((t) => <p>{t}</p>)}
+        </section>
+      ))}
+      {artKids.length > 0 && (
+        <>
+          <h2>The {artKids.length} pages in {art.name}</h2>
+          <ul class="co-list">
+            {artKids.map((k) => (
+              <li><a href={k.path}>{k.name}</a>{k.blurb && <p>{k.blurb}</p>}</li>
+            ))}
+          </ul>
+        </>
+      )}
+      {artSiblings.length > 0 && (
+        <>
+          <h2>Also in {art.parent_name}</h2>
+          <ul class="co-list">
+            {artSiblings.map((k) => <li><a href={k.path}>{k.name}</a></li>)}
+          </ul>
+        </>
+      )}
+      {art.book && (
+        <p class="meta-line">Built on {art.book.title}{art.book.volume && <>, {art.book.volume}</>}, by {art.book.author}.
+          The words on this page are written for the site from that volume.</p>
+      )}
+      <div class="cite-box">Cite this page: <code>"{art.name}." The World of AI,
+        theworldofai.org{BASE}/{art.uid}/. Retrieved {art.generated}.</code></div>
+    </>
+  )}
 
   {isEntry && (
     <>
