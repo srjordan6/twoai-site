@@ -281,6 +281,46 @@ ${generated}.
   spenders drawn from SEC XBRL company facts, and 8-K acquisition filings
   (items 1.01 and 2.01) across tracked registrants, linked to the filings
   rather than summarised.
+- [AI in Education](https://theworldofai.org/ai-ecosystem/research-knowledge-and-learning/31028dac/):
+  what works for AI in schools from preschool to graduation, built on the
+  book The AI Ready School (Volume X of the SRJ series): four parts, twenty
+  chapter pages and 262 idea pages, each written from the book's own text
+  with its evidence label kept, and each chapter page listing the peer
+  reviewed research mapped to it with our reading of every paper and a link
+  to the paper's own home.
+- [Knowledge Based Professions and their Future](https://theworldofai.org/ai-ecosystem/enterprise-applications-governance-and-tools/1e6de64f/):
+  the AI Accountant, AI Economist, AI Lawyer, AI Physician and AI Researcher,
+  each a hub of ten fields with five topics apiece under a fixed frame
+  (scope, what it runs on, method, governance, horizon), with news from the
+  profession's trade press pinned where it bears on a page.
+- [AI and SQL](https://theworldofai.org/ai-ecosystem/enterprise-applications-governance-and-tools/3d344eab/):
+  twelve topics on structured data as the foundation of AI intelligence,
+  from text to SQL and retrieval over relational stores to governance of
+  the warehouse.
+- [The Art of AI](https://theworldofai.org/ai-ecosystem/ecosystem-entities-market-and-operations/4de73ea6/):
+  ten fields of AI in creative work, from image and music generation to
+  authorship, rights and the studios' own programs.
+- [The Politics of AI](https://theworldofai.org/ai-ecosystem/enterprise-applications-governance-and-tools/d9480073/):
+  AI lobbying and campaign money from federal disclosures (LDA filings and
+  FEC records), the registered lobbyists and firms, the companies behind
+  them, the bills they name, and a press room of the primary documents.
+- [AI Insurance](https://theworldofai.org/ai-ecosystem/enterprise-applications-governance-and-tools/7785d228/)
+  and [Health Insurance and AI](https://theworldofai.org/ai-ecosystem/enterprise-applications-governance-and-tools/a0f8be3d/):
+  insurance for AI risk and AI inside insurance, NAIC model bulletins, state
+  insurance department actions, the Medicare and ACA compliance pages, and
+  the lawsuits against insurers' AI claim tools.
+- [AI Policy Ledger](https://theworldofai.org/ai-compliance/policy-ledger/):
+  one row per jurisdiction, state, EU, China and federal, with the status of
+  its AI law, updated from the bill corpus every run; alongside it
+  [AI enforcement actions](https://theworldofai.org/ai-compliance/ai-enforcement-actions/)
+  from FTC and SEC releases naming AI, read daily.
+- [Learning Paths](https://theworldofai.org/learning-paths/): three ordered
+  routes through the site for business leaders, builders and governance
+  staff, every step an existing page.
+- [Data Quality](https://theworldofai.org/data-quality/): rebuilt every run;
+  each section's sources, page counts, refresh schedule and last check, the
+  live counts of broken and blocked outbound links, and every published
+  correction with its date.
 - Books (under Research, Knowledge and Learning): an independent shelf of AI
   titles, followed by the SRJ book series on AI audit, governance, and
   security, labelled as the publisher's own and linked with rel=sponsored.${bcCount ? ` The
