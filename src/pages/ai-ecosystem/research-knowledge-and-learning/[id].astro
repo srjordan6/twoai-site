@@ -322,6 +322,30 @@ const jsonld = JSON.stringify(
           </ul>
         </>
       )}
+      {Array.isArray(art.papers) && art.papers.length > 0 && (
+        <>
+          {/* THE RESEARCH BEHIND THE CHAPTER, 2026-09-29. From srj_edu_research,
+              the papers Stephen loaded for The AI Ready School, tagged to the
+              chapter they speak to. We publish the citation record, our own
+              key finding and caveat, and a link to the paper's own home. No
+              abstract is reproduced. */}
+          <h2>The research behind this chapter</h2>
+          <p class="meta-line">{art.papers.length} {art.papers.length === 1 ? 'paper' : 'papers'} on this site speak to this chapter. Each line is our reading of the paper; the link goes to the paper itself.</p>
+          <ol class="papers">
+            {art.papers.map((p) => (
+              <li>
+                {p.url ? <a href={p.url} rel="noopener">{p.title}</a> : <b>{p.title}</b>}
+                <p class="mon">{[p.venue, p.year ? String(p.year) : '', p.citations ? `${p.citations.toLocaleString()} citation${p.citations === 1 ? '' : 's'}` : ''].filter(Boolean).join(' · ')}</p>
+                {p.finding && <p>{p.finding}</p>}
+                {p.caveat && <p class="mon">Caveat: {p.caveat}</p>}
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
+      {art.research_total > 0 && (
+        <p class="meta-line">{art.research_total} research papers on this site are mapped to the chapters of this section and appear on the chapter pages.</p>
+      )}
       {art.book && (
         <p class="meta-line">Built on {art.book.title}{art.book.volume && <>, {art.book.volume}</>}, by {art.book.author}.
           The words on this page are written for the site from that volume.</p>
