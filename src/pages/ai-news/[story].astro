@@ -133,6 +133,25 @@ const knownPersons = onPage.filter((e) => /\/ecosystem-entities-market-and-opera
 const knownOrgs = onPage.filter((e) => !knownPersons.includes(e));
 
 const timeline = coverageByDay(story.Articles);
+// THREE LINKS, NOT EIGHTY. Stephen, 2026-09-29, on a story carried by 79
+// outlets: too many links, keep it to two or three. The coverage list shows
+// the three best sources: national and trade outlets first, one per outlet,
+// the earliest publication first among equals. The counts still say how
+// wide the coverage was.
+const STRONG = /(reuters|apnews|bloomberg|wsj|nytimes|washingtonpost|ft\.com|politico|axios|cnbc|theverge|wired|arstechnica|techcrunch|theguardian|bbc|npr|economist|latimes|statnews|theinformation|semafor|thehill|law360)\./i;
+const topCoverage = (() => {
+  const seen = new Set<string>();
+  const ranked = [...(story.Articles || [])]
+    .sort((a, b) => (STRONG.test(b.Domain || '') ? 1 : 0) - (STRONG.test(a.Domain || '') ? 1 : 0) || String(a.Date || '').localeCompare(String(b.Date || '')));
+  const out: typeof ranked = [];
+  for (const a of ranked) {
+    if (!a.URL || seen.has(a.Domain)) continue;
+    seen.add(a.Domain);
+    out.push(a);
+    if (out.length === 3) break;
+  }
+  return out;
+})();
 const stamp = generated ? `${new Date(generated).toUTCString().slice(0, 22)} UTC` : null;
 
 // ENACTED-LAW ROWS ARE A DIFFERENT ANIMAL FROM A COVERAGE CLUSTER, and the page
@@ -168,7 +187,7 @@ const minutes = readingMinutes(story.Headline, ...story.Articles.map((a) => a.Ti
 const title = story.Headline.length <= 58 ? story.Headline : `${story.Headline.slice(0, 57).replace(/\s+\S*$/, '')}…`;
 const _fullDesc =
   `${story.Headline}. Covered by ${story.DomainCount} outlets across ${story.ArticleCount} ` +
-  `articles: full source list, named entities, and coverage timeline.`;
+  `articles: the leading sources, named entities, and coverage timeline.`;
 const description = _fullDesc.length <= 158 ? _fullDesc : `${_fullDesc.slice(0, 157).replace(/\s+\S*$/, '')}…`;
 
 const jsonld = JSON.stringify({
@@ -262,7 +281,7 @@ const jsonld = JSON.stringify({
             <tr><th scope="row">Category</th><td>{cat.name}</td></tr>
           </tbody>
         </table>
-        {story.Domains.length > 0 && <p class="doms">{story.Domains.join(' · ')}</p>}
+        {story.Domains.length > 0 && <p class="doms">{story.Domains.slice(0, 3).join(' · ')}{story.Domains.length > 3 ? ` and ${story.Domains.length - 3} more` : ''}</p>}
       </div>
 
       {(knownPersons.length > 0 || knownOrgs.length > 0) && (
@@ -321,11 +340,10 @@ const jsonld = JSON.stringify({
         <div class="rule"></div>
         <p class="lead">
           This story was carried by <strong>{story.DomainCount}</strong> distinct outlets across
-          <strong> {story.ArticleCount}</strong> articles in the past 36 hours. Every source the
-          pipeline found is listed below, unedited.
+          <strong> {story.ArticleCount}</strong> articles in the past 36 hours. {topCoverage.length === 1 ? 'The source:' : `${topCoverage.length === 2 ? 'Two' : 'Three'} of them:`}
         </p>
         <ul class="cov">
-          {story.Articles.map((a) => (
+          {topCoverage.map((a) => (
             <li>
               <a href={a.URL} rel="noopener nofollow" target="_blank">{a.Title}</a>
               <span class="meta">{a.Domain}{a.Date ? ` · ${a.Date}` : ''}</span>
