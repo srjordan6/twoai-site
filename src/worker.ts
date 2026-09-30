@@ -517,6 +517,72 @@ export default {
         console.warn("ask: entity lookup failed:", String((e as any)?.message ?? e).slice(0, 160));
       }
     }
+    // BILLS BY NUMBER. Stephen, 2026-09-29, asked "CA AB1609 enacted". The
+    // site had it on the California page and the enacted laws list, signed on
+    // 2026-09-28, and the box said it did not cover it, then offered Wikidata's
+    // entry for the Catalan language, because "CA" was the only word it could
+    // look up. A bill number is an exact identifier: it is matched in SQL, and
+    // a question that names a bill is never sent to Wikidata.
+    const STATE_CODES: Record<string, string> = { alabama: "AL", alaska: "AK", arizona: "AZ", arkansas: "AR", california: "CA", colorado: "CO", connecticut: "CT", delaware: "DE", florida: "FL", georgia: "GA", hawaii: "HI", idaho: "ID", illinois: "IL", indiana: "IN", iowa: "IA", kansas: "KS", kentucky: "KY", louisiana: "LA", maine: "ME", maryland: "MD", massachusetts: "MA", michigan: "MI", minnesota: "MN", mississippi: "MS", missouri: "MO", montana: "MT", nebraska: "NE", nevada: "NV", "new hampshire": "NH", "new jersey": "NJ", "new mexico": "NM", "new york": "NY", "north carolina": "NC", "north dakota": "ND", ohio: "OH", oklahoma: "OK", oregon: "OR", pennsylvania: "PA", "rhode island": "RI", "south carolina": "SC", "south dakota": "SD", tennessee: "TN", texas: "TX", utah: "UT", vermont: "VT", virginia: "VA", washington: "WA", "west virginia": "WV", wisconsin: "WI", wyoming: "WY" };
+    const billRefs: Array<{ state: string; num: string }> = [];
+    {
+      const q = question.replace(/[.,;:!?]/g, " ");
+      let st = "";
+      const m2 = q.match(/\b([A-Z]{2})\b(?=\s+(?:[A-Z]{1,3}\s?-?\s?\d))/);
+      if (m2 && Object.values(STATE_CODES).includes(m2[1])) st = m2[1];
+      if (!st) {
+        const low = q.toLowerCase();
+        for (const [name, code] of Object.entries(STATE_CODES)) if (new RegExp(`\\b${name}\\b`).test(low)) { st = code; break; }
+      }
+      // Two and three letter prefixes on their own; a single letter (New
+      // York's A and S, Massachusetts's H and S) only with a state named,
+      // so "a 2024 law" is never read as bill A2024.
+      for (const m of q.matchAll(/\b(AB|SB|HB|HF|SF|LD|HR|SR|AJR|SJR|ACR|SCR|LB|A|S|H)\s?-?\s?(?:\d{2}-)?(\d{1,5})\b/gi)) {
+        if (m[1].length === 1 && !st) continue;
+        billRefs.push({ state: st, num: (m[1] + m[2]).toUpperCase() });
+      }
+    }
+    if (env.AUDIT_DB && billRefs.length) {
+      try {
+        const sql = postgres(env.AUDIT_DB.connectionString, { max: 1, fetch_types: false, idle_timeout: 10 });
+        for (const b of billRefs.slice(0, 3)) {
+          const like = b.state ? `${b.state} ${b.num}:%` : `%${b.num}:%`;
+          const rows = await sql.unsafe(`
+            SELECT DISTINCT ON (split_part(d.title, ':', 1)) split_part(d.title, ':', 1) AS ref,
+                   trim(split_part(d.title, ':', 2)) AS title, d.url
+            FROM pipeline.documents d
+            WHERE d.title ILIKE $1
+            ORDER BY split_part(d.title, ':', 1), d.fetched_at DESC LIMIT 3`, [like]);
+          for (const r of rows) {
+            const [code, num] = String(r.ref).split(" ");
+            const lawPath = `compliance/law-${code.toLowerCase()}-${num.toLowerCase()}.json`;
+            const law = await sql.unsafe(`SELECT data->>'answer' AS answer FROM twoai_pages WHERE path = $1`, [lawPath]);
+            const en = await sql.unsafe(`
+              SELECT e->>'status' AS status, e->>'status_date' AS status_date, e->>'description' AS description
+              FROM twoai_pages p, jsonb_array_elements(p.data->'laws') e
+              WHERE p.path = 'compliance/enacted-ai-laws.json' AND e->>'state' = $1 AND e->>'bill' = $2 LIMIT 1`, [code, num]);
+            const stateName = Object.entries(STATE_CODES).find(([, c]) => c === code)?.[0] ?? "";
+            const stateUrl = stateName ? `/ai-laws/${stateName.replace(/ /g, "-")}/` : "/ai-laws/";
+            const url = law.length ? `/ai-compliance/law-${code.toLowerCase()}-${num.toLowerCase()}/` : stateUrl;
+            const f: string[] = [`${code} ${num}: ${r.title}`];
+            if (en.length) {
+              f.push(`Status on LegiScan: ${en[0].status}${en[0].status_date ? `, ${en[0].status_date}` : ""}. LegiScan uses Passed for a bill that has been enacted, signed into law.`);
+              if (en[0].description) f.push(en[0].description);
+              f.push(`Listed on this site's enacted AI laws page, /ai-compliance/enacted-ai-laws/.`);
+            } else {
+              f.push(`Tracked on this site's ${stateName || "state"} AI laws page; it is not on the enacted AI laws list.`);
+            }
+            if (law.length && law[0].answer) f.push(`This site's page on the law: ${String(law[0].answer).slice(0, 400)}`);
+            if (r.url) f.push(`Bill record: ${r.url}`);
+            facts.push({ entity: `${code} ${num}`, kind: "bill", url, facts: f, edges: [] });
+          }
+        }
+        await sql.end();
+      } catch (e) {
+        console.warn("ask: bill lookup failed:", String((e as any)?.message ?? e).slice(0, 160));
+      }
+    }
+
     if (env.AUDIT_DB) {
       try {
         const sql = postgres(env.AUDIT_DB.connectionString, {
@@ -845,6 +911,10 @@ export default {
         // unsafe gets the plain not-covered answer and nothing is looked up.
         if ((await guard).toLowerCase().startsWith("unsafe") || CREATIVE.test(question)) {
           return json({ answered: false, answer: notCovered, sources: [], externalDeclined: true });
+        }
+        // A bill number the site does not hold is not a Wikidata subject.
+        if (billRefs.length) {
+          return json({ answered: false, answer: "The World of AI does not track that bill. It follows state bills that concern artificial intelligence, from LegiScan; the question has been recorded.", sources: [] });
         }
         const subject = subjectOf(question);
         const cached = await cachedLookup(env, norm, qVec);
@@ -1221,7 +1291,7 @@ export default {
     // not-covered path.
     let sideWikidata: any = undefined;
     if (/\b(does not|doesn't|do not|don't) (cover|credit|hold|have|include|track|list|record)\b|\bnot covered\b|\bno (page|record|entry|coverage) (on|for|of)\b/i.test(answer)
-        && !CREATIVE.test(question) && !(await guard).toLowerCase().startsWith("unsafe")) {
+        && !CREATIVE.test(question) && !billRefs.length && !(await guard).toLowerCase().startsWith("unsafe")) {
       try { sideWikidata = (await wikidataLookup(question)) ?? undefined; } catch { sideWikidata = undefined; }
     }
     return json({ answered: true, answer, beyond: beyond || undefined, sources: shownSources, papers: citedPapers, model: usedModel, wikidata: sideWikidata });
