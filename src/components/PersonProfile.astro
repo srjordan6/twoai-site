@@ -197,6 +197,62 @@ const personFaqLd = faqSchema && pf.length >= 2
     </>
   )}
 
+  {person.standing && person.standing.standing && (
+    <>
+      {/* WHERE THEY STAND, 2026-09-29. Stephen, on Elon Musk's page: very
+          thin content on the richest man in the world. Written by the model
+          from the records this site holds on the person, listed below it. */}
+      <h3>Where does {person.name} stand in AI now?</h3>
+      <p>{person.standing.standing}</p>
+      <h3>What does the record on this site show?</h3>
+      <p>{person.standing.record}</p>
+      {person.standing.watch && (
+        <>
+          <h3>What is unresolved?</h3>
+          <p>{person.standing.watch}</p>
+        </>
+      )}
+      <p class="meta-line">Written {person.standing.generated_on} from this profile and the companies, cases and
+        news this site holds on {person.name}, listed next. It is our reading, not a sourced fact.</p>
+    </>
+  )}
+
+  {person.on_site && (
+    <>
+      {(person.on_site.companies || []).length > 0 && (
+        <>
+          <h3>Companies on this site</h3>
+          <ul class="cites">
+            {person.on_site.companies.map((c) => (
+              <li><a href={c.path}>{c.name}</a>{c.detail && <> · {person.name} {c.detail} {c.name}</>}</li>
+            ))}
+          </ul>
+        </>
+      )}
+      {(person.on_site.lawsuits || []).length > 0 && (
+        <>
+          <h3>Lawsuits on this site</h3>
+          <ul class="cites">
+            {person.on_site.lawsuits.map((l) => (
+              <li><a href={l.path}>{l.name}</a>{l.detail && <> · {l.detail}</>}</li>
+            ))}
+          </ul>
+        </>
+      )}
+      {(person.on_site.stories || []).length > 0 && (
+        <>
+          <h3>In the news on this site</h3>
+          <p class="meta-line">{person.on_site.story_total} {person.on_site.story_total === 1 ? 'story has' : 'stories have'} named {person.name}. The latest:</p>
+          <ul class="cites">
+            {person.on_site.stories.slice(0, 5).map((s) => (
+              <li><a href={s.path}>{s.name}</a>{s.date && <> · {String(s.date).slice(0, 10)}</>}</li>
+            ))}
+          </ul>
+        </>
+      )}
+    </>
+  )}
+
   {sources.length > 0 ? (
     <>
       <h3>Where does this come from?</h3>
