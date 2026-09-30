@@ -802,6 +802,12 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
     source. Where a sector has no verifiable primary source beyond the official adoption
     survey, this page says less rather than inventing case studies.</p>
 
+  {/* PINNED NEWS ON INDUSTRY PAGES, 2026-09-30. Stephen asked for the
+      America.gov launch to sit on the Government page; the publishers already
+      merge twoai_page_news for every page, only the industry branch did not
+      show it. */}
+  <PinnedNews pins={sec.pinned_news} />
+
   {isIndustry && sec.btos && sec.btos.latest && sec.btos.latest !== 'S' && (
     <div class="dom">
       <h3>The official adoption number for this sector</h3>
