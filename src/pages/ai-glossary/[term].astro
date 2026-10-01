@@ -44,7 +44,12 @@ export function getStaticPaths() {
       // and arrives keyed by the term's own URL. See main.go's publish merge.
       reading: g.readings?.[`/ai-glossary/${t.slug}/`] ?? null,
       generated: g.generated ?? '',
-      related: terms.filter((o) => o.category === t.category && o.slug !== t.slug).slice(0, 6),
+      // The pipeline's related list (terms whose definitions reference each
+      // other, then category neighbours, 2026-09-30); category neighbours
+      // alone as the fallback for a document built before it.
+      related: (Array.isArray(t.related) && t.related.length > 0)
+        ? t.related
+        : terms.filter((o) => o.category === t.category && o.slug !== t.slug).slice(0, 6),
     },
   }));
 }
@@ -77,7 +82,8 @@ const faq = [
   }] : []),
   ...(related.length > 0 ? [{
     q: `What terms are related to ${t.term}?`,
-    a: `${related.map((r) => r.term).join(', ')} sit in the same category, ${t.category}.`,
+    a: `${related.map((r) => r.term).join(', ')} are related to ${t.term}; see the list under Related terms.`,
+    links: related,
   }] : []),
 ].filter((f) => f.a && String(f.a).trim().length > 0);
 
@@ -141,7 +147,7 @@ const jsonld = JSON.stringify({
   {t.origin && (<><h2>Where the term comes from</h2><p>{t.origin}</p></>)}
   {related.length > 0 && (
     <>
-      <h2>Related terms in {t.category}</h2>
+      <h2>Related terms</h2>
       <ul class="grid">
         {related.map((r) => (<li class="card"><a href={`/ai-glossary/${r.slug}/`}>{r.term}</a></li>))}
       </ul>
@@ -153,7 +159,11 @@ const jsonld = JSON.stringify({
       {faq.map((f) => (
         <div class="faq-item">
           <h3 style="font-family:Poppins;font-size:16.5px;font-weight:600;color:#201868;margin:0 0 .3rem;">{f.q}</h3>
-          <p style="margin:0;line-height:1.7;">{f.a}</p>
+          {f.links ? (
+            <p style="margin:0;line-height:1.7;">{f.links.map((r, i) => (<>{i > 0 && ', '}<a href={`/ai-glossary/${r.slug}/`}>{r.term}</a></>))} are related to {t.term}.</p>
+          ) : (
+            <p style="margin:0;line-height:1.7;">{f.a}</p>
+          )}
         </div>
       ))}
     </>
