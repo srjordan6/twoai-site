@@ -49,7 +49,10 @@ const entityHref = (it: any) =>
 const linkedVendors = new Set(latest.filter((i) => entityHref(i)).map((i) => i.vendor));
 
 const totalShown = latest.length;
-const totalTracked = vn?.archive?.length ?? latest.length;
+// Retired posts (not vendor news after all) keep their permalinks but are
+// not counted or listed as sources here.
+const liveArchive = (vn?.archive ?? []).filter((a: any) => a.retired !== true);
+const totalTracked = liveArchive.length || latest.length;
 const generated = vn?.generated ? new Date(vn.generated) : null;
 const stamp = generated ? `${generated.toUTCString().slice(0, 22)} UTC` : null;
 const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -57,7 +60,7 @@ const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').repla
 // The source index is every vendor that has ever published here, not just
 // those inside the intel window.
 const sourceCounts = new Map<string, number>();
-for (const it of vn?.archive ?? []) sourceCounts.set(it.vendor, (sourceCounts.get(it.vendor) ?? 0) + 1);
+for (const it of liveArchive) sourceCounts.set(it.vendor, (sourceCounts.get(it.vendor) ?? 0) + 1);
 const sources = [...sourceCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 
 const title = `AI Vendor News: Announcements from the Companies Building AI`;

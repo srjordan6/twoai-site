@@ -14,7 +14,7 @@ export function getStaticPaths() {
   const seen = new Set<string>();
   const posts: any[] = [];
   for (const a of data?.archive ?? []) {
-    if (!a.slug || seen.has(a.slug) || a.has_page === false) continue;
+    if (!a.slug || seen.has(a.slug) || a.has_page === false || a.retired === true) continue;
     seen.add(a.slug);
     posts.push(a);
   }

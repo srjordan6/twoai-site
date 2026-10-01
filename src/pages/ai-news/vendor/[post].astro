@@ -47,7 +47,8 @@ export function getStaticPaths() {
     // flows. This is the same treatment the /mcp/ section already gives its
     // one-sentence server pages, decided 2026-08-13.
     seen.add(a.slug);
-    out.push({ params: { post: a.slug }, props: { it: a, vendor: a.vendor, thin: a.has_page === false } });
+    // A retired post keeps its permalink and leaves the index.
+    out.push({ params: { post: a.slug }, props: { it: a, vendor: a.vendor, thin: a.has_page === false || a.retired === true } });
   }
   for (const v of data?.vendors ?? []) {
     for (const it of v.items ?? []) {
