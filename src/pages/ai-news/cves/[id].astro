@@ -22,7 +22,17 @@ const { c } = Astro.props;
 const entities: any[] = c.entities ?? [];
 const refs: string[] = c.references ?? [];
 const sevWord = (c.cvss_severity || '').toLowerCase();
-const headline = `${c.cve_id}${c.product ? `: ${c.product}` : ''}${sevWord ? `, ${sevWord} severity` : ''}`;
+// WRITTEN HEADLINE. Stephen, 2026-10-02: each CVE needs a headline that says
+// what the flaw lets an attacker do. The pipeline's cve_writer writes it from
+// the record and checks it against the record; until one exists the page
+// falls back to the identifier and product as before. The CVE id stays
+// visible beside it on every surface.
+const written = typeof c.headline === 'string' && c.headline.trim() !== '' ? c.headline.trim() : '';
+const headline = written || `${c.cve_id}${c.product ? `: ${c.product}` : ''}${sevWord ? `, ${sevWord} severity` : ''}`;
+const def = c.defense && typeof c.defense === 'object' ? c.defense : null;
+const untilPatched: string[] = Array.isArray(def?.until_patched) ? def.until_patched : [];
+const checks: string[] = Array.isArray(def?.check) ? def.check : [];
+const hasDefense = def !== null && (untilPatched.length > 0 || checks.length > 0 || Boolean(def.fix?.text));
 const desc = `${c.cve_id} affects ${c.product || c.vendor || 'an AI product'}${c.cvss_score != null ? `, CVSS ${c.cvss_score} ${c.cvss_severity}` : ''}${c.kev ? ", on CISA's exploited list" : ''}. ${c.description}`.slice(0, 300);
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
@@ -42,7 +52,8 @@ const jsonld = JSON.stringify({
 <Base title={`${headline} — AI CVE tracker — The World of AI`} description={desc} current="/ai-news/" jsonld={jsonld}
   doc={{ page_uid: c.uid, built_at: c.generated, generated: c.published }} stampLabel="CVE recorded">
   <p class="meta-line"><a href="/ai-news/">AI News</a> · <a href="/ai-news/cves/">AI CVE tracker</a></p>
-  <h1>{c.cve_id}</h1>
+  <h1>{written ? written : c.cve_id}</h1>
+  {written && <p class="cve-id"><code>{c.cve_id}</code></p>}
   <p class="answer">
     {c.cvss_severity && <span class={`sev ${severityClass(c.cvss_severity)}`}>{c.cvss_severity}{c.cvss_score != null && <> {c.cvss_score}</>}</span>}
     {c.kev && <span class="kev">Exploited in the wild</span>}
@@ -58,6 +69,31 @@ const jsonld = JSON.stringify({
   <p class="meta-line">This is the description as filed with the CVE Program, reproduced under the CVE
     Program's terms of use, which permit copying the CVE List with attribution. It is the reporter's
     wording, not ours. CVE is a registered trademark of The MITRE Corporation.</p>
+
+  {hasDefense && (
+    <>
+      <h2>How to defend against it</h2>
+      {def.kev_open && <p class="kev-open"><b>Exploited in the wild.</b> {def.kev_open}</p>}
+      <h3>Fix</h3>
+      <p>{def.fix?.text}
+        {def.fix?.advisory_url && <> <a href={def.fix.advisory_url} rel="noopener nofollow" target="_blank">Vendor advisory</a>.</>}</p>
+      {untilPatched.length > 0 && (
+        <>
+          <h3>Until you can patch</h3>
+          <ul>{untilPatched.map((s) => <li>{s}</li>)}</ul>
+        </>
+      )}
+      {checks.length > 0 && (
+        <>
+          <h3>Check whether you are exposed</h3>
+          <ul>{checks.map((s) => <li>{s}</li>)}</ul>
+        </>
+      )}
+      <p class="meta-line">The fix comes from the CVE record and its references, and names a version only when the
+        record does. The other two parts are general security practice for this class of weakness{c.cwe && <> ({c.cwe})</>}
+        and its attack path, not vendor guidance. Written {def.written_on} from the record as it stood then.</p>
+    </>
+  )}
 
   <h2>Severity</h2>
   <table>
@@ -115,6 +151,10 @@ const jsonld = JSON.stringify({
   .meta-line-inline { font-size: 12.5px; color: #7A8A9E; }
   .cite-box { margin: 1.6em 0; padding: .9em 1em; background: #f7f7fb; border-left: 3px solid #201868; font-size: .9rem; }
   .cite-box code { display: block; margin-top: .3em; }
+  .cve-id { margin: -.4em 0 1em; }
+  .cve-id code { font-weight: 700; color: #201868; }
+  .kev-open { padding: .7em 1em; background: #fff4f4; border-left: 3px solid #8B1A1A; }
+  h3 { margin: 1.1em 0 .3em; font-size: 1.05rem; }
   .sev { display: inline-block; padding: 0 .45em; border-radius: 3px; font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #fff; background: #7A8A9E; vertical-align: middle; }
   .sev-critical { background: #8B1A1A; }
   .sev-high { background: #C2410C; }

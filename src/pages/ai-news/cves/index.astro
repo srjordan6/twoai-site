@@ -53,7 +53,8 @@ const jsonld = JSON.stringify({
   <ul class="cve-list">
     {cves.map((c) => (
       <li>
-        <a href={`/ai-news/cves/${c.cve_id}/`}><code>{c.cve_id}</code></a>
+        <a href={`/ai-news/cves/${c.cve_id}/`}>{c.headline ? c.headline : <code>{c.cve_id}</code>}</a>
+        {c.headline && <code class="cve-id">{c.cve_id}</code>}
         {c.cvss_severity && <span class={`sev ${severityClass(c.cvss_severity)}`}>{c.cvss_severity}{c.cvss_score != null && <> {c.cvss_score}</>}</span>}
         {c.kev && <span class="kev">Exploited in the wild</span>}
         <span class="cve-date">{c.published}</span>
@@ -80,6 +81,7 @@ const jsonld = JSON.stringify({
   .cve-list { list-style: none; padding: 0; margin: .6em 0 1em; }
   .cve-list li { padding: .7em 0; border-bottom: 1px solid #ececf2; font-size: 14.5px; line-height: 1.6; }
   .cve-list code { font-weight: 700; color: #201868; }
+  .cve-list .cve-id { font-weight: 400; color: #7A8A9E; margin-left: .5em; font-size: 13px; }
   .cve-sum { display: block; color: #2C2C2A; margin-top: 2px; }
   .cve-ents { display: block; font-size: 13px; color: #7A8A9E; margin-top: 2px; }
   .cve-date, .cve-prod { color: #7A8A9E; margin-left: .5em; font-size: 13px; }

@@ -14,6 +14,8 @@ export type CveRow = {
   cve_id: string; uid: string; published: string; product: string; vendor: string;
   cvss_score: number | null; cvss_severity: string; kev: boolean; summary: string;
   entities: CveEntity[];
+  /** Written by the pipeline's cve_writer from the record; empty until it is. Stephen, 2026-10-02. */
+  headline?: string;
 };
 
 let cache: { generated: string; total: number; kev: number; cves: CveRow[] } | null = null;

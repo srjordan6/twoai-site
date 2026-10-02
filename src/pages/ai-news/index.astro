@@ -288,8 +288,9 @@ const jsonld = JSON.stringify({
       <ol class="preview">
         {cvesTop.map((c: any) => (
           <li>
-            <a href={`/ai-news/cves/${c.cve_id}/`}>{c.cve_id}{c.product && <>: {c.product}</>}</a>
+            <a href={`/ai-news/cves/${c.cve_id}/`}>{c.headline ? c.headline : <>{c.cve_id}{c.product && <>: {c.product}</>}</>}</a>
             <span class="pmeta">
+              {c.headline && <><code>{c.cve_id}</code> &middot; </>}
               {c.cvss_severity && <span class={`sev ${severityClass(c.cvss_severity)}`}>{c.cvss_severity}{c.cvss_score != null && <> {c.cvss_score}</>}</span>}
               {c.kev && <span class="kev">Exploited in the wild</span>}
               {' '}&middot; {c.published}
