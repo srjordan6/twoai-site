@@ -55,7 +55,10 @@
     // Listed by exact path rather than /api/* on purpose: /api/build.json and
     // the other /api/*.json files are static and must keep serving if the
     // Worker ever has a bug.
-    "run_worker_first": ["/embed/*", "/api/ask", "/api/translate", "/api/talent/*", "/sitemap.xml"]
+    // /api/feed-fetch added 2026-10-02: the first deploy of the route (3ccef40)
+    // answered 404 because the asset layer took the path first, exactly as
+    // this note warns. Every Worker route must be listed here.
+    "run_worker_first": ["/embed/*", "/api/ask", "/api/translate", "/api/talent/*", "/api/feed-fetch", "/sitemap.xml"]
   },
   "ai": {
     "binding": "AI"
