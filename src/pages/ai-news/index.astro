@@ -319,6 +319,7 @@ const jsonld = JSON.stringify({
               {c.kev && <span class="kev">Exploited in the wild</span>}
               {' '}&middot; {c.published}
             </span>
+            {c.summary && <span class="cve-sum">{c.summary}</span>}
           </li>
         ))}
       </ol>
@@ -355,6 +356,11 @@ const jsonld = JSON.stringify({
   .cve-sec .sev-high { background: #C2410C; }
   .cve-sec .sev-medium { background: #B7791F; }
   .cve-sec .sev-low { background: #4B5563; }
+  /* Stephen, 2026-10-02 evening: "still nothing that describes the cve on
+     the front page". The headline says what the flaw lets an attacker do;
+     this line is the first sentence of the NVD record, the same text the
+     tracker list shows, so the reader can judge the entry without a click. */
+  .cve-sec .cve-sum { display: block; font-size: 13.5px; line-height: 1.5; color: #2C2C2A; margin-top: 3px; }
   .cve-sec .kev { display: inline-block; margin-left: .4em; padding: 0 .45em; border-radius: 3px; font-size: 11px; font-weight: 700; color: #8B1A1A; border: 1px solid #8B1A1A; }
   .dateline { color: #7A8A9E; font-size: 14px; letter-spacing: .02em; }
   .dateline strong { color: #201868; }
