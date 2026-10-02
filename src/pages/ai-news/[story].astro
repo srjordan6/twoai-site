@@ -105,6 +105,14 @@ const stampDoc = {
 
 const storyPath = `/ai-news/${stampDoc.page_uid}/`;
 
+// WHY IT MATTERS HERE, Stephen 2026-10-02 (theworldofai row 371): one line of
+// the site's own analysis, written by the pipeline from the records it had
+// already matched to the story (twoai_news_why). A story with no tracked
+// match carries none, and the block does not render.
+const whyRaw: any = (story as any).why_it_matters;
+const whyHere: any = whyRaw && typeof whyRaw === 'object' && typeof whyRaw.text === 'string' && whyRaw.text.trim() !== '' && !whyRaw.none ? whyRaw : null;
+const whyCites: any[] = whyHere && Array.isArray(whyHere.cites) ? whyHere.cites.filter((c: any) => c && c.href && c.name) : [];
+
 const cat = categoryOf(story);
 const cats = categoriesOf(story);
 // Onward links: terms this story actually names, and the company pages for any
@@ -189,6 +197,10 @@ const _fullDesc =
   `${story.Headline}. Covered by ${story.DomainCount} outlets across ${story.ArticleCount} ` +
   `articles: the leading sources, named entities, and coverage timeline.`;
 const description = _fullDesc.length <= 158 ? _fullDesc : `${_fullDesc.slice(0, 157).replace(/\s+\S*$/, '')}…`;
+// The NewsArticle carries the why-it-matters line where it fits (row 371);
+// the meta description stays the short one.
+const _withWhy = whyHere ? `${story.Headline}. ${whyHere.text}` : '';
+const articleDescription = _withWhy && _withWhy.length <= 300 ? _withWhy : description;
 
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
@@ -202,7 +214,7 @@ const jsonld = JSON.stringify({
       '@type': 'NewsArticle',
       '@id': `https://theworldofai.org${storyPath}#article`,
       headline: story.Headline,
-      description,
+      description: articleDescription,
       url: `https://theworldofai.org${storyPath}`,
       mainEntityOfPage: `https://theworldofai.org${storyPath}`,
       datePublished: date,
@@ -243,7 +255,19 @@ const jsonld = JSON.stringify({
   ],
 });
 ---
-{story.retired ? (
+{story.retired && story.duplicate_of ? (
+  /* MERGED DUPLICATE, 2026-10-02 (row 368). One event is one story: this
+     permalink keeps serving, its canonical is the survivor, and the page
+     sends the reader there. Not noindex, because a canonical that points
+     elsewhere already tells search engines which page to keep. */
+  <Base title="Story merged | AI News" description={`This report was merged into ${story.duplicate_of_headline || 'another story'} on The World of AI.`} current="/ai-news/" canonicalOverride={`https://theworldofai.org/ai-news/${story.duplicate_of}/`}>
+    <p class="meta-line"><a href="/ai-news/">AI News</a> · <a href="/ai-news/daily/">Daily News</a></p>
+    <h1>Story merged</h1>
+    <p>This report covered the same event as another story and was merged into it. Read it at
+      {' '}<a href={`/ai-news/${story.duplicate_of}/`}>{story.duplicate_of_headline || `/ai-news/${story.duplicate_of}/`}</a>.</p>
+    <p class="meta-line">This page carried the headline "{story.Headline}". The merge is recorded in the news archive, and nothing was deleted.</p>
+  </Base>
+) : story.retired ? (
   /* WITHDRAWN STORY, 2026-10-01. The permalink stays; the page says so and
      is out of search. The reason comes from twoai_news_stories.retired_reason. */
   <Base title="Story withdrawn | AI News" description="This story was withdrawn from The World of AI." current="/ai-news/" noindex={true}>
@@ -342,6 +366,18 @@ const jsonld = JSON.stringify({
               <a href={story.SummaryURL} rel="nofollow noopener" target="_blank">Read the original coverage.</a>
             </p>
           )}
+        </div>
+      )}
+
+      {whyHere && (
+        <div class="why" id="why-here">
+          <h2>Why it matters here</h2>
+          <p>{whyHere.text}</p>
+          {whyCites.length > 0 && (
+            <p class="why-cites">Follow it on this site:
+              {whyCites.map((c: any, i: number) => <>{i > 0 ? ', ' : ' '}<a href={c.href}>{c.name}</a></>)}.</p>
+          )}
+          <p class="meta-line">Drafted by {whyHere.model || 'the site model'} on {whyHere.written_on} from the records this site had already matched to the story, and checked by the pipeline against those records. See the <a href="/editorial-policy/">editorial policy</a>.</p>
         </div>
       )}
 
