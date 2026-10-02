@@ -22,7 +22,29 @@ export function getStaticPaths() {
     .filter((p) => p.params.page && Array.isArray(p.props.d.sections));
 }
 const { d } = Astro.props;
-const jsonld = JSON.stringify({
+// THE EDITOR PAGE. Stephen, 2026-10-02 (theworldofai row 370): /stephen-jordan/
+// is the author page Google News reads, so it carries a ProfilePage with the
+// Person as its main entity, the same person every NewsArticle names as
+// editor. Every other static page stays a WebPage.
+const isEditor = d.slug === 'stephen-jordan';
+const jsonld = JSON.stringify(isEditor ? {
+  '@context': 'https://schema.org',
+  '@type': 'ProfilePage',
+  name: d.title,
+  description: d.description,
+  url: `https://theworldofai.org/${d.slug}/`,
+  dateModified: d.updated,
+  isPartOf: { '@type': 'WebSite', name: 'The World of AI', url: 'https://theworldofai.org/' },
+  mainEntity: {
+    '@type': 'Person',
+    '@id': 'https://theworldofai.org/stephen-jordan/#person',
+    name: 'Stephen R. Jordan',
+    jobTitle: 'Editor',
+    url: 'https://theworldofai.org/stephen-jordan/',
+    worksFor: { '@type': 'Organization', name: 'SRJ Consulting & Services LLC', url: 'https://srjconsultingservices.com/' },
+    sameAs: ['https://www.linkedin.com/in/stephenrjordan/', 'https://srjconsultingservices.com/about/'],
+  },
+} : {
   '@context': 'https://schema.org',
   '@type': 'WebPage',
   name: d.title,

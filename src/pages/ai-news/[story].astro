@@ -209,9 +209,17 @@ const jsonld = JSON.stringify({
       dateModified: generated,
       isAccessibleForFree: true,
       author: { '@type': 'Organization', name: 'The World of AI', url: 'https://theworldofai.org/about/' },
-      editor: { '@type': 'Person', name: 'Stephen Jordan', url: 'https://theworldofai.org/about/' },
+      // PUBLISHER TRUST SIGNALS. Stephen, 2026-10-02 (theworldofai row 370):
+      // Google News indexes the reference pages and not the stories, and it
+      // reads these. The editor is a named person with his own page, and the
+      // publisher names its editorial policy, corrections page and funding.
+      editor: { '@type': 'Person', name: 'Stephen Jordan', url: 'https://theworldofai.org/stephen-jordan/',
+        sameAs: ['https://www.linkedin.com/in/stephenrjordan/'] },
       publisher: { '@type': 'Organization', name: 'The World of AI', url: 'https://theworldofai.org/',
-        logo: { '@type': 'ImageObject', url: 'https://theworldofai.org/brand/og.png', width: 1200, height: 630 } },
+        logo: { '@type': 'ImageObject', url: 'https://theworldofai.org/brand/og.png', width: 1200, height: 630 },
+        publishingPrinciples: 'https://theworldofai.org/editorial-policy/',
+        correctionsPolicy: 'https://theworldofai.org/data-quality/',
+        ownershipFundingInfo: 'https://theworldofai.org/disclosure/' },
       image: 'https://theworldofai.org/brand/og.png',
     },
     {
@@ -256,7 +264,7 @@ const jsonld = JSON.stringify({
     <strong>Daily briefing</strong> · {date}
     {stamp && <> · compiled {stamp}</>}
     · {minutes}-minute read
-    · <span class="byline">Compiled by The World of AI, editor <a href="/about/">Stephen Jordan</a></span>
+    · <span class="byline">Compiled by The World of AI, editor <a href="/stephen-jordan/" rel="author">Stephen Jordan</a></span>
   </p>
   <div class="pills">
     {/* Every section this story belongs to, then every entity on this site it

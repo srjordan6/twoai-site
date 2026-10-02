@@ -16,10 +16,34 @@ import Base from '../../layouts/Base.astro';
 import { categoryOf, type Story } from '../../lib/newsTopics';
 import { storyUid, cleanSummary, incidentUid } from '../../lib/storyUid';
 import { latestCves, cveList, severityClass } from '../../lib/cves';
+import { readFileSync, existsSync } from 'node:fs';
 // AI CVE TRACKER, Stephen 2026-10-01: the ten newest, at the FOOT of this page
 // so nothing already here loses its place. Every CVE stays on /ai-news/cves/.
 const cvesTop = latestCves(10);
 const cvesAll = cveList();
+
+// AI HISTORICAL TIMELINE, Stephen 2026-10-02 (theworldofai row 369): the last
+// block inside the page's own content, just above the Ask box that Base.astro
+// adds at the foot. Read from the same content the timeline page uses, so it
+// shows the span and a few landmark entries rather than a bare link. The blurb
+// is the one twoai_taxonomy holds for slug historical-timeline; the taxonomy
+// is not exported as content, so it is repeated here and kept in step by hand.
+const tl: any = existsSync('content/timeline/index.json')
+  ? JSON.parse(readFileSync('content/timeline/index.json', 'utf8'))
+  : null;
+const tlEntries: any[] = tl ? (tl.eras || []).flatMap((b: any) => b.entries || []) : [];
+const tlLandmarks: any[] = (() => {
+  if (tlEntries.length === 0) return [];
+  const want = Math.min(4, tlEntries.length);
+  const picked: any[] = [];
+  for (let i = 0; i < want; i++) {
+    const idx = Math.floor((i * (tlEntries.length - 1)) / Math.max(1, want - 1));
+    const e = tlEntries[idx];
+    if (e && !picked.includes(e)) picked.push(e);
+  }
+  return picked;
+})();
+const tlBlurb = 'From the 1940s to the present: Turing, the perceptron, expert systems, backpropagation, deep learning, AlexNet, transformers, and what followed.';
 
 const newsMods = import.meta.glob('../../../content/news/news.json', { eager: true });
 const news: any = Object.values(newsMods)[0]?.default ?? null;
@@ -303,6 +327,25 @@ const jsonld = JSON.stringify({
         A CVE leaves this list as newer ones arrive and stays on the tracker.</p>
     </section>
   )}
+
+  <section class="sec cve-sec">
+    <h2><a href="/ai-news/timeline/">AI Historical Timeline</a></h2>
+    <p class="sec-sub">{tlBlurb}</p>
+    {tl && tlLandmarks.length > 0 && (
+      <>
+        <p class="sec-desc">{tl.total} milestones from {tl.first_year} to {tl.last_year || 'the present'}, in {(tl.eras || []).length} eras, each citing its primary source. Four of them:</p>
+        <ol class="preview">
+          {tlLandmarks.map((e: any) => (
+            <li>
+              <a href="/ai-news/timeline/">{e.title}</a>
+              <span class="pmeta">{e.date || e.year}</span>
+            </li>
+          ))}
+        </ol>
+      </>
+    )}
+    <a class="go" href="/ai-news/timeline/">The whole timeline &rarr;</a>
+  </section>
 </Base>
 
 <style>

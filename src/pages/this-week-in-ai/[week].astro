@@ -58,19 +58,23 @@ const jsonld = JSON.stringify({
   dateModified: w.generated,
   isAccessibleForFree: true,
   author: { '@type': 'Organization', name: 'The World of AI', url: 'https://theworldofai.org/about/' },
-  editor: { '@type': 'Person', name: 'Stephen Jordan', url: 'https://theworldofai.org/about/' },
+  editor: { '@type': 'Person', name: 'Stephen Jordan', url: 'https://theworldofai.org/stephen-jordan/',
+    sameAs: ['https://www.linkedin.com/in/stephenrjordan/'] },
   image: 'https://theworldofai.org/brand/og.png',
   publisher: {
     '@type': 'Organization',
     name: 'The World of AI',
     url: 'https://theworldofai.org/',
     logo: { '@type': 'ImageObject', url: 'https://theworldofai.org/brand/og.png', width: 1200, height: 630 },
+    publishingPrinciples: 'https://theworldofai.org/editorial-policy/',
+    correctionsPolicy: 'https://theworldofai.org/data-quality/',
+    ownershipFundingInfo: 'https://theworldofai.org/disclosure/',
   },
 });
 ---
 <Base title={`This Week in AI: ${w.start} to ${w.end}`} description={desc} current="/this-week-in-ai/" jsonld={jsonld}>
   <h1>{w.label}</h1>
-  <p class="meta-line byline">Compiled by The World of AI · editor <a href="/about/">Stephen Jordan</a> · <time datetime={w.end}>{w.end}</time></p>
+  <p class="meta-line byline">Compiled by The World of AI · editor <a href="/stephen-jordan/" rel="author">Stephen Jordan</a> · <time datetime={w.end}>{w.end}</time></p>
   <p class="answer">{lede}</p>
   {w.recap && (
     <div class="recap">

@@ -125,9 +125,13 @@ const jsonld = JSON.stringify({
   dateModified: it.date,
   // The announcement is the vendor's; this site surfaces and summarises it.
   author: { '@type': 'Organization', name: vendor },
-  editor: { '@type': 'Person', name: 'Stephen Jordan', url: 'https://theworldofai.org/about/' },
+  editor: { '@type': 'Person', name: 'Stephen Jordan', url: 'https://theworldofai.org/stephen-jordan/',
+    sameAs: ['https://www.linkedin.com/in/stephenrjordan/'] },
   publisher: { '@type': 'Organization', name: 'The World of AI', url: 'https://theworldofai.org/',
-    logo: { '@type': 'ImageObject', url: 'https://theworldofai.org/brand/og.png', width: 1200, height: 630 } },
+    logo: { '@type': 'ImageObject', url: 'https://theworldofai.org/brand/og.png', width: 1200, height: 630 },
+    publishingPrinciples: 'https://theworldofai.org/editorial-policy/',
+    correctionsPolicy: 'https://theworldofai.org/data-quality/',
+    ownershipFundingInfo: 'https://theworldofai.org/disclosure/' },
   image: 'https://theworldofai.org/brand/og.png',
   isAccessibleForFree: true,
   isBasedOn: it.url,
@@ -145,7 +149,7 @@ const jsonld = JSON.stringify({
       ? <a class="pill" href={`/companies/${vendorCompany.uid}/`}>{vendor}</a>
       : <a class="pill" href="/ai-news/vendor/">{vendor}</a>}
     Surfaced <time datetime={it.date}>{it.date}</time> · Announcement · {host}
-    · <span class="byline">Editor <a href="/about/">Stephen Jordan</a></span></p>
+    · <span class="byline">Editor <a href="/stephen-jordan/" rel="author">Stephen Jordan</a></span></p>
 
   <div class="answer-box">
     <p class="answer-label">{it.summary ? `In ${vendor}\u2019s words` : 'What this is'}</p>
