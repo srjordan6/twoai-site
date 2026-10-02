@@ -102,10 +102,16 @@ async function handleFeedFetch(request: Request, env: Env): Promise<Response> {
   }
   let upstream: Response;
   try {
+    // pib.gov.in answered the first version's honest reader UA with 403 from
+    // the Worker (2026-10-02) while serving the same feed to a browser, so
+    // the request now looks like the browser it is standing in for. The
+    // From header still says who is asking.
     upstream = await fetch(target.toString(), {
       headers: {
-        "User-Agent": "theworldofai.org feed reader (srj@srjconsultingservices.com)",
-        "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.5",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+        "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, text/html;q=0.8, */*;q=0.5",
+        "Accept-Language": "en-US,en;q=0.9",
+        "From": "srj@srjconsultingservices.com",
       },
       cf: { cacheTtl: 600, cacheEverything: true },
     } as RequestInit);
