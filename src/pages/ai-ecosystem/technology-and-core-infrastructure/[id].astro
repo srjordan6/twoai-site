@@ -12,6 +12,8 @@
  */
 import Base from '../../../layouts/Base.astro';
 import Reading from '../../../components/Reading.astro';
+import CveList from '../../../components/CveList.astro';
+import { cvesFor } from '../../../lib/cves';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
 const CATEGORY = 'technology-and-core-infrastructure';
@@ -122,6 +124,20 @@ const isRepo = sec.source === 'github';
 const isStatus = sec.tax === 'api-status-uptime';
 const isDir = sec.tax === 'api-directory';
 const isLang = sec.tax === 'programming-languages';
+// LANGUAGE AND FRAMEWORK PROFILES, Stephen 2026-10-02: one page each, shape
+// lang-profile, written by the pipeline from a reading of the official site.
+const isProfile = sec.shape === 'lang-profile';
+const profileByKey: Record<string, string> = {};
+if (existsSync('content/tech')) {
+  for (const f of readdirSync('content/tech')) {
+    if (!f.startsWith('profile-') || !f.endsWith('.json')) continue;
+    try {
+      const p = JSON.parse(readFileSync(`content/tech/${f}`, 'utf8'));
+      if (p?.uid && p?.subject_key) profileByKey[p.subject_key] = p.uid;
+    } catch {}
+  }
+}
+const profileHref = (key: string) => profileByKey[key] ? `${BASE}/${profileByKey[key]}/` : '';
 const isMeta = sec.kind === 'standard' && sec.tax === 'model-metadata';
 const isMCPSec = sec.tax === 'mcp-security';
 const isClients = sec.tax === 'mcp-clients';
@@ -264,6 +280,7 @@ const facPlace = sec.shape === 'dc-facility'
 // those pages until 2026-08-30. Each shape knows its own headline.
 const pageTitle =
   isHub ? secName :
+  isProfile ? (sec.title || sec.name) :
   sec.shape === 'dc-state' ? `Data centers in ${sec.state}` :
   sec.shape === 'dc-facility'
     ? (sec.profile?.campus_buildings > 1
@@ -278,7 +295,9 @@ const pageTitle =
   sec.shape === 'dc-grid' ? 'The Grid Observatory' :
   secName;
 
-const _descRaw = isHub
+const _descRaw = isProfile
+  ? String(sec.answer || '')
+  : isHub
   ? `${secName}: ${hubKids.length} section${hubKids.length === 1 ? '' : 's'} on The World of AI. ${sec.answer || sec.blurb || ''}`
   : isDCChild
   ? (sec.shape === 'dc-facility'
@@ -563,6 +582,44 @@ const facBare = sec.shape === 'dc-facility' && !(
 
   <h1>{pageTitle}</h1>
 
+  {isProfile && (
+    <>
+      <p class="meta-line"><a href={sec.parent_path}>{sec.parent_name}</a> &middot; {sec.subject_kind}</p>
+      <p class="answer">{sec.answer}</p>
+      <p class="meta-line">Last verified: {sec.generated} &middot; uid {sec.uid} &middot; written from a reading of
+        {' '}{sec.site_domain}{sec.site_pages_read ? `, ${sec.site_pages_read} pages` : ''}{sec.source_read_on ? `, read ${sec.source_read_on}` : ''}</p>
+      {sec.facts && (
+        <table class="facts">
+          <tbody>
+            {sec.facts.steward && <tr><th>Steward</th><td>{sec.facts.steward}</td></tr>}
+            {sec.facts.first_release && <tr><th>First release</th><td>{sec.facts.first_release}</td></tr>}
+            {sec.facts.repo && <tr><th>Repository</th><td>{sec.facts.repo}</td></tr>}
+            {sec.facts.licence && <tr><th>Licence</th><td>{sec.facts.licence}</td></tr>}
+            {sec.facts.language && <tr><th>Written in</th><td>{sec.facts.language}</td></tr>}
+            {sec.facts.stars > 0 && <tr><th>GitHub stars</th><td>{Number(sec.facts.stars).toLocaleString()}</td></tr>}
+            {sec.facts.last_push && <tr><th>Last push</th><td>{String(sec.facts.last_push).slice(0, 10)}</td></tr>}
+            {Array.isArray(sec.facts.tracked_repos) && sec.facts.tracked_repos.length > 0 && <tr><th>Tracked repositories written in it</th><td>{sec.facts.tracked_repos.join(', ')}</td></tr>}
+          </tbody>
+        </table>
+      )}
+      {(sec.sections || []).map((s: any) => (
+        <>
+          <h2>{s.heading}</h2>
+          {String(s.body).split(/\n\s*\n/).map((p: string) => <p>{p}</p>)}
+        </>
+      ))}
+      {Array.isArray(sec.siblings) && sec.siblings.length > 0 && (
+        <>
+          <h2>Other languages and frameworks profiled here</h2>
+          <p class="meta-line">{sec.siblings.map((x: any, i: number) => <>{i > 0 && ' · '}<a href={x.path}>{x.name}</a></>)}</p>
+        </>
+      )}
+      <p class="meta-line">Written {sec.generated} by the pipeline from the facts above and a reading of the official
+        site, nothing else, and rewritten when that reading changes.</p>
+      <h2>Source</h2>
+      <p><a href={sec.source_url} rel="noopener">{sec.name} official site</a>{sec.facts?.repo_url && <> &middot; <a href={sec.facts.repo_url} rel="noopener">repository</a></>}</p>
+    </>
+  )}
   {isDC && (
     <>
       <p class="answer"><b>The physical layer of the AI boom, tracked from primary
@@ -1918,7 +1975,7 @@ const facBare = sec.shape === 'dc-facility' && !(
         profiles are curated with a verified source each.</p>
       {sec.languages.map((l) => (
         <div class="dom">
-          <h3>{l.name} <span class="n">{l.first_release}</span></h3>
+          <h3>{profileHref('lang:' + l.slug) ? <a href={profileHref('lang:' + l.slug)}>{l.name}</a> : l.name} <span class="n">{l.first_release}</span></h3>
           <p>{l.ai_role}</p>
           <p class="meta-line">Steward: {l.steward} ·
             {' '}<a href={l.source_url} rel="noopener">Official site</a> · verified {l.verified}
@@ -1946,7 +2003,7 @@ const facBare = sec.shape === 'dc-facility' && !(
         <tbody>
           {sec.repos.map((r) => (
             <tr>
-              <td><a href={r.url} rel="noopener">{r.name}</a>{r.archived && <span class="n">archived</span>}</td>
+              <td>{profileHref('framework:' + (r.repo || r.name)) ? <a href={profileHref('framework:' + (r.repo || r.name))}>{r.name}</a> : <a href={r.url} rel="noopener">{r.name}</a>}{r.archived && <span class="n">archived</span>}</td>
               <td>{r.description || '—'}</td>
               <td>{r.licence || '—'}</td>
               <td class="num">{fmt(r.stars)}</td>
@@ -2246,6 +2303,7 @@ const facBare = sec.shape === 'dc-facility' && !(
 
   <div class="cite-box">Cite this page: <code>"{pageTitle}." The World of AI,
     theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
+  <CveList cves={cvesFor(`${BASE}/${sec.uid}/`)} name={pageTitle} />
 </Base>
 
 <style>

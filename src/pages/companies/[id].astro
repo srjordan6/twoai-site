@@ -20,6 +20,8 @@
 import Base from '../../layouts/Base.astro';
 import Reading from '../../components/Reading.astro';
 import StockBox from '../../components/StockBox.astro';
+import CveList from '../../components/CveList.astro';
+import { cvesFor } from '../../lib/cves';
 import { capParagraphs } from '../../lib/prose';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { ownedServers } from '../../lib/mcpAttribution';
@@ -402,6 +404,7 @@ const jsonld = JSON.stringify({
     spelling a source used.</p>
 
   <p><a href="/companies/">All companies</a></p>
+  <CveList cves={cvesFor(`/companies/${company.uid}/`)} name={n} />
 </Base>
 
 <style>

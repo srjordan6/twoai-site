@@ -15,6 +15,11 @@
 import Base from '../../layouts/Base.astro';
 import { categoryOf, type Story } from '../../lib/newsTopics';
 import { storyUid, cleanSummary, incidentUid } from '../../lib/storyUid';
+import { latestCves, cveList, severityClass } from '../../lib/cves';
+// AI CVE TRACKER, Stephen 2026-10-01: the ten newest, at the FOOT of this page
+// so nothing already here loses its place. Every CVE stays on /ai-news/cves/.
+const cvesTop = latestCves(10);
+const cvesAll = cveList();
 
 const newsMods = import.meta.glob('../../../content/news/news.json', { eager: true });
 const news: any = Object.values(newsMods)[0]?.default ?? null;
@@ -275,9 +280,38 @@ const jsonld = JSON.stringify({
     Looking for the policy and litigation week in review? That lives at
     <a href="/this-week-in-ai/"> This Week in AI</a>.
   </p>
+
+  {cvesTop.length > 0 && (
+    <section class="sec cve-sec">
+      <h2><a href="/ai-news/cves/">Latest AI CVEs</a></h2>
+      <p class="sec-sub">The ten newest vulnerabilities recorded against AI tools, models, agents and MCP servers</p>
+      <ol class="preview">
+        {cvesTop.map((c: any) => (
+          <li>
+            <a href={`/ai-news/cves/${c.cve_id}/`}>{c.cve_id}{c.product && <>: {c.product}</>}</a>
+            <span class="pmeta">
+              {c.cvss_severity && <span class={`sev ${severityClass(c.cvss_severity)}`}>{c.cvss_severity}{c.cvss_score != null && <> {c.cvss_score}</>}</span>}
+              {c.kev && <span class="kev">Exploited in the wild</span>}
+              {' '}&middot; {c.published}
+            </span>
+          </li>
+        ))}
+      </ol>
+      <a class="go" href="/ai-news/cves/">All {cvesAll.total} AI CVEs &rarr;</a>
+      <p class="meta-line">From the CVE Program (MITRE) and NVD (NIST), with CISA's exploited-in-the-wild flag.
+        A CVE leaves this list as newer ones arrive and stays on the tracker.</p>
+    </section>
+  )}
 </Base>
 
 <style>
+  .cve-sec { margin-top: 28px; }
+  .cve-sec .sev { display: inline-block; padding: 0 .45em; border-radius: 3px; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #fff; background: #7A8A9E; }
+  .cve-sec .sev-critical { background: #8B1A1A; }
+  .cve-sec .sev-high { background: #C2410C; }
+  .cve-sec .sev-medium { background: #B7791F; }
+  .cve-sec .sev-low { background: #4B5563; }
+  .cve-sec .kev { display: inline-block; margin-left: .4em; padding: 0 .45em; border-radius: 3px; font-size: 11px; font-weight: 700; color: #8B1A1A; border: 1px solid #8B1A1A; }
   .dateline { color: #7A8A9E; font-size: 14px; letter-spacing: .02em; }
   .dateline strong { color: #201868; }
 

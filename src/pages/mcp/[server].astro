@@ -8,6 +8,8 @@
  */
 import Base from '../../layouts/Base.astro';
 import KeepReading from '../../components/KeepReading.astro';
+import CveList from '../../components/CveList.astro';
+import { cvesFor } from '../../lib/cves';
 import { matchTerms, companyFor } from '../../lib/related';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
@@ -250,6 +252,7 @@ const jsonld = JSON.stringify({
     theworldofai.org/mcp/{s.slug}/.{generated ? ` Verified ${generated}.` : ''}</code></div>
 
   <p><a href="/mcp/">All MCP servers</a></p>
+  <CveList cves={cvesFor(`/mcp/${s.slug}/`)} name={label} />
   <KeepReading blocks={[
     { label: 'Terms this server works with, defined',
       links: krTerms.map((t) => ({ href: `/ai-glossary/${t.slug}/`, label: t.term, note: t.category })) },

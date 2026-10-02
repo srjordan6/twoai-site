@@ -1,0 +1,124 @@
+---
+/**
+ * One page per AI CVE, at /ai-news/cves/{CVE-ID}/.
+ *
+ * Everything on the page is the public record: the description as cve.org
+ * carries it, the score NVD assigned, the weakness class, and which pages on
+ * this site the affected product has. The links to cve.org and NVD sit at the
+ * foot. The CVE identifier is the slug because it is stable, public and
+ * citable. Stephen, 2026-10-01.
+ */
+import Base from '../../../layouts/Base.astro';
+import { severityClass } from '../../../lib/cves';
+
+export function getStaticPaths() {
+  const mods = import.meta.glob('../../../../content/news/cve-*.json', { eager: true });
+  return Object.values(mods)
+    .map((m: any) => m?.default)
+    .filter((d: any) => d && d.cve_id)
+    .map((d: any) => ({ params: { id: d.cve_id }, props: { c: d } }));
+}
+const { c } = Astro.props;
+const entities: any[] = c.entities ?? [];
+const refs: string[] = c.references ?? [];
+const sevWord = (c.cvss_severity || '').toLowerCase();
+const headline = `${c.cve_id}${c.product ? `: ${c.product}` : ''}${sevWord ? `, ${sevWord} severity` : ''}`;
+const desc = `${c.cve_id} affects ${c.product || c.vendor || 'an AI product'}${c.cvss_score != null ? `, CVSS ${c.cvss_score} ${c.cvss_severity}` : ''}${c.kev ? ', on CISA's exploited list' : ''}. ${c.description}`.slice(0, 300);
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline,
+  description: desc,
+  datePublished: c.published,
+  dateModified: c.last_modified || c.generated,
+  url: `https://theworldofai.org/ai-news/cves/${c.cve_id}/`,
+  isPartOf: { '@type': 'CollectionPage', name: 'AI CVE tracker', url: 'https://theworldofai.org/ai-news/cves/' },
+  citation: [
+    { '@type': 'CreativeWork', name: `${c.cve_id} at cve.org`, url: c.cve_org_url },
+    { '@type': 'CreativeWork', name: `${c.cve_id} at NVD`, url: c.nvd_url },
+  ],
+});
+---
+<Base title={`${headline} — AI CVE tracker — The World of AI`} description={desc} current="/ai-news/" jsonld={jsonld}
+  doc={{ page_uid: c.uid, built_at: c.generated, generated: c.published }} stampLabel="CVE recorded">
+  <p class="meta-line"><a href="/ai-news/">AI News</a> · <a href="/ai-news/cves/">AI CVE tracker</a></p>
+  <h1>{c.cve_id}</h1>
+  <p class="answer">
+    {c.cvss_severity && <span class={`sev ${severityClass(c.cvss_severity)}`}>{c.cvss_severity}{c.cvss_score != null && <> {c.cvss_score}</>}</span>}
+    {c.kev && <span class="kev">Exploited in the wild</span>}
+    {' '}A publicly recorded vulnerability{c.product && <> in <b>{c.product}</b></>}{c.vendor && c.vendor !== c.product && <> from {c.vendor}</>},
+    published {c.published}{c.cwe && <>, classed as {c.cwe}</>}.
+    {c.kev && <> CISA added it to the Known Exploited Vulnerabilities catalog{c.kev_added && <> on {c.kev_added}</>}, which means it is being used in real attacks.</>}
+  </p>
+  <p class="meta-line">Last verified: <time datetime={c.generated}>{c.generated}</time>
+    {' '}&middot; <span class="uid" title="This CVE's identifier on theworldofai.org">uid {c.uid}</span></p>
+
+  <h2>What the record says</h2>
+  <p>{c.description}</p>
+  <p class="meta-line">This is the description as filed with the CVE Program, reproduced under the CVE
+    Program's terms of use, which permit copying the CVE List with attribution. It is the reporter's
+    wording, not ours. CVE is a registered trademark of The MITRE Corporation.</p>
+
+  <h2>Severity</h2>
+  <table>
+    <tbody>
+      <tr><th>CVSS score</th><td>{c.cvss_score != null ? <>{c.cvss_score} ({c.cvss_severity})</> : 'Not yet scored by NVD'}</td></tr>
+      {c.cvss_vector && <tr><th>Vector</th><td><code>{c.cvss_vector}</code></td></tr>}
+      {c.cwe && <tr><th>Weakness class</th><td>{c.cwe}</td></tr>}
+      <tr><th>Exploited in the wild</th><td>{c.kev ? `Yes, listed by CISA${c.kev_added ? ` on ${c.kev_added}` : ''}` : 'Not on CISA\u2019s catalog as of the last check'}</td></tr>
+      <tr><th>Published</th><td>{c.published}</td></tr>
+      {c.last_modified && <tr><th>Record last modified</th><td>{c.last_modified}</td></tr>}
+    </tbody>
+  </table>
+  <p class="meta-line">A CVSS score rates how bad the flaw could be in the abstract, not how likely it is to
+    be exploited. The exploited flag is the stronger signal for what to patch first.</p>
+
+  {entities.length > 0 && (
+    <>
+      <h2>On this site</h2>
+      <p>The product named in this CVE has {entities.length === 1 ? 'a page' : 'pages'} here. Each lists its
+        known vulnerabilities at the foot.</p>
+      <ul>
+        {entities.map((e) => <li><a href={e.href}>{e.name}</a> <span class="meta-line-inline">{e.kind.replace('_', ' ')}</span></li>)}
+      </ul>
+    </>
+  )}
+
+  <h2>Why it is on the AI tracker</h2>
+  <p class="meta-line">Matched on: {c.match_reason || 'AI product named'}. The tracker lists a CVE when the
+    affected product is an AI tool, model, agent, MCP server or framework the site covers, or when a
+    profiled company's CVE is about AI.</p>
+
+  <div class="cite-box">Cite this page: <code>"{c.cve_id}." AI CVE tracker, The World of AI,
+    theworldofai.org/ai-news/cves/{c.cve_id}/. Retrieved {c.generated}.</code></div>
+
+  <h2>Sources</h2>
+  <ul class="sources">
+    <li><a href={c.cve_org_url} rel="noopener" target="_blank">{c.cve_id} at cve.org</a>
+      <span class="src-meta">The CVE Program, MITRE. The record of truth.</span></li>
+    <li><a href={c.nvd_url} rel="noopener" target="_blank">{c.cve_id} at NVD</a>
+      <span class="src-meta">National Vulnerability Database, NIST. Score, weakness class, affected products.</span></li>
+    {refs.map((r) => (
+      <li><a href={r} rel="noopener nofollow" target="_blank">{r}</a></li>
+    ))}
+  </ul>
+
+  <p><a href="/ai-news/cves/">&larr; All AI CVEs</a></p>
+</Base>
+
+<style>
+  table th { width: 30%; text-align: left; vertical-align: top; }
+  code { word-break: break-all; }
+  .sources { list-style: none; padding: 0; margin: 1em 0 1.6em; }
+  .sources li { padding: .5em 0; border-bottom: 1px solid #ececf2; word-break: break-all; }
+  .src-meta { display: block; font-size: 12.5px; color: #7A8A9E; margin-top: 2px; }
+  .meta-line-inline { font-size: 12.5px; color: #7A8A9E; }
+  .cite-box { margin: 1.6em 0; padding: .9em 1em; background: #f7f7fb; border-left: 3px solid #201868; font-size: .9rem; }
+  .cite-box code { display: block; margin-top: .3em; }
+  .sev { display: inline-block; padding: 0 .45em; border-radius: 3px; font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #fff; background: #7A8A9E; vertical-align: middle; }
+  .sev-critical { background: #8B1A1A; }
+  .sev-high { background: #C2410C; }
+  .sev-medium { background: #B7791F; }
+  .sev-low { background: #4B5563; }
+  .kev { display: inline-block; margin-left: .4em; padding: 0 .45em; border-radius: 3px; font-size: 11.5px; font-weight: 700; color: #8B1A1A; border: 1px solid #8B1A1A; vertical-align: middle; }
+</style>

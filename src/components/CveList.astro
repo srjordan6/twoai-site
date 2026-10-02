@@ -1,0 +1,47 @@
+---
+/**
+ * Known vulnerabilities for the product this page is about, at the foot of
+ * the page. Renders nothing when there are none, so no page carries an empty
+ * heading. Stephen, 2026-10-02: if a product is named in a CVE, its page
+ * lists that CVE toward the bottom.
+ */
+import { severityClass, type CveRow } from '../lib/cves';
+interface Props { cves: CveRow[]; name: string; limit?: number }
+const { cves, name, limit = 10 } = Astro.props;
+const shown = (cves ?? []).slice(0, limit);
+---
+{shown.length > 0 && (
+  <section class="cve-block">
+    <h2>Known vulnerabilities naming {name}</h2>
+    <p class="meta-line">{cves.length} {cves.length === 1 ? 'CVE' : 'CVEs'} on record for this product
+      in the <a href="/ai-news/cves/">AI CVE tracker</a>, newest first. A CVE is a public record that a
+      flaw was reported and assigned an identifier; check the vendor's advisory for the fix.</p>
+    <ul class="cve-list">
+      {shown.map((c) => (
+        <li>
+          <a href={`/ai-news/cves/${c.cve_id}/`}><code>{c.cve_id}</code></a>
+          {c.cvss_severity && <span class={`sev ${severityClass(c.cvss_severity)}`}>{c.cvss_severity}{c.cvss_score != null && <> {c.cvss_score}</>}</span>}
+          {c.kev && <span class="kev">Exploited in the wild</span>}
+          <span class="cve-date">{c.published}</span>
+          <span class="cve-sum">{c.summary}</span>
+        </li>
+      ))}
+    </ul>
+    {cves.length > shown.length && <p><a href="/ai-news/cves/">All {cves.length} on the tracker &rarr;</a></p>}
+  </section>
+)}
+
+<style>
+  .cve-block { margin-top: 2em; }
+  .cve-list { list-style: none; padding: 0; margin: .6em 0 1em; }
+  .cve-list li { padding: .6em 0; border-bottom: 1px solid #ececf2; font-size: 14.5px; line-height: 1.6; }
+  .cve-list code { font-weight: 700; color: #201868; }
+  .cve-sum { display: block; color: #2C2C2A; margin-top: 2px; }
+  .cve-date { color: #7A8A9E; margin-left: .5em; font-size: 13px; }
+  .sev { display: inline-block; margin-left: .5em; padding: 0 .45em; border-radius: 3px; font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #fff; background: #7A8A9E; }
+  .sev-critical { background: #8B1A1A; }
+  .sev-high { background: #C2410C; }
+  .sev-medium { background: #B7791F; }
+  .sev-low { background: #4B5563; }
+  .kev { display: inline-block; margin-left: .5em; padding: 0 .45em; border-radius: 3px; font-size: 11.5px; font-weight: 700; color: #8B1A1A; border: 1px solid #8B1A1A; }
+</style>

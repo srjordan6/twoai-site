@@ -2,6 +2,8 @@
 import Base from '../../layouts/Base.astro';
 import Reading from '../../components/Reading.astro';
 import KeepReading from '../../components/KeepReading.astro';
+import CveList from '../../components/CveList.astro';
+import { cvesFor } from '../../lib/cves';
 import { matchTerms, companyFor, vendorPostsNaming, companiesNamedIn } from '../../lib/related';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
@@ -168,6 +170,7 @@ const jsonld = JSON.stringify({
 
   <p class="meta-line">We are not paid by the vendors we profile. Verdicts are never for sale:
     <a href="/disclosure/">disclosure</a>.</p>
+  <CveList cves={cvesFor(`/ai-tools/${t.slug}/`)} name={t.name} />
   <KeepReading blocks={[
     { label: 'Terms this tool works with, defined',
       links: krTerms.map((t) => ({ href: `/ai-glossary/${t.slug}/`, label: t.term, note: t.category })) },
