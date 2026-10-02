@@ -138,6 +138,7 @@ if (existsSync('content/tech')) {
   }
 }
 const profileHref = (key: string) => profileByKey[key] ? `${BASE}/${profileByKey[key]}/` : '';
+const repoProfileHref = (r: any) => profileHref('framework:' + (r.repo || r.name)) || profileHref('engine:' + (r.repo || r.name));
 const isMeta = sec.kind === 'standard' && sec.tax === 'model-metadata';
 const isMCPSec = sec.tax === 'mcp-security';
 const isClients = sec.tax === 'mcp-clients';
@@ -2003,7 +2004,7 @@ const facBare = sec.shape === 'dc-facility' && !(
         <tbody>
           {sec.repos.map((r) => (
             <tr>
-              <td>{profileHref('framework:' + (r.repo || r.name)) ? <a href={profileHref('framework:' + (r.repo || r.name))}>{r.name}</a> : <a href={r.url} rel="noopener">{r.name}</a>}{r.archived && <span class="n">archived</span>}</td>
+              <td>{repoProfileHref(r) ? <a href={repoProfileHref(r)}>{r.name}</a> : <a href={r.url} rel="noopener">{r.name}</a>}{r.archived && <span class="n">archived</span>}</td>
               <td>{r.description || '—'}</td>
               <td>{r.licence || '—'}</td>
               <td class="num">{fmt(r.stars)}</td>
