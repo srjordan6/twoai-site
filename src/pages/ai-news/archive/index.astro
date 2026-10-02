@@ -29,6 +29,7 @@ for (const s of archive?.stories ?? []) {
   const slug = s.Slug || s.slug;
   if (!slug || seen.has(slug)) continue;
   seen.add(slug);
+  if (s.retired) continue; // withdrawn story: permalink kept, not listed
   items.push({ slug, headline: s.Headline || s.headline, date: s.ArchivedDate || s.published_on, uid: storyUid(slug, s.uid) });
 }
 

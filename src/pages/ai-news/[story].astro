@@ -235,7 +235,16 @@ const jsonld = JSON.stringify({
   ],
 });
 ---
-{redirectTo ? (
+{story.retired ? (
+  /* WITHDRAWN STORY, 2026-10-01. The permalink stays; the page says so and
+     is out of search. The reason comes from twoai_news_stories.retired_reason. */
+  <Base title="Story withdrawn | AI News" description="This story was withdrawn from The World of AI." current="/ai-news/" noindex={true}>
+    <p class="meta-line"><a href="/ai-news/">AI News</a> · <a href="/ai-news/daily/">Daily News</a></p>
+    <h1>Story withdrawn</h1>
+    <p>This page was published as a news story and has been withdrawn{story.retired_reason ? `: ${story.retired_reason}` : '.'}</p>
+    <p class="meta-line">Today's briefing is at <a href="/ai-news/">AI News</a>.</p>
+  </Base>
+) : redirectTo ? (
   <Base title={`${title} | AI News`} description={description} current="/ai-news/" noindex={true} canonicalOverride={`https://theworldofai.org${redirectTo}`} redirect={redirectTo}>
     <p class="meta-line">This story has moved to its permanent address: <a href={redirectTo}>{story.Headline}</a></p>
   </Base>
