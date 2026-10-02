@@ -68,6 +68,59 @@ interface Env {
   // pipeline.env). OLLAMA_MODEL is an optional override, default below.
   OLLAMA_API_KEY?: string;
   OLLAMA_MODEL?: string;
+  // Optional shared secret for /api/feed-fetch (see handleFeedFetch). Set
+  // with `npx wrangler secret put FEED_FETCH_SECRET` and the same value as
+  // FEED_FETCH_SECRET in pipeline.env. Unset, the route still answers, but
+  // only for the allow-listed feed hosts.
+  FEED_FETCH_SECRET?: string;
+}
+
+// FEED FETCH-THROUGH. Stephen, 2026-10-02 (theworldofai row 376): the office
+// PC cannot reach pib.gov.in, most likely the router's geo-blocking of Indian
+// address space, and the router stays as it is. The pipeline retries a feed
+// through here when a direct fetch fails on DNS or a connect timeout. This is
+// not an open proxy: only the hosts of the feeds in twoai_vendor_feeds that
+// need it are allowed, the target must be https, and a shared secret is
+// required when one is configured. The body is passed through as the origin
+// sent it, with its content type, so the pipeline parses the XML exactly as
+// it would from a direct fetch.
+const FEED_FETCH_HOSTS = new Set(["pib.gov.in", "www.pib.gov.in", "reinsurancene.ws", "www.reinsurancene.ws"]);
+
+async function handleFeedFetch(request: Request, env: Env): Promise<Response> {
+  const raw = new URL(request.url).searchParams.get("url") || "";
+  let target: URL;
+  try {
+    target = new URL(raw);
+  } catch {
+    return new Response("bad url", { status: 400 });
+  }
+  if (target.protocol !== "https:" || !FEED_FETCH_HOSTS.has(target.hostname)) {
+    return new Response("host not allowed", { status: 403 });
+  }
+  if (env.FEED_FETCH_SECRET && request.headers.get("x-feed-secret") !== env.FEED_FETCH_SECRET) {
+    return new Response("forbidden", { status: 403 });
+  }
+  let upstream: Response;
+  try {
+    upstream = await fetch(target.toString(), {
+      headers: {
+        "User-Agent": "theworldofai.org feed reader (srj@srjconsultingservices.com)",
+        "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.5",
+      },
+      cf: { cacheTtl: 600, cacheEverything: true },
+    } as RequestInit);
+  } catch (e) {
+    return new Response(`upstream fetch failed: ${String(e).slice(0, 160)}`, { status: 502 });
+  }
+  const body = await upstream.arrayBuffer();
+  return new Response(body, {
+    status: upstream.status,
+    headers: {
+      "content-type": upstream.headers.get("content-type") || "application/xml",
+      "cache-control": "no-store",
+      "x-fetched-via": "cloudflare",
+    },
+  });
 }
 
 const EMBED_MODEL = "@cf/baai/bge-m3";
@@ -182,6 +235,10 @@ export default {
       // The AI Talent Network write path lives in its own module so a bug in
       // it can never touch the assistant, and vice versa.
       return handleTalent(request, env as unknown as Parameters<typeof handleTalent>[1]);
+    }
+
+    if (url.pathname === "/api/feed-fetch") {
+      return handleFeedFetch(request, env);
     }
 
     if (url.pathname === "/api/translate") {
