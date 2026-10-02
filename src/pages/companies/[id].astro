@@ -21,6 +21,7 @@ import Base from '../../layouts/Base.astro';
 import Reading from '../../components/Reading.astro';
 import StockBox from '../../components/StockBox.astro';
 import CveList from '../../components/CveList.astro';
+import PinnedNews from '../../components/PinnedNews.astro';
 import { cvesFor } from '../../lib/cves';
 import { capParagraphs } from '../../lib/prose';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
@@ -47,6 +48,7 @@ export function getStaticPaths() {
       params: { id: d.company.uid },
       props: { company: d.company, generated: d.generated, profileText: d.profile_text || null, siteUrl: d.website || '', reading: d.reading || null,
         lobbying: d.lobbying || null,
+        pinnedNews: Array.isArray(d.pinned_news) ? d.pinned_news : null,
         stock: (stocks.by_company || {})[d.company.uid] || null,
         stockPending: pendingByCompany[d.company.uid] || null,
         operator: (() => {
@@ -65,7 +67,7 @@ export function getStaticPaths() {
         })() },
     }));
 }
-const { company, generated, profileText, siteUrl, reading, stock, stockPending, lobbying, operator } = Astro.props;
+const { company, generated, profileText, siteUrl, reading, stock, stockPending, lobbying, operator, pinnedNews } = Astro.props;
 const op = operator && (operator.reading || operator.facilities > 0) ? operator : null;
 // A company record that was superseded by another: AMD was tracked twice, as
 // AMD (b54d3e84) and as ADVANCED MICRO DEVICES INC (6b518abb, the SEC
@@ -404,6 +406,11 @@ const jsonld = JSON.stringify({
     spelling a source used.</p>
 
   <p><a href="/companies/">All companies</a></p>
+  {/* IN THE NEWS, Stephen 2026-10-02 (theworldofai rows 355 and 375): the
+      stories the solo news stage pins to this company arrive on the page
+      document as pinned_news, the same field the industry pages read. The
+      component renders nothing when there are none. */}
+  <PinnedNews pins={pinnedNews} heading={`${n} in the news`} />
   <CveList cves={cvesFor(`/companies/${company.uid}/`)} name={n} />
 </Base>
 
