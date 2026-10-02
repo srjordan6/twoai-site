@@ -23,7 +23,7 @@ const entities: any[] = c.entities ?? [];
 const refs: string[] = c.references ?? [];
 const sevWord = (c.cvss_severity || '').toLowerCase();
 const headline = `${c.cve_id}${c.product ? `: ${c.product}` : ''}${sevWord ? `, ${sevWord} severity` : ''}`;
-const desc = `${c.cve_id} affects ${c.product || c.vendor || 'an AI product'}${c.cvss_score != null ? `, CVSS ${c.cvss_score} ${c.cvss_severity}` : ''}${c.kev ? ', on CISA's exploited list' : ''}. ${c.description}`.slice(0, 300);
+const desc = `${c.cve_id} affects ${c.product || c.vendor || 'an AI product'}${c.cvss_score != null ? `, CVSS ${c.cvss_score} ${c.cvss_severity}` : ''}${c.kev ? ", on CISA's exploited list" : ''}. ${c.description}`.slice(0, 300);
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'Article',
