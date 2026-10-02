@@ -73,7 +73,6 @@ const live = (c.domains || []).filter((d) => d.status === 'live');
 // category routes to render hub records, and the day they do, this test
 // should be deleted so the headings link again. It is deliberately a list of
 // what IS built, so a new route fails safe to "no link" rather than to a 404.
-const ENTERPRISE_SLUG = 'enterprise-applications-governance-and-tools';
 const industryHubUids = new Set<string>();
 if (existsSync('content/industries')) {
   for (const f of readdirSync('content/industries')) {
@@ -84,12 +83,18 @@ if (existsSync('content/industries')) {
     } catch { /* an unreadable file is not evidence of a page */ }
   }
 }
+// 2026-10-02, Stephen: "this should be a hub page" on AI Agents and the MCP
+// Ecosystem. The day the comment above foresaw has come: every category
+// route now renders hub records, and all sixteen hub addresses outside the
+// Enterprise category answered 200 when checked before this change. The
+// test now says what it should always have said: a uid address is linked
+// when a hub record carries that uid, and left as text only when none does.
 const domainHref = (d: any): string | null => {
   if (!d?.path) return null;
   const m = /^\/ai-ecosystem\/([^/]+)\/([0-9a-f]{8})\/?$/.exec(String(d.path));
   if (!m) return d.path; // not a uid address under a category: leave it alone
-  const [, cat, uid] = m;
-  if (industryHubUids.has(uid) && cat !== ENTERPRISE_SLUG) return null;
+  const [, , uid] = m;
+  if (!industryHubUids.has(uid)) return null;
   return d.path;
 };
 const rest = (c.domains || []).filter((d) => d.status !== 'live');
