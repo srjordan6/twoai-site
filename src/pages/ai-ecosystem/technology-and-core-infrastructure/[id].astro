@@ -127,6 +127,20 @@ const isLang = sec.tax === 'programming-languages';
 // LANGUAGE AND FRAMEWORK PROFILES, Stephen 2026-10-02: one page each, shape
 // lang-profile, written by the pipeline from a reading of the official site.
 const isProfile = sec.shape === 'lang-profile';
+// MODEL FAMILIES, theworldofai bridge rows 386 to 389 (Stephen, 2026-10-02):
+// one page per developer model line, every version in one table, written by
+// the pipeline's twoai_model_families from the OpenRouter catalog.
+const isFamily = sec.shape === 'model-family';
+const famMembers: any[] = isFamily && Array.isArray(sec.members) ? sec.members : [];
+const famLive = famMembers.filter((m) => !m.delisted);
+const famRetired = famMembers.filter((m) => m.delisted);
+const famTok = (n: number) => (!n ? 'not listed' : n >= 1000000 ? `${+(n / 1000000).toFixed(2)}M` : n >= 1000 ? `${Math.round(n / 1000)}k` : `${n}`);
+const famPrice = (v: number) => (v === null || v === undefined || v < 0 ? 'not listed' : v === 0 ? 'free' : `$${v}`);
+const famMods = (a: string[]) => (Array.isArray(a) && a.length ? a.join(', ') : 'text');
+// The Large Language Models page lists its families and links each model in
+// its table to its family page.
+const secFamilies: any[] = Array.isArray(sec.families) ? sec.families : [];
+const familyOf: Record<string, { uid: string; name: string }> = sec.family_of && typeof sec.family_of === 'object' ? sec.family_of : {};
 const profileByKey: Record<string, string> = {};
 if (existsSync('content/tech')) {
   for (const f of readdirSync('content/tech')) {
@@ -282,6 +296,7 @@ const facPlace = sec.shape === 'dc-facility'
 const pageTitle =
   isHub ? secName :
   isProfile ? (sec.title || sec.name) :
+  isFamily ? (sec.title || `${sec.name} model family`) :
   sec.shape === 'dc-state' ? `Data centers in ${sec.state}` :
   sec.shape === 'dc-facility'
     ? (sec.profile?.campus_buildings > 1
@@ -296,7 +311,7 @@ const pageTitle =
   sec.shape === 'dc-grid' ? 'The Grid Observatory' :
   secName;
 
-const _descRaw = isProfile
+const _descRaw = (isProfile || isFamily)
   ? String(sec.answer || '')
   : isHub
   ? `${secName}: ${hubKids.length} section${hubKids.length === 1 ? '' : 's'} on The World of AI. ${sec.answer || sec.blurb || ''}`
@@ -621,6 +636,135 @@ const facBare = sec.shape === 'dc-facility' && !(
       <p><a href={sec.source_url} rel="noopener">{sec.name} official site</a>{sec.facts?.repo_url && <> &middot; <a href={sec.facts.repo_url} rel="noopener">repository</a></>}</p>
     </>
   )}
+  {isFamily && (
+    <>
+      <p class="meta-line"><a href={sec.hub_path}>{sec.hub_name}</a> &middot; <a href={sec.parent_path}>{sec.parent_name}</a></p>
+      <p class="answer">{sec.answer}</p>
+      <p class="meta-line">Last verified: {sec.generated} &middot; uid {sec.uid} &middot; from the
+        {' '}<a href={sec.source?.url} rel="noopener">{sec.source?.name}</a></p>
+      <table class="facts">
+        <tbody>
+          <tr><th>Developer</th><td>{sec.developer_company ? <a href={sec.developer_company.href}>{sec.developer_company.name}</a> : sec.developer}</td></tr>
+          <tr><th>Versions</th><td>{famLive.length}{famRetired.length > 0 && <>, plus {famRetired.length} no longer listed</>}</td></tr>
+          <tr><th>First release</th><td>{sec.first_release}</td></tr>
+          <tr><th>Latest release</th><td>{sec.latest_release}</td></tr>
+          <tr><th>Licence</th><td>{sec.licence}</td></tr>
+          <tr><th>Input</th><td>{(sec.input_modalities || []).map((m) => <span class="tag">{m}</span>)}</td></tr>
+          <tr><th>Output</th><td>{(sec.output_modalities || []).map((m) => <span class="tag">{m}</span>)}</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Versions</h2>
+      <p class="meta-line">Every version in the catalog, newest first. Prices are per million tokens from the
+        catalog's lowest-cost route; providers can charge more.</p>
+      <div class="fam-scroll">
+        <table class="pay">
+          <thead><tr><th>Version</th><th>Released</th><th class="num">Context</th><th class="num">Max output</th><th class="num">$/M in</th><th class="num">$/M out</th><th>Knowledge cutoff</th><th>Reasoning</th><th>Input</th></tr></thead>
+          <tbody>
+            {famLive.map((m) => (
+              <tr>
+                <td><a href={m.url} rel="noopener">{m.name}</a>{m.open_weights && <span class="tag">open weights</span>}{m.expires && <span class="tag">retiring {m.expires}</span>}</td>
+                <td>{m.released}</td>
+                <td class="num">{famTok(m.context)}</td>
+                <td class="num">{famTok(m.max_output)}</td>
+                <td class="num">{famPrice(m.prompt_pm)}</td>
+                <td class="num">{famPrice(m.completion_pm)}</td>
+                <td>{m.knowledge_cutoff || 'not published'}</td>
+                <td>{m.reasoning ? 'Yes' : 'No'}</td>
+                <td>{famMods(m.input)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {famRetired.length > 0 && (
+        <p class="meta-line">No longer listed: {famRetired.map((m, i) => <>{i > 0 && ', '}{m.name} ({m.released})</>)}.</p>
+      )}
+
+      <h2>Changelog</h2>
+      <ul class="fam-log">
+        {(sec.changelog || []).slice(0, 40).map((c) => (
+          <li><time datetime={c.date}>{c.date}</time> {c.text}</li>
+        ))}
+      </ul>
+
+      <h2>Technical notes</h2>
+      <ul>
+        <li>Tokenizer: {(sec.tokenizers || []).length ? sec.tokenizers.join(', ') : 'not published'}.</li>
+        <li>Parameter counts: {(sec.params || []).length
+          ? (sec.params || []).map((p, i) => <>{i > 0 && '; '}{p.model}: {p.params}</>)
+          : 'not published by the developer in the catalog'}.</li>
+        <li>Architecture: not published in the catalog.</li>
+        {(sec.hf_models || []).length > 0 && (
+          <li>Open weights: {(sec.hf_models || []).map((h, i) => <>{i > 0 && ', '}<a href={h.url} rel="noopener">{h.hf_id}</a></>)}.</li>
+        )}
+      </ul>
+
+      <h2>Benchmarks</h2>
+      {(sec.benchmarks || []).length > 0 ? (
+        <table class="facts">
+          <thead><tr><th>Benchmark</th><th>Entry</th><th class="num">Score</th><th>Source</th></tr></thead>
+          <tbody>
+            {sec.benchmarks.map((b) => (
+              <tr><td>{b.benchmark}</td><td>{b.system}</td><td class="num">{b.score}</td>
+                <td><a href={b.source_url} rel="noopener">{b.source}</a>{b.as_of && <>, {b.as_of}</>}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p>No scores for this family from a named public benchmark are tracked yet. Vendor-reported figures are not
+          listed here.</p>
+      )}
+
+      <h2>Cost and availability</h2>
+      {(sec.providers || []).length > 0 ? (
+        <>
+          <p>Served by {sec.providers.length} {sec.providers.length === 1 ? 'provider' : 'providers'} in the catalog.</p>
+          <ul class="fam-prov">
+            {sec.providers.slice(0, 16).map((p) => (
+              <li>{p.provider} <span class="meta-line-inline">{p.models} {p.models === 1 ? 'version' : 'versions'}{p.min_prompt_pm > 0 && <>, from ${p.min_prompt_pm}/M input</>}</span></li>
+            ))}
+          </ul>
+        </>
+      ) : <p>The catalog lists no hosting providers for this family.</p>}
+      {(sec.hf_models || []).length > 0 && <p>Open weights can be downloaded from the Hugging Face Hub (links above). Minimum hardware is not stated by the source.</p>}
+
+      <h2>Where to read more</h2>
+      <ul>
+        {sec.developer_company && <li><a href={sec.developer_company.href}>{sec.developer_company.name}</a> on this site</li>}
+        <li><a href={famLive[0]?.url} rel="noopener">{famLive[0]?.name} on OpenRouter</a></li>
+        {(sec.hf_models || [])[0] && <li><a href={sec.hf_models[0].url} rel="noopener">{sec.hf_models[0].hf_id} model card</a></li>}
+      </ul>
+
+      {sec.family_reading?.text && (
+        <>
+          <h2>Strengths and limits</h2>
+          <p>{sec.family_reading.text}</p>
+          <p class="meta-line">Written from the facts on this page only, {sec.family_reading.written_on}.</p>
+        </>
+      )}
+
+      {(sec.cves || []).length > 0 && (
+        <>
+          <h2>Known vulnerabilities naming this family</h2>
+          <ul>
+            {sec.cves.map((c) => (
+              <li><a href={`/ai-news/cves/${c.cve_id}/`}>{c.headline || c.cve_id}</a> <span class="meta-line-inline">{c.cve_id}{c.severity && <>, {c.severity.toLowerCase()}</>}, {c.published}</span></li>
+            ))}
+          </ul>
+        </>
+      )}
+      {(sec.news || []).length > 0 && (
+        <>
+          <h2>In the news</h2>
+          <ul>
+            {sec.news.map((n) => <li><a href={`/ai-news/${n.uid}/`}>{n.headline}</a> <span class="meta-line-inline">{n.published}</span></li>)}
+          </ul>
+        </>
+      )}
+    </>
+  )}
+
   {isDC && (
     <>
       <p class="answer"><b>The physical layer of the AI boom, tracked from primary
@@ -2264,6 +2408,28 @@ const facBare = sec.shape === 'dc-facility' && !(
     </>
   )}
 
+  {secFamilies.length > 0 && (
+    <>
+      <h2>Model families</h2>
+      <p>A model family is a developer's named model line with every version and size under it. Each has its
+        own page with the versions side by side, newest family first.</p>
+      <table class="pay">
+        <thead><tr><th>Family</th><th>Developer</th><th class="num">Versions</th><th>Newest</th><th>First</th></tr></thead>
+        <tbody>
+          {secFamilies.map((f) => (
+            <tr>
+              <td><a href={f.href}>{f.name}</a></td>
+              <td>{f.developer}</td>
+              <td class="num">{f.members}</td>
+              <td>{f.newest}</td>
+              <td>{f.first}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  )}
+
   {sec.api_models?.length > 0 && (
     <>
       <h2>Available over commercial APIs</h2>
@@ -2277,7 +2443,7 @@ const facBare = sec.shape === 'dc-facility' && !(
         <tbody>
           {sec.api_models.map((m) => (
             <tr>
-              <td><a href={m.url} rel="noopener">{m.name}</a></td>
+              <td><a href={m.url} rel="noopener">{m.name}</a>{familyOf[m.id] && <> <a class="fam-link" href={`${BASE}/${familyOf[m.id].uid}/`}>{familyOf[m.id].name} family</a></>}</td>
               <td>{m.provider}</td>
               <td class="num">{ctx(m.context)}</td>
               <td class="num">{money(m.prompt_pm)}</td>
@@ -2308,6 +2474,17 @@ const facBare = sec.shape === 'dc-facility' && !(
 </Base>
 
 <style>
+  /* Model family pages, 2026-10-03. */
+  .tag { display: inline-block; margin: 0 .3em .2em 0; padding: 0 .5em; border-radius: 10px; background: #f0f0f5; color: #201868; font-size: 12px; }
+  td .tag { margin-left: .4em; }
+  .fam-scroll { overflow-x: auto; }
+  .fam-log { list-style: none; padding: 0; }
+  .fam-log li { padding: .25em 0; border-bottom: 1px solid #ececf2; font-size: 14px; }
+  .fam-log time { color: #7A8A9E; margin-right: .6em; font-size: 13px; }
+  .fam-prov { columns: 2; }
+  .fam-link { font-size: 12px; margin-left: .4em; color: #F07800; }
+  .meta-line-inline { font-size: 12.5px; color: #7A8A9E; }
+
   /* The fact box is a rail card now, not a float. float:right with a fixed
      300px width was correct while it lived inside the article; in the rail it
      would take itself out of flow inside a 268px track and the width would
