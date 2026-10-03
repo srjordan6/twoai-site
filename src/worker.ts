@@ -1336,6 +1336,13 @@ export default {
     // uses, so this checks rather than trusts. If the filter would empty the
     // list entirely the top-scoring page is kept, because an answer that came
     // from somewhere must show somewhere.
+    // A CVE record the answer came from is its first source. On 2026-10-03
+    // the CVE-2026-94486 answer was written from its [DB] record and the
+    // list showed only CVE-2026-47282, the nearest page by similarity.
+    for (const f of facts.filter((x) => x.kind === "cve").reverse()) {
+      const url = `https://theworldofai.org${f.url}`;
+      if (!sources.some((s) => s.url === url)) sources.unshift({ title: f.entity, url, score: 1 });
+    }
     const namedSources = sources.filter((s) => namedInAnswer(s.title));
     const shownSources = namedSources.length ? namedSources : sources.slice(0, 1);
 
