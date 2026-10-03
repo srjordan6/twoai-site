@@ -150,6 +150,15 @@ const famRetired = famMembers.filter((m) => m.delisted);
 const famTok = (n: number) => (!n ? 'not listed' : n >= 1000000 ? `${+(n / 1000000).toFixed(2)}M` : n >= 1000 ? `${Math.round(n / 1000)}k` : `${n}`);
 const famPrice = (v: number) => (v === null || v === undefined || v < 0 ? 'not listed' : v === 0 ? 'free' : `$${v}`);
 const famMods = (a: string[]) => (Array.isArray(a) && a.length ? a.join(', ') : 'text');
+// THE VERSIONS TABLE FITS THE PAGE. Stephen, 2026-10-03, "fix the table": nine
+// columns wrapped each name onto four lines and cut the Input column off.
+// The developer prefix repeats on every row of one family, so it goes; the
+// inputs become small tags under the name; the two prices share a column.
+const famShort = (n: string) => { const i = String(n || '').indexOf(':'); return (i >= 0 ? String(n).slice(i + 1) : String(n || '')).trim(); };
+const famPrices = (m: any) => {
+  const a = famPrice(m.prompt_pm), b = famPrice(m.completion_pm);
+  return a === 'not listed' && b === 'not listed' ? 'not listed' : `${a} / ${b}`;
+};
 // The Large Language Models page lists its families and links each model in
 // its table to its family page.
 const secFamilies: any[] = Array.isArray(sec.families) ? sec.families : [];
@@ -701,22 +710,21 @@ const facBare = sec.shape === 'dc-facility' && !(
 
       <h2>Versions</h2>
       <p class="meta-line">Every version in the catalog, newest first. Prices are per million tokens from the
-        catalog's lowest-cost route; providers can charge more.</p>
+        catalog's lowest-cost route; providers can charge more. The tags under each name are the inputs it accepts.</p>
       <div class="fam-scroll">
         <table class="pay">
-          <thead><tr><th>Version</th><th>Released</th><th class="num">Context</th><th class="num">Max output</th><th class="num">$/M in</th><th class="num">$/M out</th><th>Knowledge cutoff</th><th>Reasoning</th><th>Input</th></tr></thead>
+          <thead><tr><th>Version</th><th>Released</th><th class="num">Context</th><th class="num">Max out</th><th class="num">$/M in / out</th><th>Cutoff</th><th>Reasoning</th></tr></thead>
           <tbody>
             {famLive.map((m) => (
               <tr>
-                <td><a href={m.url} rel="noopener">{m.name}</a>{m.open_weights && <span class="tag">open weights</span>}{m.expires && <span class="tag">retiring {m.expires}</span>}</td>
-                <td>{m.released}</td>
+                <td class="fam-ver"><a href={m.url} rel="noopener">{famShort(m.name)}</a>
+                  <span class="fam-mods">{(Array.isArray(m.input) && m.input.length ? m.input : ['text']).map((x) => <span class="tag">{x}</span>)}{m.open_weights && <span class="tag tag-ow">open weights</span>}{m.expires && <span class="tag tag-ret">retiring {m.expires}</span>}</span></td>
+                <td class="nw">{m.released}</td>
                 <td class="num">{famTok(m.context)}</td>
                 <td class="num">{famTok(m.max_output)}</td>
-                <td class="num">{famPrice(m.prompt_pm)}</td>
-                <td class="num">{famPrice(m.completion_pm)}</td>
-                <td>{m.knowledge_cutoff || 'not published'}</td>
+                <td class="num nw">{famPrices(m)}</td>
+                <td class="nw">{m.knowledge_cutoff || 'not published'}</td>
                 <td>{m.reasoning ? 'Yes' : 'No'}</td>
-                <td>{famMods(m.input)}</td>
               </tr>
             ))}
           </tbody>
@@ -2594,6 +2602,15 @@ const facBare = sec.shape === 'dc-facility' && !(
   .dc-power li span { display: block; font-size: 14px; color: #201868; }
   .dc-topic-xref { background: #FFF6EC; border-left: 3px solid #F07800; padding: 8px 14px; color: #201868; }
   /* Model family pages, 2026-10-03. */
+  .fam-scroll table { font-size: 14px; }
+  .fam-scroll th { white-space: nowrap; }
+  .fam-scroll .nw { white-space: nowrap; }
+  .fam-ver { min-width: 13em; }
+  .fam-ver a { font-weight: 600; }
+  .fam-mods { display: block; margin-top: .25em; }
+  .fam-mods .tag.tag { margin: 0 .3em .2em 0; font-size: 11.5px; }
+  .tag.tag-ow { background: #201868; color: #FFFFFF; }
+  .tag.tag-ret { background: #F07800; color: #FFFFFF; }
   .fam-list { margin: 1.4em 0 1.8em; }
   .tag { display: inline-block; margin: 0 .3em .2em 0; padding: 0 .5em; border-radius: 10px; background: #FFF6EC; color: #201868; font-size: 12px; }
   td .tag { margin-left: .4em; }
