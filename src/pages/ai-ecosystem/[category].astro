@@ -102,6 +102,32 @@ if (existsSync('content/caselaw')) {
     if (d?.shape === 'caselaw-index') addUid(d.uid);
   }
 }
+// 2026-10-03, Stephen: "the Data Centers 1,784 hub is not working". Its page
+// at b441a27b answers 200, but the Technology route builds it from
+// content/tech, a folder this page never read. Adding folders one complaint at
+// a time is how this kept happening, so each category now reads exactly the
+// folders its own [id] route builds pages from, and a uid found there is a
+// page that exists under this category. Ecosystem section docs count only
+// when they belong to this category.
+const ROUTE_FOLDERS: Record<string, string[]> = {
+  'technology-and-core-infrastructure': ['models', 'repos', 'status', 'tech'],
+  'ecosystem-entities-market-and-operations': ['jobs', 'observatory', 'people'],
+  'research-knowledge-and-learning': ['learn', 'research'],
+  'enterprise-applications-governance-and-tools': [],
+};
+for (const dir of ROUTE_FOLDERS[c.slug] || []) {
+  if (!existsSync(`content/${dir}`)) continue;
+  for (const f of readdirSync(`content/${dir}`)) {
+    if (f.endsWith('.json')) addUid(readJson(`content/${dir}/${f}`)?.uid);
+  }
+}
+if (existsSync('content/ecosystem')) {
+  for (const f of readdirSync('content/ecosystem')) {
+    if (!f.endsWith('.json')) continue;
+    const d = readJson(`content/ecosystem/${f}`);
+    if (d?.uid && d.category === c.slug) addUid(d.uid);
+  }
+}
 // 2026-10-02, Stephen: "this should be a hub page" on AI Agents and the MCP
 // Ecosystem. The day the comment above foresaw has come: every category
 // route now renders hub records, and all sixteen hub addresses outside the
