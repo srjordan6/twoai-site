@@ -16,6 +16,20 @@ const critical = bySev('CRITICAL');
 const high = bySev('HIGH');
 const products: Record<string, number> = {};
 for (const c of cves) if (c.product) products[c.product] = (products[c.product] || 0) + 1;
+// A TO Z BY PRODUCT. Stephen, 2026-10-03: keep the list newest first, and
+// add an A to Z indexer after its heading. CVE ids all start with "CVE", so
+// the letters index the products: each letter jumps to that letter's
+// products in the section after the list, where every product opens to its
+// CVEs, newest first. Static HTML, no script.
+const byProduct: Record<string, typeof cves> = {};
+for (const c of cves) (byProduct[c.product || 'Product not named'] ||= []).push(c);
+const sortKey = (n: string) => String(n || '').trim().replace(/^the\s+/i, '').toLowerCase();
+const letterOf = (n: string) => { const ch = sortKey(n).charAt(0).toUpperCase(); return ch >= 'A' && ch <= 'Z' ? ch : '0-9'; };
+const productNames = Object.keys(byProduct).sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+const azGroups: Record<string, string[]> = {};
+for (const p of productNames) (azGroups[letterOf(p)] ||= []).push(p);
+const azLetters = [...(azGroups['0-9'] ? ['0-9'] : []), ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')];
+const azAnchor = (l: string) => (l === '0-9' ? 'p-0-9' : `p-${l.toLowerCase()}`);
 const topProducts = Object.entries(products).sort((a, b) => b[1] - a[1]).slice(0, 12);
 const desc = `${cves.length} CVEs naming AI tools, models, agents, MCP servers and frameworks, newest first, with CVSS severity and CISA's exploited-in-the-wild flag. ${critical} critical, ${high} high. Updated ${d.generated}.`;
 const jsonld = JSON.stringify({
@@ -50,6 +64,12 @@ const jsonld = JSON.stringify({
   )}
 
   <h2>All AI CVEs, newest first</h2>
+  <nav class="az-index" id="az-index" aria-label="AI CVEs by product, A to Z">
+    <span class="az-label">Products A to Z</span>
+    {azLetters.map((l) => (azGroups[l]
+      ? <a href={`#${azAnchor(l)}`}>{l}</a>
+      : <span class="az-empty" aria-hidden="true">{l}</span>))}
+  </nav>
   <ul class="cve-list">
     {cves.map((c) => (
       <li>
@@ -66,6 +86,25 @@ const jsonld = JSON.stringify({
       </li>
     ))}
   </ul>
+
+  <h2 id="by-product">AI CVEs by product, A to Z</h2>
+  <p class="meta-line">{productNames.length} products. Open a product to see its CVEs, newest first.</p>
+  {azLetters.filter((l) => azGroups[l]).map((l) => (
+    <section class="az-group">
+      <h3 id={azAnchor(l)}>{l}</h3>
+      {azGroups[l].map((p) => (
+        <details class="az-product">
+          <summary>{p} <span class="az-n">{byProduct[p].length}</span></summary>
+          <ul>
+            {byProduct[p].map((c) => (
+              <li><a href={`/ai-news/cves/${c.cve_id}/`}>{c.headline || c.cve_id}</a> <span class="cve-id">{c.cve_id}</span> <span class="cve-date">{c.published}</span></li>
+            ))}
+          </ul>
+        </details>
+      ))}
+      <p class="az-top"><a href="#az-index">Back to top</a></p>
+    </section>
+  ))}
 
   <div class="cite-box">Cite this page: <code>"AI CVE tracker." The World of AI,
     theworldofai.org/ai-news/cves/. Retrieved {d.generated}.</code></div>
@@ -95,4 +134,17 @@ const jsonld = JSON.stringify({
   .kev { display: inline-block; margin-left: .5em; padding: 0 .45em; border-radius: 3px; font-size: 11.5px; font-weight: 700; color: #F07800; border: 1px solid #F07800; }
   .cite-box { margin: 1.6em 0; padding: .9em 1em; background: #FFF6EC; border-left: 3px solid #201868; font-size: .9rem; }
   .cite-box code { display: block; margin-top: .3em; }
+  .az-index { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25em .5em; margin: .4em 0 1.2em; font-weight: 600; font-size: 15px; }
+  .az-label { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #F07800; margin-right: .5em; }
+  .az-index a { color: #201868; text-decoration: none; min-width: 1.4em; text-align: center; }
+  .az-index a:hover { color: #F07800; }
+  .az-empty { color: rgba(122, 138, 158, 0.45); min-width: 1.4em; text-align: center; }
+  .az-group h3 { margin: 1.2em 0 .3em; color: #201868; scroll-margin-top: 80px; }
+  .az-product { border-bottom: 1px solid rgba(122, 138, 158, 0.25); padding: .35em 0; }
+  .az-product summary { cursor: pointer; color: #201868; font-weight: 600; }
+  .az-n { display: inline-block; margin-left: .4em; padding: 0 .5em; border-radius: 10px; background: #FFF6EC; color: #201868; font-size: 12px; font-weight: 600; }
+  .az-product ul { list-style: none; padding: 0 0 0 1em; margin: .4em 0; }
+  .az-product li { padding: .2em 0; font-size: 14px; }
+  .az-product .cve-id { margin-left: .4em; color: #7A8A9E; font-size: 13px; }
+  .az-top { font-size: 13px; margin: .4em 0 0; }
 </style>
