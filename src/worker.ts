@@ -663,7 +663,10 @@ export default {
                  coalesce(published::text,'') AS published, coalesce(description,'') AS description,
                  cvss_score, coalesce(cvss_severity,'') AS severity, kev, coalesce(kev_added::text,'') AS kev_added,
                  coalesce(defense::text,'') AS defense
-          FROM twoai_cves WHERE cve_id = ANY($1::text[]) AND status IN ('published','approved')`, [cveRefs]);
+          FROM twoai_cves WHERE cve_id = ANY(string_to_array($1, ',')) AND status IN ('published','approved')`, [cveRefs.join(",")]);
+        // Passed as one comma-joined string: with fetch_types off, postgres.js
+        // does not send a JS array as text[], and the first version of this
+        // lookup (899aaa4) found nothing for a CVE the site has a page on.
         for (const r of rows) {
           const f: string[] = [];
           if (r.headline) f.push(`Headline on this site: ${r.headline}`);
@@ -1025,18 +1028,17 @@ export default {
         if (billRefs.length) {
           return json({ answered: false, answer: "The World of AI does not track that bill. It follows state bills that concern artificial intelligence, from LegiScan; the question has been recorded.", sources: [] });
         }
-        // Likewise a CVE id: Wikidata would offer whatever word it could match.
-        if (cveRefs.length) {
-          return json({ answered: false, answer: `The World of AI does not track ${cveRefs.join(", ")}. It follows CVEs in AI products and frameworks; the full record is at the National Vulnerability Database, https://nvd.nist.gov/vuln/detail/${cveRefs[0]}`, sources: [] });
-        }
         const subject = subjectOf(question);
         const cached = await cachedLookup(env, norm, qVec);
         if (cached && (cached.wikidata || cached.lookup)) {
           return json({ answered: false, answer: notCovered, sources: [],
             wikidata: cached.wikidata, lookup: cached.lookup, lookupCached: true, lookupFetchedAt: cached.fetchedAt });
         }
-        const wd = await wikidataLookup(question);
-        const alt = wd ? null : (await huggingFaceModel(subject, question)) ?? (await openAlexAuthor(subject, question));
+        // A CVE id the site does not hold skips the encyclopaedia tiers, which
+        // would match whatever word they could, and goes straight to the web
+        // search below, which answered CVE-2026-94486 correctly on 2026-10-03.
+        const wd = cveRefs.length ? null : await wikidataLookup(question);
+        const alt = (wd || cveRefs.length) ? null : (await huggingFaceModel(subject, question)) ?? (await openAlexAuthor(subject, question));
         if (wd || alt) {
           const recorded: Array<{ sourceLabel: string; title: string; url: string; facts: any[] }> = [];
           if (wd) recorded.push({ sourceLabel: "Wikidata " + wd.qid, title: wd.title, url: wd.url, facts: wd.facts });
@@ -1329,12 +1331,6 @@ export default {
       // nearest page as "Sources on this site", which on 2026-10-03 put the
       // wrong CVE under "does not cover that yet". Nothing is shown instead.
       const shownSources: typeof sources = [];
-      // A CVE id the site does not hold, where retrieval found other CVE
-      // pages: the answer is that we do not track it, with NVD's address,
-      // never a Wikidata guess at one of its words.
-      if (cveRefs.length && !facts.some((f) => f.kind === "cve")) {
-        return json({ answered: false, answer: `The World of AI does not track ${cveRefs.join(", ")}. It follows CVEs in AI products and frameworks; the full record is at the National Vulnerability Database, https://nvd.nist.gov/vuln/detail/${cveRefs[0]}`, sources: [] });
-      }
       // TIER 2: WIKIDATA, ahead of any web search. Free, so no cap and no
       // budget counter, and CC0, so unlike a publisher's prose these claims
       // can eventually be published on our own pages rather than only cited.
@@ -1363,8 +1359,9 @@ export default {
           lookupCached: true, lookupFetchedAt: cached.fetchedAt,
         });
       }
-      const wd = await wikidataLookup(question);
-      const alt = wd ? null : (await huggingFaceModel(subject, question)) ?? (await openAlexAuthor(subject, question));
+      // A CVE question goes past the encyclopaedia tiers to the web search.
+      const wd = cveRefs.length ? null : await wikidataLookup(question);
+      const alt = (wd || cveRefs.length) ? null : (await huggingFaceModel(subject, question)) ?? (await openAlexAuthor(subject, question));
       if (wd || alt) {
         // Retain what we looked up. Runs in waitUntil so the reader is not
         // waiting on bookkeeping, and every fact lands as `proposed` for
