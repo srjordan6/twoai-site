@@ -1353,6 +1353,37 @@ export default {
     // that carries a subtitle after a colon, and on any five-word run of the
     // title, which catches a shortened reference without matching on
     // "language models" alone.
+    // A DEFINITION THE GLOSSARY ANSWERS STANDS ON THE GLOSSARY. Stephen,
+    // 2026-10-03, on "what is a reasoning model": he would have left off the
+    // Reasoning Models section and the chain-of-thought paper. Two prompt
+    // rules did not hold the model to it (it added the section back as
+    // "similarly describes"), so it is enforced here: when the question asks
+    // what something is and the answer uses a glossary entry, sentences that
+    // cite another page of this site or a research paper are dropped, and the
+    // source list shows the glossary alone.
+    const isDefinition = /^\s*(what\s+(is|are|was|were)\b|what's\b|whats\b|define\b|definition of\b|meaning of\b|what does\b.*\bmean\b)/i.test(question);
+    const usesGlossary = /\/ai-glossary\//.test(answer) ||
+      sources.some((s) => s.url.includes("/ai-glossary/") && answer.toLowerCase().includes(String(s.title).toLowerCase()));
+    let definitionOnly = false;
+    if (isDefinition && usesGlossary) {
+      const esc = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const otherPages = sources.filter((s) => !s.url.includes("/ai-glossary/")).map((s) => String(s.title)).filter((t) => t.length > 3);
+      const pageRef = otherPages.length
+        ? new RegExp(`(the site's|this site's)\\s+(${otherPages.map(esc).join("|")})|\\b(${otherPages.map(esc).join("|")})\\s+(section|page)\\b`, "i")
+        : null;
+      const paperTitles = papers.map((p) => String(p.title).toLowerCase()).filter((t) => t.length >= 25);
+      const citesOther = (sent: string) =>
+        /theworldofai\.org\/(?!ai-glossary\/)[^\s)]+/.test(sent) ||
+        (pageRef !== null && pageRef.test(sent)) ||
+        paperTitles.some((t) => sent.toLowerCase().includes(t));
+      const trimmed = answer.split(/\n{2,}/)
+        .map((par) => par.split(/(?<=[.!?])\s+(?=[A-Z])/).filter((s) => !citesOther(s)).join(" "))
+        .filter((p) => p.trim() !== "").join("\n\n");
+      if (trimmed.length >= 60) {
+        answer = trimmed;
+        definitionOnly = true;
+      }
+    }
     const flat = (t: string) => t.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
     const flatAnswer = flat(answer);
     const namedInAnswer = (title: string): boolean => {
@@ -1367,7 +1398,7 @@ export default {
       }
       return false;
     };
-    const citedPapers = papers.filter((pp) => namedInAnswer(pp.title));
+    const citedPapers = definitionOnly ? [] : papers.filter((pp) => namedInAnswer(pp.title));
 
     // DEMAND IS A SIGNAL. Stephen, 2026-09-03: whenever an answer cites a
     // paper from the research index, the site should spin up a page on that
@@ -1422,7 +1453,9 @@ export default {
     // said it had no page defining one and still listed the Centersquare data
     // centre section, the nearest page by similarity, as its source.
     const saysNotHeld = /\b(does not|doesn't|do not|don't) (cover|hold|have|include|define|mention)\b|\bnot covered\b|\bno (page|record|entry)\b/i.test(answer);
-    const shownSources = namedSources.length ? namedSources : (saysNotHeld ? [] : sources.slice(0, 1));
+    const glossaryNamed = namedSources.filter((s) => s.url.includes("/ai-glossary/"));
+    const shownSources = definitionOnly && glossaryNamed.length ? glossaryNamed
+      : namedSources.length ? namedSources : (saysNotHeld ? [] : sources.slice(0, 1));
 
     // THE SECOND REFUSAL PATH. Measured live 2026-09-01: the Einstein question
     // retrieved seven site pages and a quantum computing paper, so the
