@@ -68,6 +68,15 @@ export function getStaticPaths() {
     }));
 }
 const { company, generated, profileText, siteUrl, reading, stock, stockPending, lobbying, operator, pinnedNews } = Astro.props;
+// Data Centers topic pages that name this company (theworldofai bridge row
+// 399, 2026-10-03): the Tesla Megapack page from Tesla, the power page from
+// xAI, SpaceX, Google, Nvidia.
+const DC_BASE = '/ai-ecosystem/technology-and-core-infrastructure';
+const dcTopicsHere: any[] = existsSync('content/tech')
+  ? readdirSync('content/tech').filter((f) => f.startsWith('dc-topic-') && f.endsWith('.json'))
+      .map((f) => { try { return JSON.parse(readFileSync(`content/tech/${f}`, 'utf8')); } catch { return null; } })
+      .filter((t) => t && (t.related_links || []).some((l) => l.href === `/companies/${company.uid}/`))
+  : [];
 const op = operator && (operator.reading || operator.facilities > 0) ? operator : null;
 // A company record that was superseded by another: AMD was tracked twice, as
 // AMD (b54d3e84) and as ADVANCED MICRO DEVICES INC (6b518abb, the SEC
@@ -410,11 +419,16 @@ const jsonld = JSON.stringify({
       stories the solo news stage pins to this company arrive on the page
       document as pinned_news, the same field the industry pages read. The
       component renders nothing when there are none. */}
+  {dcTopicsHere.length > 0 && (
+    <p class="dc-topic-xref">Further reading: {dcTopicsHere.map((t, i) => <>{i > 0 && ' · '}<a href={`${DC_BASE}/${t.uid}/`}>{t.title}</a></>)}</p>
+  )}
   <PinnedNews pins={pinnedNews} heading={`${n} in the news`} />
   <CveList cves={cvesFor(`/companies/${company.uid}/`)} name={n} />
 </Base>
 
 <style>
+  .dc-topic-xref { background: #FFF6EC; border-left: 3px solid #F07800; padding: 8px 14px; color: #201868; }
+
   table { border-collapse: collapse; margin: 1em 0; width: 100%; }
   table th, table td { text-align: left; vertical-align: top; padding: .5em .7em;
     border-bottom: 1px solid #ececf2; }

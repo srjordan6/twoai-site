@@ -131,6 +131,19 @@ const isProfile = sec.shape === 'lang-profile';
 // one page per developer model line, every version in one table, written by
 // the pipeline's twoai_model_families from the OpenRouter catalog.
 const isFamily = sec.shape === 'model-family';
+// DATA CENTERS TOPIC PAGES, theworldofai bridge row 399 (Stephen, 2026-10-03):
+// power pages written in twoai_dc_power_topics, rendered as shape dc-topic.
+// The Data Centers page lists them in its Power block, and a facility page
+// links every topic that names it.
+const isDCTopic = sec.shape === 'dc-topic';
+const dcTopics: any[] = existsSync('content/tech')
+  ? readdirSync('content/tech').filter((f) => f.startsWith('dc-topic-') && f.endsWith('.json'))
+      .map((f) => { try { return JSON.parse(readFileSync(`content/tech/${f}`, 'utf8')); } catch { return null; } })
+      .filter((t) => t && t.uid)
+  : [];
+const topicsLinking = (href: string) => dcTopics.filter((t) => (t.related_links || []).some((l) => l.href === href));
+const firstSentence = (t: string) => { const m = String(t || '').match(/^.*?[.!?](\s|$)/); return (m ? m[0] : String(t || '')).trim(); };
+const paras = (t: string) => String(t || '').split(/\r?\n\s*\r?\n/).map((p) => p.trim()).filter(Boolean);
 const famMembers: any[] = isFamily && Array.isArray(sec.members) ? sec.members : [];
 const famLive = famMembers.filter((m) => !m.delisted);
 const famRetired = famMembers.filter((m) => m.delisted);
@@ -297,6 +310,7 @@ const pageTitle =
   isHub ? secName :
   isProfile ? (sec.title || sec.name) :
   isFamily ? (sec.title || `${sec.name} model family`) :
+  isDCTopic ? (sec.title || sec.name) :
   sec.shape === 'dc-state' ? `Data centers in ${sec.state}` :
   sec.shape === 'dc-facility'
     ? (sec.profile?.campus_buildings > 1
@@ -311,7 +325,7 @@ const pageTitle =
   sec.shape === 'dc-grid' ? 'The Grid Observatory' :
   secName;
 
-const _descRaw = (isProfile || isFamily)
+const _descRaw = (isProfile || isFamily || isDCTopic)
   ? String(sec.answer || '')
   : isHub
   ? `${secName}: ${hubKids.length} section${hubKids.length === 1 ? '' : 's'} on The World of AI. ${sec.answer || sec.blurb || ''}`
@@ -636,6 +650,37 @@ const facBare = sec.shape === 'dc-facility' && !(
       <p><a href={sec.source_url} rel="noopener">{sec.name} official site</a>{sec.facts?.repo_url && <> &middot; <a href={sec.facts.repo_url} rel="noopener">repository</a></>}</p>
     </>
   )}
+  {isDCTopic && (
+    <>
+      <p class="meta-line"><a href={sec.parent_path}>{sec.parent_name}</a> &middot; Power</p>
+      <p class="answer">{sec.answer}</p>
+      <p class="meta-line">Last verified: {sec.generated} &middot; uid {sec.uid}{sec.written_on && <> &middot; written {sec.written_on}</>}</p>
+      {(sec.sections || []).map((x) => (
+        <section class="dc-topic-sec">
+          <h2>{x.heading}</h2>
+          {paras(x.body).map((p) => <p>{p}</p>)}
+        </section>
+      ))}
+      {((sec.related_links || []).length > 0 || (sec.unresolved || []).length > 0) && (
+        <>
+          <h2>Related on this site</h2>
+          <ul class="dc-topic-rel">
+            {(sec.related_links || []).map((l) => <li><a href={l.href}>{l.label}</a> <span class="meta-line-inline">{l.kind}</span></li>)}
+          </ul>
+          {(sec.unresolved || []).length > 0 && <p class="meta-line">Also named: {sec.unresolved.join(', ')}.</p>}
+        </>
+      )}
+      {(sec.sources || []).length > 0 && (
+        <>
+          <h2>Sources</h2>
+          <ul class="dc-topic-src">
+            {sec.sources.map((x) => <li><a href={x.url} rel="noopener nofollow" target="_blank">{x.title || x.url}</a></li>)}
+          </ul>
+        </>
+      )}
+    </>
+  )}
+
   {isFamily && (
     <>
       <p class="meta-line"><a href={sec.hub_path}>{sec.hub_name}</a> &middot; <a href={sec.parent_path}>{sec.parent_name}</a></p>
@@ -800,6 +845,17 @@ const facBare = sec.shape === 'dc-facility' && !(
       <p class="meta-line">Last verified: {sec.generated} · Capex and filings refresh
         daily from SEC EDGAR. Definitions and the directory are editorial, in this
         site's own words, with the standard-setter linked.</p>
+
+      {dcTopics.length > 0 && (
+        <section class="dc-power">
+          <h2>Power</h2>
+          <ul>
+            {dcTopics.map((t) => (
+              <li><a href={`${BASE}/${t.uid}/`}>{t.title}</a><span>{firstSentence(t.answer)}</span></li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section>
         <h2>Two ways to track a data center</h2>
@@ -1229,6 +1285,9 @@ const facBare = sec.shape === 'dc-facility' && !(
             the operator's own page with the source and the retrieval date attached. Where it does
             not, the row is what the map holds and nothing more.</p>
         </>
+      )}
+      {sec.shape === 'dc-facility' && topicsLinking(`${BASE}/${sec.uid}/`).length > 0 && (
+        <p class="dc-topic-xref">Further reading: {topicsLinking(`${BASE}/${sec.uid}/`).map((t, i) => <>{i > 0 && ' · '}<a href={`${BASE}/${t.uid}/`}>{t.title}</a></>)}</p>
       )}
       {sec.shape === 'dc-facility' && (
         <>
@@ -2523,6 +2582,17 @@ const facBare = sec.shape === 'dc-facility' && !(
 </Base>
 
 <style>
+  /* Data Centers topic pages, 2026-10-03. */
+  .dc-topic-sec h2 { margin-top: 1.4em; }
+  .dc-topic-rel, .dc-topic-src { list-style: none; padding: 0; }
+  .dc-topic-rel li, .dc-topic-src li { padding: .4em 0; border-bottom: 1px solid rgba(122, 138, 158, 0.25); }
+  .dc-topic-src li { word-break: break-word; }
+  .dc-power { background: #FFF6EC; border-left: 3px solid #F07800; padding: 12px 18px; margin: 1.2em 0; }
+  .dc-power h2 { margin: 0 0 .4em; }
+  .dc-power ul { list-style: none; padding: 0; margin: 0; }
+  .dc-power li { padding: .4em 0; }
+  .dc-power li span { display: block; font-size: 14px; color: #201868; }
+  .dc-topic-xref { background: #FFF6EC; border-left: 3px solid #F07800; padding: 8px 14px; color: #201868; }
   /* Model family pages, 2026-10-03. */
   .fam-list { margin: 1.4em 0 1.8em; }
   .tag { display: inline-block; margin: 0 .3em .2em 0; padding: 0 .5em; border-radius: 10px; background: #FFF6EC; color: #201868; font-size: 12px; }
