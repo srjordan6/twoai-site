@@ -439,7 +439,11 @@ export default {
         const today = new Date().toISOString().slice(0, 10);
         const row: any = await env.ASSISTANT_DB.prepare(
           `SELECT count(*) AS n FROM answer_log WHERE model_used = 'research' AND asked_at >= ?`).bind(today).first();
-        if (Number(row?.n ?? 0) >= 80) {
+        // 80 a day until research started on its own (66e128b). Stephen,
+        // 2026-10-03: raise it to 100 on October 12. The date is in the code
+        // so the change happens without a deploy on the day.
+        const researchCap = today >= "2026-10-12" ? 100 : 80;
+        if (Number(row?.n ?? 0) >= researchCap) {
           return json({ answered: false, answer: "Research mode has reached its daily limit. The quick answer is still available; try again tomorrow.", sources: [], mode: "research" });
         }
       } catch {}
