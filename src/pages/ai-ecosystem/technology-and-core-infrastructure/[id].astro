@@ -162,6 +162,9 @@ const famPrices = (m: any) => {
 // The Large Language Models page lists its families and links each model in
 // its table to its family page.
 const secFamilies: any[] = Array.isArray(sec.families) ? sec.families : [];
+// Families paged under an earlier category that also belong here, listed
+// apart and not counted toward this category's ten (row 388).
+const alsoFamilies: any[] = Array.isArray(sec.also_families) ? sec.also_families : [];
 const familyOf: Record<string, { uid: string; name: string }> = sec.family_of && typeof sec.family_of === 'object' ? sec.family_of : {};
 const profileByKey: Record<string, string> = {};
 if (existsSync('content/tech')) {
@@ -692,7 +695,7 @@ const facBare = sec.shape === 'dc-facility' && !(
 
   {isFamily && (
     <>
-      <p class="meta-line"><a href={sec.hub_path}>{sec.hub_name}</a> &middot; <a href={sec.parent_path}>{sec.parent_name}</a></p>
+      <p class="meta-line"><a href={sec.hub_path}>{sec.hub_name}</a> &middot; <a href={sec.parent_path}>{sec.parent_name}</a>{(sec.also_in || []).map((c) => <> &middot; <a href={c.href}>{c.name}</a></>)}</p>
       <p class="answer">{sec.answer}</p>
       <p class="meta-line">Last verified: {sec.generated} &middot; uid {sec.uid} &middot; from the
         {' '}<a href={sec.source?.url} rel="noopener">{sec.source?.name}</a></p>
@@ -2358,12 +2361,33 @@ const facBare = sec.shape === 'dc-facility' && !(
         {' '}<a href="https://openrouter.ai/models" rel="noopener">OpenRouter</a> public model API,
         refreshed daily. Newest releases first. Prices are per one million tokens.</p>
 
+      {(secFamilies.length > 0 || alsoFamilies.length > 0) && (
+        <section class="fam-list">
+          <h2>Model families</h2>
+          <p>A model family is a developer's named model line with every version and size under it. Each has its
+            own page with the versions side by side, newest family first.</p>
+          {secFamilies.length > 0 && (
+            <table class="pay">
+              <thead><tr><th>Family</th><th>Developer</th><th class="num">Versions</th><th>Newest</th><th>First</th></tr></thead>
+              <tbody>
+                {secFamilies.map((f) => (
+                  <tr><td><a href={f.href}>{f.name}</a></td><td>{f.developer}</td><td class="num">{f.members}</td><td>{f.newest}</td><td>{f.first}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {alsoFamilies.length > 0 && (
+            <p class="fam-also"><b>Also in this category:</b> {alsoFamilies.map((f, i) => <>{i > 0 && ', '}<a href={f.href}>{f.name}</a></>)}.</p>
+          )}
+        </section>
+      )}
+
       <table class="pay">
         <thead><tr><th>Model</th><th>Provider</th><th class="num">Context</th><th class="num">$/M in</th><th class="num">$/M out</th><th>Released</th></tr></thead>
         <tbody>
           {sec.models.map((m) => (
             <tr>
-              <td><a href={m.url} rel="noopener">{m.name}</a>{m.open_weights && <span class="n">open</span>}</td>
+              <td><a href={m.url} rel="noopener">{m.name}</a>{m.open_weights && <span class="n">open</span>}{familyOf[m.id] && <> <a class="fam-link" href={`${BASE}/${familyOf[m.id].uid}/`}>{familyOf[m.id].name} family</a></>}</td>
               <td>{m.provider}</td>
               <td class="num">{ctx(m.context)}</td>
               <td class="num">{money(m.prompt_pm)}</td>
@@ -2524,7 +2548,7 @@ const facBare = sec.shape === 'dc-facility' && !(
     </>
   )}
 
-  {secFamilies.length > 0 && !hf && (
+  {secFamilies.length > 0 && !hf && !isAPI && (
     <section class="fam-list">
       <h2>Model families</h2>
       <p>A model family is a developer's named model line with every version and size under it, from the
@@ -2612,6 +2636,7 @@ const facBare = sec.shape === 'dc-facility' && !(
   .tag.tag-ow { background: #201868; color: #FFFFFF; }
   .tag.tag-ret { background: #F07800; color: #FFFFFF; }
   .fam-list { margin: 1.4em 0 1.8em; }
+  .fam-also { margin-top: .8em; color: #201868; }
   .tag { display: inline-block; margin: 0 .3em .2em 0; padding: 0 .5em; border-radius: 10px; background: #FFF6EC; color: #201868; font-size: 12px; }
   td .tag { margin-left: .4em; }
   .fam-scroll { overflow-x: auto; }
