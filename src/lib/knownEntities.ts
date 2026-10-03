@@ -69,7 +69,9 @@ export function loadKnownEntities(): Map<string, KnownEntity> {
       if (!f.endsWith('.json') || f === 'index.json') continue;
       try {
         const c = JSON.parse(readFileSync(`content/companies/${f}`, 'utf8'))?.company;
-        if (c?.uid) {
+        // A retired record (company.moved_to) is not a link target; its
+        // names arrive as aliases on the record that stays.
+        if (c?.uid && !c.moved_to) {
           add(c.name, `/companies/${c.uid}/`);
           // ALIASES, because a newswire names the model and not the lab.
           // Stephen, 2026-09-15, on a story about China closing the gap:

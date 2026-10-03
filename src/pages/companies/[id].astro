@@ -83,8 +83,11 @@ const op = operator && (operator.reading || operator.facilities > 0) ? operator 
 // registrant). The retired URL still answers, carries a canonical and a meta
 // refresh to the record that stays, and drops out of the index. Not in
 // public/_redirects, which Cloudflare capped at 100 rules of this kind.
-const MOVED_TO = { b54d3e84: '6b518abb' };
-const movedTo = MOVED_TO[company.uid] || '';
+// Since 2026-10-03 (bridge row 409) the record that stays is the earlier
+// one, b54d3e84, and the pairs live in scripts/company-moves.json: the build
+// folds the retired record's data into the kept one and marks the retired
+// one with company.moved_to, which is all this page reads.
+const movedTo = company.moved_to || '';
 // Federal lobbying on AI, patched in by srj-pipeline twoai_politics_pages for
 // a company whose Lobbying Disclosure Act client record Stephen confirmed as
 // this company. Absent for every other company, so the section never renders

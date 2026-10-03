@@ -193,10 +193,10 @@ const ownedMcp = company ? ownedServers(company.mcp, company.name) : [];
 // ("Maximum number of dynamic _redirects rules limit of 100 exceeded") and
 // failed the 16:43 UTC build.
 //
-// COMPANY_MOVED sends a retired company record to the one that replaced it.
-// AMD was tracked twice, as AMD and as ADVANCED MICRO DEVICES INC, the SEC
-// registrant; the registrant is the one that stays.
-const COMPANY_MOVED = { b54d3e84: '6b518abb' };
+// A retired company record sends its twin to the one that replaced it. AMD
+// was tracked twice, as AMD and as ADVANCED MICRO DEVICES INC, the SEC
+// registrant. Since 2026-10-03 (bridge row 409) AMD, the earlier uid, stays:
+// scripts/company-merge.mjs marks the retired record with company.moved_to.
 
 const companyIndexPath = 'content/companies/index.json';
 const g2 = globalThis;
@@ -573,8 +573,8 @@ const jsonld = JSON.stringify(
   noindex={Boolean(art?.noindex)}
   doc={legacyPerson || pcat || hub || company || chub || obs || jhub || jdisc || csec || cpat || cpriv || corg || cfund || cma}
   stampLabel="Last verified"
-  canonicalOverride={company ? `https://theworldofai.org/companies/${COMPANY_MOVED[company.uid] || company.uid}/` : undefined}
-  redirect={company ? `/companies/${COMPANY_MOVED[company.uid] || company.uid}/` : undefined}>
+  canonicalOverride={company ? `https://theworldofai.org/companies/${company.moved_to || company.uid}/` : undefined}
+  redirect={company ? `/companies/${company.moved_to || company.uid}/` : undefined}>
   {/* EVERY COMPANY WAS PUBLISHED AT TWO SELF-CANONICAL URLS. This route builds a
       company page under the ecosystem path and src/pages/companies/[id].astro
       builds the same company under /companies/, both declared canonical to

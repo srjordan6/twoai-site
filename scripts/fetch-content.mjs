@@ -22,6 +22,7 @@
 // with silently missing pages.
 import { execSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readdirSync, copyFileSync, readFileSync, writeFileSync } from 'node:fs';
+import { mergeMovedCompanies } from './company-merge.mjs';
 import { createHash } from 'node:crypto';
 
 const REPO = 'https://github.com/srjordan6/twoai-content';
@@ -346,6 +347,15 @@ try {
   await researchFromSQL();
 } catch (e) {
   console.warn('fetch-content: live research unavailable, using bundled copy:', e.message);
+}
+
+// Company records that were tracked twice fold into one before anything
+// reads them, so the index, the API mirror and every page see one company.
+// See scripts/company-merge.mjs (bridge row 409, 2026-10-03).
+try {
+  mergeMovedCompanies('content', 'scripts/company-moves.json');
+} catch (e) {
+  console.warn('fetch-content: company merge failed, records left as fetched:', e.message);
 }
 
 // Public API mirrors of the aggregates.

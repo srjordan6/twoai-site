@@ -1,0 +1,4 @@
+{
+  "_note": "Retired company uid -> the uid that stays. Read by scripts/company-merge.mjs at build. AMD: bridge row 409, 2026-10-03, merged under the earlier uid b54d3e84.",
+  "6b518abb": "b54d3e84"
+}
