@@ -53,9 +53,11 @@ const strip = [
   { n: bills, label: 'state AI bills', href: '/ai-laws/' },
   { n: cases, label: 'lawsuits tracked live', href: '/ai-lawsuits/' },
   { n: companies, label: 'companies profiled', href: '/companies/' },
-  { n: tools, label: 'AI tools reviewed', href: '/ai-tools/' },
+  // "Tracked", not "reviewed": 450 entries, 74 with a reviewed page (row 405).
+  { n: tools, label: 'AI tools tracked', href: '/ai-tools/' },
   { n: servers, label: 'MCP servers', href: '/mcp/' },
-  { n: jobs, label: 'AI jobs open now', href: '/ai-ecosystem/ecosystem-entities-market-and-operations/995676ef/' },
+  { n: jobs, label: 'AI jobs open now', href: '/ai-ecosystem/ecosystem-entities-market-and-operations/995676ef/',
+    note: 'AI roles seen on employer job boards in the last three days' },
   { n: people, label: 'people in the field', href: '/ai-ecosystem/ecosystem-entities-market-and-operations/c53153c4/' },
   { n: terms, label: 'terms defined', href: '/ai-glossary/' },
 ].filter((s) => s.n > 0);
@@ -98,7 +100,7 @@ const strip = [
 
     <div class="counts">
       {strip.map((s) => (
-        <a href={s.href}><b>{s.n.toLocaleString()}</b><span>{s.label}</span></a>
+        <a href={s.href} title={(s as any).note}><b>{s.n.toLocaleString()}</b><span>{s.label}</span></a>
       ))}
     </div>
 

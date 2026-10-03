@@ -87,7 +87,7 @@ const jsonld = JSON.stringify({
 
   {cats.map((c) => (
     <div class="cat">
-      <h2><a href={`/ai-ecosystem/${c.slug}/`}>{c.name}</a></h2>
+      <h2><a href={c.slug === 'ai-news' ? '/ai-news/' : `/ai-ecosystem/${c.slug}/`}>{c.name}</a></h2>
       <p>{c.blurb}</p>
       {/* RECORDS, NOT PAGES. Stephen, 2026-09-20, after another assistant
           quoted these figures back at him as evidence of how complete the
