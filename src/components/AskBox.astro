@@ -105,8 +105,13 @@ const {
         if (inList) html += '</ul>';
         return html;
       }
-      function ask(mode) {
-        var text = q.value.trim();
+      var autoResearch = false;
+      var lastAsked = '';
+      function ask(mode, auto) {
+        // An automatic follow-up researches the question that was answered,
+        // not whatever the reader has typed into the box since.
+        if (!auto) lastAsked = q.value.trim();
+        var text = lastAsked;
         if (!text || busy) return;
         busy = true;
         go.disabled = true;
@@ -118,8 +123,14 @@ const {
         if (mode === 'research') {
           var steps = ['Breaking the question into parts\u2026', 'Searching this site, the research index, Wikidata and the web\u2026', 'Reading the pages found\u2026', 'Writing a sourced answer\u2026'];
           var si = 0;
-          out.innerHTML = '<p class="ask-wait">' + steps[0] + '</p>';
-          stepsTimer = setInterval(function () { si = Math.min(si + 1, steps.length - 1); out.innerHTML = '<p class="ask-wait">' + steps[si] + '</p>'; }, 7000);
+          // An automatic follow-up keeps the quick answer on screen and moves
+          // only its status line, so the reader reads while it works.
+          var setStep = function (t) {
+            var el = auto ? out.querySelector('.ask-more') : null;
+            if (el) el.textContent = t; else out.innerHTML = '<p class="ask-wait">' + t + '</p>';
+          };
+          setStep(auto ? 'Not fully answered yet, researching further: ' + steps[0] : steps[0]);
+          stepsTimer = setInterval(function () { si = Math.min(si + 1, steps.length - 1); setStep(steps[si]); }, 7000);
         } else {
           out.innerHTML = '<p class="ask-wait">Searching this site\u2026</p>';
         }
@@ -236,14 +247,26 @@ const {
             }
             html += '</ul>';
           }
-          out.innerHTML = html + '<p class="ask-more"><button type="button" class="ask-research">Research this more thoroughly</button> <span class="ask-more-note">Checks this site, the research index, Wikidata and the web together. About 30 seconds.</span></p>';
-          var rb = out.querySelector('.ask-research');
-          if (rb) rb.addEventListener('click', function () { ask('research'); });
+          // NO BUTTON, KEEP LOOKING. Stephen, 2026-10-03: "i dont want a box
+          // to ask if i want to keep looking - do it automatically until you
+          // get the answer". When the quick answer says the site does not
+          // cover the question, or covers only part of it, and no outside
+          // block came back with an answer, research mode starts on its own:
+          // this site, the research index, Wikidata and the web together.
+          var shortfall = !d.answered || /\b(does not|doesn't|do not|don't) (cover|track|hold|have|include|mention)\b|\bnot covered\b/i.test(d.answer || '');
+          var outsideAnswered = !!(d.wikidata || d.lookup ||
+            (d.web && !/do not answer|does not answer|no (relevant )?results/i.test(d.web)));
+          if (shortfall && !outsideAnswered && !d.externalDeclined) {
+            autoResearch = true;
+            html += '<p class="ask-wait ask-more">Not fully answered yet, researching further: this site, the research index, Wikidata and the web…</p>';
+          }
+          out.innerHTML = html;
         }).catch(function () {
           if (stepsTimer) clearInterval(stepsTimer);
           out.innerHTML = '<p class="ask-wait">The assistant is unavailable right now.</p>';
         }).then(function () {
           busy = false; go.disabled = false; go.textContent = 'Ask';
+          if (autoResearch) { autoResearch = false; ask('research', true); }
         });
       }
       // Research results: the answer with its [S1] [W2] keys, then each list

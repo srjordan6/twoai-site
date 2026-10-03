@@ -1068,6 +1068,25 @@ export default {
       return json({ answered: false, answer: notCovered, sources: [], webError: lastWebError || undefined });
     }
 
+    // A CVE THE SITE DOES NOT HOLD SKIPS THE MODEL. Stephen, 2026-10-03, asked
+    // about CVE-2025-19999. Retrieval found vendor posts on other Next.js
+    // CVEs, the model listed them and said none was the one asked about, and
+    // those posts showed as "Sources on this site". An exact id with no
+    // record here has one useful next step, the web search, so it goes there.
+    if (cveRefs.length && !facts.some((f) => f.kind === "cve")) {
+      ctx.waitUntil(log(false));
+      const notTracked = `The World of AI does not track ${cveRefs.join(", ")}.`;
+      if ((await guard).toLowerCase().startsWith("unsafe")) {
+        return json({ answered: false, answer: notTracked, sources: [], externalDeclined: true });
+      }
+      const webC = await webFallback(env, ANTHROPIC_MODEL, question, norm, hits.length, papers.length, qVec, best);
+      if (webC) {
+        return json({ answered: false, answer: notTracked, sources: [], papers: [],
+          web: webC.text, webSources: webC.sources, webCached: webC.cached || undefined, webFetchedAt: webC.fetchedAt });
+      }
+      return json({ answered: false, answer: notTracked, sources: [], webError: lastWebError || undefined });
+    }
+
     // Retrieval succeeded and we are about to spend on a model call. Check the
     // account-wide daily ceiling FIRST. Over the cap, return the not-covered
     // shape (200, answered:false) so the page shows its normal quiet state
