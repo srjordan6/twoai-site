@@ -867,7 +867,7 @@ export default {
           take(await sql.unsafe(`
             SELECT title, pub_year, cited_by, doi, oa_url, abstract
             FROM twoai_works
-            WHERE ${FTSX} @@ websearch_to_tsquery('english', $1)
+            WHERE ${FTSX} @@ websearch_to_tsquery('english', $1) AND excluded_reason IS NULL
             ORDER BY cited_by DESC NULLS LAST
             LIMIT 5`, [andQuery]));
           // TIER 2: AND of only the distinctive words. "How did Einstein's
@@ -877,7 +877,7 @@ export default {
             take(await sql.unsafe(`
               SELECT title, pub_year, cited_by, doi, oa_url, abstract
               FROM twoai_works
-              WHERE ${FTSX} @@ to_tsquery('english', $1)
+              WHERE ${FTSX} @@ to_tsquery('english', $1) AND excluded_reason IS NULL
               ORDER BY cited_by DESC NULLS LAST
               LIMIT 5`, [distinctive.join(" & ")]));
           }
@@ -894,7 +894,7 @@ export default {
               WITH cand AS (
                 SELECT title, pub_year, cited_by, doi, oa_url, abstract, fts
                 FROM twoai_works
-                WHERE ${FTSX} @@ to_tsquery('english', $1)
+                WHERE ${FTSX} @@ to_tsquery('english', $1) AND excluded_reason IS NULL
                 ORDER BY cited_by DESC NULLS LAST
                 LIMIT 400)
               SELECT title, pub_year, cited_by, doi, oa_url, abstract,
@@ -911,7 +911,7 @@ export default {
               SELECT title, pub_year, cited_by, doi, oa_url, abstract,
                      ts_rank_cd(fts, to_tsquery('english', $1)) AS rank
               FROM twoai_works
-              WHERE ${FTSX} @@ to_tsquery('english', $1)
+              WHERE ${FTSX} @@ to_tsquery('english', $1) AND excluded_reason IS NULL
               ORDER BY rank DESC, cited_by DESC NULLS LAST
               LIMIT 5`, [orQuery]));
           }
