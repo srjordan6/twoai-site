@@ -657,7 +657,7 @@ export default {
     // A CVE id is an exact identifier, so it is matched in SQL like a bill
     // number, and a question that names one is never sent to Wikidata.
     const cveRefs = Array.from(new Set(
-      Array.from(question.matchAll(/\bCVE[-\s]?(\d{4})[-\s]?(\d{4,7})\b/gi)).map((m) => `CVE-${m[1]}-${m[2]}`)
+      Array.from(question.matchAll(/\bCVE[-\s]?(\d{4})[-\s]?(\d{4,})\b/gi)).map((m) => `CVE-${m[1]}-${m[2]}`)
     )).slice(0, 3);
     if (env.AUDIT_DB && cveRefs.length) {
       try {
@@ -1014,13 +1014,24 @@ export default {
     // that id cannot exist; the web search returned near-misses and the reply
     // led with CVE-2021-2000 as if it were the answer. A malformed id is told
     // so plainly, and the page does not research it further (final: true).
-    const badCve = !cveRefs.length ? question.match(/\bCVE[-\s]?(\d{4})[-\s]?(\d{1,3})(?!\d)/i) : null;
+    // Stephen, same night: the reply should tell the reader the proper form
+    // of a CVE number. Any "CVE" followed by digits that is not a well-formed
+    // id (a two-digit year, a short sequence, no sequence) gets the format.
+    const badCve = !cveRefs.length ? question.match(/\bCVE[-\s_]?(\d+)(?:[-\s_](\d+))?/i) : null;
     if (badCve) {
       ctx.waitUntil(log(false));
-      const asked = `CVE-${badCve[1]}-${badCve[2]}`;
-      const padded = `CVE-${badCve[1]}-${badCve[2].padStart(4, "0")}`;
+      const [, yr, seq = ""] = badCve;
+      const asked = `CVE-${yr}${seq ? "-" + seq : ""}`;
+      let hint = "";
+      if (yr.length === 4 && seq && seq.length < 4) {
+        hint = `\n\nYour number has ${seq.length === 1 ? "one digit" : seq.length + " digits"} after the year. If it was copied from somewhere, check for a missing digit; a sequence number below 1000 is written with leading zeros, as in CVE-${yr}-${seq.padStart(4, "0")}.`;
+      } else if (yr.length !== 4) {
+        hint = `\n\nThe year must be written in full, with four digits, for example 2021 rather than 21.`;
+      } else if (!seq) {
+        hint = `\n\nYour number has the year but no sequence number after it.`;
+      }
       return json({ answered: false, final: true, sources: [],
-        answer: `${asked} is not a valid CVE number. A CVE number has at least four digits after the year, for example ${padded}. Check the number you have; the National Vulnerability Database search is at https://nvd.nist.gov/vuln/search` });
+        answer: `${asked} is not a valid CVE number.\n\nA CVE number has three parts joined by hyphens:\n\n- the letters CVE\n- the year the number was assigned, in four digits\n- a sequence number of four or more digits\n\nFor example, CVE-2021-44228 is the Log4Shell vulnerability in Apache Log4j.${hint}\n\nAny CVE number can be looked up at the National Vulnerability Database: https://nvd.nist.gov/vuln/search` });
     }
 
     if ((!hits.length || best < SCORE_FLOOR) && !papers.length && !facts.length) {
