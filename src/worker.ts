@@ -210,6 +210,7 @@ RULES, in order:
 2a. ANSWER THE QUESTION ASKED, FROM THE FEWEST SOURCES THAT ANSWER IT. When one page answers it fully, cite that one page. Do not add a paragraph on a related topic, and do not cite a second page that only repeats what the first already said, because every title you name becomes a listed source and a padded list tells the reader less, not more. Stephen, 2026-10-03, on "what is a reasoning model": the glossary entry answered it, and the section page and the chain-of-thought paper added nothing the reader asked for.
 2b. WHEN THE QUESTION ASKS WHAT SOMETHING IS and an AI Glossary entry (a page under /ai-glossary/) defines it, answer from that glossary entry alone and name no other page or paper.
 3. Be brief. Two or three short paragraphs at most. Lead with the answer.
+3a. THE FIRST SENTENCE ANSWERS THE QUESTION AND STANDS ALONE. For a question asking what something is, it is the definition of that thing in plain words. Then say how it works in two or three sentences, then give the evidence, specific named cases with dates from the pages and papers, then what to do about it if the question invites it. Never open with "X is a section of The World of AI" and never describe what a page documents, covers or tracks: that is navigation, and the source list under the answer already does it. Excerpts can carry a section's general blurb (for example a sentence about which companies work in AI); never repeat a blurb that is not about the thing asked.
 4. Where the excerpts disagree or are dated, say so rather than smoothing it over.
 5. Plain English. No hype. Commas rather than dashes.
 6. You are a reference work, not a salesperson and not a lawyer. Never give legal advice; report what the sources say and note that the primary source should be checked for anything that matters.
@@ -1245,7 +1246,7 @@ export default {
     // model is the Cloudflare-hosted one, which was already serving whenever
     // Anthropic failed. askAnthropicDirect stays defined and uncalled; putting
     // it back is a code change, not a secret.
-    const askOllama = async (model: string): Promise<string> => {
+    const askOllama = async (model: string, correction = ""): Promise<string> => {
       if (!env.OLLAMA_API_KEY) throw new Error("OLLAMA_API_KEY is not set on the Worker");
       const r = await fetch(OLLAMA_URL, {
         method: "POST",
@@ -1260,13 +1261,25 @@ export default {
           options: { num_predict: 700 },
           messages: [
             { role: "system", content: SYSTEM },
-            { role: "user", content: userContent },
+            { role: "user", content: correction ? `${userContent}\n\n${correction}` : userContent },
           ],
         }),
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}: ${(await r.text()).slice(0, 300)}`);
       const out: any = await r.json();
       return String(out?.message?.content ?? "").trim();
+    };
+    // ANSWER FIRST, NOT NAVIGATION. theworldofai bridge row 392 (Stephen,
+    // 2026-10-03): asked about AI-enabled malware, the box opened "AI-enabled
+    // Malware is a section of The World of AI ... It documents ..." and the
+    // definition never came. An opening that describes a page of this site
+    // rather than the thing asked about is sent back once with the fault
+    // named; the second answer stands either way.
+    const opensWithNavigation = (a: string) => {
+      const first = a.split(/(?<=[.!?])\s+/)[0] || "";
+      return /\b(is|are) (a|an|the) (section|page|hub|part|area|category)\b[^.]{0,80}\b(The World of AI|this site|the site)\b/i.test(first)
+        || /\b(section|page) (of|on) (The World of AI|this site)\b/i.test(first)
+        || /^\s*(This|The) (section|page|site)\b[^.]{0,60}\b(documents|covers|tracks|lists|describes)\b/i.test(first);
     };
 
     const ollamaModel = env.OLLAMA_MODEL || OLLAMA_DEFAULT_MODEL;
@@ -1295,6 +1308,15 @@ export default {
     }
     if (!answer) {
       return json({ error: "The assistant is unavailable right now.", detail: lastError }, 503);
+    }
+    if (opensWithNavigation(answer)) {
+      try {
+        const again = await askOllama(ollamaModel, "Your previous answer opened by describing a page of this site. Do not. Start with one sentence that answers the question directly, for a what-is question the definition of the thing in plain words, then how it works, then the evidence.");
+        if (again) {
+          modelErrors.push("navigation opening, asked again");
+          answer = again;
+        }
+      } catch { /* keep the first answer */ }
     }
 
     ctx.waitUntil(log(true));
