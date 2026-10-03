@@ -681,6 +681,30 @@ const facBare = sec.shape === 'dc-facility' && !(
         <p class="meta-line">No longer listed: {famRetired.map((m, i) => <>{i > 0 && ', '}{m.name} ({m.released})</>)}.</p>
       )}
 
+      {(sec.hf_releases || []).length > 0 && (
+        <>
+          <h2>Open-weight releases on Hugging Face</h2>
+          <p class="meta-line">The family's own repositories among the most-downloaded open models on the Hub,
+            most downloaded first. Third-party repackagings are not listed.</p>
+          <div class="fam-scroll">
+            <table class="pay">
+              <thead><tr><th>Repository</th><th>Licence</th><th class="num">Downloads</th><th>Task</th><th>Released</th></tr></thead>
+              <tbody>
+                {sec.hf_releases.map((r) => (
+                  <tr>
+                    <td><a href={r.url} rel="noopener">{r.id}</a></td>
+                    <td>{r.licence || 'not declared'}</td>
+                    <td class="num">{fmt(r.downloads)}</td>
+                    <td>{r.task}</td>
+                    <td>{r.created || 'not listed'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
       <h2>Changelog</h2>
       <ul class="fam-log">
         {(sec.changelog || []).slice(0, 40).map((c) => (
@@ -2207,13 +2231,38 @@ const facBare = sec.shape === 'dc-facility' && !(
         {' '}<a href="https://huggingface.co/models" rel="noopener">Hugging Face Hub</a> public API,
         sorted by all-time downloads, refreshed daily. Every model links to its own Hub page.</p>
 
+      {/* MODEL FAMILIES FIRST. Stephen, 2026-10-03: "nothing has been done" on
+          this page. The list sat below a thousand Hub rows. It now follows the
+          answer, and every Hub row that belongs to a family links to it. */}
+      {secFamilies.length > 0 && (
+        <section class="fam-list">
+          <h2>Model families</h2>
+          <p>A model family is a developer's named model line with every version and size under it, from the
+            API releases to the open weights. Each has its own page with the versions side by side, newest family first.</p>
+          <table class="pay">
+            <thead><tr><th>Family</th><th>Developer</th><th class="num">Versions</th><th>Newest</th><th>First</th></tr></thead>
+            <tbody>
+              {secFamilies.map((f) => (
+                <tr>
+                  <td><a href={f.href}>{f.name}</a></td>
+                  <td>{f.developer}</td>
+                  <td class="num">{f.members}</td>
+                  <td>{f.newest}</td>
+                  <td>{f.first}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
       <div class="tbl-scroll">
       <table class="pay">
         <thead><tr><th>Model</th><th>Licence</th><th class="num">Downloads</th><th class="num">Likes</th><th>Task</th><th>Released</th></tr></thead>
         <tbody>
           {sec.models.map((m) => (
             <tr>
-              <td><a href={m.url} rel="noopener">{m.id}</a></td>
+              <td><a href={m.url} rel="noopener">{m.id}</a>{familyOf[m.id] && <> <a class="fam-link" href={`${BASE}/${familyOf[m.id].uid}/`}>{familyOf[m.id].name} family</a></>}</td>
               <td>{m.licence || '—'}</td>
               <td class="num">{fmt(m.downloads)}</td>
               <td class="num">{fmt(m.likes)}</td>
@@ -2408,11 +2457,11 @@ const facBare = sec.shape === 'dc-facility' && !(
     </>
   )}
 
-  {secFamilies.length > 0 && (
-    <>
+  {secFamilies.length > 0 && !hf && (
+    <section class="fam-list">
       <h2>Model families</h2>
-      <p>A model family is a developer's named model line with every version and size under it. Each has its
-        own page with the versions side by side, newest family first.</p>
+      <p>A model family is a developer's named model line with every version and size under it, from the
+        API releases to the open weights. Each has its own page with the versions side by side, newest family first.</p>
       <table class="pay">
         <thead><tr><th>Family</th><th>Developer</th><th class="num">Versions</th><th>Newest</th><th>First</th></tr></thead>
         <tbody>
@@ -2427,7 +2476,7 @@ const facBare = sec.shape === 'dc-facility' && !(
           ))}
         </tbody>
       </table>
-    </>
+    </section>
   )}
 
   {sec.api_models?.length > 0 && (
@@ -2475,6 +2524,7 @@ const facBare = sec.shape === 'dc-facility' && !(
 
 <style>
   /* Model family pages, 2026-10-03. */
+  .fam-list { margin: 1.4em 0 1.8em; }
   .tag { display: inline-block; margin: 0 .3em .2em 0; padding: 0 .5em; border-radius: 10px; background: #FFF6EC; color: #201868; font-size: 12px; }
   td .tag { margin-left: .4em; }
   .fam-scroll { overflow-x: auto; }
