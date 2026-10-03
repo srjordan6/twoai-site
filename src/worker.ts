@@ -1077,7 +1077,11 @@ export default {
     // CVEs, the model listed them and said none was the one asked about, and
     // those posts showed as "Sources on this site". An exact id with no
     // record here has one useful next step, the web search, so it goes there.
-    if (cveRefs.length && !facts.some((f) => f.kind === "cve")) {
+    // Only when no page found names the id: CVE-2025-29927 has no tracker
+    // record but has vendor posts here that explain it, and the first cut of
+    // this rule sent it to the web past them.
+    const cveInPages = hits.some((h) => cveRefs.some((id) => `${h.title} ${h.body}`.toUpperCase().includes(id)));
+    if (cveRefs.length && !facts.some((f) => f.kind === "cve") && !cveInPages) {
       ctx.waitUntil(log(false));
       const notTracked = `The World of AI does not track ${cveRefs.join(", ")}.`;
       if ((await guard).toLowerCase().startsWith("unsafe")) {
