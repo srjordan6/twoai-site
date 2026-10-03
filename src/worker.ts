@@ -1009,6 +1009,20 @@ export default {
     // research index, so the refusal now requires BOTH retrievers to come back
     // empty. Papers alone are a thinner answer and it says so, but refusing
     // while holding a relevant paper would be the box lying about its reach.
+    // NOT A CVE NUMBER. Stephen, 2026-10-03, asked "tell me about
+    // cve-2021-200". A CVE number has at least four digits after the year, so
+    // that id cannot exist; the web search returned near-misses and the reply
+    // led with CVE-2021-2000 as if it were the answer. A malformed id is told
+    // so plainly, and the page does not research it further (final: true).
+    const badCve = !cveRefs.length ? question.match(/\bCVE[-\s]?(\d{4})[-\s]?(\d{1,3})(?!\d)/i) : null;
+    if (badCve) {
+      ctx.waitUntil(log(false));
+      const asked = `CVE-${badCve[1]}-${badCve[2]}`;
+      const padded = `CVE-${badCve[1]}-${badCve[2].padStart(4, "0")}`;
+      return json({ answered: false, final: true, sources: [],
+        answer: `${asked} is not a valid CVE number. A CVE number has at least four digits after the year, for example ${padded}. Check the number you have; the National Vulnerability Database search is at https://nvd.nist.gov/vuln/search` });
+    }
+
     if ((!hits.length || best < SCORE_FLOOR) && !papers.length && !facts.length) {
       ctx.waitUntil(log(false));
       const notCovered =

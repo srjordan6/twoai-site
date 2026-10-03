@@ -254,9 +254,11 @@ const {
           // block came back with an answer, research mode starts on its own:
           // this site, the research index, Wikidata and the web together.
           var shortfall = !d.answered || /\b(does not|doesn't|do not|don't) (cover|track|hold|have|include|mention)\b|\bnot covered\b/i.test(d.answer || '');
+          // A web block that says it found only near-misses has not answered
+          // ("do not contain a specific record", "not directly listed").
           var outsideAnswered = !!(d.wikidata || d.lookup ||
-            (d.web && !/do not answer|does not answer|no (relevant )?results/i.test(d.web)));
-          if (shortfall && !outsideAnswered && !d.externalDeclined) {
+            (d.web && !/\b(do|does) not (answer|contain|include|mention|list)\b|not directly listed|no (specific |relevant )?(record|results|information)\b/i.test(d.web)));
+          if (shortfall && !outsideAnswered && !d.externalDeclined && !d.final) {
             autoResearch = true;
             html += '<p class="ask-wait ask-more">Not fully answered yet, researching further: this site, the research index, Wikidata and the web…</p>';
           }
