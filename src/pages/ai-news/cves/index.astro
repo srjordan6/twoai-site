@@ -29,6 +29,31 @@ const productNames = Object.keys(byProduct).sort((a, b) => sortKey(a).localeComp
 const azGroups: Record<string, string[]> = {};
 for (const p of productNames) (azGroups[letterOf(p)] ||= []).push(p);
 const azLetters = [...(azGroups['0-9'] ? ['0-9'] : []), ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')];
+// PRODUCT LINKS. Stephen, 2026-10-03: the most-named products should link
+// to the products and to their CVEs. A product links to the page its CVEs
+// are matched to when that page carries the product's own name (a tool page
+// before a company page before a section entry); MCP is the whole category of
+// MCP servers, so it links the MCP directory. A product with no page of its
+// own stays plain text. The count links to the product's CVE list below.
+const PRODUCT_OVERRIDE: Record<string, string> = { MCP: '/mcp/' };
+const KIND_RANK: Record<string, number> = { tool: 0, company: 1, section_item: 2, mcp_server: 3 };
+const normName = (x: string) => String(x || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+const productHref: Record<string, string> = {};
+for (const p of Object.keys(byProduct)) {
+  if (PRODUCT_OVERRIDE[p]) { productHref[p] = PRODUCT_OVERRIDE[p]; continue; }
+  const np = normName(p);
+  let best = '', bestScore = 99;
+  for (const c of byProduct[p]) for (const e of (c.entities || [])) {
+    const ne = normName(e.name);
+    if (!ne || !e.href) continue;
+    const exact = ne === np;
+    if (!exact && !ne.includes(np) && !np.includes(ne)) continue;
+    const score = (exact ? 0 : 10) + (KIND_RANK[e.kind] ?? 5);
+    if (score < bestScore) { bestScore = score; best = e.href; }
+  }
+  if (best) productHref[p] = best;
+}
+const prodId = (p: string) => `prod-${String(p).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
 const azAnchor = (l: string) => (l === '0-9' ? 'p-0-9' : `p-${l.toLowerCase()}`);
 const topProducts = Object.entries(products).sort((a, b) => b[1] - a[1]).slice(0, 12);
 const desc = `${cves.length} CVEs naming AI tools, models, agents, MCP servers and frameworks, newest first, with CVSS severity and CISA's exploited-in-the-wild flag. ${critical} critical, ${high} high. Updated ${d.generated}.`;
@@ -59,7 +84,7 @@ const jsonld = JSON.stringify({
   {topProducts.length > 0 && (
     <>
       <h2>Most named products</h2>
-      <p class="meta-line">{topProducts.map(([p, n], i) => <>{i > 0 && ' · '}{p} ({n})</>)}</p>
+      <p class="meta-line top-products">{topProducts.map(([p, n], i) => <>{i > 0 && ' · '}{productHref[p] ? <a href={productHref[p]}>{p}</a> : p} (<a href={`#${prodId(p)}`} title={`${p} CVEs`}>{n}</a>)</>)}</p>
     </>
   )}
 
@@ -95,7 +120,8 @@ const jsonld = JSON.stringify({
       {azGroups[l].map((p) => (
         <details class="az-product">
           <summary>{p} <span class="az-n">{byProduct[p].length}</span></summary>
-          <ul>
+          {productHref[p] && <p class="az-prodlink"><a href={productHref[p]}>{p} on this site</a></p>}
+          <ul id={prodId(p)}>
             {byProduct[p].map((c) => (
               <li><a href={`/ai-news/cves/${c.cve_id}/`}>{c.headline || c.cve_id}</a> <span class="cve-id">{c.cve_id}</span> <span class="cve-date">{c.published}</span></li>
             ))}
@@ -147,4 +173,8 @@ const jsonld = JSON.stringify({
   .az-product li { padding: .2em 0; font-size: 14px; }
   .az-product .cve-id { margin-left: .4em; color: #7A8A9E; font-size: 13px; }
   .az-top { font-size: 13px; margin: .4em 0 0; }
+  .az-prodlink { font-size: 13px; margin: .3em 0 0 1em; }
+  .az-product ul { scroll-margin-top: 90px; }
+  .top-products a { color: #201868; }
+  .top-products a:hover { color: #F07800; }
 </style>
