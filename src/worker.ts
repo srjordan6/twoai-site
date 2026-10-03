@@ -732,7 +732,7 @@ export default {
             if (Array.isArray(m) && m.length) f.push(`MITRE mitigations: ${m.slice(0, 3).map((x: any) => (x.strategy ? x.strategy + ": " : "") + String(x.description).slice(0, 300)).join(" | ")}`);
           } catch { /* none recorded */ }
           f.push(`MITRE entry: ${mitre}`);
-          f.push(`A CWE names a kind of software weakness in the abstract; a CVE identifies one specific vulnerability in one product. The ranked list of every weakness class behind AI CVEs is on the Application and Product Security page, /ai-ecosystem/enterprise-applications-governance-and-tools/72cf7bba/#cwe-list.`);
+          f.push(`A CWE names a kind of software weakness in the abstract; a CVE identifies one specific vulnerability in one product. The ranked list of every weakness class behind AI CVEs is at /ai-ecosystem/enterprise-applications-governance-and-tools/aa6058ad/, a page under Application and Product Security.`);
           facts.push({ entity: r.cwe_id, kind: "cwe", url: Number(r.n) > 0 ? `/ai-news/cwes/${r.cwe_id}/` : mitre, facts: f, edges: [] });
         }
         await sql.end();

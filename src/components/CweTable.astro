@@ -1,45 +1,54 @@
 ---
 /**
  * What a CWE is, and every CWE weakness class behind the AI CVEs on record,
- * ranked. Lives on the Application and Product Security page (72cf7bba):
- * Stephen, 2026-10-03, "i told you where i want it to go". A separate
- * /ai-news/cwes/ list page was built first and retired the same night; it
- * redirects here, to #cwe-list.
+ * ranked. Stephen, 2026-10-03: it belongs under Application and Product
+ * Security (72cf7bba) and must not take that page over. The full version is
+ * its own page, aa6058ad, a child of 72cf7bba; 72cf7bba carries the summary
+ * version: the short answer, the top five and a link.
  */
 import { cweList } from '../lib/cwes';
 import CweVsCve from './CweVsCve.astro';
+interface Props { summary?: boolean }
+const { summary = false } = Astro.props;
+const CWE_PAGE = '/ai-ecosystem/enterprise-applications-governance-and-tools/aa6058ad/';
 const d = cweList();
-const rows = d.cwes;
-const top = rows.slice(0, 6);
+const top = d.cwes.slice(0, 6);
+const rows = summary ? d.cwes.slice(0, 5) : d.cwes;
 const topShare = d.cves_classed > 0 ? Math.round((top.reduce((s, c) => s + c.count, 0) / d.cves_classed) * 100) : 0;
 // The "old web flaws" line holds only while the top three are classic web
 // weaknesses; if the ranking changes, the sentence goes rather than lies.
 const CLASSIC = new Set([918, 22, 94, 78, 79, 89, 862, 502, 306, 639, 400, 20, 287, 863, 200, 352, 77, 434, 284, 285]);
 const classicTop = top.length >= 3 && top.slice(0, 3).every((c) => CLASSIC.has(c.num));
 ---
-{rows.length > 0 && (
+{d.cwes.length > 0 && (
   <section class="cwe-table-wrap" id="cwe-list">
-    <h2>The weaknesses behind AI vulnerabilities</h2>
+    {summary && <h2><a href={CWE_PAGE}>The weaknesses behind AI vulnerabilities</a></h2>}
     <p class="answer">A CWE, Common Weakness Enumeration, names a kind of mistake that makes software
       vulnerable. The <b>{d.cves_classed}</b> AI CVEs on this site's <a href="/ai-news/cves/">CVE tracker</a> fall
       into <b>{d.total}</b> weakness classes, and the six most common account for {topShare} percent of them.
       {classicTop && <> The leaders are {top[0].name}, {top[1].name} and {top[2].name}: old, well-known web
       flaws, not exotic attacks on models.</>}</p>
 
-    <CweVsCve />
+    {summary ? (
+      <p class="meta-line">The five most common are below. <a href={CWE_PAGE}>What a CWE is, how it differs from
+        a CVE, and all {d.total} weakness classes</a>.</p>
+    ) : (
+      <>
+        <CweVsCve />
+        <h2>What a CWE is</h2>
+        <p>MITRE maintains the CWE list, a catalogue of {d.mitre_total > 0 ? d.mitre_total : 'about 940'} software
+          weaknesses, each with a number, a definition, the damage it can do and the ways to prevent it. Every CVE
+          record that the National Vulnerability Database analyses is assigned the CWE that best describes its root
+          cause, so a flaw in a web framework and a flaw in an MCP server can be filed under the same weakness.
+          Counting CVEs by CWE shows which mistakes keep being made, which is the question a security program can
+          act on: fix a class of mistake once and many future CVEs never happen.</p>
+        <p>Weaknesses come at different levels of detail. A <b>Pillar</b> or <b>Class</b> is broad, such as
+          improper access control; a <b>Base</b> is specific enough to test for, such as path traversal; a
+          <b>Variant</b> is tied to one language or technology. Each weakness page says which level it is.</p>
+        <h2>Every CWE associated with AI vulnerabilities</h2>
+      </>
+    )}
 
-    <h3>What a CWE is</h3>
-    <p>MITRE maintains the CWE list, a catalogue of {d.mitre_total > 0 ? d.mitre_total : 'about 940'} software
-      weaknesses, each with a number, a definition, the damage it can do and the ways to prevent it. Every CVE
-      record that the National Vulnerability Database analyses is assigned the CWE that best describes its root
-      cause, so a flaw in a web framework and a flaw in an MCP server can be filed under the same weakness.
-      Counting CVEs by CWE shows which mistakes keep being made, which is the question a security program can
-      act on: fix a class of mistake once and many future CVEs never happen.</p>
-    <p>Weaknesses come at different levels of detail. A <b>Pillar</b> or <b>Class</b> is broad, such as
-      improper access control; a <b>Base</b> is specific enough to test for, such as path traversal; a
-      <b>Variant</b> is tied to one language or technology. Each weakness page says which level it is.</p>
-
-    <h3>Every CWE associated with AI vulnerabilities</h3>
     <div class="cwe-scroll">
       <table class="cwe-table">
         <thead>
@@ -58,15 +67,19 @@ const classicTop = top.length >= 3 && top.slice(0, 3).every((c) => CLASSIC.has(c
         </tbody>
       </table>
     </div>
-    {d.unlisted.length > 0 && (
+
+    {summary && <p><a href={CWE_PAGE}>All {d.total} weakness classes &rarr;</a></p>}
+    {!summary && d.unlisted.length > 0 && (
       <p class="meta-line">Also on the tracker: {d.unlisted.map((u, i) => <>{i > 0 && ', '}{u.cwe_id} ({u.count})</>)},
         a CWE category rather than a weakness, so MITRE's weakness list has no entry for it.
         {d.cves_unclassed > 0 && <> {d.cves_unclassed} AI CVEs have no CWE assigned yet.</>}</p>
     )}
-    <p class="meta-line">Weakness names, definitions and mitigations are from the <a href="https://cwe.mitre.org/" rel="noopener">CWE
-      List</a>, copyright The MITRE Corporation, reproduced under its terms of use; CWE is a trademark of The MITRE
-      Corporation. Counts and rankings are this site's, from its AI CVE tracker, updated {d.generated}. Exploited
-      means on CISA's Known Exploited Vulnerabilities catalog.</p>
+    {!summary && (
+      <p class="meta-line">Weakness names, definitions and mitigations are from the <a href="https://cwe.mitre.org/" rel="noopener">CWE
+        List</a>, copyright The MITRE Corporation, reproduced under its terms of use; CWE is a trademark of The MITRE
+        Corporation. Counts and rankings are this site's, from its AI CVE tracker, updated {d.generated}. Exploited
+        means on CISA's Known Exploited Vulnerabilities catalog.</p>
+    )}
   </section>
 )}
 

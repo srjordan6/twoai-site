@@ -430,9 +430,10 @@
 # now link to the uid address directly; this catches anyone who kept the old one.
 /data-centers/  /ai-ecosystem/technology-and-core-infrastructure/b441a27b/  301
 
-# The CWE explanation and the full list of AI weakness classes live on the
-# Application and Product Security page, where Stephen placed them on
-# 2026-10-03; /ai-news/cwes/ was built first and retired the same night.
+# The CWE explanation and the full list of AI weakness classes live on their
+# own page under Application and Product Security (aa6058ad), where Stephen
+# placed them on 2026-10-03; /ai-news/cwes/ was built first and retired the
+# same night.
 # The per-weakness pages under /ai-news/cwes/CWE-n/ are not affected.
-/ai-news/cwes/ /ai-ecosystem/enterprise-applications-governance-and-tools/72cf7bba/#cwe-list 301
-/ai-news/cwes /ai-ecosystem/enterprise-applications-governance-and-tools/72cf7bba/#cwe-list 301
+/ai-news/cwes/ /ai-ecosystem/enterprise-applications-governance-and-tools/aa6058ad/ 301
+/ai-news/cwes /ai-ecosystem/enterprise-applications-governance-and-tools/aa6058ad/ 301

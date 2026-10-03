@@ -1,0 +1,47 @@
+---
+/**
+ * The weaknesses behind AI vulnerabilities: what a CWE is, how it differs
+ * from a CVE, and every CWE weakness class that an AI CVE on this site's
+ * tracker is filed under, ranked.
+ *
+ * A child of Application and Product Security (72cf7bba). Stephen,
+ * 2026-10-03: the CWE explanation and the listing belong there, as a page of
+ * their own so they do not take that page over. uid aa6058ad is
+ * sha256("cwe-list")[:8], the site scheme; the pipeline writes the same uid
+ * into news/cwes.json. A static file takes priority over the [id] route.
+ */
+import Base from '../../../layouts/Base.astro';
+import CweTable from '../../../components/CweTable.astro';
+import { cweList } from '../../../lib/cwes';
+const BASE = '/ai-ecosystem/enterprise-applications-governance-and-tools';
+const UID = 'aa6058ad';
+const d = cweList();
+const desc = `${d.total} CWE weakness classes behind ${d.cves_classed} AI CVEs, ranked. What a CWE is, how it differs from a CVE, and which software mistakes dominate AI vulnerabilities.`;
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org', '@type': 'CollectionPage',
+  name: 'The weaknesses behind AI vulnerabilities — The World of AI',
+  description: desc.slice(0, 300), dateModified: d.generated,
+  url: `https://theworldofai.org${BASE}/${UID}/`,
+  isPartOf: { '@type': 'CollectionPage', name: 'Application and Product Security', url: `https://theworldofai.org${BASE}/72cf7bba/` },
+});
+---
+<Base title="The weaknesses behind AI vulnerabilities (CWE) — AI Security and Risk — The World of AI"
+  description={desc.slice(0, 300)} current="/ai-ecosystem/" jsonld={jsonld} noindex={d.total === 0}
+  doc={{ page_uid: UID, built_at: d.generated, generated: d.generated }}>
+  <p class="meta-line"><a href={`${BASE}/`}>Enterprise Applications, Governance and Tools</a> ·
+    {' '}<a href={`${BASE}/0ff57218/`}>AI Security and Risk</a> ·
+    {' '}<a href={`${BASE}/72cf7bba/`}>Application and Product Security</a></p>
+  <h1>The weaknesses behind AI vulnerabilities</h1>
+  {d.generated && <p class="meta-line">Last verified: <time datetime={d.generated}>{d.generated}</time>
+    {' '}&middot; <span class="uid" title="This page's identifier on theworldofai.org">uid {UID}</span></p>}
+  {d.total === 0 && <p>The weakness list is being built and appears here after the next update.</p>}
+  <CweTable />
+  <div class="cite-box">Cite this page: <code>"The weaknesses behind AI vulnerabilities." The World of AI,
+    theworldofai.org{BASE}/{UID}/. Retrieved {d.generated}.</code></div>
+  <p><a href={`${BASE}/72cf7bba/`}>&larr; Application and Product Security</a></p>
+</Base>
+
+<style>
+  .cite-box { margin: 1.6em 0; padding: .9em 1em; background: #f7f7fb; border-left: 3px solid #201868; font-size: .9rem; }
+  .cite-box code { display: block; margin-top: .3em; }
+</style>

@@ -557,7 +557,7 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
       )}
       {/* Stephen, 2026-10-03: the CWE table belongs on Application and
           Product Security (72cf7bba), the domain that owns secure building. */}
-      {secu.uid === '72cf7bba' && <CweTable />}
+      {secu.uid === '72cf7bba' && <CweTable summary />}
       {secu.program && secu.program.length > 0 && <h2>How each AI security topic lands here</h2>}
       {secu.topics.map((t) => (
         <section class="dom">
