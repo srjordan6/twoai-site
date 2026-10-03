@@ -646,6 +646,52 @@ export default {
       }
     }
 
+    // CVES BY ID. Stephen, 2026-10-03 02:34 UTC, asked "what is
+    // CVE-2026-94486" from that CVE's own page. Similarity search returned a
+    // different CVE page, CVE-2026-47282, the model refused correctly from
+    // what it was given, and the reply listed the wrong page as its source.
+    // A CVE id is an exact identifier, so it is matched in SQL like a bill
+    // number, and a question that names one is never sent to Wikidata.
+    const cveRefs = Array.from(new Set(
+      Array.from(question.matchAll(/\bCVE[-\s]?(\d{4})[-\s]?(\d{4,7})\b/gi)).map((m) => `CVE-${m[1]}-${m[2]}`)
+    )).slice(0, 3);
+    if (env.AUDIT_DB && cveRefs.length) {
+      try {
+        const sql = postgres(env.AUDIT_DB.connectionString, { max: 1, fetch_types: false, idle_timeout: 10 });
+        const rows = await sql.unsafe(`
+          SELECT cve_id, coalesce(headline,'') AS headline, coalesce(product,'') AS product, coalesce(vendor,'') AS vendor,
+                 coalesce(published::text,'') AS published, coalesce(description,'') AS description,
+                 cvss_score, coalesce(cvss_severity,'') AS severity, kev, coalesce(kev_added::text,'') AS kev_added,
+                 coalesce(defense::text,'') AS defense
+          FROM twoai_cves WHERE cve_id = ANY($1::text[]) AND status IN ('published','approved')`, [cveRefs]);
+        for (const r of rows) {
+          const f: string[] = [];
+          if (r.headline) f.push(`Headline on this site: ${r.headline}`);
+          // product is the AI subject the tracker filed it under (CVE-2026-94486
+          // is a Next.js flaw filed under MCP), not necessarily the vulnerable
+          // software, which the headline and description name.
+          if (r.product) f.push(`Listed on this site under: ${r.product}`);
+          if (r.published) f.push(`Published by NVD: ${String(r.published).slice(0, 10)}`);
+          if (r.severity) f.push(`CVSS: ${r.severity}${r.cvss_score != null ? ` ${r.cvss_score}` : ""}`);
+          f.push(r.kev
+            ? `On CISA's Known Exploited Vulnerabilities list${r.kev_added ? ` since ${r.kev_added}` : ""}: exploited in the wild.`
+            : `Not on CISA's Known Exploited Vulnerabilities list.`);
+          if (r.description) f.push(`NVD description: ${String(r.description).slice(0, 900)}`);
+          try {
+            const d = r.defense ? JSON.parse(r.defense) : null;
+            if (d?.fix?.text) f.push(`Fix: ${d.fix.text}${d.fix.advisory_url ? ` Advisory: ${d.fix.advisory_url}` : ""}`);
+            if (Array.isArray(d?.until_patched) && d.until_patched.length) f.push(`Until patched: ${d.until_patched.join(" ")}`);
+            if (Array.isArray(d?.check) && d.check.length) f.push(`Check exposure: ${d.check.join(" ")}`);
+          } catch { /* a malformed defence block leaves the record without it */ }
+          f.push(`Source: https://nvd.nist.gov/vuln/detail/${r.cve_id}`);
+          facts.push({ entity: r.cve_id, kind: "cve", url: `/ai-news/cves/${r.cve_id}/`, facts: f, edges: [] });
+        }
+        await sql.end();
+      } catch (e) {
+        console.warn("ask: cve lookup failed:", String((e as any)?.message ?? e).slice(0, 160));
+      }
+    }
+
     if (env.AUDIT_DB) {
       try {
         const sql = postgres(env.AUDIT_DB.connectionString, {
@@ -979,6 +1025,10 @@ export default {
         if (billRefs.length) {
           return json({ answered: false, answer: "The World of AI does not track that bill. It follows state bills that concern artificial intelligence, from LegiScan; the question has been recorded.", sources: [] });
         }
+        // Likewise a CVE id: Wikidata would offer whatever word it could match.
+        if (cveRefs.length) {
+          return json({ answered: false, answer: `The World of AI does not track ${cveRefs.join(", ")}. It follows CVEs in AI products and frameworks; the full record is at the National Vulnerability Database, https://nvd.nist.gov/vuln/detail/${cveRefs[0]}`, sources: [] });
+        }
         const subject = subjectOf(question);
         const cached = await cachedLookup(env, norm, qVec);
         if (cached && (cached.wikidata || cached.lookup)) {
@@ -1274,6 +1324,17 @@ export default {
     // as retrieval ANSWERING, and only the model can tell the two apart, so
     // the refusal it writes is the signal we key on.
     if (/does not cover that yet/i.test(answer)) {
+      // A REFUSAL USED NOTHING. The keep-the-top-page rule above is for an
+      // answer, which came from somewhere. Under a refusal it listed the
+      // nearest page as "Sources on this site", which on 2026-10-03 put the
+      // wrong CVE under "does not cover that yet". Nothing is shown instead.
+      const shownSources: typeof sources = [];
+      // A CVE id the site does not hold, where retrieval found other CVE
+      // pages: the answer is that we do not track it, with NVD's address,
+      // never a Wikidata guess at one of its words.
+      if (cveRefs.length && !facts.some((f) => f.kind === "cve")) {
+        return json({ answered: false, answer: `The World of AI does not track ${cveRefs.join(", ")}. It follows CVEs in AI products and frameworks; the full record is at the National Vulnerability Database, https://nvd.nist.gov/vuln/detail/${cveRefs[0]}`, sources: [] });
+      }
       // TIER 2: WIKIDATA, ahead of any web search. Free, so no cap and no
       // budget counter, and CC0, so unlike a publisher's prose these claims
       // can eventually be published on our own pages rather than only cited.
@@ -1354,7 +1415,7 @@ export default {
     // not-covered path.
     let sideWikidata: any = undefined;
     if (/\b(does not|doesn't|do not|don't) (cover|credit|hold|have|include|track|list|record)\b|\bnot covered\b|\bno (page|record|entry|coverage) (on|for|of)\b/i.test(answer)
-        && !CREATIVE.test(question) && !billRefs.length && !(await guard).toLowerCase().startsWith("unsafe")) {
+        && !CREATIVE.test(question) && !billRefs.length && !cveRefs.length && !(await guard).toLowerCase().startsWith("unsafe")) {
       try { sideWikidata = (await wikidataLookup(question)) ?? undefined; } catch { sideWikidata = undefined; }
     }
     return json({ answered: true, answer, beyond: beyond || undefined, sources: shownSources, papers: citedPapers, model: usedModel, wikidata: sideWikidata });
