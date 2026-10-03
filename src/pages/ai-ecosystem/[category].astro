@@ -83,6 +83,25 @@ if (existsSync('content/industries')) {
     } catch { /* an unreadable file is not evidence of a page */ }
   }
 }
+// 2026-10-03, Stephen: "AI Security and Risk 18 should be a hub page". Its
+// page at 0ff57218 answers 200, but the Enterprise route builds it from
+// content/security, not content/industries, so the set above never held its
+// uid and the heading stayed text. The set now also reads every other folder
+// the Enterprise route builds pages from: security, the enacted laws page
+// and the case law index.
+const addUid = (u: unknown) => { if (u) industryHubUids.add(String(u)); };
+const readJson = (p: string) => { try { return JSON.parse(readFileSync(p, 'utf8')); } catch { return null; } };
+if (existsSync('content/security')) {
+  for (const f of readdirSync('content/security')) if (f.endsWith('.json')) addUid(readJson(`content/security/${f}`)?.uid);
+}
+addUid(existsSync('content/compliance/enacted-ai-laws.json') ? readJson('content/compliance/enacted-ai-laws.json')?.uid : null);
+if (existsSync('content/caselaw')) {
+  for (const f of readdirSync('content/caselaw')) {
+    if (!f.endsWith('.json')) continue;
+    const d = readJson(`content/caselaw/${f}`);
+    if (d?.shape === 'caselaw-index') addUid(d.uid);
+  }
+}
 // 2026-10-02, Stephen: "this should be a hub page" on AI Agents and the MCP
 // Ecosystem. The day the comment above foresaw has come: every category
 // route now renders hub records, and all sixteen hub addresses outside the

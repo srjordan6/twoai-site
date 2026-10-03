@@ -10,6 +10,7 @@
  */
 import Base from '../../../layouts/Base.astro';
 import { severityClass } from '../../../lib/cves';
+import { cweList } from '../../../lib/cwes';
 
 export function getStaticPaths() {
   const mods = import.meta.glob('../../../../content/news/cve-*.json', { eager: true });
@@ -33,6 +34,17 @@ const def = c.defense && typeof c.defense === 'object' ? c.defense : null;
 const untilPatched: string[] = Array.isArray(def?.until_patched) ? def.until_patched : [];
 const checks: string[] = Array.isArray(def?.check) ? def.check : [];
 const hasDefense = def !== null && (untilPatched.length > 0 || checks.length > 0 || Boolean(def.fix?.text));
+// THE WEAKNESS CLASS, CROSS-REFERENCED. Stephen, 2026-10-03: every CVE page
+// cross-references the AI CWE table. The CWE names its page, the page ranks
+// it among every weakness class behind AI CVEs, and MITRE's mitigations for
+// the class join the defence section. A CWE with no page (a category such as
+// CWE-189, or none assigned) stays plain text.
+const cweAll = cweList();
+const cweRow = c.cwe ? cweAll.cwes.find((r) => r.cwe_id === c.cwe) : undefined;
+const cweHref = cweRow ? `/ai-news/cwes/${c.cwe}/` : '';
+const cweName: string = c.cwe_name || cweRow?.name || '';
+const cweMits: any[] = Array.isArray(c.cwe_mitigations) ? c.cwe_mitigations : [];
+const othersInClass = cweRow ? cweRow.count - 1 : 0;
 const desc = `${c.cve_id} affects ${c.product || c.vendor || 'an AI product'}${c.cvss_score != null ? `, CVSS ${c.cvss_score} ${c.cvss_severity}` : ''}${c.kev ? ", on CISA's exploited list" : ''}. ${c.description}`.slice(0, 300);
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
@@ -58,7 +70,7 @@ const jsonld = JSON.stringify({
     {c.cvss_severity && <span class={`sev ${severityClass(c.cvss_severity)}`}>{c.cvss_severity}{c.cvss_score != null && <> {c.cvss_score}</>}</span>}
     {c.kev && <span class="kev">Exploited in the wild</span>}
     {' '}A publicly recorded vulnerability{c.product && <> in <b>{c.product}</b></>}{c.vendor && c.vendor !== c.product && <> from {c.vendor}</>},
-    published {c.published}{c.cwe && <>, classed as {c.cwe}</>}.
+    published {c.published}{c.cwe && <>, classed as {cweHref ? <a href={cweHref}>{c.cwe}{cweName && <>, {cweName}</>}</a> : c.cwe}</>}.
     {c.kev && <> CISA added it to the Known Exploited Vulnerabilities catalog{c.kev_added && <> on {c.kev_added}</>}, which means it is being used in real attacks.</>}
   </p>
   <p class="meta-line">Last verified: <time datetime={c.generated}>{c.generated}</time>
@@ -83,6 +95,13 @@ const jsonld = JSON.stringify({
           <ul>{untilPatched.map((s) => <li>{s}</li>)}</ul>
         </>
       )}
+      {cweMits.length > 0 && (
+        <>
+          <h3>Prevent this class of weakness</h3>
+          <p class="meta-line">MITRE's mitigations for {cweHref ? <a href={cweHref}>{c.cwe}</a> : c.cwe}{cweName && <>, {cweName}</>}, from the CWE List.</p>
+          <ul>{cweMits.map((m) => <li>{m.strategy && <b>{m.strategy}. </b>}{m.description}</li>)}</ul>
+        </>
+      )}
       {checks.length > 0 && (
         <>
           <h3>Check whether you are exposed</h3>
@@ -100,7 +119,7 @@ const jsonld = JSON.stringify({
     <tbody>
       <tr><th>CVSS score</th><td>{c.cvss_score != null ? <>{c.cvss_score} ({c.cvss_severity})</> : 'Not yet scored by NVD'}</td></tr>
       {c.cvss_vector && <tr><th>Vector</th><td><code>{c.cvss_vector}</code></td></tr>}
-      {c.cwe && <tr><th>Weakness class</th><td>{c.cwe}</td></tr>}
+      {c.cwe && <tr><th>Weakness class</th><td>{cweHref ? <a href={cweHref}>{c.cwe}{cweName && <>: {cweName}</>}</a> : c.cwe}</td></tr>}
       <tr><th>Exploited in the wild</th><td>{c.kev ? `Yes, listed by CISA${c.kev_added ? ` on ${c.kev_added}` : ''}` : 'Not on CISA\u2019s catalog as of the last check'}</td></tr>
       <tr><th>Published</th><td>{c.published}</td></tr>
       {c.last_modified && <tr><th>Record last modified</th><td>{c.last_modified}</td></tr>}
@@ -108,6 +127,16 @@ const jsonld = JSON.stringify({
   </table>
   <p class="meta-line">A CVSS score rates how bad the flaw could be in the abstract, not how likely it is to
     be exploited. The exploited flag is the stronger signal for what to patch first.</p>
+
+  {cweRow && (
+    <>
+      <h2>Its weakness class</h2>
+      <p>This CVE is filed under <a href={cweHref}>{c.cwe}, {cweRow.name}</a>, which
+        {othersInClass > 0 ? <> holds {cweRow.count} AI CVEs on this site's tracker, ranked {cweRow.rank} of the
+        {' '}{cweAll.total} weakness classes behind AI vulnerabilities</> : <> holds no other AI CVE on this site's tracker yet</>}.
+        {' '}<a href="/ai-news/cwes/">See every weakness class in AI CVEs, ranked</a>.</p>
+    </>
+  )}
 
   {entities.length > 0 && (
     <>

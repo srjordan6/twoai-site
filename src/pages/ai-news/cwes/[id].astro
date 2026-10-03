@@ -1,0 +1,150 @@
+---
+/**
+ * One page per CWE weakness class that at least one AI CVE is filed under,
+ * at /ai-news/cwes/{CWE-ID}/. MITRE's name, definition, consequences and
+ * mitigations, quoted and attributed; a paragraph written here on how the
+ * weakness shows up in AI software, from the definition and the AI CVEs only;
+ * and every AI CVE in the class, newest first.
+ *
+ * theworldofai bridge row 385, 2026-10-03.
+ */
+import Base from '../../../layouts/Base.astro';
+import { severityClass } from '../../../lib/cves';
+import { cweList } from '../../../lib/cwes';
+
+export function getStaticPaths() {
+  const mods = import.meta.glob('../../../../content/news/cwe-*.json', { eager: true });
+  return Object.values(mods)
+    .map((m: any) => m?.default)
+    .filter((d: any) => d && d.cwe_id)
+    .map((d: any) => ({ params: { id: d.cwe_id }, props: { w: d } }));
+}
+const { w } = Astro.props;
+const cves: any[] = Array.isArray(w.cves) ? w.cves : [];
+const mits: any[] = Array.isArray(w.mitigations) ? w.mitigations : [];
+const cons: any[] = Array.isArray(w.consequences) ? w.consequences : [];
+const alts: any[] = Array.isArray(w.alternate_terms) ? w.alternate_terms : [];
+const title = `${w.cwe_id}: ${w.name}`;
+const desc = `${w.cwe_id}, ${w.name}: ${w.count} AI ${w.count === 1 ? 'CVE' : 'CVEs'} on record${w.kev ? `, ${w.kev} exploited in the wild` : ''}. ${w.description || ''}`.slice(0, 300);
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org', '@type': 'DefinedTerm',
+  name: title, termCode: w.cwe_id, description: w.description,
+  url: `https://theworldofai.org/ai-news/cwes/${w.cwe_id}/`,
+  inDefinedTermSet: { '@type': 'DefinedTermSet', name: 'CWE List', url: 'https://cwe.mitre.org/' },
+  sameAs: w.mitre_url,
+});
+const all = cweList();
+const rank = all.cwes.find((c) => c.cwe_id === w.cwe_id)?.rank;
+const phases = (m: any) => (Array.isArray(m.phase) ? m.phase.join(', ') : '');
+---
+<Base title={`${title} — AI CWE tracker — The World of AI`} description={desc} current="/ai-news/" jsonld={jsonld}
+  doc={{ page_uid: w.uid, built_at: w.generated, generated: w.generated }}>
+  <p class="meta-line"><a href="/ai-news/">AI News</a> · <a href="/ai-news/cwes/">AI CWE tracker</a></p>
+  <h1>{w.name}</h1>
+  <p class="cwe-id"><code>{w.cwe_id}</code>{w.abstraction && <span class="abst">{w.abstraction} weakness</span>}</p>
+  <p class="answer"><b>{w.count}</b> AI {w.count === 1 ? 'CVE is' : 'CVEs are'} filed under this weakness on
+    this site's tracker{rank && <>, ranked {rank} of the {all.total} weakness classes behind AI vulnerabilities</>}
+    {w.critical > 0 && <>, {w.critical} rated critical</>}{w.kev > 0 && <>, {w.kev} exploited in the wild</>}.
+    {w.latest && <> The most recent was published {w.latest}.</>}</p>
+  <p class="meta-line">Last verified: <time datetime={w.generated}>{w.generated}</time>
+    {' '}&middot; <span class="uid" title="This weakness's identifier on theworldofai.org">uid {w.uid}</span></p>
+
+  <h2>MITRE's definition</h2>
+  <p>{w.description}</p>
+  {w.extended_description && <p>{w.extended_description}</p>}
+  {alts.length > 0 && <p class="meta-line">Also called: {alts.map((a) => a.term).join(', ')}.</p>}
+
+  {w.ai_text && (
+    <>
+      <h2>How it shows up in AI software</h2>
+      <p>{w.ai_text}</p>
+      <p class="meta-line">Written from MITRE's definition and the AI CVEs below only. Written {w.ai_written_on}.</p>
+    </>
+  )}
+
+  {(cons.length > 0 || w.likelihood) && (
+    <>
+      <h2>What it lets an attacker do</h2>
+      {w.likelihood && <p>MITRE rates the likelihood of exploit as <b>{w.likelihood.toLowerCase()}</b>.</p>}
+      {cons.length > 0 && (
+        <ul>
+          {cons.map((c) => (
+            <li><b>{(c.scope || []).join(', ')}</b>{c.impact && c.impact.length > 0 && <>: {c.impact.join(', ')}</>}
+              {c.note && <span class="note">{c.note}</span>}</li>
+          ))}
+        </ul>
+      )}
+    </>
+  )}
+
+  <h2>How to prevent it</h2>
+  {mits.length > 0 ? (
+    <ol class="mits">
+      {mits.map((m) => (
+        <li>
+          {(phases(m) || m.strategy) && <p class="mit-meta">{phases(m)}{phases(m) && m.strategy && ' · '}{m.strategy}{m.effectiveness && <> · effectiveness {m.effectiveness.toLowerCase()}</>}</p>}
+          <p>{m.description}</p>
+        </li>
+      ))}
+    </ol>
+  ) : (
+    <p>MITRE's entry for this weakness lists no mitigations. Each AI CVE below has its own defence notes on its page.</p>
+  )}
+
+  <h2>AI CVEs filed under {w.cwe_id}</h2>
+  <ul class="cve-list">
+    {cves.map((c) => (
+      <li>
+        <a href={`/ai-news/cves/${c.cve_id}/`}>{c.headline ? c.headline : <code>{c.cve_id}</code>}</a>
+        {c.headline && <code class="cve-id-s">{c.cve_id}</code>}
+        {c.cvss_severity && <span class={`sev ${severityClass(c.cvss_severity)}`}>{c.cvss_severity}{c.cvss_score != null && <> {c.cvss_score}</>}</span>}
+        {c.kev && <span class="kev">Exploited in the wild</span>}
+        <span class="cve-date">{c.published}</span>
+        {c.product && <span class="cve-prod">{c.product}</span>}
+        {c.summary && <span class="cve-sum">{c.summary}</span>}
+      </li>
+    ))}
+  </ul>
+
+  <div class="cite-box">Cite this page: <code>"{w.cwe_id}: {w.name}." AI CWE tracker, The World of AI,
+    theworldofai.org/ai-news/cwes/{w.cwe_id}/. Retrieved {w.generated}.</code></div>
+
+  <h2>Sources</h2>
+  <ul class="sources">
+    <li><a href={w.mitre_url} rel="noopener" target="_blank">{w.cwe_id} at cwe.mitre.org</a>
+      <span class="src-meta">The CWE List, The MITRE Corporation. Name, definition, consequences and mitigations.</span></li>
+    <li><a href="/ai-news/cves/">AI CVE tracker</a>
+      <span class="src-meta">This site. The CVEs in this class and their counts.</span></li>
+  </ul>
+  <p class="meta-line">CWE content is copyright The MITRE Corporation and reproduced under the CWE terms of use.
+    CWE is a trademark of The MITRE Corporation.</p>
+
+  <p><a href="/ai-news/cwes/">&larr; All AI weakness classes</a></p>
+</Base>
+
+<style>
+  .cwe-id { margin: -.4em 0 1em; }
+  .cwe-id code { font-weight: 700; color: #201868; }
+  .abst { margin-left: .7em; font-size: 13px; color: #7A8A9E; }
+  .note { display: block; font-size: 13.5px; color: #3d3d46; margin-top: .2em; }
+  .mits li { margin-bottom: .8em; }
+  .mits p { margin: 0; }
+  .mit-meta { font-size: 12.5px; color: #7A8A9E; margin-bottom: .2em !important; }
+  .cve-list { list-style: none; padding: 0; margin: .6em 0 1em; }
+  .cve-list li { padding: .7em 0; border-bottom: 1px solid #ececf2; font-size: 14.5px; line-height: 1.6; }
+  .cve-list code { font-weight: 700; color: #201868; }
+  .cve-id-s { font-weight: 400 !important; color: #7A8A9E !important; margin-left: .5em; font-size: 13px; }
+  .cve-sum { display: block; color: #2C2C2A; margin-top: 2px; }
+  .cve-date, .cve-prod { color: #7A8A9E; margin-left: .5em; font-size: 13px; }
+  .sev { display: inline-block; margin-left: .5em; padding: 0 .45em; border-radius: 3px; font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #fff; background: #7A8A9E; }
+  .sev-critical { background: #8B1A1A; }
+  .sev-high { background: #C2410C; }
+  .sev-medium { background: #B7791F; }
+  .sev-low { background: #4B5563; }
+  .kev { display: inline-block; margin-left: .5em; padding: 0 .45em; border-radius: 3px; font-size: 11.5px; font-weight: 700; color: #8B1A1A; border: 1px solid #8B1A1A; }
+  .sources { list-style: none; padding: 0; margin: 1em 0 1.6em; }
+  .sources li { padding: .5em 0; border-bottom: 1px solid #ececf2; }
+  .src-meta { display: block; font-size: 12.5px; color: #7A8A9E; margin-top: 2px; }
+  .cite-box { margin: 1.6em 0; padding: .9em 1em; background: #f7f7fb; border-left: 3px solid #201868; font-size: .9rem; }
+  .cite-box code { display: block; margin-top: .3em; }
+</style>

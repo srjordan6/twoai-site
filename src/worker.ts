@@ -699,6 +699,48 @@ export default {
       }
     }
 
+    // CWES BY NUMBER. theworldofai bridge row 385, 2026-10-03: the box, asked
+    // what a CWE number is, had nothing to answer from and cited a data centre
+    // section. A CWE id is matched in SQL against MITRE's list (944
+    // weaknesses); one that AI CVEs are filed under links its page here, any
+    // other links MITRE's own entry.
+    const cweRefs = Array.from(new Set(
+      Array.from(question.matchAll(/\bCWE[-\s]?(\d{1,5})\b/gi)).map((m) => `CWE-${Number(m[1])}`)
+    )).slice(0, 3);
+    if (env.AUDIT_DB && cweRefs.length) {
+      try {
+        const sql = postgres(env.AUDIT_DB.connectionString, { max: 1, fetch_types: false, idle_timeout: 10 });
+        const rows = await sql.unsafe(`
+          SELECT w.cwe_id, w.num, w.name, coalesce(w.abstraction,'') AS abstraction, coalesce(w.description,'') AS description,
+                 coalesce(w.likelihood,'') AS likelihood, coalesce(w.ai_text,'') AS ai_text,
+                 coalesce(w.mitigations,'[]'::jsonb)::text AS mitigations,
+                 (SELECT count(*) FROM twoai_cves c WHERE c.cwe = w.cwe_id AND c.status IN ('published','approved'))::int AS n,
+                 (SELECT string_agg(c.cve_id || coalesce(': ' || c.headline, ''), ' | ') FROM (SELECT cve_id, headline FROM twoai_cves
+                    WHERE cwe = w.cwe_id AND status IN ('published','approved') ORDER BY published DESC NULLS LAST LIMIT 5) c) AS recent
+          FROM twoai_cwes w WHERE w.cwe_id = ANY(string_to_array($1, ','))`, [cweRefs.join(",")]);
+        for (const r of rows) {
+          const mitre = `https://cwe.mitre.org/data/definitions/${r.num}.html`;
+          const f: string[] = [`${r.cwe_id}: ${r.name}${r.abstraction ? ` (${r.abstraction} weakness in MITRE's CWE list)` : ""}`];
+          if (r.description) f.push(`MITRE definition: ${String(r.description).slice(0, 900)}`);
+          if (r.likelihood) f.push(`MITRE likelihood of exploit: ${r.likelihood}`);
+          f.push(Number(r.n) > 0
+            ? `AI CVEs on this site's tracker filed under it: ${r.n}. Most recent: ${r.recent}`
+            : `No AI CVE on this site's tracker is filed under it.`);
+          if (r.ai_text) f.push(`How it shows up in AI software (this site): ${r.ai_text}`);
+          try {
+            const m = JSON.parse(r.mitigations);
+            if (Array.isArray(m) && m.length) f.push(`MITRE mitigations: ${m.slice(0, 3).map((x: any) => (x.strategy ? x.strategy + ": " : "") + String(x.description).slice(0, 300)).join(" | ")}`);
+          } catch { /* none recorded */ }
+          f.push(`MITRE entry: ${mitre}`);
+          f.push(`A CWE names a kind of software weakness in the abstract; a CVE identifies one specific vulnerability in one product. The ranked list of every weakness class behind AI CVEs is at /ai-news/cwes/.`);
+          facts.push({ entity: r.cwe_id, kind: "cwe", url: Number(r.n) > 0 ? `/ai-news/cwes/${r.cwe_id}/` : mitre, facts: f, edges: [] });
+        }
+        await sql.end();
+      } catch (e) {
+        console.warn("ask: cwe lookup failed:", String((e as any)?.message ?? e).slice(0, 160));
+      }
+    }
+
     if (env.AUDIT_DB) {
       try {
         const sql = postgres(env.AUDIT_DB.connectionString, {
@@ -1066,8 +1108,8 @@ export default {
         // A CVE id the site does not hold skips the encyclopaedia tiers, which
         // would match whatever word they could, and goes straight to the web
         // search below, which answered CVE-2026-94486 correctly on 2026-10-03.
-        const wd = cveRefs.length ? null : await wikidataLookup(question);
-        const alt = (wd || cveRefs.length) ? null : (await huggingFaceModel(subject, question)) ?? (await openAlexAuthor(subject, question));
+        const wd = (cveRefs.length || cweRefs.length) ? null : await wikidataLookup(question);
+        const alt = (wd || cveRefs.length || cweRefs.length) ? null : (await huggingFaceModel(subject, question)) ?? (await openAlexAuthor(subject, question));
         if (wd || alt) {
           const recorded: Array<{ sourceLabel: string; title: string; url: string; facts: any[] }> = [];
           if (wd) recorded.push({ sourceLabel: "Wikidata " + wd.qid, title: wd.title, url: wd.url, facts: wd.facts });
@@ -1368,12 +1410,17 @@ export default {
     // A CVE record the answer came from is its first source. On 2026-10-03
     // the CVE-2026-94486 answer was written from its [DB] record and the
     // list showed only CVE-2026-47282, the nearest page by similarity.
-    for (const f of facts.filter((x) => x.kind === "cve").reverse()) {
+    for (const f of facts.filter((x) => (x.kind === "cve" || x.kind === "cwe") && x.url.startsWith("/")).reverse()) {
       const url = `https://theworldofai.org${f.url}`;
       if (!sources.some((s) => s.url === url)) sources.unshift({ title: f.entity, url, score: 1 });
     }
     const namedSources = sources.filter((s) => namedInAnswer(s.title));
-    const shownSources = namedSources.length ? namedSources : sources.slice(0, 1);
+    // ...except when the answer says the site does not hold the thing asked
+    // about. Asked what a CWE number is (theworldofai bridge row 385), the box
+    // said it had no page defining one and still listed the Centersquare data
+    // centre section, the nearest page by similarity, as its source.
+    const saysNotHeld = /\b(does not|doesn't|do not|don't) (cover|hold|have|include|define|mention)\b|\bnot covered\b|\bno (page|record|entry)\b/i.test(answer);
+    const shownSources = namedSources.length ? namedSources : (saysNotHeld ? [] : sources.slice(0, 1));
 
     // THE SECOND REFUSAL PATH. Measured live 2026-09-01: the Einstein question
     // retrieved seven site pages and a quantum computing paper, so the
@@ -1419,8 +1466,8 @@ export default {
         });
       }
       // A CVE question goes past the encyclopaedia tiers to the web search.
-      const wd = cveRefs.length ? null : await wikidataLookup(question);
-      const alt = (wd || cveRefs.length) ? null : (await huggingFaceModel(subject, question)) ?? (await openAlexAuthor(subject, question));
+      const wd = (cveRefs.length || cweRefs.length) ? null : await wikidataLookup(question);
+      const alt = (wd || cveRefs.length || cweRefs.length) ? null : (await huggingFaceModel(subject, question)) ?? (await openAlexAuthor(subject, question));
       if (wd || alt) {
         // Retain what we looked up. Runs in waitUntil so the reader is not
         // waiting on bookkeeping, and every fact lands as `proposed` for

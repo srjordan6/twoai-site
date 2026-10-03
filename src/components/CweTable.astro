@@ -1,0 +1,65 @@
+---
+/**
+ * Every CWE weakness class behind the AI CVEs on record, as a ranked table.
+ * Used on /ai-news/cwes/ and on the Application and Product Security page
+ * (72cf7bba), where Stephen asked for it on 2026-10-03.
+ */
+import { cweList } from '../lib/cwes';
+import CweVsCve from './CweVsCve.astro';
+interface Props { limit?: number; intro?: boolean }
+const { limit = 0, intro = false } = Astro.props;
+const d = cweList();
+const rows = limit > 0 ? d.cwes.slice(0, limit) : d.cwes;
+const top = d.cwes.slice(0, 3);
+---
+{d.cwes.length > 0 && (
+  <section class="cwe-table-wrap">
+    {intro && (
+      <>
+        <h2>The weaknesses behind AI vulnerabilities</h2>
+        <p>A CWE, Common Weakness Enumeration, is MITRE's catalogue of the kinds of mistake that make
+          software vulnerable. A CVE records one flaw in one product; its CWE says what kind of flaw it is.
+          The <b>{d.cves_classed}</b> AI CVEs on this site's tracker fall into <b>{d.total}</b> weakness
+          classes{top.length === 3 && <>, led by {top[0].name} ({top[0].count}), {top[1].name} ({top[1].count})
+          and {top[2].name} ({top[2].count})</>}. <a href="/ai-news/cwes/">What CWE is, and every class in full</a>.</p>
+        <CweVsCve />
+      </>
+    )}
+    <div class="cwe-scroll">
+      <table class="cwe-table">
+        <thead>
+          <tr><th>#</th><th>CWE</th><th>Weakness</th><th class="num">AI CVEs</th><th class="num">Exploited</th></tr>
+        </thead>
+        <tbody>
+          {rows.map((c) => (
+            <tr>
+              <td class="rank">{c.rank}</td>
+              <td><a href={`/ai-news/cwes/${c.cwe_id}/`}><code>{c.cwe_id}</code></a></td>
+              <td><a href={`/ai-news/cwes/${c.cwe_id}/`}>{c.name}</a></td>
+              <td class="num">{c.count}</td>
+              <td class="num">{c.kev > 0 ? c.kev : ''}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    {limit > 0 && d.cwes.length > limit && (
+      <p class="meta-line"><a href="/ai-news/cwes/">All {d.cwes.length} weakness classes</a></p>
+    )}
+    <p class="meta-line">Weakness names from MITRE's <a href="https://cwe.mitre.org/" rel="noopener">CWE list</a>.
+      Counts from this site's AI CVE tracker, updated {d.generated}. Exploited means on CISA's Known
+      Exploited Vulnerabilities catalog.</p>
+  </section>
+)}
+
+<style>
+  .cwe-scroll { overflow-x: auto; margin: .6em 0; }
+  .cwe-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .cwe-table th, .cwe-table td { padding: .45em .6em; border-bottom: 1px solid #ececf2; text-align: left; vertical-align: top; }
+  .cwe-table thead th { background: #201868; color: #fff; font-weight: 600; }
+  .cwe-table .num { text-align: right; white-space: nowrap; }
+  .cwe-table .rank { color: #7A8A9E; width: 2.5em; }
+  .cwe-table code { font-weight: 700; color: #201868; white-space: nowrap; }
+  .cwe-table a { color: #201868; text-decoration: none; }
+  .cwe-table a:hover { color: #F07800; text-decoration: underline; }
+</style>
