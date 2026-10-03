@@ -20,6 +20,22 @@ export function getStaticPaths() {
     });
 }
 const { c, nameToSlug } = Astro.props;
+// A TO Z INDEX, theworldofai bridge row 393 (Stephen, 2026-10-03). Education
+// and Research went from 4 tools to about 122 on 2026-10-02 and became one
+// long list. Any category holding more than 30 tools gets a letter row and
+// the list grouped under letter headings; smaller ones render as before.
+// Static links only, no script. Sorting ignores case and a leading "The";
+// a name starting with a digit or symbol files under 0-9.
+const AZ_THRESHOLD = 30;
+const useAZ = c.tools.length > AZ_THRESHOLD;
+const sortKey = (n: string) => String(n || "").trim().replace(/^thes+/i, "").toLowerCase();
+const letterOf = (n: string) => { const ch = sortKey(n).charAt(0).toUpperCase(); return ch >= "A" && ch <= "Z" ? ch : "0-9"; };
+const sortedTools = [...c.tools].sort((a, b) => sortKey(a.name).localeCompare(sortKey(b.name)));
+const groups: Record<string, any[]> = {};
+for (const t of sortedTools) (groups[letterOf(t.name)] ||= []).push(t);
+const letters = [...(groups["0-9"] ? ["0-9"] : []), ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("")];
+const anchor = (l: string) => (l === "0-9" ? "0-9" : l.toLowerCase());
+const hrefFor = (t: any) => { const slug = nameToSlug[String(t.name).toLowerCase()]; return slug ? { href: `/ai-tools/${slug}/`, external: false } : (t.url ? { href: t.url, external: true } : null); };
 const desc = `${c.tools.length} AI tools in ${c.name}, with vendors, what each one does, and links to full profiles where we have them.`;
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
@@ -55,23 +71,54 @@ const jsonld = JSON.stringify({
     </section>
   )}
 
-  <table>
-    <thead><tr><th>Tool</th><th>Vendor</th><th>What it does</th></tr></thead>
-    <tbody>
-      {c.tools.map((t) => {
-        const slug = nameToSlug[String(t.name).toLowerCase()];
-        return (
-          <tr>
-            <td>{slug
-              ? <a href={`/ai-tools/${slug}/`}>{t.name}</a>
-              : (t.url ? <a href={t.url} rel="noopener nofollow">{t.name}</a> : t.name)}</td>
-            <td>{t.vendor}</td>
-            <td>{t.note}</td>
-          </tr>
-        );
-      })}
-    </tbody>
-  </table>
+  {!useAZ && (
+    <table>
+      <thead><tr><th>Tool</th><th>Vendor</th><th>What it does</th></tr></thead>
+      <tbody>
+        {c.tools.map((t) => {
+          const h = hrefFor(t);
+          return (
+            <tr>
+              <td>{h ? (h.external ? <a href={h.href} rel="noopener nofollow">{t.name}</a> : <a href={h.href}>{t.name}</a>) : t.name}</td>
+              <td>{t.vendor}</td>
+              <td>{t.note}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  )}
+
+  {useAZ && (
+    <>
+      <nav class="az-index" id="az-index" aria-label="Tools A to Z">
+        {letters.map((l) => (groups[l]
+          ? <a href={`#${anchor(l)}`}>{l}</a>
+          : <span class="az-empty" aria-hidden="true">{l}</span>))}
+      </nav>
+      {letters.filter((l) => groups[l]).map((l) => (
+        <section class="az-group">
+          <h2 id={anchor(l)}>{l}</h2>
+          <table>
+            <thead><tr><th>Tool</th><th>Vendor</th><th>What it does</th></tr></thead>
+            <tbody>
+              {groups[l].map((t) => {
+                const h = hrefFor(t);
+                return (
+                  <tr>
+                    <td>{h ? (h.external ? <a href={h.href} rel="noopener nofollow">{t.name}</a> : <a href={h.href}>{t.name}</a>) : t.name}</td>
+                    <td>{t.vendor}</td>
+                    <td>{t.note}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <p class="az-top"><a href="#az-index">Back to top</a></p>
+        </section>
+      ))}
+    </>
+  )}
 
   <Reading reading={c.reading} heading={`What should a buyer know about ${c.name.toLowerCase()}?`} />
 
@@ -79,3 +126,12 @@ const jsonld = JSON.stringify({
   <p class="meta-line">How this directory is funded, and what that never changes:
     <a href="/disclosure/">disclosure</a>.</p>
 </Base>
+
+<style>
+  .az-index { display: flex; flex-wrap: wrap; gap: .25em .5em; margin: 1.2em 0 1.4em; font-weight: 600; font-size: 15px; }
+  .az-index a { color: #201868; text-decoration: none; min-width: 1.4em; text-align: center; }
+  .az-index a:hover { color: #F07800; }
+  .az-empty { color: #c4c4cf; min-width: 1.4em; text-align: center; }
+  .az-group h2 { margin: 1.2em 0 .4em; color: #201868; scroll-margin-top: 80px; }
+  .az-top { font-size: 13px; margin: .4em 0 0; }
+</style>
