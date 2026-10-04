@@ -6,6 +6,7 @@
 import Base from '../layouts/Base.astro';
 import Reading from '../components/Reading.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { EDITOR_PERSON } from '../lib/editor';
 
 export function getStaticPaths() {
   if (!existsSync('content/static')) return [];
@@ -35,15 +36,8 @@ const jsonld = JSON.stringify(isEditor ? {
   url: `https://theworldofai.org/${d.slug}/`,
   dateModified: d.updated,
   isPartOf: { '@type': 'WebSite', name: 'The World of AI', url: 'https://theworldofai.org/' },
-  mainEntity: {
-    '@type': 'Person',
-    '@id': 'https://theworldofai.org/stephen-jordan/#person',
-    name: 'Stephen R. Jordan',
-    jobTitle: 'Editor',
-    url: 'https://theworldofai.org/stephen-jordan/',
-    worksFor: { '@type': 'Organization', name: 'SRJ Consulting & Services LLC', url: 'https://srjconsultingservices.com/' },
-    sameAs: ['https://www.linkedin.com/in/stephenrjordan/', 'https://srjconsultingservices.com/about/'],
-  },
+  // The one Person every NewsArticle names as editor (row 420).
+  mainEntity: EDITOR_PERSON,
 } : {
   '@context': 'https://schema.org',
   '@type': 'WebPage',

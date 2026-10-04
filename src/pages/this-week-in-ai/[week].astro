@@ -13,6 +13,7 @@ import Base from '../../layouts/Base.astro';
 import Reading from '../../components/Reading.astro';
 import KeepReading from '../../components/KeepReading.astro';
 import { companiesNamedIn } from '../../lib/related';
+import { EDITOR_PERSON } from '../../lib/editor';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
 export function getStaticPaths() {
@@ -58,8 +59,7 @@ const jsonld = JSON.stringify({
   dateModified: w.generated,
   isAccessibleForFree: true,
   author: { '@type': 'Organization', name: 'The World of AI', url: 'https://theworldofai.org/about/' },
-  editor: { '@type': 'Person', name: 'Stephen Jordan', url: 'https://theworldofai.org/stephen-jordan/',
-    sameAs: ['https://www.linkedin.com/in/stephenrjordan/'] },
+  editor: EDITOR_PERSON, // one identity with /stephen-jordan/ (row 420)
   image: 'https://theworldofai.org/brand/og.png',
   publisher: {
     '@type': 'Organization',

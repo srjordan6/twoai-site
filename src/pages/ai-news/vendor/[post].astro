@@ -26,6 +26,7 @@
  */
 import Base from '../../../layouts/Base.astro';
 import KeepReading from '../../../components/KeepReading.astro';
+import { EDITOR_PERSON } from '../../../lib/editor';
 import { matchTerms, moreFromVendor, companyFor } from '../../../lib/related';
 
 export function getStaticPaths() {
@@ -125,8 +126,7 @@ const jsonld = JSON.stringify({
   dateModified: it.date,
   // The announcement is the vendor's; this site surfaces and summarises it.
   author: { '@type': 'Organization', name: vendor },
-  editor: { '@type': 'Person', name: 'Stephen Jordan', url: 'https://theworldofai.org/stephen-jordan/',
-    sameAs: ['https://www.linkedin.com/in/stephenrjordan/'] },
+  editor: EDITOR_PERSON, // one identity with /stephen-jordan/ (row 420)
   publisher: { '@type': 'Organization', name: 'The World of AI', url: 'https://theworldofai.org/',
     logo: { '@type': 'ImageObject', url: 'https://theworldofai.org/brand/og.png', width: 1200, height: 630 },
     publishingPrinciples: 'https://theworldofai.org/editorial-policy/',
