@@ -64,13 +64,20 @@ const jsonld = JSON.stringify({
   {b.results && (
     <>
       <h2>Current results</h2>
-      <p class="results-meta">As of <strong>{b.results.as_of}</strong> · {b.results.metric} · Source: <a href={b.results.source_url} rel="noopener">{b.results.source}</a></p>
+      <p class="results-meta">As of <strong>{b.results.as_of}</strong>{b.results.retrieved && b.results.retrieved !== b.results.as_of && <> · Checked {b.results.retrieved}</>} · {b.results.metric} · Source: <a href={b.results.source_url} rel="noopener">{b.results.source}</a></p>
       {(b.results.rows ?? []).length > 0 && (
         <table class="results-table">
           <thead><tr><th>System</th><th>Result</th></tr></thead>
           <tbody>
             {b.results.rows.map((r) => (
-              <tr><td>{r.system}</td><td>{r.score}</td></tr>
+              <tr>
+                <td>
+                  {r.system}
+                  {r.family && <> · <a href={r.family.href}>{r.family.name}</a></>}
+                  {r.detail && <span class="results-detail">{r.detail}</span>}
+                </td>
+                <td>{r.score}</td>
+              </tr>
             ))}
           </tbody>
         </table>
@@ -144,4 +151,5 @@ const jsonld = JSON.stringify({
   .results-table th { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #F07800; }
   .results-table td:last-child { color: #201868; font-weight: 700; white-space: nowrap; }
   .results-note { font-size: 14.5px; color: #444; max-width: 72ch; }
+  .results-detail { display: block; font-size: 12.5px; color: #7A8A9E; margin-top: 2px; }
 </style>
