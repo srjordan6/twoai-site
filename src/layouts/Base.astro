@@ -512,6 +512,22 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
   </script>
   {!redirect && <script type="application/ld+json" set:html={baseLd} />}
   {jsonld && <script type="application/ld+json" set:html={jsonld} />}
+  {/* PRINT THIS PAGE, theworldofai rows 424 and 425 (Stephen, 2026-10-03):
+      a print stylesheet so the printout is the content, and a button wired by
+      an external script so no inline handler is needed. */}
+  <link rel="stylesheet" href="/print.css" media="print" />
+  <script src="/js/print.js" defer></script>
+  <style is:inline>
+    .print-head { display: none; }
+    .print-tools { display: flex; justify-content: flex-end; margin: 0 0 6px; }
+    .print-btn { display: none; font-family: Poppins, system-ui, sans-serif; font-size: 12.5px; font-weight: 600;
+      color: #201868; background: transparent; border: 1px solid #c9c6dd; border-radius: 4px;
+      min-height: 28px; padding: 3px 12px; cursor: pointer; }
+    .can-print .print-btn { display: inline-flex; align-items: center; }
+    .print-btn:hover, .print-btn:focus-visible { color: #F07800; border-color: #F07800; }
+    .print-btn:focus-visible { outline: 2px solid #F07800; outline-offset: 2px; }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .print-btn { color: #fff; border-color: rgba(255,255,255,.35); } }
+  </style>
 </head>
 <body>
   <!-- The topbar and the masthead are ONE sticky unit, not two.
@@ -652,6 +668,15 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
         the words they contain and buries the pages that are actually about
         the query. data-pagefind-body limits the index to this column. */}
     <div class="main-col" data-pagefind-body>
+      {/* Print only: the navy mark, then the page uid, its URL and the print
+          date (filled in by /js/print.js on the day of printing). */}
+      <div class="print-head" aria-hidden="true" data-pagefind-ignore>
+        <span class="print-logo"><Logo /></span>
+        <p class="print-trace">{pageUid && <>Page uid {pageUid} &middot; </>}{canonical}<span class="print-date"></span></p>
+      </div>
+      <div class="print-tools" data-nosnippet data-pagefind-ignore>
+        <button type="button" class="print-btn" id="print-btn">Print this page</button>
+      </div>
       <slot />
       {/* READ NEXT, NEAR THE TOP. Stephen, 2026-09-24: Clarity showed one page
           per session and 25 percent scroll depth. Visitors take the opening
