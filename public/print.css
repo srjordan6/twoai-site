@@ -6,7 +6,11 @@
    keep-reading links, the print button itself, and the footer. */
 @page { margin: 16mm 14mm; }
 html, body { background: #fff !important; color: #000 !important; }
-body { font-family: Lora, Georgia, 'Times New Roman', serif; font-size: 11.5pt; line-height: 1.5; }
+body { font-size: 11.5pt; line-height: 1.5; }
+/* The site sets Poppins on body and on many blocks, so the serif body has to
+   be forced. The trace line below keeps Poppins on purpose. */
+body, body p, body li, body td, body th, body dd, body dt, body div, body span, body blockquote, body figcaption {
+  font-family: Lora, Georgia, 'Times New Roman', serif !important; }
 .site-sticky, .site-head, .main-nav, .mobile-panel, .scrim, .nav-toggle, .lang-panel,
 .rail-col, .ask-foot, .ask-box, .amz-shelf, .site-foot, footer, .read-next, .keep-reading,
 .print-tools, .statcounter, ins.adsbygoogle, .adsbygoogle, .google-auto-placed, iframe,
@@ -31,4 +35,5 @@ img { max-width: 100% !important; break-inside: avoid; }
 .print-head { display: block !important; margin: 0 0 10pt; padding-bottom: 6pt; border-bottom: 1px solid #000 !important; }
 .print-head .print-logo svg, .print-head .print-logo img { height: 34px; width: auto; }
 .print-head .print-logo, .print-head .print-logo * { color: #201868 !important; }
-.print-trace { display: block !important; font-family: Poppins, Arial, sans-serif; font-size: 8.5pt; margin: 6pt 0 0; }
+.print-trace, .print-trace span { display: block !important; font-family: Poppins, Arial, sans-serif !important; font-size: 8.5pt; margin: 6pt 0 0; }
+.print-trace span { display: inline !important; margin: 0; }
