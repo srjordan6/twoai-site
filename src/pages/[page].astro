@@ -7,7 +7,6 @@ import Base from '../layouts/Base.astro';
 import Reading from '../components/Reading.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { EDITOR_PERSON } from '../lib/editor';
-import Corrections from '../components/Corrections.astro';
 
 export function getStaticPaths() {
   if (!existsSync('content/static')) return [];
@@ -66,8 +65,6 @@ const jsonld = JSON.stringify(isEditor ? {
         <div set:html={s.body} />
       </section>
     ))}
-    {/* The public corrections log, newest first (row 437). */}
-    {d.slug === 'data-quality' && <Corrections all={true} />}
     <Reading reading={d.reading} heading={`What does this ${d.title.toLowerCase()} page commit us to?`} />
     <p class="doc-foot">
       Questions or a correction for this page? Email
