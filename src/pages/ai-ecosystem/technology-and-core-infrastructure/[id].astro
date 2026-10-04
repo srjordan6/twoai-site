@@ -148,10 +148,11 @@ const famMembers: any[] = isFamily && Array.isArray(sec.members) ? sec.members :
 // HISTORY, theworldofai row 423 (Stephen, 2026-10-03). The pipeline writes
 // sec.history (twoai_family_history.go): dated entries in our own words from
 // the family's Wikipedia article and the developer's announcements, or from
-// our catalog's release dates when there is no article. HISTORY_LIVE stays
-// false until Stephen approves the section's wording.
-const HISTORY_LIVE = false;
-const famHist: any = isFamily && HISTORY_LIVE && sec.history && Array.isArray(sec.history.entries) && sec.history.entries.length > 0 ? sec.history : null;
+// our catalog's release dates when there is no article. Stephen approved the
+// wording on 2026-10-04. Only histories written under the version 2 rules
+// show: version 1 let a catalog date stand in for a Wikipedia event.
+const HISTORY_LIVE = true;
+const famHist: any = isFamily && HISTORY_LIVE && sec.history && Number(sec.history.v) >= 2 && Array.isArray(sec.history.entries) && sec.history.entries.length > 0 ? sec.history : null;
 const HIST_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const histDate = (d: string) => {
   const [y, m, dd] = String(d || '').split('-');
