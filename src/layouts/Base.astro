@@ -532,6 +532,8 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
     .print-head { display: none; }
     /* ANALYSIS, theworldofai row 437: interpretation is labelled so news and
        analysis are never mixed silently. */
+    .ds-prov-solo { color: #7A8A9E; font-size: 13px; margin: 0 0 18px; line-height: 1.5; }
+    .ds-prov-solo a { color: #201868; }
     .analysis-tag { display: inline-block; margin: 0 0 6px; padding: 1px 8px; border: 1px solid #F07800; border-radius: 3px;
       font-family: Poppins, system-ui, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #F07800; }
     .print-tools { display: flex; justify-content: flex-end; margin: 0 0 6px; }
@@ -752,6 +754,11 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
           shows nothing here, so this can be adopted template by template
           without a flag day. */}
       {doc && <DataStamp doc={doc} label={stampLabel ?? 'Generated'} provenance={prov} />}
+      {/* A page with model-written text but no date stamp (company pages,
+          hand-written pages with a reading) still says so (row 437). */}
+      {!doc && prov === 'drafted' && (
+        <p class="ds-prov ds-prov-solo">Drafted by a language model from the sources below, under this site's <a href="/editorial-policy/">editorial rules</a>.</p>
+      )}
       <Corrections />
     </div>
   </main>
