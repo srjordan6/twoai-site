@@ -145,6 +145,21 @@ const topicsLinking = (href: string) => dcTopics.filter((t) => (t.related_links 
 const firstSentence = (t: string) => { const m = String(t || '').match(/^.*?[.!?](\s|$)/); return (m ? m[0] : String(t || '')).trim(); };
 const paras = (t: string) => String(t || '').split(/\r?\n\s*\r?\n/).map((p) => p.trim()).filter(Boolean);
 const famMembers: any[] = isFamily && Array.isArray(sec.members) ? sec.members : [];
+// HISTORY, theworldofai row 423 (Stephen, 2026-10-03). The pipeline writes
+// sec.history (twoai_family_history.go): dated entries in our own words from
+// the family's Wikipedia article and the developer's announcements, or from
+// our catalog's release dates when there is no article. HISTORY_LIVE stays
+// false until Stephen approves the section's wording.
+const HISTORY_LIVE = false;
+const famHist: any = isFamily && HISTORY_LIVE && sec.history && Array.isArray(sec.history.entries) && sec.history.entries.length > 0 ? sec.history : null;
+const HIST_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const histDate = (d: string) => {
+  const [y, m, dd] = String(d || '').split('-');
+  if (dd) return `${+dd} ${HIST_MONTHS[+m - 1]} ${y}`;
+  if (m) return `${HIST_MONTHS[+m - 1]} ${y}`;
+  return y;
+};
+const histPrimary: any[] = famHist && Array.isArray(famHist.primary) ? famHist.primary : [];
 const famLive = famMembers.filter((m) => !m.delisted);
 const famRetired = famMembers.filter((m) => m.delisted);
 const famTok = (n: number) => (!n ? 'not listed' : n >= 1000000 ? `${+(n / 1000000).toFixed(2)}M` : n >= 1000 ? `${Math.round(n / 1000)}k` : `${n}`);
@@ -821,6 +836,23 @@ const facBare = sec.shape === 'dc-facility' && !(
           <h2>Strengths and limits</h2>
           <p>{sec.family_reading.text}</p>
           <p class="meta-line">Written from the facts on this page only, {sec.family_reading.written_on}.</p>
+        </>
+      )}
+
+      {famHist && (
+        <>
+          <h2>History</h2>
+          <ul class="fam-history">
+            {famHist.entries.map((e: any) => (
+              <li><time datetime={e.date}>{histDate(e.date)}</time>: {e.text}</li>
+            ))}
+          </ul>
+          {famHist.now && <p>{famHist.now}</p>}
+          {famHist.basis === 'wikipedia' ? (
+            <p class="meta-line">Written in our own words from the English Wikipedia article <a href={famHist.wiki_url} rel="noopener">{famHist.wiki_title}</a>, retrieved {famHist.retrieved}, licensed CC BY-SA{histPrimary.length > 0 && <>, and the developer's announcements {histPrimary.map((p: any, i: number) => <>{i > 0 && ', '}<a href={p.url} rel="noopener">{p.title}</a></>)}</>}.</p>
+          ) : (
+            <p class="meta-line">Built from the release dates in our model catalog, as no encyclopedia article on this family was found.</p>
+          )}
         </>
       )}
 
