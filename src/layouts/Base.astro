@@ -15,15 +15,26 @@ import PillarBox from '../components/PillarBox.astro';
 import Topbar from '../components/Topbar.astro';
 import DataStamp from '../components/DataStamp.astro';
 import AskBox from '../components/AskBox.astro';
+import Corrections from '../components/Corrections.astro';
 import { readFileSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
-interface Props { title: string; description: string; current?: string; jsonld?: string; canonicalOverride?: string; noindex?: boolean; ogType?: string; rail?: boolean; titleTail?: string; doc?: Record<string, any>; stampLabel?: string; redirect?: string; }
+interface Props { title: string; description: string; current?: string; jsonld?: string; canonicalOverride?: string; noindex?: boolean; ogType?: string; rail?: boolean; titleTail?: string; doc?: Record<string, any>; stampLabel?: string; redirect?: string; provenance?: 'drafted' | 'compiled' | 'none'; }
 /* rail=false drops the section-index card and lets the content run full width.
    The home page opts out: it IS the ecosystem map, so a card listing the same
    five categories beside it is the page repeating itself in miniature, and it
    pushed the hero, the ask box and everything below off centre. */
-const { title, description, current = '', jsonld, canonicalOverride, noindex = false, ogType = 'website', rail = true, titleTail, doc: docProp, stampLabel, redirect } = Astro.props;
+const { title, description, current = '', jsonld, canonicalOverride, noindex = false, ogType = 'website', rail = true, titleTail, doc: docProp, stampLabel, redirect, provenance } = Astro.props;
+// HOW THE TEXT WAS MADE (row 437): a page that renders model-written text
+// says provenance="drafted"; a page built from a pipeline record defaults to
+// "compiled"; a hand-written page passes no doc and shows neither line.
+// The page body is rendered first so the layout can see whether any of it
+// was model-written: every component and block that renders such text
+// carries data-llm="drafted" (Reading, PersonProfile, story summaries and
+// why-it-matters lines, source summaries, company profiles).
+const slotHtml = await Astro.slots.render('default');
+const draftedInBody = slotHtml.includes('data-llm="drafted"');
+const prov = provenance ?? (draftedInBody ? 'drafted' : docProp ? 'compiled' : 'none');
 
 // THE ASK BOX ON EVERY PAGE. Stephen, 2026-09-23: put it on as many pages as
 // possible. Visitors land deep in the site from search and answer engines, so
@@ -519,6 +530,10 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
   <script src="/js/print.js" defer></script>
   <style is:inline>
     .print-head { display: none; }
+    /* ANALYSIS, theworldofai row 437: interpretation is labelled so news and
+       analysis are never mixed silently. */
+    .analysis-tag { display: inline-block; margin: 0 0 6px; padding: 1px 8px; border: 1px solid #F07800; border-radius: 3px;
+      font-family: Poppins, system-ui, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #F07800; }
     .print-tools { display: flex; justify-content: flex-end; margin: 0 0 6px; }
     .print-btn { display: none; font-family: Poppins, system-ui, sans-serif; font-size: 12.5px; font-weight: 600;
       color: #201868; background: transparent; border: 1px solid #c9c6dd; border-radius: 4px;
@@ -677,7 +692,7 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
       <div class="print-tools" data-nosnippet data-pagefind-ignore>
         <button type="button" class="print-btn" id="print-btn">Print this page</button>
       </div>
-      <slot />
+      <Fragment set:html={slotHtml} />
       {/* READ NEXT, NEAR THE TOP. Stephen, 2026-09-24: Clarity showed one page
           per session and 25 percent scroll depth. Visitors take the opening
           answer and leave before reaching Keep reading at the foot. This
@@ -736,7 +751,8 @@ const gaSection = _seg[0] === 'ai-ecosystem' ? (_seg[2] ? 'detail' : 'category')
           the foot of the content; a page that has not been wired yet simply
           shows nothing here, so this can be adopted template by template
           without a flag day. */}
-      {doc && <DataStamp doc={doc} label={stampLabel ?? 'Generated'} />}
+      {doc && <DataStamp doc={doc} label={stampLabel ?? 'Generated'} provenance={prov} />}
+      <Corrections />
     </div>
   </main>
 

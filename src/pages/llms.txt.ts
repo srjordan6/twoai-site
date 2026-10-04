@@ -36,6 +36,27 @@ const bookCat = readJSON('content/learn/book-catalog.json');
 const bcCount = bookCat?.total ?? 0;
 const bcFree = bookCat?.free ?? 0;
 
+// Added 2026-10-04 (Stephen: update llms.txt): the AI CVE tracker, its CWE
+// weakness classes, the model family pages and the industry source pages.
+const cveIdx = readJSON('content/news/cves.json');
+const cveCount = cveIdx?.total ?? (Array.isArray(cveIdx?.cves) ? cveIdx.cves.length : 0);
+const cveKev = cveIdx?.kev ?? 0;
+const cweIdx = readJSON('content/news/cwes.json');
+const cweCount = Array.isArray(cweIdx?.cwes) ? cweIdx.cwes.length : 0;
+let familyCount = 0, sourcePageCount = 0;
+try {
+  for (const name of readdirSync('content/tech')) {
+    if (name.startsWith('family-') && name.endsWith('.json')) familyCount++;
+  }
+} catch { /* no family pages yet */ }
+try {
+  for (const name of readdirSync('content/industries')) {
+    if (!name.endsWith('.json')) continue;
+    const d = readJSON('content/industries/' + name);
+    if (d?.kind === 'source-summary' && d?.built_from === 'site-crawl' && !d?.withdrawn) sourcePageCount++;
+  }
+} catch { /* fall through */ }
+
 const caseCount = lawsuits?.count ?? 104;
 const generated = lawsuits?.generated ?? '2026-08-20';
 const mcpCount = mcp?.total ?? 1908;
@@ -319,8 +340,30 @@ ${generated}.
   staff, every step an existing page.
 - [Data Quality](https://theworldofai.org/data-quality/): rebuilt every run;
   each section's sources, page counts, refresh schedule and last check, the
-  live counts of broken and blocked outbound links, and every published
-  correction with its date.
+  live counts of broken and blocked outbound links, and the public corrections
+  log: every corrected published fact with its date and what the earlier
+  version said, newest first. A corrected page also carries its own dated
+  note.${cveCount ? `
+- [AI CVE Tracker](https://theworldofai.org/ai-news/cves/): ${fmt(cveCount)}
+  published vulnerabilities in AI software and services${cveKev ? `, ${fmt(cveKev)} of
+  them in CISA's Known Exploited Vulnerabilities catalogue` : ''}, indexed A to Z by
+  product and newest first. Each CVE has its own page at
+  https://theworldofai.org/ai-news/cves/{CVE id}/ with the description as
+  filed with the CVE Program, its weakness class, the fix and what to do until
+  it is patched.` : ''}${cweCount ? ` The weakness classes are explained on their own page,
+  [CWE for AI](https://theworldofai.org/ai-ecosystem/enterprise-applications-governance-and-tools/aa6058ad/):
+  the ${fmt(cweCount)} MITRE CWE classes that AI CVEs are filed under, each with
+  how CWE and CVE differ and recent examples.` : ''}${familyCount ? `
+- AI model families (under Technology and Core Infrastructure): ${fmt(familyCount)}
+  family pages for Large Language Models, Reasoning Models and Multimodal
+  Models, each listing every version with context window, price and inputs,
+  the family's changelog, its providers, a reading of strengths and limits,
+  and a dated history written from the family's encyclopedia article and the
+  developer's announcements, or from this site's catalog where no article
+  exists.` : ''}${sourcePageCount ? `
+- Industry source pages: ${fmt(sourcePageCount)} of the primary sources the
+  industry pages cite have a page of their own, written only after the
+  source's whole site has been read, listing the pages the summary draws on.` : ''}
 - Books (under Research, Knowledge and Learning): an independent shelf of AI
   titles, followed by the SRJ book series on AI audit, governance, and
   security, labelled as the publisher's own and linked with rel=sponsored.${bcCount ? ` The
@@ -376,6 +419,10 @@ https://theworldofai.org/embed/.
 
 ## About this publication
 - https://theworldofai.org/about/ (who publishes this and how pages are made)
+- https://theworldofai.org/stephen-jordan/ (the editor, Stephen R. Jordan:
+  biography, identifiers including Wikidata Q140622333 and ORCID
+  0009-0009-6913-0886; every news article names him as editor)
+- https://theworldofai.org/editorial-policy/ (editorial policy)
 - https://theworldofai.org/contact/ (corrections, press, data questions)
 - https://theworldofai.org/disclosure/ (advertising and affiliate policy)
 - https://theworldofai.org/privacy/ (privacy policy)
@@ -383,7 +430,8 @@ https://theworldofai.org/embed/.
 - https://theworldofai.org/disclaimer/ (editorial and legal disclaimer)
 
 ## Update cadence
-The main pipeline runs every three hours; the "generated" or "last verified"
+The main pipeline runs twice a day, at 10:00 and 18:00 UTC, until 12 October
+2026, and every three hours after that; the "generated" or "last verified"
 date on each page and in each API file is the verification date. A second,
 separate run once a day reads publishers' own pages to fill facility
 specifications and company details, and audits every page on this site for
@@ -416,7 +464,14 @@ written to fill a template, and a page that holds no answer carries no
 question. A figure a vendor or standards body publishes about its own product
 is reported as that body's statement, not as an independent finding. Every page
 names its publisher in its markup: The World of AI, an independent publication
-of SRJ Consulting & Services LLC. Corrections are welcomed at
+of SRJ Consulting & Services LLC. Where a language model drafted any of a
+page's text (story summaries, readings, source summaries, histories), the page
+says so beside its date stamp, "Drafted by a language model from the sources
+below, under this site's editorial rules"; a page built only from records says
+"Compiled automatically from the records cited". Interpretation, such as a
+story's "Why it matters" line or a reading, is labelled Analysis, so reporting
+and analysis are never mixed silently. A corrected fact is shown corrected on
+its page with the date and what the earlier version said. Corrections are welcomed at
 info@srjconsultingservices.com.
 
 ## Citation format

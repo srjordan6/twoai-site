@@ -1,0 +1,54 @@
+---
+/**
+ * VISIBLE CORRECTIONS, theworldofai row 437 (Stephen, 2026-10-04, ahead of a
+ * NewsGuard review). When a published fact is corrected, the page it was on
+ * shows a dated note. The records come from twoai_corrections in Postgres,
+ * written by the pipeline to content/meta/corrections.json and matched here
+ * by the page's path, so every kind of page carries its notes without each
+ * template having to know. The full log is on /data-quality/.
+ */
+import { existsSync, readFileSync } from 'node:fs';
+
+interface Props { path?: string; all?: boolean }
+const { path, all = false } = Astro.props;
+
+const g = globalThis as any;
+if (!g.__twoaiCorrections) {
+  let items: any[] = [];
+  try {
+    if (existsSync('content/meta/corrections.json')) {
+      const d = JSON.parse(readFileSync('content/meta/corrections.json', 'utf8'));
+      items = Array.isArray(d.items) ? d.items : [];
+    }
+  } catch { /* no log yet: nothing renders */ }
+  items.sort((a, b) => String(b.corrected_on || '').localeCompare(String(a.corrected_on || '')));
+  g.__twoaiCorrections = items;
+}
+const norm = (p: string) => '/' + String(p || '').replace(/^https?:\/\/[^/]+/, '').replace(/^\/+|\/+$/g, '') + '/';
+const here = norm(path ?? Astro.url.pathname);
+const list: any[] = all ? g.__twoaiCorrections : g.__twoaiCorrections.filter((c: any) => norm(c.path) === here);
+---
+{!all && list.length > 0 && (
+  <div class="corrections" data-pagefind-ignore>
+    {list.map((c: any) => (
+      <p>Corrected {c.corrected_on}: earlier version said {c.earlier}.{c.note && <> {c.note}</>}</p>
+    ))}
+  </div>
+)}
+{all && list.length > 0 && (
+  <section class="corrections-log">
+    <h2>Corrections</h2>
+    <ul>
+      {list.map((c: any) => (
+        <li><time datetime={c.corrected_on}>{c.corrected_on}</time>, <a href={norm(c.path)}>{c.title || norm(c.path)}</a>: earlier version said {c.earlier}.{c.note && <> {c.note}</>}</li>
+      ))}
+    </ul>
+  </section>
+)}
+<style>
+  .corrections { border-left: 3px solid #F07800; background: #FFF6EC; padding: 8px 12px; margin: 0 0 18px; font-size: 14px; color: #1A1357; }
+  .corrections p { margin: 4px 0; }
+  .corrections-log ul { padding-left: 18px; }
+  .corrections-log li { margin: 6px 0; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .corrections { background: rgba(240,120,0,.08); color: inherit; } }
+</style>

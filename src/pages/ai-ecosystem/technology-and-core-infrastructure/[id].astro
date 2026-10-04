@@ -502,6 +502,7 @@ const facBare = sec.shape === 'dc-facility' && !(
 ---
 <Base title={`${pageTitle}${sec.shape === 'dc-facility' && sec.uid ? ` (${sec.uid})` : ''} — The World of AI`} description={desc.slice(0, 300)}
   current={`${BASE}/`} jsonld={jsonld} noindex={facBare || metricBare || Boolean(facMovedTo)} doc={sec} stampLabel="Last verified"
+  provenance={(isProfile || isFamily) ? 'drafted' : undefined}
   canonicalOverride={facMovedTo ? `https://theworldofai.org${BASE}/${facMovedTo}/` : undefined}
   redirect={facMovedTo ? `${BASE}/${facMovedTo}/` : undefined}>
   {/* THE FACT BOX LIVES IN THE RAIL, under the section navigation card.
@@ -834,6 +835,7 @@ const facBare = sec.shape === 'dc-facility' && !(
 
       {sec.family_reading?.text && (
         <>
+          <p class="analysis-tag">Analysis</p>
           <h2>Strengths and limits</h2>
           <p>{sec.family_reading.text}</p>
           <p class="meta-line">Written from the facts on this page only, {sec.family_reading.written_on}.</p>

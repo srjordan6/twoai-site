@@ -191,6 +191,8 @@ const personFaqLd = faqSchema && pf.length >= 2
   {readingParas.length > 0 && (
     <>
       <h3>What does {person.name}&rsquo;s record show?</h3>
+      <span data-llm="drafted" hidden></span>
+      <p class="analysis-tag">Analysis</p>
       {readingParas.map((p) => <p>{p}</p>)}
       <p class="meta-line">Written {person.reading.generated_on} from this profile and the sources
         below, and nothing else. It is our reading rather than a sourced fact.</p>

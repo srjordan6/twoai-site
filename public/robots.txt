@@ -14,10 +14,18 @@
 User-agent: *
 Allow: /
 
+# The same policy in machine-readable form (Cloudflare's Content Signals
+# Policy, contentsignals.org): yes to search indexing, yes to use as live
+# input for AI answers, yes to AI training. Updated 2026-10-04.
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
+
 # The front door for machines, in order of usefulness:
-#   llms.txt   a guided index of every section, written for language models
-#   /api/      the same facts as JSON: laws, lawsuits, glossary, tools, and more
-#   sitemap    every published URL
+#   llms.txt   a guided index of every section, written for language models,
+#              with how pages are made: which text a language model drafted,
+#              what is labelled analysis, and where corrections are logged
+#   /api/      the same facts as JSON: laws, lawsuits, glossary, tools,
+#              companies, people, research, sources, and more
+#   sitemap    every published URL, refreshed with every build
 # https://theworldofai.org/llms.txt
 # https://theworldofai.org/api/
 Sitemap: https://theworldofai.org/sitemap-index.xml

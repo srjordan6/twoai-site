@@ -47,6 +47,8 @@ const paras = capParagraphs(reading?.body);
 ---
 {paras.length > 0 && (
   <section class="reading">
+    <span data-llm="drafted" hidden></span>
+    <p class="analysis-tag">Analysis</p>
     <h2>{heading}</h2>
     {paras.map((p) => <p>{p}</p>)}
     <p class="meta-line">

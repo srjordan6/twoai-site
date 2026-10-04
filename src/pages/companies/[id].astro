@@ -269,6 +269,7 @@ const jsonld = JSON.stringify({
   {paras.length > 0 && (
     <>
       <h2>What does {n} do?</h2>
+      <span data-llm="drafted" hidden></span>
       {paras.map((p) => <p>{p}</p>)}
       <p class="meta-line">Written {profileText.generated_on} from what {n} states on its own site
         and the facts this site holds, and rewritten when that site changes. Claims attributed to the

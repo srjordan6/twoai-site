@@ -32,8 +32,11 @@ interface Props {
   /** A source line to carry alongside, where the page has one. */
   source?: string;
   sourceUrl?: string;
+  /** How the page's text was made (theworldofai row 437, 2026-10-04): a
+   *  language model drafted some of it, or it is compiled from records. */
+  provenance?: 'drafted' | 'compiled' | 'none';
 }
-const { doc = {}, uid, builtAt, generated, label = 'Generated', source, sourceUrl } = Astro.props;
+const { doc = {}, uid, builtAt, generated, label = 'Generated', source, sourceUrl, provenance = 'none' } = Astro.props;
 
 const theUid = uid ?? doc.page_uid ?? doc.uid ?? '';
 const theBuilt = builtAt ?? doc.built_at ?? '';
@@ -110,6 +113,15 @@ const currentWord = cadence > 0 && Number.isFinite(ageDays)
     <span class="ds-by">Published by <a href="/about/" rel="author">The World of AI</a></span>
   </p>
 )}
+{/* AI DISCLOSURE, theworldofai row 437 (Stephen, 2026-10-04, before a
+    NewsGuard review): a reader can see on the page, and on a printout, when
+    a language model drafted any of its text. */}
+{provenance === 'drafted' && (
+  <p class="ds-prov">Drafted by a language model from the sources below, under this site's <a href="/editorial-policy/">editorial rules</a>.</p>
+)}
+{provenance === 'compiled' && (
+  <p class="ds-prov">Compiled automatically from the records cited.</p>
+)}
 
 <style>
   .datastamp {
@@ -132,6 +144,13 @@ const currentWord = cadence > 0 && Number.isFinite(ageDays)
     padding: 1px 5px;
     color: #4a4a55;
   }
+  .ds-prov {
+    color: var(--gray, #7A8A9E);
+    font-size: 13px;
+    margin: -12px 0 18px;
+    line-height: 1.5;
+  }
+  .ds-prov a { color: var(--navy, #201868); }
   @media (max-width: 520px) {
     .datastamp { font-size: 13px; }
   }

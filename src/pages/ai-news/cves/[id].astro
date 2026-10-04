@@ -62,7 +62,7 @@ const jsonld = JSON.stringify({
 });
 ---
 <Base title={`${headline} — AI CVE tracker — The World of AI`} description={desc} current="/ai-news/" jsonld={jsonld}
-  doc={{ page_uid: c.uid, built_at: c.generated, generated: c.published }} stampLabel="CVE recorded">
+  doc={{ page_uid: c.uid, built_at: c.generated, generated: c.published }} stampLabel="CVE recorded" provenance="drafted">
   <p class="meta-line"><a href="/ai-news/">AI News</a> · <a href="/ai-news/cves/">AI CVE tracker</a></p>
   <h1>{written ? written : c.cve_id}</h1>
   {written && <p class="cve-id"><code>{c.cve_id}</code></p>}

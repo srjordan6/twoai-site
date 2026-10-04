@@ -346,6 +346,7 @@ const jsonld = JSON.stringify({
     <div class="main">
       {story.Summary && (
         <div class="story-summary" id="the-story">
+          <span data-llm="drafted" hidden></span>
           <h2>The story</h2>
           {/* The summariser writes Markdown, and its output is stored as
               written: dozens of archive summaries begin "# Summary". Split on
@@ -371,6 +372,8 @@ const jsonld = JSON.stringify({
 
       {whyHere && (
         <div class="why" id="why-here">
+          <span data-llm="drafted" hidden></span>
+          <p class="analysis-tag">Analysis</p>
           <h2>Why it matters here</h2>
           <p>{whyHere.text}</p>
           {whyCites.length > 0 && (
@@ -383,6 +386,8 @@ const jsonld = JSON.stringify({
 
       {story.Why && (
         <div class="why" id="why">
+          <span data-llm="drafted" hidden></span>
+          <p class="analysis-tag">Analysis</p>
           <p class="box-label">Why it matters</p>
           <p>{story.Why}</p>
         </div>

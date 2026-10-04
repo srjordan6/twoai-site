@@ -271,6 +271,7 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
            website, digest all it has to offer, and only then write the page.
            The pages the writing drew on are listed here, at the very bottom. */
         <div class="meta-line source-line">
+          <span data-llm="drafted" hidden></span>
           <p>Written from a reading of {art.site_pages_read} pages on {art.site_domain}, read {art.source_read_on}. The pages this summary draws on:</p>
           <ul class="site-pages">
             {art.site_pages.map((p) => (
