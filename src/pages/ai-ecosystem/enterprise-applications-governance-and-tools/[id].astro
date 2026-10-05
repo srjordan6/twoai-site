@@ -11,6 +11,7 @@ import { capParagraphs } from '../../../lib/prose';
 import Reading from '../../../components/Reading.astro';
 import PinnedNews from '../../../components/PinnedNews.astro';
 import SourcedFacts from '../../../components/SourcedFacts.astro';
+import Faq from '../../../components/Faq.astro';
 import CweTable from '../../../components/CweTable.astro';
 import StateLawsuitMap from '../../../components/StateLawsuitMap.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
@@ -216,6 +217,16 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
         {art.parent_path && <> &middot; {' '}<a href={art.parent_path}>{art.parent_name}</a></>}
         {art.hub_path && art.hub_path !== `${BASE}/${art.uid}/` && <>, in {' '}<a href={art.hub_path}>{art.hub_name || 'this section'}</a></>}</p>
       {art.drafted && <span data-llm="drafted" hidden></span>}
+      {(art.key_points || []).length > 0 && (
+        /* Row 481: the section trees' key points, then the explainer. */
+        <ul class="sp-keys">{art.key_points.map((k) => <li>{k}</li>)}</ul>
+      )}
+      {art.explainer && (
+        <section>
+          <h2>How it works</h2>
+          {capParagraphs(art.explainer).map((t) => <p>{t}</p>)}
+        </section>
+      )}
       {(art.developments || []).length > 0 && (
         /* SECTION TREES WRITTEN BY THEWORLDOFAI, rows 457 and 458: dated
            developments, each citing its primary sources. */
@@ -239,6 +250,63 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
           {capParagraphs(s.body).map((t) => <p>{t}</p>)}
         </section>
       ))}
+      <Faq items={art.faq || []} heading="Common questions" />
+      <SourcedFacts doc={art} />
+      {art.related && (
+        /* RELATED RECORDS, row 481. What the site holds on the page's subject,
+           matched by the pipeline (twoai_section_related.go). Each block shows
+           only when it has rows. */
+        <>
+          {(art.related.terms || []).length > 0 && (
+            <section class="sp-rel">
+              <h2>Terms used on this page</h2>
+              <ul>{art.related.terms.map((t) => <li><a href={t.path}>{t.term}</a>{t.line && <>: {t.line}</>}</li>)}</ul>
+            </section>
+          )}
+          {(art.related.companies || []).length > 0 && (
+            <section class="sp-rel">
+              <h2>Companies named on this page</h2>
+              <ul class="sp-inline">{art.related.companies.map((c) => <li><a href={c.path}>{c.name}</a></li>)}</ul>
+            </section>
+          )}
+          {(art.related.facts || []).length > 0 && (
+            <section class="sp-rel">
+              <h2>Related facts, checked at the source</h2>
+              <ul>{art.related.facts.map((x) => (
+                <li>{x.date && <b>{x.date}: </b>}{x.claim}
+                  <span class="sp-src">Source: <a href={x.source_url} rel="noopener">{x.source_title || x.source_url}</a></span></li>
+              ))}</ul>
+            </section>
+          )}
+          {(art.related.news || []).length > 0 && (
+            <section class="sp-rel">
+              <h2>In the news</h2>
+              <ul>{art.related.news.map((n) => <li>{n.date && <b>{n.date}: </b>}<a href={n.path}>{n.headline}</a></li>)}</ul>
+            </section>
+          )}
+          {(art.related.papers || []).length > 0 && (
+            <section class="sp-rel">
+              <h2>Most cited research</h2>
+              <p class="meta-line">Papers whose titles match this subject, most cited first. Citation counts from OpenAlex.</p>
+              <ul>{art.related.papers.map((p) => (
+                <li><a href={p.url} rel="noopener">{p.title}</a>{p.year > 0 && <> ({p.year})</>}{p.cited_by > 0 && <>, cited {p.cited_by.toLocaleString('en-US')} times</>}</li>
+              ))}</ul>
+            </section>
+          )}
+          {(art.related.lawsuits || []).length > 0 && (
+            <section class="sp-rel">
+              <h2>Related lawsuits</h2>
+              <ul>{art.related.lawsuits.map((l) => <li><a href={l.path}>{l.name}</a>{l.status && <>, {l.status}</>}</li>)}</ul>
+            </section>
+          )}
+          {(art.related.cves || []).length > 0 && (
+            <section class="sp-rel">
+              <h2>Related vulnerabilities</h2>
+              <ul>{art.related.cves.map((c) => <li><a href={c.path}>{c.id}</a>: {c.headline}</li>)}</ul>
+            </section>
+          )}
+        </>
+      )}
       {artKids.length > 0 && (
         <>
           <h2>The {artKids.length} pages in {art.name}</h2>
@@ -1222,4 +1290,9 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
   .cs-sum { margin: .25rem 0 0; color: #46505e; }
   .sp-devs li { padding: .4em 0; }
   .sp-devs .sp-src { display: block; font-size: 13px; color: #7A8A9E; }
+  .sp-keys { margin: .6em 0 1.2em; padding-left: 1.2em; }
+  .sp-keys li { padding: .2em 0; }
+  .sp-rel li { padding: .3em 0; }
+  .sp-rel .sp-src { display: block; font-size: 13px; color: #7A8A9E; }
+  .sp-inline { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: .4em 1.2em; }
 </style>
