@@ -49,6 +49,7 @@ export function getStaticPaths() {
       props: { company: d.company, generated: d.generated, profileText: d.profile_text || null, siteUrl: d.website || '', reading: d.reading || null,
         lobbying: d.lobbying || null,
         pinnedNews: Array.isArray(d.pinned_news) ? d.pinned_news : null,
+        people: Array.isArray(d.people) ? d.people : [],
         stock: (stocks.by_company || {})[d.company.uid] || null,
         stockPending: pendingByCompany[d.company.uid] || null,
         operator: (() => {
@@ -67,7 +68,7 @@ export function getStaticPaths() {
         })() },
     }));
 }
-const { company, generated, profileText, siteUrl, reading, stock, stockPending, lobbying, operator, pinnedNews } = Astro.props;
+const { company, generated, profileText, siteUrl, reading, stock, stockPending, lobbying, operator, pinnedNews, people } = Astro.props;
 // Data Centers topic pages that name this company (theworldofai bridge row
 // 399, 2026-10-03): the Tesla Megapack page from Tesla, the power page from
 // xAI, SpaceX, Google, Nvidia.
@@ -274,6 +275,17 @@ const jsonld = JSON.stringify({
       <p class="meta-line">Written {profileText.generated_on} from what {n} states on its own site
         and the facts this site holds, and rewritten when that site changes. Claims attributed to the
         company are its own; the numbers in the table above are verified separately.</p>
+    </>
+  )}
+
+  {people.length > 0 && (
+    <>
+      {/* Founders this site has a page for, from the entity graph
+          (theworldofai row 447), so the link runs both ways. */}
+      <h2>Who founded {n}?</h2>
+      <ul>
+        {people.map((p: any) => <li><a href={p.href}>{p.name}</a></li>)}
+      </ul>
     </>
   )}
 
