@@ -122,7 +122,7 @@ ${generated}.
 - [AI Glossary](https://theworldofai.org/ai-glossary/): ${fmt(termCount)} AI terms defined
   in plain English with origin, example, and related terms.
 - [AI Lawsuit Tracker](https://theworldofai.org/ai-lawsuits/): ${fmt(caseCount)} living case
-  pages with daily docket checks, full timelines, and both the CourtListener
+  pages with dockets checked in rotation, every case at least every two weeks, full timelines, and both the CourtListener
   docket record and the govinfo opinion text where available. The tracker opens
   with the answer: how many cases, as of what date, how they divide by the law
   they are brought under, which companies are named most often, and what was

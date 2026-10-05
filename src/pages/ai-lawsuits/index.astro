@@ -10,7 +10,7 @@ const caseUid = (c) => c.uid || createHash('sha256').update(`lawsuit:${c.slug}`)
 const s = existsSync('content/lawsuits/lawsuits.json')
   ? JSON.parse(readFileSync('content/lawsuits/lawsuits.json', 'utf8'))
   : { cases: [], count: 0, generated: '' };
-const desc = `${s.count} AI lawsuits tracked in United States courts as of ${s.generated || 'today'}: copyright, privacy, hiring and safety cases against AI companies, with dockets checked daily.`;
+const desc = `${s.count} AI lawsuits tracked in United States courts as of ${s.generated || 'today'}: copyright, privacy, hiring and safety cases against AI companies, with dockets checked in rotation, every case at least every two weeks.`;
 
 // THE ANSWER FIRST. Microsoft Clarity's citation report for 2026-09-12 to 18
 // showed this hub cited 85 times in AI answers in one week, and the questions
@@ -82,7 +82,7 @@ const jsonld = JSON.stringify({
   <p class="answer">As of {asOf || 'today'}, this tracker follows <b>{s.count} AI lawsuits</b> in United States courts.
     {catList.length > 0 && <> By claim: {catList.slice(0, 5).map(([k, v]) => `${v} ${k}`).join(', ')}.</>}
     {topDefs.length > 0 && <> The most sued companies are {topDefs.map(([k, v], i) => <>{i > 0 && (i === topDefs.length - 1 ? ' and ' : ', ')}{DEF_NAME[k] || k} ({v})</>)}.</>}
-    {' '}Every case is a living page: dockets are checked against CourtListener daily and each page carries its full timeline.</p>
+    {' '}Every case is a living page that carries its full timeline, with CourtListener dockets checked in rotation, every case at least every two weeks.</p>
   {s.generated && <p class="meta-line">Last verified: {s.generated} · Source: CourtListener / RECAP ·
     See the cases <a href="/ai-ecosystem/enterprise-applications-governance-and-tools/de99d3d0/">by state on the map</a> ·
     {' '}<a href="/embed/">Embed this count on your site</a></p>}
@@ -140,7 +140,7 @@ const jsonld = JSON.stringify({
                 surfacing it to us, and the page should not claim otherwise. */}
             <td>{c.latest_development
               ? <>{c.latest_development_date && <b>{c.latest_development_date}: </b>}{c.latest_development}</>
-              : <span class="pending">Filed. No docket development recorded by this tracker yet; checked daily.</span>}</td>
+              : <span class="pending">Filed. No docket development recorded by this tracker yet; dockets checked in rotation, every case at least every two weeks.</span>}</td>
             {/* The case's own uid, from the pipeline. A td, not a container the
                 empty-render check reads, so a build against content published
                 before the pipeline carried uids shows a blank cell, not a failure. */}

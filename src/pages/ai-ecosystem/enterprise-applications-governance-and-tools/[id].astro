@@ -872,7 +872,10 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
         </>
       )}
       {f.source && ownHref(f.source) ? null : f.source ? (
-        <p class="meta-line"><a href={f.source} rel="noopener">Source</a>{f.reading_path && <> &middot; <a href={f.reading_path}>Our summary of this source</a></>}</p>
+        <>
+          <p class="meta-line"><a href={f.source} rel="noopener">Source</a>{f.reading_path && <> &middot; <a href={f.reading_path}>Our summary of this source</a></>}</p>
+          {!f.reading_path && f.source_unreadable && <p class="meta-line">Summary not available, the source site could not be read.</p>}
+        </>
       ) : (
         /* NO SOURCE, NO LINK. This rendered <a href="">Source</a>
            unconditionally, so a point still being researched emitted a link
