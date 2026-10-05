@@ -889,6 +889,30 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
     );
   })}
 
+  {/* FURTHER READING FROM AN OUTSIDE LIBRARY, Stephen 2026-10-04: most of
+      intuitionlabs.ai belongs on Healthcare. Titles and links only, grouped
+      by topic, newest first; the text stays on their site. Attached by the
+      pipeline's twoai_ext_library stage as a page extra. */}
+  {sec.library && (sec.library.groups || []).length > 0 && (
+    <section class="ext-lib">
+      <h2>Further reading from {sec.library.source}</h2>
+      <p>{sec.library.source}, a consultancy working on AI in pharma and life sciences, has published
+        {' '}{sec.library.count} articles on the ground this page covers. They are grouped by topic,
+        newest first, and each opens on <a href={sec.library.source_url} rel="noopener">their site</a>.
+        Checked {sec.library.as_of}.</p>
+      {sec.library.groups.map((g) => (
+        <details>
+          <summary>{g.topic} &middot; {g.count}</summary>
+          <ul>
+            {g.items.map((it) => (
+              <li><a href={it.url} rel="noopener">{it.title}</a> <span class="ext-date">{it.date}</span></li>
+            ))}
+          </ul>
+        </details>
+      ))}
+    </section>
+  )}
+
   <p class="meta-line">Related on this site: <a href="/ai-laws/">AI laws by state</a> ·
     <a href="/ai-lawsuits/">the AI lawsuit tracker</a> ·
     <a href="/ai-tools/">the tools directory</a> ·
@@ -1188,4 +1212,9 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
   .cs-list { padding-left: 1.2rem; }
   .cs-list li { margin-bottom: 1.1rem; }
   .cs-sum { margin: .25rem 0 0; color: #46505e; }
+  .ext-lib details { border-top: 1px solid #e8e6e0; padding: .5em 0; }
+  .ext-lib summary { cursor: pointer; font-weight: 600; color: #201868; }
+  .ext-lib ul { margin: .5em 0 .3em 1.1em; }
+  .ext-lib li { padding: .15em 0; }
+  .ext-lib .ext-date { font-size: 13px; color: #7A8A9E; }
 </style>
