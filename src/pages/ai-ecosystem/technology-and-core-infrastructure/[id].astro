@@ -213,13 +213,20 @@ const isDC = sec.shape === 'datacenters';
 const FACILITY_MOVED = { a2e4b607: 'ec499e52' };
 const facMovedTo = FACILITY_MOVED[sec.uid] || '';
 
-const isDCChild = ['dc-state', 'dc-metric', 'dc-builder', 'dc-smr', 'dc-grid', 'dc-facility', 'dc-operator', 'dc-operators-index', 'dc-states-index'].includes(sec.shape);
+const isDCChild = ['dc-state', 'dc-metric', 'dc-builder', 'dc-smr', 'dc-grid', 'dc-facility', 'dc-operator', 'dc-operators-index', 'dc-states-index', 'dc-category'].includes(sec.shape);
 const metricUID = isDC ? Object.fromEntries((sec.metric_pages || []).map((m) => [m.label, m.uid])) : {};
 const builderUID = isDC ? Object.fromEntries((sec.builder_pages || []).map((b) => [b.label, b.uid])) : {};
 const dcOps = isDC ? (sec.metrics || []).filter((m) => m.track === 'operations') : [];
 const dcMkt = isDC ? (sec.metrics || []).filter((m) => m.track === 'market') : [];
 const dcOpsCats = [...new Set(dcOps.map((m) => m.category))];
 const dcMktCats = [...new Set(dcMkt.map((m) => m.category))];
+// The eight metric categories, each its own page since row 451. Until the
+// pipeline has written them, the categories stay headings as before.
+const dcHubs = isDC && Array.isArray(sec.category_hubs) ? sec.category_hubs : [];
+const dcOpsHubs = dcHubs.filter((h) => h.track === 'operations');
+const dcMktHubs = dcHubs.filter((h) => h.track !== 'operations');
+const dcCatLive = sec.shape === 'dc-category' ? (sec.live || {}) : {};
+const dcCatMoney = (v) => v >= 1e9 ? `$${(v / 1e9).toFixed(1)} billion` : `$${Math.round(v / 1e6)} million`;
 const dcSrcKinds = [
   ['grid-queue', 'Grid operators and public power data'],
   ['market-intel', 'Market intelligence, commercial'],
@@ -348,6 +355,7 @@ const pageTitle =
   sec.shape === 'dc-operators-index' ? 'Data centers by operator' :
   sec.shape === 'dc-states-index' ? 'Data centers by state' :
   sec.shape === 'dc-metric' ? (sec.metric?.metric || secName) :
+  sec.shape === 'dc-category' ? `${sec.name}: data center metrics` :
   sec.shape === 'dc-builder' ? `${sec.builder?.name || secName} data center capex` :
   sec.shape === 'dc-smr' ? 'SMR programs powering data centers' :
   sec.shape === 'dc-grid' ? 'The Grid Observatory' :
@@ -372,6 +380,8 @@ const _descRaw = (isProfile || isFamily || isDCTopic)
       ? `US grid interconnection queues harvested daily from the operators' own files: requests, megawatts tracked, and the storage, solar, wind and gas split behind the AI data center buildout.`
       : sec.shape === 'dc-smr'
       ? `Small modular reactor programs signed to power data centers, with deal status, NRC licensing pathway, fuel type and target date, every figure sourced.`
+      : sec.shape === 'dc-category'
+      ? String(sec.answer || `${sec.name}: data center metrics`)
       : `${secName}, part of the Data Centers section: the capital, buildings and power behind AI compute.`)
   : isHW
   ? `${sec.total} ${secName.toLowerCase()} entries, each curated with a verified vendor or primary source and re-verified daily. ${sec.blurb}`
@@ -1017,6 +1027,27 @@ const facBare = sec.shape === 'dc-facility' && !(
         </section>
       )}
 
+      {dcHubs.length > 0 ? (
+        <>
+          <section>
+            <h2>Inside the facility: the metrics operations run on</h2>
+            <ul class="dc-hubs">
+              {dcOpsHubs.map((h) => (
+                <li><a href={`${BASE}/${h.uid}/`}>{h.name}</a> &middot; {h.count} metric{h.count === 1 ? '' : 's'}<span>{h.line}</span></li>
+              ))}
+            </ul>
+          </section>
+          <section>
+            <h2>The market variables: what moves, and who measures it</h2>
+            <ul class="dc-hubs">
+              {dcMktHubs.map((h) => (
+                <li><a href={`${BASE}/${h.uid}/`}>{h.name}</a> &middot; {h.count} metric{h.count === 1 ? '' : 's'}<span>{h.line}</span></li>
+              ))}
+            </ul>
+          </section>
+        </>
+      ) : (
+        <>
       <section>
         <h2>Inside the facility: the metrics operations run on</h2>
         {dcOpsCats.map((cat) => (
@@ -1047,6 +1078,8 @@ const facBare = sec.shape === 'dc-facility' && !(
           </div>
         ))}
       </section>
+        </>
+      )}
 
       {sec.operators && sec.operators.length > 0 && (
         <section>
@@ -1822,7 +1855,7 @@ const facBare = sec.shape === 'dc-facility' && !(
           <p class="meta-line">Last verified: {sec.generated} · A
             {' '}{sec.metric.track === 'market' ? 'market' : 'facility operations'} metric in the
             {' '}<a href={`${BASE}/${sec.parent.uid}/`}>{sec.parent.name}</a> reference ·
-            Category: {sec.metric.category}.</p>
+            Category: {sec.category_hub ? <a href={`${BASE}/${sec.category_hub.uid}/`}>{sec.metric.category}</a> : sec.metric.category}.</p>
           {sec.metric.formula && (
             <section><h2>How is {sec.metric.metric} calculated?</h2><p><code>{sec.metric.formula}</code></p></section>
           )}
@@ -1842,6 +1875,83 @@ const facBare = sec.shape === 'dc-facility' && !(
                 {' '}{sec.siblings.map((x, i) => (
                   <>{i > 0 && ', '}<a href={`${BASE}/${x.uid}/`}>{x.label}</a></>
                 ))}.</p>
+            </section>
+          )}
+        </>
+      )}
+      {sec.shape === 'dc-category' && (
+        <>
+          <p class="answer">{sec.answer}</p>
+          <p class="meta-line">Last verified: {sec.generated} · A
+            {' '}{sec.track === 'market' ? 'market' : 'facility operations'} category in the
+            {' '}<a href={`${BASE}/${sec.parent.uid}/`}>{sec.parent.name}</a> reference · uid {sec.uid}</p>
+          <section>
+            <h2>Which measures are in {sec.name.toLowerCase()}?</h2>
+            <ul class="dc-hubs">
+              {(sec.metrics || []).map((m) => (
+                <li><a href={`${BASE}/${m.uid}/`}>{m.label}</a><span>{m.line}</span></li>
+              ))}
+            </ul>
+          </section>
+          {(dcCatLive.grid_obs || []).length > 0 && (
+            <section>
+              <h2>What do the grid operators report?</h2>
+              <p>Megawatts tracked in each operator's interconnection queue, at its latest reading:</p>
+              <ul>
+                {dcCatLive.grid_obs.map((g) => (
+                  <li>{g.source}: {Math.round(g.mw).toLocaleString()} MW, as of {g.as_of}</li>
+                ))}
+              </ul>
+              <p><a href={`${BASE}/${dcCatLive.grid_uid}/`}>The Grid Observatory</a> has the daily series and the fuel split behind it.</p>
+            </section>
+          )}
+          {(dcCatLive.topics || []).length > 0 && (
+            <section>
+              <h2>Power topics</h2>
+              <ul>
+                {dcCatLive.topics.map((t) => <li><a href={`${BASE}/${t.uid}/`}>{t.title}</a></li>)}
+              </ul>
+            </section>
+          )}
+          {(dcCatLive.behind_the_meter || []).length > 0 && (
+            <section>
+              <h2>Which facilities generate power on site?</h2>
+              <ul>
+                {dcCatLive.behind_the_meter.map((f) => (
+                  <li><a href={`${BASE}/${f.uid}/`}>{f.name}</a>{f.mw && <> &middot; {f.mw} MW</>}{f.type && <> &middot; {f.type}</>}{f.status && <> &middot; {f.status}</>}</li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {dcCatLive.planned_count > 0 && (
+            <section>
+              <h2>What is being planned?</h2>
+              <p>{dcCatLive.planned_count} facilities in this site's register record planned IT capacity,
+                {' '}{Math.round(dcCatLive.planned_total_mw).toLocaleString()} MW in all. The largest:</p>
+              <ul>
+                {dcCatLive.planned_top.map((f) => (
+                  <li><a href={`${BASE}/${f.uid}/`}>{f.name}</a> &middot; {f.mw} MW{f.status && <> &middot; {f.status}</>}</li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {(dcCatLive.capex || []).length > 0 && (
+            <section>
+              <h2>What are the largest builders spending?</h2>
+              <p>Capital expenditure in each company's latest quarterly filing with the SEC:</p>
+              <ul>
+                {dcCatLive.capex.map((b) => (
+                  <li>{b.uid ? <a href={`${BASE}/${b.uid}/`}>{b.name}</a> : b.name}: {dcCatMoney(b.latest)}, quarter ending {b.end}</li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {(sec.siblings || []).length > 0 && (
+            <section>
+              <h2>The other categories</h2>
+              <p>{sec.siblings.map((x, i) => (
+                <>{i > 0 && ', '}<a href={`${BASE}/${x.uid}/`}>{x.name}</a></>
+              ))}.</p>
             </section>
           )}
         </>
@@ -2669,6 +2779,9 @@ const facBare = sec.shape === 'dc-facility' && !(
   .dc-power ul { list-style: none; padding: 0; margin: 0; }
   .dc-power li { padding: .4em 0; }
   .dc-power li span { display: block; font-size: 14px; color: #201868; }
+  .dc-hubs { list-style: none; padding: 0; }
+  .dc-hubs li { padding: .45em 0; }
+  .dc-hubs li span { display: block; font-size: 14px; color: #444; }
   .dc-topic-xref { background: #FFF6EC; border-left: 3px solid #F07800; padding: 8px 14px; color: #201868; }
   /* Model family pages, 2026-10-03. */
   .fam-scroll table { font-size: 14px; }
