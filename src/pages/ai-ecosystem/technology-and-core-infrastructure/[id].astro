@@ -892,14 +892,24 @@ const facBare = sec.shape === 'dc-facility' && !(
         daily from SEC EDGAR. Definitions and the directory are editorial, in this
         site's own words, with the standard-setter linked.</p>
 
-      {dcTopics.length > 0 && (
+      {(dcTopics.length > 0 || (sec.power_cooling || []).length > 0 || sec.power_terms) && (
         <section class="dc-power">
           <h2>Power</h2>
-          <ul>
-            {dcTopics.map((t) => (
-              <li><a href={`${BASE}/${t.uid}/`}>{t.title}</a><span>{firstSentence(t.answer)}</span></li>
-            ))}
-          </ul>
+          {dcTopics.length > 0 && (
+            <ul>
+              {dcTopics.map((t) => (
+                <li><a href={`${BASE}/${t.uid}/`}>{t.title}</a><span>{firstSentence(t.answer)}</span></li>
+              ))}
+            </ul>
+          )}
+          {/* Absorbed from the former Power and Cooling section, d98d9c37,
+              which now redirects here (theworldofai row 449). */}
+          {sec.power_terms && <p>{sec.power_terms}</p>}
+          {(sec.power_cooling || []).map((o: any) => (
+            <p><b>{o.name}</b>{o.maker && <> ({o.maker})</>}. {o.note}
+              {o.source_url && <> {' '}<a href={o.source_url} rel="noopener">Source</a>.</>}
+              {o.verified && <> {' '}Verified {o.verified}.</>}</p>
+          ))}
         </section>
       )}
 
