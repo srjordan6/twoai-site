@@ -7,6 +7,7 @@
  * Reads content/prompts/{slug}.json; the kind field selects the layout.
  */
 import Base from '../../layouts/Base.astro';
+import SourcedFacts from '../../components/SourcedFacts.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
 export function getStaticPaths() {
@@ -113,6 +114,7 @@ const jsonld = JSON.stringify({
     </>
   )}
 
+  <SourcedFacts doc={p} />
   <div class="cite-box">
     <strong>Cite this page:</strong>
     <code>The World of AI, "{p.name}," theworldofai.org/ai-prompts/{p.slug}/, verified {p.last_reviewed || p.generated}.</code>

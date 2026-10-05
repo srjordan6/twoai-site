@@ -13,6 +13,7 @@
  * should cite, is what each test actually measures and what it does not.
  */
 import Base from '../../layouts/Base.astro';
+import SourcedFacts from '../../components/SourcedFacts.astro';
 import { readFileSync, existsSync } from 'node:fs';
 
 const path = 'content/benchmarks/index.json';
@@ -80,6 +81,7 @@ const jsonld = JSON.stringify({
 
   {hub.maintenance_note && (<p class="meta-line">{hub.maintenance_note}</p>)}
 
+  <SourcedFacts doc={hub} />
   <div class="cite-box">
     <strong>Cite this page:</strong>
     <code>The World of AI, "AI Benchmarks and Performance," theworldofai.org/benchmarks/, verified {hub.generated}.</code>

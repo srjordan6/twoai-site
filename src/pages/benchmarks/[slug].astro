@@ -9,6 +9,7 @@
  * reference that states the limits is the one worth citing.
  */
 import Base from '../../layouts/Base.astro';
+import SourcedFacts from '../../components/SourcedFacts.astro';
 import KeepReading from '../../components/KeepReading.astro';
 import { matchTerms, companiesNamedIn } from '../../lib/related';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
@@ -124,6 +125,7 @@ const jsonld = JSON.stringify({
     systems are submitted; this page describes the test itself, and the link above is
     where the live numbers belong.</p>
 
+  <SourcedFacts doc={b} />
   <div class="cite-box">
     <strong>Cite this page:</strong>
     <code>The World of AI, "{b.name}: What It Measures," theworldofai.org/benchmarks/{b.slug}/, verified {b.last_reviewed || b.generated}.</code>
