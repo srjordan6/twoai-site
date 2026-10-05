@@ -373,7 +373,9 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
           {(art.related.papers || []).length > 0 && (
             <section class="sp-rel">
               <h2>Most cited research</h2>
-              <p class="meta-line">Papers whose titles match this subject, most cited first. Citation counts from OpenAlex.</p>
+              {!art.related.papers_from_library && (
+                <p class="meta-line">Papers whose titles match this subject, most cited first. Citation counts from OpenAlex.</p>
+              )}
               <ul>{art.related.papers.map((p) => (
                 <li><a href={p.url} rel="noopener">{p.title}</a>{p.year > 0 && <> ({p.year})</>}{p.cited_by > 0 && <>, cited {p.cited_by.toLocaleString('en-US')} times</>}</li>
               ))}</ul>
