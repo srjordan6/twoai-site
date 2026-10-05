@@ -19,10 +19,10 @@ export function getStaticPaths() {
     .filter((f) => f.endsWith('.json') && f !== 'index.json')
     .map((f) => {
       const d = JSON.parse(readFileSync(`content/mcp/${f}`, 'utf8'));
-      return { params: { server: d.server.slug }, props: { s: d.server, generated: d.generated } };
+      return { params: { server: d.server.slug }, props: { s: d.server, generated: d.generated, stamp: { page_uid: d.page_uid || d.uid, built_at: d.built_at, generated: d.generated, refresh_every_days: d.refresh_every_days } } };
     });
 }
-const { s, generated } = Astro.props;
+const { s, generated, stamp } = Astro.props;
 const label = s.title || s.name;
 /* PAGE TITLE CARRIES THE REGISTRY NAME, the H1 does not.
 
@@ -140,7 +140,7 @@ const jsonld = JSON.stringify({
   ...(s.vendor ? { author: { '@type': 'Organization', name: s.vendor } } : {}),
 });
 ---
-<Base title={`${label} — MCP server — The World of AI`} titleTail={titleTail} description={desc} current="/mcp/" jsonld={jsonld} noindex={!indexable}>
+<Base title={`${label} — MCP server — The World of AI`} titleTail={titleTail} description={desc} current="/mcp/" jsonld={jsonld} noindex={!indexable} doc={stamp}>
   <p class="meta-line"><a href="/">AI Ecosystem</a> ·
     <a href="/ai-ecosystem/technology-and-core-infrastructure/">Technology and Core Infrastructure</a> ·
     <a href="/mcp/">MCP Servers</a></p>

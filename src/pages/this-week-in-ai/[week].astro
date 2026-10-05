@@ -72,7 +72,7 @@ const jsonld = JSON.stringify({
   },
 });
 ---
-<Base title={`This Week in AI: ${w.start} to ${w.end}`} description={desc} current="/this-week-in-ai/" jsonld={jsonld}>
+<Base title={`This Week in AI: ${w.start} to ${w.end}`} description={desc} current="/this-week-in-ai/" jsonld={jsonld} doc={w}>
   <h1>{w.label}</h1>
   <p class="meta-line byline">Compiled by The World of AI · editor <a href="/stephen-jordan/" rel="author">Stephen Jordan</a> · <time datetime={w.end}>{w.end}</time></p>
   <p class="answer">{lede}</p>

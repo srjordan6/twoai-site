@@ -25,11 +25,11 @@ export function getStaticPaths() {
     .filter((d: any) => d?.occupation?.soc)
     .map((d: any) => ({
       params: { soc: d.occupation.soc },
-      props: { o: d.occupation, generated: d.generated },
+      props: { o: d.occupation, generated: d.generated, stamp: { page_uid: d.page_uid || d.uid, built_at: d.built_at, generated: d.generated, refresh_every_days: d.refresh_every_days } },
     }));
 }
 
-const { o, generated } = Astro.props;
+const { o, generated, stamp } = Astro.props;
 const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
 const byScore = (a: any, b: any) => (b.score || 0) - (a.score || 0);
 const skills = (o.skills ?? []).slice().sort(byScore);
@@ -74,7 +74,7 @@ const jsonld = JSON.stringify({
   skills: skills.slice(0, 12).map((s: any) => s.name).join(', '),
 });
 ---
-<Base title={`${o.title} — skills, pay, and openings — The World of AI`} description={desc} current="/skills/" jsonld={jsonld}>
+<Base title={`${o.title} — skills, pay, and openings — The World of AI`} description={desc} current="/skills/" jsonld={jsonld} doc={stamp}>
   <p class="meta-line"><a href="/skills/">AI Skills Graph</a> · {o.soc}</p>
 
   <h1>{o.title}</h1>

@@ -54,7 +54,7 @@ const jsonld = JSON.stringify(isEditor ? {
 });
 ---
 
-<Base title={`${d.title} — The World of AI`} description={d.description} jsonld={jsonld}>
+<Base title={`${d.title} — The World of AI`} description={d.description} jsonld={jsonld} doc={d}>
   <article class="doc">
     <h1>{d.title}</h1>
     <p class="lede">{d.description}</p>

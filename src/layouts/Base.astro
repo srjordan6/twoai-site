@@ -112,8 +112,11 @@ const HUB_RECORD: Record<string, string> = {
   '/this-week-in-ai/': 'week/index.json',
   '/ai-news/archive/': 'news/archive.json',
   '/ai-news/timeline/': 'timeline/index.json',
+  // Row 465, 2026-10-05: two more hubs that had a record and showed no uid.
+  '/ai-news/cves/': 'news/cves.json',
+  '/ai-news/vendor/': 'news/vendor.json',
 };
-const DERIVED_UID = /^\/(api|talent|ai-news|ai-news\/daily|ai-news\/vendor)\/$|^\/calculators\/[a-z0-9-]+\/$|^\/talent\/[a-z0-9-]+\/$/;
+const DERIVED_UID = /^\/(api|talent|press|ai-news|ai-news\/daily|ai-news\/vendor)\/$|^\/calculators\/[a-z0-9-]+\/$|^\/talent\/[a-z0-9-]+\/$|^\/ai-news\/vendor\/archive\/[0-9]+\/$/;
 let doc = docProp;
 if (!doc && !redirect) {
   const here = Astro.url.pathname.endsWith('/') ? Astro.url.pathname : Astro.url.pathname + '/';

@@ -57,7 +57,7 @@ const jsonld = JSON.stringify({
 });
 ---
 <Base title={`${b.name}: What It Measures and What It Does Not`}
-  description={desc} current="/ai-ecosystem/enterprise-applications-governance-and-tools/" jsonld={jsonld}>
+  description={desc} current="/ai-ecosystem/enterprise-applications-governance-and-tools/" jsonld={jsonld} doc={b}>
   <p class="meta-line"><a href="/benchmarks/">AI Benchmarks</a> › {sectionName}</p>
   <h1>{b.name}</h1>
   <p class="answer"><strong>{b.name}</strong> measures {b.measures.charAt(0).toLowerCase() + b.measures.slice(1)}</p>

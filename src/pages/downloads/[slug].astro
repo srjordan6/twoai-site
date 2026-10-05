@@ -22,9 +22,9 @@ export function getStaticPaths() {
     .filter((f) => f.endsWith('.json') && f !== 'index.json')
     .map((f) => JSON.parse(readFileSync(`content/downloads/${f}`, 'utf8')))
     .filter((d) => d && d.item && d.item.slug)
-    .map((d) => ({ params: { slug: d.item.slug }, props: { item: d.item, section: d.section, generated: d.generated } }));
+    .map((d) => ({ params: { slug: d.item.slug }, props: { item: d.item, section: d.section, generated: d.generated, stamp: { page_uid: d.page_uid || d.uid, built_at: d.built_at, generated: d.generated, refresh_every_days: d.refresh_every_days } } }));
 }
-const { item, section, generated } = Astro.props;
+const { item, section, generated, stamp } = Astro.props;
 
 const inline = (s) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -88,7 +88,7 @@ const jsonld = JSON.stringify({
   publisher: { '@type': 'Organization', name: 'SRJ Consulting & Services LLC' },
 });
 ---
-<Base title={`${item.title}: a template you can adapt`} description={description} current="/downloads/" jsonld={jsonld}>
+<Base title={`${item.title}: a template you can adapt`} description={description} current="/downloads/" jsonld={jsonld} doc={stamp}>
   <p class="meta-line"><a href="/downloads/">Downloads</a> · {section}</p>
   <h1>{item.title}</h1>
   <p class="answer">{item.summary}</p>
