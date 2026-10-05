@@ -12,7 +12,6 @@
  */
 import Base from '../../../layouts/Base.astro';
 import Reading from '../../../components/Reading.astro';
-import ExtLibrary from '../../../components/ExtLibrary.astro';
 import CveList from '../../../components/CveList.astro';
 import { cvesFor } from '../../../lib/cves';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
@@ -2762,7 +2761,6 @@ const facBare = sec.shape === 'dc-facility' && !(
       on 2026-09-01 with a 1,200 to 1,600 character reading already written and
       merged. The DC branch keeps its own placement above, which is why this is
       guarded rather than unconditional. */}
-  <ExtLibrary doc={sec} />
   <Reading reading={isDCChild ? null : sec.reading} heading="What does this tell us about AI?" />
 
   <div class="cite-box">Cite this page: <code>"{pageTitle}." The World of AI,
