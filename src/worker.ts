@@ -37,7 +37,7 @@
 import { handleTalent, talentWeeklyDigest, talentMailAnswer } from "./talent";
 import { handleTranslate } from "./translate";
 import { webFallback, lastWebError } from "./websearch";
-import { wikidataLookup, lastWikidataError, subjectOf } from "./wikidata";
+import { wikidataLookup, lastWikidataError, subjectOf, wikidataThin, type WikidataAnswer } from "./wikidata";
 import { openAlexAuthor, huggingFaceModel, recordLookup, cachedLookup, promoteFacts } from "./lookups";
 import { researchAnswer } from "./research";
 import postgres from "postgres";
@@ -1092,6 +1092,8 @@ export default {
       // the web search gate, which its vocabulary failed. Wikidata never ran.
       // The path for unknown entities was the one path that skipped the free
       // encyclopaedia. Same tiers, same order, same recording and promotion.
+      // A thin Wikidata match found below rides along with the web answer.
+      let thinWd: WikidataAnswer | null = null;
       {
         // The classifier closes the external tiers. A question it marks
         // unsafe gets the plain not-covered answer and nothing is looked up.
@@ -1104,7 +1106,7 @@ export default {
         }
         const subject = subjectOf(question);
         const cached = await cachedLookup(env, norm, qVec);
-        if (cached && (cached.wikidata || cached.lookup)) {
+        if (cached && ((cached.wikidata && !wikidataThin(cached.wikidata)) || cached.lookup)) {
           return json({ answered: false, answer: notCovered, sources: [],
             wikidata: cached.wikidata, lookup: cached.lookup, lookupCached: true, lookupFetchedAt: cached.fetchedAt });
         }
@@ -1112,8 +1114,10 @@ export default {
         // would match whatever word they could, and goes straight to the web
         // search below, which answered CVE-2026-94486 correctly on 2026-10-03.
         const wd = (cveRefs.length || cweRefs.length) ? null : await wikidataLookup(question);
-        const alt = (wd || cveRefs.length || cweRefs.length) ? null : (await huggingFaceModel(subject, question)) ?? (await openAlexAuthor(subject, question));
-        if (wd || alt) {
+        // A thin Wikidata match is shown but does not end the search (row 446).
+        thinWd = wikidataThin(wd) ? wd : null;
+        const alt = ((wd && !thinWd) || cveRefs.length || cweRefs.length) ? null : (await huggingFaceModel(subject, question)) ?? (await openAlexAuthor(subject, question));
+        if ((wd && !thinWd) || alt) {
           const recorded: Array<{ sourceLabel: string; title: string; url: string; facts: any[] }> = [];
           if (wd) recorded.push({ sourceLabel: "Wikidata " + wd.qid, title: wd.title, url: wd.url, facts: wd.facts });
           if (alt) recorded.push({ sourceLabel: alt.sourceLabel, title: alt.title, url: alt.url, facts: alt.facts });
@@ -1137,9 +1141,11 @@ export default {
           sources: [],
           web: web.text, webSources: web.sources, webCached: web.cached || undefined,
           webFetchedAt: web.fetchedAt,
+          wikidata: thinWd ?? undefined, wikidataThin: thinWd ? true : undefined,
         });
       }
-      return json({ answered: false, answer: notCovered, sources: [], webError: lastWebError || undefined });
+      return json({ answered: false, answer: notCovered, sources: [], webError: lastWebError || undefined,
+        wikidata: thinWd ?? undefined, wikidataThin: thinWd ? true : undefined });
     }
 
     // A CVE THE SITE DOES NOT HOLD SKIPS THE MODEL. Stephen, 2026-10-03, asked
@@ -1515,7 +1521,7 @@ export default {
       // once we have looked something up and kept it, the answer comes from
       // us. Only on a miss do we go out to Wikidata and the rest.
       const cached = await cachedLookup(env, norm, qVec);
-      if (cached && (cached.wikidata || cached.lookup)) {
+      if (cached && ((cached.wikidata && !wikidataThin(cached.wikidata)) || cached.lookup)) {
         return json({
           answered: false, answer, sources: shownSources, papers: [],
           wikidata: cached.wikidata, lookup: cached.lookup,
@@ -1524,8 +1530,9 @@ export default {
       }
       // A CVE question goes past the encyclopaedia tiers to the web search.
       const wd = (cveRefs.length || cweRefs.length) ? null : await wikidataLookup(question);
-      const alt = (wd || cveRefs.length || cweRefs.length) ? null : (await huggingFaceModel(subject, question)) ?? (await openAlexAuthor(subject, question));
-      if (wd || alt) {
+      const thinWd2 = wikidataThin(wd) ? wd : null;
+      const alt = ((wd && !thinWd2) || cveRefs.length || cweRefs.length) ? null : (await huggingFaceModel(subject, question)) ?? (await openAlexAuthor(subject, question));
+      if ((wd && !thinWd2) || alt) {
         // Retain what we looked up. Runs in waitUntil so the reader is not
         // waiting on bookkeeping, and every fact lands as `proposed` for
         // review rather than on a page.
@@ -1553,9 +1560,11 @@ export default {
           answered: false, answer, sources: shownSources, papers: [],
           web: web2.text, webSources: web2.sources, webCached: web2.cached || undefined,
           webFetchedAt: web2.fetchedAt,
+          wikidata: thinWd2 ?? undefined, wikidataThin: thinWd2 ? true : undefined,
         });
       }
-      return json({ answered: false, answer, sources: shownSources, papers: [], webError: lastWebError || undefined });
+      return json({ answered: false, answer, sources: shownSources, papers: [], webError: lastWebError || undefined,
+        wikidata: thinWd2 ?? undefined, wikidataThin: thinWd2 ? true : undefined });
     }
 
     // Diagnostic ride-alongs removed 2026-08-19 after doing their job twice:

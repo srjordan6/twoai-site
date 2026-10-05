@@ -66,6 +66,24 @@ export type WikidataAnswer = {
   facts: WikidataFact[];
 };
 
+// A THIN WIKIDATA MATCH IS NOT AN ANSWER. Stephen, 2026-10-04, asked "mercor":
+// the box showed "Mercor, American technology company" from Wikidata and
+// stopped. His source order is SQL, then Wikidata, then Hugging Face and
+// OpenAlex, then the internet, and a one line label is never a complete
+// answer. A match is thin when it carries fewer than three facts beyond what
+// it is and its website, and a company or other organisation always counts as
+// thin, because what a reader asks about a company (what it does, recent news)
+// is on its own site and in the press, not in Wikidata. A thin match is still
+// shown as a card, but the box goes on to the web.
+export function wikidataThin(wd: WikidataAnswer | null | undefined): boolean {
+  if (!wd) return false;
+  const facts = wd.facts ?? [];
+  const substantive = facts.filter((f) => f.field !== "instance_of" && f.field !== "website");
+  const org = /\b(company|business|enterprise|organi[sz]ation|start-?up|corporation|firm|marketplace)\b/i;
+  const isOrg = facts.some((f) => f.field === "instance_of" && org.test(f.value)) || org.test(wd.description ?? "");
+  return substantive.length < 3 || isOrg;
+}
+
 export let lastWikidataError = "";
 
 const wdFetch = async (url: string): Promise<any | null> => {
