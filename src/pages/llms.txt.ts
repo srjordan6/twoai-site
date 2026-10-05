@@ -75,6 +75,27 @@ try {
     }
   }
 } catch { /* a missing folder counts as none */ }
+
+// Added 2026-10-05 (Stephen: do we need to update llms.txt): the Life
+// Sciences tree, AI in Health Care Delivery, GPU compute providers and the
+// Press Room. Counted from the files, and an entry whose files are missing
+// is left out rather than advertising a page that does not render.
+let lscUID = '', hcdUID = '', lscAreas = 0, lscTopics = 0, hcdTopics = 0;
+try {
+  for (const name of readdirSync('content/industries')) {
+    if (!name.endsWith('.json')) continue;
+    const lsc = name.startsWith('lsc-'), hcd = name.startsWith('hcd-');
+    if (!lsc && !hcd) continue;
+    const d = readJSON('content/industries/' + name);
+    if (!d?.uid) continue;
+    if (name === 'lsc-lsc.json') lscUID = d.uid;
+    else if (name === 'hcd-hcd.json') hcdUID = d.uid;
+    else if (d.shape === 'art-topic') { if (lsc) lscTopics++; else hcdTopics++; }
+    else if (d.shape === 'art-hub' && lsc) lscAreas++;
+  }
+} catch { /* no section pages yet */ }
+const computeHub = readJSON('content/compute/index.json');
+const computeCount = computeHub?.total ?? 0;
 const generated = lawsuits?.generated ?? '2026-08-20';
 const mcpCount = mcp?.total ?? 1908;
 const compCount = compliance?.total ?? compliance?.frameworks?.length ?? 62;
@@ -334,7 +355,22 @@ ${generated}.
 - [AI and SQL](https://theworldofai.org/ai-ecosystem/enterprise-applications-governance-and-tools/3d344eab/):
   twelve topics on structured data as the foundation of AI intelligence,
   from text to SQL and retrieval over relational stores to governance of
-  the warehouse.
+  the warehouse.${lscUID ? `
+- [Life Sciences](https://theworldofai.org/ai-ecosystem/enterprise-applications-governance-and-tools/${lscUID}/):
+  AI in the pharmaceutical, biotechnology and medical device industries,
+  ${fmt(lscAreas)} areas from drug discovery and clinical trials to regulatory and
+  quality, safety and pharmacovigilance, manufacturing, commercial and
+  medical affairs, with ${fmt(lscTopics)} topic pages. Each page opens with a direct
+  answer, followed by recent developments and what they mean, and facts
+  checked against their primary sources where the site holds them.` : ''}${hcdUID ? `
+- [AI in Health Care Delivery](https://theworldofai.org/ai-ecosystem/enterprise-applications-governance-and-tools/${hcdUID}/):
+  ${fmt(hcdTopics)} topic pages on AI where care is delivered, reached from the
+  Healthcare industry page.` : ''}${computeCount > 0 ? `
+- [GPU Compute Providers](https://theworldofai.org/compute/): ${fmt(computeCount)} companies
+  that rent AI accelerators by the hour.` : ''}
+- [Press Room](https://theworldofai.org/press/): downloadable data on AI
+  lobbying, political money, and bills and votes in Congress, with a daily
+  RSS feed at https://theworldofai.org/press/feed.xml.
 - [The Art of AI](https://theworldofai.org/ai-ecosystem/ecosystem-entities-market-and-operations/4de73ea6/):
   ten fields of AI in creative work, from image and music generation to
   authorship, rights and the studios' own programs.
