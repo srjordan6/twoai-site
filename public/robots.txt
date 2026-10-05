@@ -6,10 +6,13 @@
 # that build LLM training sets (Common Crawl, Google-Extended and the rest),
 # not only the ones that cite live. Nothing here is gated.
 #
-# There is no Disallow for any agent on purpose. If a bot is ever blocked,
-# it should be for hammering the origin, and that belongs at the edge
-# (Cloudflare), not in a policy file that also turns away the crawlers we
-# want. The sitemap and the machine-readable index below are the front door.
+# No page is disallowed to any agent, on purpose. The one exception below is
+# not about pages: Meta's AI crawler re-downloads the shared section cover
+# images and build assets for every page it reads (36,300 of 66,600 requests
+# in one day, 2026-10-05), so it is asked to skip those two folders while
+# every page stays open to it. facebookexternalhit, which builds Facebook
+# share previews, is a different agent and still fetches covers. The sitemap
+# and the machine-readable index below are the front door.
 
 User-agent: *
 Allow: /
@@ -17,6 +20,15 @@ Allow: /
 # The same policy in machine-readable form (Cloudflare's Content Signals
 # Policy, contentsignals.org): yes to search indexing, yes to use as live
 # input for AI answers, yes to AI training. Updated 2026-10-04.
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
+
+# A named group replaces the * group for that agent, so it repeats the same
+# policy: every page allowed, the same content signals, and only the cover
+# images and build assets skipped. Approved by Stephen, theworldofai row 469.
+User-agent: meta-externalagent
+Disallow: /covers/
+Disallow: /_astro/
+Allow: /
 Content-Signal: search=yes, ai-input=yes, ai-train=yes
 
 # The front door for machines, in order of usefulness:
