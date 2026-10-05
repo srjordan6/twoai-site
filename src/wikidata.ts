@@ -75,13 +75,18 @@ export type WikidataAnswer = {
 // thin, because what a reader asks about a company (what it does, recent news)
 // is on its own site and in the press, not in Wikidata. A thin match is still
 // shown as a card, but the box goes on to the web.
+// A company or other organisation, from what Wikidata says it is.
+export function wikidataIsOrg(wd: WikidataAnswer | null | undefined): boolean {
+  if (!wd) return false;
+  const org = /\b(company|business|enterprise|organi[sz]ation|start-?up|corporation|firm|marketplace)\b/i;
+  return (wd.facts ?? []).some((f) => f.field === "instance_of" && org.test(f.value)) || org.test(wd.description ?? "");
+}
+
 export function wikidataThin(wd: WikidataAnswer | null | undefined): boolean {
   if (!wd) return false;
   const facts = wd.facts ?? [];
   const substantive = facts.filter((f) => f.field !== "instance_of" && f.field !== "website");
-  const org = /\b(company|business|enterprise|organi[sz]ation|start-?up|corporation|firm|marketplace)\b/i;
-  const isOrg = facts.some((f) => f.field === "instance_of" && org.test(f.value)) || org.test(wd.description ?? "");
-  return substantive.length < 3 || isOrg;
+  return substantive.length < 3 || wikidataIsOrg(wd);
 }
 
 export let lastWikidataError = "";

@@ -37,7 +37,7 @@
 import { handleTalent, talentWeeklyDigest, talentMailAnswer } from "./talent";
 import { handleTranslate } from "./translate";
 import { webFallback, lastWebError } from "./websearch";
-import { wikidataLookup, lastWikidataError, subjectOf, wikidataThin, type WikidataAnswer } from "./wikidata";
+import { wikidataLookup, lastWikidataError, subjectOf, wikidataThin, wikidataIsOrg, type WikidataAnswer } from "./wikidata";
 import { openAlexAuthor, huggingFaceModel, recordLookup, cachedLookup, promoteFacts } from "./lookups";
 import { researchAnswer } from "./research";
 import postgres from "postgres";
@@ -1133,7 +1133,8 @@ export default {
       // rarity fix had to land first: before it, tier 3 returned papers that
       // did not contain the question's rare term at all, so the box believed
       // it had coverage and this branch never ran on questions that needed it.
-      const web = await webFallback(env, ANTHROPIC_MODEL, question, norm, hits.length, papers.length, qVec, best);
+      const web = await webFallback(env, ANTHROPIC_MODEL, question, norm, hits.length, papers.length, qVec, best,
+        thinWd && wikidataIsOrg(thinWd) ? thinWd.title : undefined);
       if (web) {
         return json({
           answered: false,
@@ -1554,7 +1555,8 @@ export default {
           lookupFetchedAt: new Date().toISOString(),
         });
       }
-      const web2 = await webFallback(env, ANTHROPIC_MODEL, question, norm, hits.length, papers.length, qVec, best);
+      const web2 = await webFallback(env, ANTHROPIC_MODEL, question, norm, hits.length, papers.length, qVec, best,
+        thinWd2 && wikidataIsOrg(thinWd2) ? thinWd2.title : undefined);
       if (web2) {
         return json({
           answered: false, answer, sources: shownSources, papers: [],

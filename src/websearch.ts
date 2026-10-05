@@ -143,7 +143,8 @@ export async function webFallback(
   siteHits: number,
   paperHits: number,
   qVec?: number[],
-  bestScore?: number
+  bestScore?: number,
+  newsFor?: string
 ): Promise<WebAnswer | null> {
   if (question.trim().split(/\s+/).length < MIN_QUESTION_WORDS) {
     lastWebError = "gate: fewer than " + MIN_QUESTION_WORDS + " words";
@@ -225,7 +226,8 @@ export async function webFallback(
     const hit = prior.length && prior[0].results && prior[0].results.text
       && Number(prior[0].sim) >= CACHE_SIM_FLOOR;
     if (hit) {
-      if (prior[0].fresh) {
+      // A company answer cached before it carried news is searched again.
+      if (prior[0].fresh && !(newsFor && !prior[0].results.news)) {
         return {
           text: String(prior[0].results.text),
           sources: prior[0].results.sources ?? [],
@@ -305,6 +307,40 @@ export async function webFallback(
       lastWebError = "ollama web_search returned no results";
       return null;
     }
+    // NEWS BESIDE THE COMPANY'S OWN SITE, theworldofai row 455 (Stephen,
+    // 2026-10-04). A company or organisation answer drew only on the
+    // company's own pages, so it carries one or two news reports as well:
+    // a second search for its name plus "news", keeping results from hosts
+    // the first search did not return and that are not social or reference
+    // sites. Counted against the daily cap like the first search.
+    const newsResults: Array<{ title: string; url: string; content: string }> = [];
+    if (newsFor && newsFor.trim()) {
+      const hostOf = (u: string) => { try { return new URL(u).hostname.replace(/^www[.]/, ""); } catch { return ""; } };
+      const seen = new Set(results.map((x) => hostOf(x.url)));
+      const skip = /(^|[.])(linkedin|facebook|instagram|x|twitter|youtube|tiktok|reddit|wikipedia|wikidata|crunchbase|pitchbook|glassdoor|indeed)[.]/;
+      try {
+        const ns = await fetch("https://ollama.com/api/web_search", {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: `Bearer ${ollamaKey}` },
+          body: JSON.stringify({ query: `${newsFor.trim()} news`, max_results: 8 }),
+        });
+        if (ns.ok) {
+          const nf: any = await ns.json();
+          for (const x of (nf?.results ?? [])) {
+            const h = hostOf(String(x?.url ?? ""));
+            if (!h || seen.has(h) || skip.test("." + h + ".")) continue;
+            seen.add(h);
+            newsResults.push({ title: String(x.title ?? x.url), url: String(x.url), content: String(x.content ?? "").slice(0, 2500) });
+            if (newsResults.length === 2) break;
+          }
+          await env.ASSISTANT_DB.prepare(
+            `INSERT INTO search_budget (day, searched) VALUES (?, 1)
+             ON CONFLICT(day) DO UPDATE SET searched = searched + 1`
+          ).bind(new Date().toISOString().slice(0, 10)).run();
+        }
+      } catch { /* the answer still stands on the first search */ }
+      results.push(...newsResults);
+    }
     const numbered = results.map((x, i) => `[${i + 1}] ${x.title}\n${x.url}\n${x.content}`).join("\n\n");
     const r = await fetch("https://ollama.com/api/chat", {
       method: "POST",
@@ -334,6 +370,8 @@ export async function webFallback(
       if (x) srcMap.set(x.url, x.title);
     }
     if (!srcMap.size) for (const x of results.slice(0, 3)) srcMap.set(x.url, x.title);
+    // The news reports are always shown, cited in the text or not.
+    for (const x of newsResults) srcMap.set(x.url, x.title);
     text = text.replace(/^\s*(i(?:'|\u2019)?ll|i will|let me|i'm going to|i am going to)\b[^.!?\n]*[.!?\n]\s*/i, "");
     text = text.trim();
     if (!text) {
@@ -356,7 +394,7 @@ export async function webFallback(
       UPDATE twoai_web_answers
          SET provider = 'ollama-web-search',
              fetched_at = now(),
-             results = ${sql.json({ text, sources } as any)},
+             results = ${sql.json({ text, sources, news: newsResults.length > 0 || undefined } as any)},
              provenance = 'cite_only'
        WHERE question_norm = ${norm}`;
 
