@@ -57,7 +57,24 @@ try {
   }
 } catch { /* fall through */ }
 
-const caseCount = lawsuits?.count ?? 104;
+const caseCount = lawsuits?.count ?? 0;
+// Counted from the files, never typed (theworldofai row 467, 2026-10-05).
+let sectorPages = 0;
+let eduParts = 0, eduChapters = 0, eduIdeas = 0;
+try {
+  for (const name of readdirSync('content/industries')) {
+    if (name.startsWith('industry-') && name !== 'industry-use-cases.json' && name.endsWith('.json')) sectorPages++;
+  }
+  for (const name of readdirSync('content/ecosystem')) {
+    if (!name.startsWith('edu-') || !name.endsWith('.json')) continue;
+    const d = readJSON('content/ecosystem/' + name);
+    if (d?.shape === 'art-topic') eduIdeas++;
+    else if (d?.shape === 'art-hub' && Array.isArray(d.crumbs)) {
+      if (d.crumbs.length === 1) eduParts++;
+      else if (d.crumbs.length === 2) eduChapters++;
+    }
+  }
+} catch { /* a missing folder counts as none */ }
 const generated = lawsuits?.generated ?? '2026-08-20';
 const mcpCount = mcp?.total ?? 1908;
 const compCount = compliance?.total ?? compliance?.frameworks?.length ?? 62;
@@ -268,7 +285,7 @@ ${generated}.
   publication and re-verified daily. Live counts from this site (state
   deepfake bills, tracked MCP servers, compliance documents) appear in
   context.
-- Industry Use Cases (same category): 21 sector pages, from manufacturing,
+- Industry Use Cases (same category): ${fmt(sectorPages)} sector pages, from manufacturing,
   healthcare, banking, and insurance to mining, agriculture, energy, defense,
   hospitality, real estate, sports, nonprofits, and churches. Each page leads
   with what AI is actually deployed for in the sector and who tracks it,
@@ -304,8 +321,8 @@ ${generated}.
   rather than summarised.
 - [AI in Education](https://theworldofai.org/ai-ecosystem/research-knowledge-and-learning/31028dac/):
   what works for AI in schools from preschool to graduation, built on the
-  book The AI Ready School (Volume X of the SRJ series): four parts, twenty
-  chapter pages and 262 idea pages, each written from the book's own text
+  book The AI Ready School (Volume X of the SRJ series): ${fmt(eduParts)} parts, ${fmt(eduChapters)}
+  chapter pages and ${fmt(eduIdeas)} idea pages, each written from the book's own text
   with its evidence label kept, and each chapter page listing the peer
   reviewed research mapped to it with our reading of every paper and a link
   to the paper's own home.

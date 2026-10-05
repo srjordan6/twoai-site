@@ -12,13 +12,21 @@ for (const t of terms) {
   (byLetter[L] ??= []).push(t);
 }
 const letters = Object.keys(byLetter).sort();
-const desc = `${g.count || terms.length} artificial intelligence terms defined in plain English, each with its origin and a real example. The AI glossary built to be cited.`;
+// THE COUNTS ARE READ, NEVER TYPED (theworldofai rows 466 and 467). The
+// sentence says every term carries its origin only when every term does.
+const termCount = g.count || terms.length;
+const withOrigin = terms.filter((t) => String(t.origin || '').trim() !== '').length;
+const allOrigin = termCount > 0 && withOrigin === termCount;
+const desc = allOrigin
+  ? `${termCount} artificial intelligence terms defined in plain English, each with its origin and a real example. The AI glossary built to be cited.`
+  : `${termCount} artificial intelligence terms defined in plain English, each with a real example and, where the record shows it, its origin. The AI glossary built to be cited.`;
 ---
-<Base title={`AI Glossary: ${g.count || terms.length} artificial intelligence terms in plain English`} description={desc} current="/ai-glossary/">
+<Base title={`AI Glossary: ${termCount} artificial intelligence terms in plain English`} description={desc} current="/ai-glossary/">
   <h1>The AI Glossary</h1>
-  <p class="answer">Plain-English definitions for <b>{g.count || terms.length} artificial
-    intelligence terms</b>, from agent to zero-shot, each with where the term came from and an
-    example of it in use. No jargon defined with more jargon.</p>
+  <p class="answer">Plain-English definitions for <b>{termCount} artificial
+    intelligence terms</b>, from agent to zero-shot, {allOrigin
+      ? 'each with where the term came from and an example of it in use.'
+      : 'each with an example of it in use and, where the record shows it, where the term came from.'}</p>
   {g.generated && <p class="meta-line">Last verified: {g.generated}</p>}
   <p>{letters.map((L) => (<a href={`#${L}`} style="margin-right:10px;font-weight:600;">{L}</a>))}</p>
   {letters.map((L) => (
