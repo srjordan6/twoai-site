@@ -712,7 +712,7 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
           <h2>{isCoverage ? 'Under this item' : 'Sections'}</h2>
           <ul class="sections">
             {sec.children.map((c) => (
-              <li><a href={c.href}>{c.name}</a>{c.desc && <p>{c.desc}</p>}</li>
+              <li><a href={c.href}>{c.name}</a>{c.count > 0 && <> &middot; {c.count.toLocaleString()}</>}{c.desc && <p>{c.desc}</p>}</li>
             ))}
           </ul>
         </section>

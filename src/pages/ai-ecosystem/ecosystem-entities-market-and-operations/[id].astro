@@ -640,7 +640,7 @@ const jsonld = JSON.stringify(
       <ul class="co-list">
         {ehubKids.map((c) => (
           <li>
-            <b><a href={c.href}>{c.name}</a></b>
+            <b><a href={c.href}>{c.name}</a></b>{c.count > 0 && <> &middot; {c.count.toLocaleString()}</>}
             {c.desc && <p>{c.desc}</p>}
           </li>
         ))}
