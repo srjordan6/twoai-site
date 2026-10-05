@@ -1,0 +1,34 @@
+---
+/**
+ * SOURCED FACTS (theworldofai row 458, 2026-10-05). Facts placed on a page by
+ * subject from twoai_sourced_facts, each cited to its primary source alone.
+ * Written in the theworldofai session, so the page carries the AI disclosure.
+ * Renders nothing without data.
+ */
+interface Props { doc?: any }
+const { doc } = Astro.props;
+const items: any[] = doc?.sourced_facts && Array.isArray(doc.sourced_facts.items) ? doc.sourced_facts.items : [];
+const topics = [...new Set(items.map((x) => x.topic || ''))];
+---
+{items.length > 0 && (
+  <section class="sourced-facts">
+    <h2>Recent facts, checked at the source</h2>
+    <span data-llm="drafted" hidden></span>
+    {topics.map((t) => (
+      <>
+        {t && <h3>{t}</h3>}
+        <ul>
+          {items.filter((x) => (x.topic || '') === t).map((x) => (
+            <li>{x.date && <b>{x.date}: </b>}{x.claim}
+              <span class="sf-src">Source: <a href={x.source_url} rel="noopener">{x.source_title || x.source_url}</a></span></li>
+          ))}
+        </ul>
+      </>
+    ))}
+  </section>
+)}
+
+<style>
+  .sourced-facts li { padding: .35em 0; }
+  .sourced-facts .sf-src { display: block; font-size: 13px; color: #7A8A9E; }
+</style>
