@@ -153,6 +153,15 @@ const hasInsured = isCoverage && (nonEmpty(needs.part_1_core_third_party_liabili
 const artSections = art ? (art.sections || []) : [];
 const artSiblings = art ? (art.siblings || []) : [];
 const artKids = art ? (art.children || []) : [];
+// Row 483: the facts of one diabetes drug, the rows with a value only.
+const drug = art?.drug;
+const drugRows = drug ? [
+  ['Brand names', (drug.brands || []).join(', ')], ['Maker', drug.maker], ['Drug class', drug.class],
+  ['Targets', (drug.targets || []).join(', ')], ['Diabetes type', drug.type], ['How it is taken', drug.route],
+  ['How often', drug.frequency], ['FDA status', drug.fda_status], ['Development phase', drug.phase],
+  ['Effect on A1C', drug.a1c], ['Effect on weight', drug.weight], ['Heart evidence', drug.cv],
+  ['Kidney evidence', drug.kidney], ['Last reviewed', art.last_reviewed],
+].filter((r) => r[1]) : [];
 const desc = clamp158(art
   ? `${art.name}: ${art.answer || ''}`
   : clc
@@ -212,6 +221,11 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
         {(art.crumbs || []).map((c) => <> · <a href={c.path}>{c.name}</a></>)}</p>
       <h1>{art.name}</h1>
       <p class="answer">{art.answer}</p>
+      {art.medical_note && (
+        <p class="meta-line sp-medical">Nothing on this page is medical advice. It reports published
+          research, trials and regulatory decisions, and decisions about your own health belong with a
+          clinician who knows you.</p>
+      )}
       <PinnedNews pins={art.pinned_news} />
       <p class="meta-line">uid {art.uid} &middot; generated {art.generated}
         {art.parent_path && <> &middot; {' '}<a href={art.parent_path}>{art.parent_name}</a></>}
@@ -220,6 +234,72 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
       {(art.key_points || []).length > 0 && (
         /* Row 481: the section trees' key points, then the explainer. */
         <ul class="sp-keys">{art.key_points.map((k) => <li>{k}</li>)}</ul>
+      )}
+      {art.drug && (
+        /* DIABETES DRUG PAGES, row 483: one row of twoai_diabetes_drugs. */
+        <table class="sp-drug">
+          <tbody>
+            {drugRows.map((r) => <tr><th scope="row">{r[0]}</th><td>{r[1]}</td></tr>)}
+            {(art.drug.trials || []).length > 0 && (
+              <tr><th scope="row">Key trials</th><td>{art.drug.trials.map((t, i) => (
+                <>{i > 0 && ', '}{t.url ? <a href={t.url} rel="noopener">{t.name || t.url}</a> : t.name}</>
+              ))}</td></tr>
+            )}
+          </tbody>
+        </table>
+      )}
+      {art.drug && art.drug.effect_source && (
+        <p class="meta-line">Source for the A1C and weight effects: <a href={art.drug.effect_source} rel="noopener">{art.drug.effect_source}</a></p>
+      )}
+      {art.drug && (art.drug.sources || []).length > 0 && (
+        <p class="meta-line">Sources: {art.drug.sources.map((x, i) => (
+          <>{i > 0 && ', '}<a href={x.url} rel="noopener">{x.title || x.url}</a></>
+        ))}</p>
+      )}
+      {(art.drug_table || []).length > 0 && (
+        <section>
+          <h2>Diabetes drugs, approved and in development</h2>
+          <input type="search" id="drug-filter" class="sp-filter" placeholder="Filter by name, maker, class or status" aria-label="Filter the drug table" />
+          <div class="sp-table-wrap">
+            <table class="sp-drugs" id="drug-table">
+              <thead><tr><th>Drug</th><th>Brands</th><th>Maker</th><th>Class</th><th>FDA status</th><th>Phase</th></tr></thead>
+              <tbody>
+                {art.drug_table.map((d) => (
+                  <tr><td><a href={d.path}>{d.name}</a></td><td>{d.brands}</td><td>{d.maker}</td><td>{d.class}</td><td>{d.fda_status}</td><td>{d.phase}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <script is:inline>{`
+            (function(){var f=document.getElementById('drug-filter'),t=document.getElementById('drug-table');
+            if(!f||!t)return;f.addEventListener('input',function(){var q=f.value.toLowerCase();
+            t.querySelectorAll('tbody tr').forEach(function(r){r.style.display=r.textContent.toLowerCase().indexOf(q)===-1?'none':'';});});})();
+          `}</script>
+        </section>
+      )}
+      {(art.lpa_table || []).length > 0 && (
+        /* LP(A) DRUG TABLE, row 484. The status label is one of five fixed
+           words that never imply an effect. */
+        <section>
+          <h2>Lp(a) drugs and where they stand</h2>
+          <div class="sp-table-wrap">
+            <table class="sp-drugs">
+              <thead><tr><th>Drug</th><th>Company</th><th>Technology</th><th>Route and frequency</th><th>Status</th><th>Lp(a) reduction</th><th>Outcome trial</th><th>Aortic stenosis</th><th>FDA status</th><th>Last reviewed</th></tr></thead>
+              <tbody>
+                {art.lpa_table.map((d) => (
+                  <tr>
+                    <td>{d.drug}</td><td>{d.company}</td><td>{d.technology}</td>
+                    <td>{[d.route, d.frequency].filter(Boolean).join(', ')}</td>
+                    <td><b>{d.status_label}</b></td>
+                    <td>{d.reduction}{d.reduction_source && <> (<a href={d.reduction_source} rel="noopener">source</a>)</>}</td>
+                    <td>{d.outcome_trial_url ? <a href={d.outcome_trial_url} rel="noopener">{d.outcome_trial}</a> : d.outcome_trial}{d.outcome_status && <>, {d.outcome_status}</>}</td>
+                    <td>{d.aortic}</td><td>{d.fda_status}</td><td>{d.last_reviewed}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
       )}
       {art.explainer && (
         <section>
@@ -251,6 +331,12 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
         </section>
       ))}
       <Faq items={art.faq || []} heading="Common questions" />
+      {(art.see_also || []).length > 0 && (
+        <section>
+          <h2>See also</h2>
+          <ul class="sections">{art.see_also.map((k) => <li><a href={k.path}>{k.name}</a>{k.blurb && <> {k.blurb}</>}</li>)}</ul>
+        </section>
+      )}
       <SourcedFacts doc={art} />
       {art.related && (
         /* RELATED RECORDS, row 481. What the site holds on the page's subject,
@@ -1295,4 +1381,13 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
   .sp-rel li { padding: .3em 0; }
   .sp-rel .sp-src { display: block; font-size: 13px; color: #7A8A9E; }
   .sp-inline { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: .4em 1.2em; }
+  .sp-medical { border-left: 3px solid var(--orange, #F07800); padding-left: 12px; }
+  .sp-drug { border-collapse: collapse; margin: 1em 0; width: 100%; }
+  .sp-drug th { background: none; color: var(--navy, #201868); text-align: left; padding: .45em .8em .45em 0; vertical-align: top; width: 34%; font-weight: 600; }
+  .sp-drug td { padding: .45em 0; vertical-align: top; }
+  .sp-drug tr { border-bottom: 1px solid #e6e4de; }
+  .sp-filter { width: 100%; max-width: 420px; padding: .5em .7em; margin: .4em 0 .8em; border: 1px solid #c9c6bd; border-radius: 6px; font: inherit; }
+  .sp-table-wrap { overflow-x: auto; }
+  .sp-drugs { border-collapse: collapse; width: 100%; font-size: 14px; }
+  .sp-drugs td { padding: .4em .6em; border-bottom: 1px solid #e6e4de; vertical-align: top; }
 </style>
