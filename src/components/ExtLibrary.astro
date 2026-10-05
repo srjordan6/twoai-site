@@ -1,0 +1,74 @@
+---
+/**
+ * FURTHER READING AND CHECKED FACTS FROM AN OUTSIDE LIBRARY (theworldofai
+ * rows 453 and 456, Stephen 2026-10-04: everything on intuitionlabs.ai in our
+ * system, facts and leads, never copied text). The pipeline attaches two page
+ * extras to a page it does not build:
+ *   library     titles grouped by topic, linking our summary page where one is
+ *               written and the article itself until then
+ *   ext_points  facts from those articles that were checked at the primary
+ *               source the article cites, each linking that source
+ * Either can be absent; nothing renders without data.
+ */
+interface Props { doc?: any }
+const { doc } = Astro.props;
+const lib = doc?.library;
+const groups: any[] = lib && Array.isArray(lib.groups) ? lib.groups : [];
+const pts: any[] = doc?.ext_points && Array.isArray(doc.ext_points.items) ? doc.ext_points.items : [];
+const src = (lib && lib.source) || (doc?.ext_points && doc.ext_points.source) || 'IntuitionLabs';
+const topics = [...new Set(pts.map((p) => p.topic || ''))];
+---
+{pts.length > 0 && (
+  <section class="ext-pts">
+    <h2>What {src}'s research adds, checked at the source</h2>
+    <span data-llm="drafted" hidden></span>
+    <p>Facts found in {src} articles and confirmed in the primary source each one cites. {src} says its
+      content may be AI assisted, so a fact that could not be confirmed at its source is not shown.</p>
+    {topics.map((t) => (
+      <>
+        {t && <h3>{t}</h3>}
+        <ul>
+          {pts.filter((p) => (p.topic || '') === t).map((p) => (
+            <li>{p.claim}
+              <span class="ext-src">Source: <a href={p.source_url} rel="noopener">{p.source_title || p.source_url}</a>.
+                Found in <a href={p.via}>our summary of {p.via_title}</a>.</span></li>
+          ))}
+        </ul>
+      </>
+    ))}
+  </section>
+)}
+{groups.length > 0 && (
+  <section class="ext-lib">
+    <h2>Further reading from {src}</h2>
+    {lib.ours ? (
+      <p>Our summaries of {lib.count} {src} articles on this topic, newest first. Each summary is in our
+        own words, with the facts checked at their sources. Checked {lib.as_of}.</p>
+    ) : (
+      <p>{src}, a consultancy working on AI in pharma and life sciences, has published {lib.count} articles
+        on the ground this page covers. They are grouped by topic, newest first. Each opens our summary of
+        the article where one is written, and <a href={lib.source_url} rel="noopener">their article</a> until
+        then. Checked {lib.as_of}.</p>
+    )}
+    {groups.map((g) => (
+      <details>
+        <summary>{g.topic} &middot; {g.count}</summary>
+        <ul>
+          {g.items.map((it) => (
+            <li><a href={it.url} rel={it.url.startsWith('/') ? undefined : 'noopener'}>{it.title}</a> <span class="ext-date">{it.date}</span></li>
+          ))}
+        </ul>
+      </details>
+    ))}
+  </section>
+)}
+
+<style>
+  .ext-pts li { padding: .35em 0; }
+  .ext-pts .ext-src { display: block; font-size: 13px; color: #7A8A9E; }
+  .ext-lib details { border-top: 1px solid #e8e6e0; padding: .5em 0; }
+  .ext-lib summary { cursor: pointer; font-weight: 600; color: #201868; }
+  .ext-lib ul { margin: .5em 0 .3em 1.1em; }
+  .ext-lib li { padding: .15em 0; }
+  .ext-lib .ext-date { font-size: 13px; color: #7A8A9E; }
+</style>

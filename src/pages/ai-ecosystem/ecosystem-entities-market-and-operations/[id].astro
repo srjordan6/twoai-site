@@ -16,6 +16,7 @@ import Base from '../../../layouts/Base.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { ownedServers } from '../../../lib/mcpAttribution';
 import Reading from '../../../components/Reading.astro';
+import ExtLibrary from '../../../components/ExtLibrary.astro';
 import PinnedNews from '../../../components/PinnedNews.astro';
 import PersonProfile from '../../../components/PersonProfile.astro';
 import StockBox from '../../../components/StockBox.astro';
@@ -841,6 +842,7 @@ const jsonld = JSON.stringify(
         ))}
       </ul>
 
+      <ExtLibrary doc={jhub} />
       <Reading reading={jhub.reading} heading="What does the hiring data show?" />
       <div class="cite-box">Cite this page: <code>"AI Jobs and Market Dynamics." The World of AI,
         theworldofai.org{BASE}/{jhub.uid}/. Verified {jhub.generated}.</code></div>

@@ -10,6 +10,7 @@ import Base from '../../../layouts/Base.astro';
 import { capParagraphs } from '../../../lib/prose';
 import Reading from '../../../components/Reading.astro';
 import PinnedNews from '../../../components/PinnedNews.astro';
+import ExtLibrary from '../../../components/ExtLibrary.astro';
 import CweTable from '../../../components/CweTable.astro';
 import StateLawsuitMap from '../../../components/StateLawsuitMap.astro';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
@@ -248,6 +249,16 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
           buy, sell or hold anything. It describes how AI is used in economics and investing
           and where the risk sits.</p>
       )}
+      {art.built_from === 'article' && (art.facts || []).length > 0 && (
+        <section>
+          <h2>Which facts were checked at the source?</h2>
+          <ul>
+            {art.facts.map((f) => (
+              <li>{f.claim} <span class="meta-line">Source: <a href={f.source_url} rel="noopener">{f.source_title || f.source_url}</a>.</span></li>
+            ))}
+          </ul>
+        </section>
+      )}
       {artSiblings.length > 0 && (
         <>
           <h2>Also in {art.parent_name}</h2>
@@ -258,7 +269,20 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
       )}
       <div class="cite-box">Cite this page: <code>"{art.name}." The World of AI,
         theworldofai.org{BASE}/{art.uid}/. Retrieved {art.generated}.</code></div>
-      {art.source_url && !(art.site_pages && art.site_pages.length) && (
+      {art.built_from === 'article' && (
+        /* ONE OUTSIDE ARTICLE, rows 453 and 456. The page is our reading of
+           it; the article is credited at the very bottom, with the
+           publisher's own note that its content may be AI assisted. */
+        <div class="meta-line source-line">
+          <span data-llm="drafted" hidden></span>
+          <p>Found in an article by {art.source_publisher}, read {art.source_read_on}: {' '}
+            <a href={art.source_url} rel="nofollow noopener">{art.source_name || art.source_url}</a>.
+            {art.source_publisher} says its content may be AI assisted, so each fact above was checked
+            against the primary source the article cites, and facts that could not be checked are left out.
+            The words above are ours; the article belongs to its publisher.</p>
+        </div>
+      )}
+      {art.source_url && art.built_from !== 'article' && !(art.site_pages && art.site_pages.length) && (
         /* SOURCE SUMMARY PAGES, 2026-09-25. The whole page is our reading of
            one outside source; the link to that source sits at the very
            bottom, as Stephen asked, with the date its text was read. */
@@ -519,6 +543,7 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
         </section>
       ))}
 
+      <ExtLibrary doc={secu} />
       <div class="cite-box">Cite this page: <code>"{secu.name}." The World of AI,
         theworldofai.org{BASE}/{secu.uid}/. Retrieved {secu.generated}.</code></div>
     </>
@@ -575,6 +600,7 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
           </ul>
         </>
       )}
+      <ExtLibrary doc={secu} />
       <div class="cite-box">Cite this page: <code>"{secu.name}." The World of AI,
         theworldofai.org{BASE}/{secu.uid}/. Retrieved {secu.generated}.</code></div>
     </>
@@ -684,6 +710,7 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
           documents in the compliance library.</p>
       )}
 
+      <ExtLibrary doc={secu} />
       <div class="cite-box">Cite this page: <code>"{secu.name}." The World of AI,
         theworldofai.org{BASE}/{secu.uid}/. Retrieved {secu.generated}.</code></div>
     </>
@@ -889,29 +916,8 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
     );
   })}
 
-  {/* FURTHER READING FROM AN OUTSIDE LIBRARY, Stephen 2026-10-04: most of
-      intuitionlabs.ai belongs on Healthcare. Titles and links only, grouped
-      by topic, newest first; the text stays on their site. Attached by the
-      pipeline's twoai_ext_library stage as a page extra. */}
-  {sec.library && (sec.library.groups || []).length > 0 && (
-    <section class="ext-lib">
-      <h2>Further reading from {sec.library.source}</h2>
-      <p>{sec.library.source}, a consultancy working on AI in pharma and life sciences, has published
-        {' '}{sec.library.count} articles on the ground this page covers. They are grouped by topic,
-        newest first, and each opens on <a href={sec.library.source_url} rel="noopener">their site</a>.
-        Checked {sec.library.as_of}.</p>
-      {sec.library.groups.map((g) => (
-        <details>
-          <summary>{g.topic} &middot; {g.count}</summary>
-          <ul>
-            {g.items.map((it) => (
-              <li><a href={it.url} rel="noopener">{it.title}</a> <span class="ext-date">{it.date}</span></li>
-            ))}
-          </ul>
-        </details>
-      ))}
-    </section>
-  )}
+  {/* Further reading and checked facts from an outside library (rows 453, 456). */}
+  <ExtLibrary doc={sec} />
 
   <p class="meta-line">Related on this site: <a href="/ai-laws/">AI laws by state</a> ·
     <a href="/ai-lawsuits/">the AI lawsuit tracker</a> ·
