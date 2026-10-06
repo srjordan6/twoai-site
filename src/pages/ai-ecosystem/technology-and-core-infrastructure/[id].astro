@@ -14,6 +14,7 @@ import Base from '../../../layouts/Base.astro';
 import Reading from '../../../components/Reading.astro';
 import SourcedFacts from '../../../components/SourcedFacts.astro';
 import CveList from '../../../components/CveList.astro';
+import Faq from '../../../components/Faq.astro';
 import { cvesFor } from '../../../lib/cves';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
@@ -164,6 +165,44 @@ const histDate = (d: string) => {
 const histPrimary: any[] = famHist && Array.isArray(famHist.primary) ? famHist.primary : [];
 const famLive = famMembers.filter((m) => !m.delisted);
 const famRetired = famMembers.filter((m) => m.delisted);
+// THICKER FAMILY PAGES, theworldofai rows 493 and 494 (Stephen, 2026-10-05:
+// "the model pages are still a little thin"). The pipeline reads the
+// developer's own site (twoai_family_sources.go) and the records the site
+// already holds (twoai_family_blocks.go). Every block below renders only
+// when it has rows, so a family with no developer site mapped, or one not
+// yet crawled, looks as it did before.
+const famArr = (v: any): any[] => (Array.isArray(v) ? v : []);
+const famExpl: any = isFamily && sec.explainer && famArr(sec.explainer.paragraphs).length > 0 ? sec.explainer : null;
+const famExplSources: any[] = famExpl ? famArr(famExpl.sources) : [];
+const famDevLines: any[] = isFamily ? famArr(sec.dev_lines) : [];
+const famDevNews: any[] = isFamily ? famArr(sec.dev_news).slice(0, 5) : [];
+const famPL: any = isFamily && sec.price_limits && famArr(sec.price_limits.rows).length > 0 ? sec.price_limits : null;
+const famBench: any[] = (isFamily ? (Array.isArray(sec.bench_best) ? sec.bench_best : famArr(sec.benchmarks)) : [])
+  .map((b: any) => ({ ...b, bestOf: Number(b.entries) > 1 ? `best of ${b.entries}` : '' }));
+// The wider repository list from every Hugging Face section, falling back to
+// the Large Language Models rows a page built before the change carries.
+const famRepos: any[] = isFamily ? (famArr(sec.hf_repos).length > 0 ? sec.hf_repos : famArr(sec.hf_releases)) : [];
+const famLics: any[] = (isFamily ? famArr(sec.licences) : [])
+  .map((l: any) => ({ ...l, repoLabel: `${l.repos} ${Number(l.repos) === 1 ? 'repository' : 'repositories'}` }));
+const famCards: any[] = isFamily ? famArr(sec.dev_cards) : [];
+const famLicBlock = famLics.length > 0 || famCards.length > 0 || famRepos.length > 0;
+const famAccess: any[] = isFamily ? famArr(sec.access) : [];
+const famMaker: any = isFamily && sec.maker && sec.maker.name ? sec.maker : null;
+const famMakerFacts: any[] = famMaker ? famArr(famMaker.facts) : [];
+const famMakerSources: any[] = famMaker ? famArr(famMaker.sources) : [];
+const famWho: string = famMaker ? famMaker.name : (sec.developer || '');
+const famRel: any = isFamily && sec.related ? sec.related : {};
+const famRelNews: any[] = Array.isArray(famRel.news) ? famRel.news
+  : famArr(sec.news).slice(0, 5).map((n: any) => ({ title: n.headline, path: `/ai-news/${n.uid}/`, date: n.published }));
+const famRelCves: any[] = Array.isArray(famRel.cves) ? famRel.cves : famArr(sec.cves).slice(0, 5);
+const famRelPapers: any[] = famArr(famRel.papers);
+const famRelSuits: any[] = famArr(famRel.lawsuits);
+const famRelTerms: any[] = famArr(famRel.terms);
+const famHasRel = isFamily && (famRelNews.length + famRelCves.length + famRelPapers.length + famRelSuits.length + famRelTerms.length) > 0;
+const famFaq: any[] = isFamily ? famArr(sec.faq).filter((f: any) => f && f.q && f.a) : [];
+const famPage = (u: string) => String(u || '').replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
+const famPageShort = (u: string) => { const s = famPage(u); return s.length > 48 ? `${s.slice(0, 47)}…` : s; };
+const famUsd = (v: number) => (v === null || v === undefined || v < 0 ? 'not listed' : v === 0 ? 'free' : `$${v}`);
 const famTok = (n: number) => (!n ? 'not listed' : n >= 1000000 ? `${+(n / 1000000).toFixed(2)}M` : n >= 1000 ? `${Math.round(n / 1000)}k` : `${n}`);
 const famPrice = (v: number) => (v === null || v === undefined || v < 0 ? 'not listed' : v === 0 ? 'free' : `$${v}`);
 const famMods = (a: string[]) => (Array.isArray(a) && a.length ? a.join(', ') : 'text');
@@ -739,6 +778,53 @@ const facBare = sec.shape === 'dc-facility' && !(
         </tbody>
       </table>
 
+      {famExpl && (
+        <section class="fam-expl">
+          <span data-llm="drafted" hidden></span>
+          <h2>What it is</h2>
+          {famExpl.paragraphs.map((p: string) => <p>{p}</p>)}
+          <p class="meta-line">Written by AI on {famExpl.written_on} from these pages of the developer's own site, and nothing else:</p>
+          <ul class="fam-src">
+            {famExplSources.map((s: any) => <li><a href={s.url} rel="noopener">{s.title || famPage(s.url)}</a></li>)}
+          </ul>
+        </section>
+      )}
+
+      {famDevLines.length > 0 && (
+        <>
+          <h2>Model lines from the developer</h2>
+          <p class="meta-line">Every model line named on {famWho}'s own website, including lines no marketplace sells,
+            with the date the developer gives where it gives one. Each links to the page it was read from.</p>
+          <div class="fam-scroll">
+            <table class="pay">
+              <thead><tr><th>Line</th><th>Modality</th><th>Announced</th><th>Read from</th></tr></thead>
+              <tbody>
+                {famDevLines.map((l: any) => (
+                  <tr>
+                    <td class="fam-ver"><a href={l.url} rel="noopener">{l.name}</a></td>
+                    <td>{l.modality || 'not stated'}</td>
+                    <td class="nw">{l.announced || 'not stated'}</td>
+                    <td>{famArr(l.sources).slice(0, 2).map((s: string, i: number) => <>{i > 0 && ', '}<a href={s} rel="noopener">{famPageShort(s)}</a></>)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {famDevNews.length > 0 && (
+        <>
+          <h2>From the developer</h2>
+          <p class="meta-line">Dated announcements from {famWho}'s own news, blog and research pages, newest first.</p>
+          <ul class="fam-log">
+            {famDevNews.map((n: any) => (
+              <li><time datetime={n.date}>{n.date}</time> <a href={n.url} rel="noopener">{n.title}</a></li>
+            ))}
+          </ul>
+        </>
+      )}
+
       <h2>Versions</h2>
       <p class="meta-line">Every version in the catalog, newest first. Prices are per million tokens from the
         catalog's lowest-cost route; providers can charge more. The tags under each name are the inputs it accepts.</p>
@@ -765,27 +851,103 @@ const facBare = sec.shape === 'dc-facility' && !(
         <p class="meta-line">No longer listed: {famRetired.map((m, i) => <>{i > 0 && ', '}{m.name} ({m.released})</>)}.</p>
       )}
 
-      {(sec.hf_releases || []).length > 0 && (
+      {famPL && (
         <>
-          <h2>Open-weight releases on Hugging Face</h2>
-          <p class="meta-line">The family's own repositories among the most-downloaded open models on the Hub,
-            most downloaded first. Third-party repackagings are not listed.</p>
+          <h2>Price and limits</h2>
+          <p>{famPL.summary}</p>
+          <p class="meta-line">Every version side by side, prices per million tokens from the OpenRouter catalog's
+            lowest-cost route.</p>
           <div class="fam-scroll">
             <table class="pay">
-              <thead><tr><th>Repository</th><th>Licence</th><th class="num">Downloads</th><th>Task</th><th>Released</th></tr></thead>
+              <thead><tr><th>Version</th><th class="num">$/M in</th><th class="num">$/M out</th><th class="num">Context</th><th class="num">Max out</th><th>Input</th><th>Output</th><th>Reasoning</th><th>Open weights</th></tr></thead>
               <tbody>
-                {sec.hf_releases.map((r) => (
+                {famPL.rows.map((m: any) => (
                   <tr>
-                    <td><a href={r.url} rel="noopener">{r.id}</a></td>
-                    <td>{r.licence || 'not declared'}</td>
-                    <td class="num">{fmt(r.downloads)}</td>
-                    <td>{r.task}</td>
-                    <td>{r.created || 'not listed'}</td>
+                    <td class="fam-ver"><a href={m.url} rel="noopener">{m.name}</a>
+                      {(m.cheapest || m.largest_context) && <span class="fam-mods">{m.cheapest && <span class="tag tag-ow">cheapest</span>}{m.largest_context && <span class="tag tag-ow">largest context</span>}</span>}</td>
+                    <td class="num nw">{famUsd(m.prompt_pm)}</td>
+                    <td class="num nw">{famUsd(m.completion_pm)}</td>
+                    <td class="num">{famTok(m.context)}</td>
+                    <td class="num">{famTok(m.max_output)}</td>
+                    <td>{famMods(m.input)}</td>
+                    <td>{famMods(m.output)}</td>
+                    <td>{m.reasoning ? 'Yes' : 'No'}</td>
+                    <td>{m.open_weights ? 'Yes' : 'No'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+        </>
+      )}
+
+      {famBench.length > 0 && (
+        <>
+          <h2>Benchmarks</h2>
+          <p class="meta-line">The family's best entry on each benchmark this site tracks, from the named public
+            source and its date. Vendor-reported figures are not listed here.</p>
+          <table class="facts">
+            <thead><tr><th>Benchmark</th><th>Best entry</th><th class="num">Score</th><th>Source</th></tr></thead>
+            <tbody>
+              {famBench.map((b: any) => (
+                <tr><td>{b.benchmark}</td><td>{b.system}{b.bestOf && <span class="meta-line-inline"> {b.bestOf}</span>}</td><td class="num">{b.score}</td>
+                  <td><a href={b.source_url} rel="noopener">{b.source}</a>{b.as_of && <>, {b.as_of}</>}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+
+      {famLicBlock && (
+        <>
+          <h2>Licence and model cards</h2>
+          {famLics.length > 0 && (
+            <p>Licences the family's repositories on Hugging Face declare: {famLics.map((l: any, i: number) => <>{i > 0 && ', '}<a href={l.url} rel="noopener">{l.name}</a> ({l.repoLabel})</>)}.</p>
+          )}
+          {famCards.length > 0 && (
+            <>
+              <p class="meta-line">Model cards, licences and policies as {famWho}'s own site labels them:</p>
+              <ul class="fam-cards">
+                {famCards.map((c: any) => <li><a href={c.url} rel="noopener">{c.label}</a> <span class="meta-line-inline">linked from {c.on_page || famPage(c.source_url)}</span></li>)}
+              </ul>
+            </>
+          )}
+          {famRepos.length > 0 && (
+            <>
+              <h3>Open-weight releases on Hugging Face</h3>
+              <p class="meta-line">The family's own repositories on the Hub, each with its model card, most downloaded
+                first. Third-party repackagings are not listed.</p>
+              <div class="fam-scroll">
+                <table class="pay">
+                  <thead><tr><th>Repository</th><th>Licence</th><th class="num">Downloads</th><th>Task</th><th>Released</th></tr></thead>
+                  <tbody>
+                    {famRepos.map((r: any) => (
+                      <tr>
+                        <td><a href={r.url} rel="noopener">{r.id}</a></td>
+                        <td>{r.licence || 'not declared'}</td>
+                        <td class="num">{fmt(r.downloads)}</td>
+                        <td>{r.task}</td>
+                        <td>{r.created || 'not listed'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      {famAccess.length > 0 && (
+        <>
+          <h2>Access</h2>
+          <p class="meta-line">Where {famWho}'s own site says its models can be used. Each entry links to the page
+            that says so.</p>
+          <ul class="fam-access">
+            {famAccess.map((a: any) => (
+              <li><a href={a.url || a.source_url} rel="noopener">{a.channel}</a> <span class="meta-line-inline">{a.kind}</span></li>
+            ))}
+          </ul>
         </>
       )}
 
@@ -807,22 +969,6 @@ const facBare = sec.shape === 'dc-facility' && !(
           <li>Open weights: {(sec.hf_models || []).map((h, i) => <>{i > 0 && ', '}<a href={h.url} rel="noopener">{h.hf_id}</a></>)}.</li>
         )}
       </ul>
-
-      <h2>Benchmarks</h2>
-      {(sec.benchmarks || []).length > 0 ? (
-        <table class="facts">
-          <thead><tr><th>Benchmark</th><th>Entry</th><th class="num">Score</th><th>Source</th></tr></thead>
-          <tbody>
-            {sec.benchmarks.map((b) => (
-              <tr><td>{b.benchmark}</td><td>{b.system}</td><td class="num">{b.score}</td>
-                <td><a href={b.source_url} rel="noopener">{b.source}</a>{b.as_of && <>, {b.as_of}</>}</td></tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <p>No scores for this family from a named public benchmark are tracked yet. Vendor-reported figures are not
-          listed here.</p>
-      )}
 
       <h2>Cost and availability</h2>
       {(sec.providers || []).length > 0 ? (
@@ -870,24 +1016,71 @@ const facBare = sec.shape === 'dc-facility' && !(
         </>
       )}
 
-      {(sec.cves || []).length > 0 && (
+      {famMaker && (
         <>
-          <h2>Known vulnerabilities naming this family</h2>
-          <ul>
-            {sec.cves.map((c) => (
-              <li><a href={`/ai-news/cves/${c.cve_id}/`}>{c.headline || c.cve_id}</a> <span class="meta-line-inline">{c.cve_id}{c.severity && <>, {c.severity.toLowerCase()}</>}, {c.published}</span></li>
-            ))}
-          </ul>
+          <h2>The maker</h2>
+          <p>{famMaker.summary}</p>
+          {famMakerFacts.length > 0 && (
+            <table class="facts">
+              <tbody>
+                {famMakerFacts.map((x: any) => <tr><th>{x.label}</th><td>{x.value}</td></tr>)}
+              </tbody>
+            </table>
+          )}
+          <p class="meta-line"><a href={famMaker.href}>{famMaker.name} company page on this site</a>
+            {famMakerSources.length > 0 && <>{', '}from {famMakerSources.map((s: any, i: number) => <>{i > 0 && ', '}<a href={s.url} rel="noopener">{s.name}</a></>)}</>}.</p>
         </>
       )}
-      {(sec.news || []).length > 0 && (
+
+      {famHasRel && (
         <>
-          <h2>In the news</h2>
-          <ul>
-            {sec.news.map((n) => <li><a href={`/ai-news/${n.uid}/`}>{n.headline}</a> <span class="meta-line-inline">{n.published}</span></li>)}
-          </ul>
+          <h2>Related</h2>
+          {famRelNews.length > 0 && (
+            <>
+              <h3>In the news</h3>
+              <ul>
+                {famRelNews.map((n: any) => <li><a href={n.path}>{n.title}</a> <span class="meta-line-inline">{n.date}</span></li>)}
+              </ul>
+            </>
+          )}
+          {famRelPapers.length > 0 && (
+            <>
+              <h3>Research papers by the developer</h3>
+              <ul>
+                {famRelPapers.map((p: any) => <li><a href={p.url} rel="noopener">{p.title}</a> <span class="meta-line-inline">{p.date}</span></li>)}
+              </ul>
+            </>
+          )}
+          {famRelCves.length > 0 && (
+            <>
+              <h3>Known vulnerabilities naming this family</h3>
+              <ul>
+                {famRelCves.map((c: any) => (
+                  <li><a href={`/ai-news/cves/${c.cve_id}/`}>{c.headline || c.cve_id}</a> <span class="meta-line-inline">{c.cve_id}{c.severity && <>, {String(c.severity).toLowerCase()}</>}, {c.published}</span></li>
+                ))}
+              </ul>
+            </>
+          )}
+          {famRelSuits.length > 0 && (
+            <>
+              <h3>Lawsuits</h3>
+              <ul>
+                {famRelSuits.map((s: any) => <li><a href={s.path}>{s.title}</a> <span class="meta-line-inline">{s.status}{s.status && s.date && ', '}{s.date}</span></li>)}
+              </ul>
+            </>
+          )}
+          {famRelTerms.length > 0 && (
+            <>
+              <h3>Glossary terms</h3>
+              <ul>
+                {famRelTerms.map((g: any) => <li><a href={g.path}>{g.title}</a></li>)}
+              </ul>
+            </>
+          )}
         </>
       )}
+
+      <Faq items={famFaq} heading="Common questions" />
     </>
   )}
 
@@ -2804,6 +2997,10 @@ const facBare = sec.shape === 'dc-facility' && !(
   .fam-log li { padding: .25em 0; border-bottom: 1px solid rgba(122, 138, 158, 0.25); font-size: 14px; }
   .fam-log time { color: #7A8A9E; margin-right: .6em; font-size: 13px; }
   .fam-prov { columns: 2; }
+  .fam-src, .fam-cards { font-size: 13px; color: #7A8A9E; }
+  .fam-src a, .fam-cards a { word-break: break-word; }
+  .fam-access { columns: 2; }
+  .fam-access .meta-line-inline, .fam-cards .meta-line-inline { font-size: 12px; }
   .fam-link { font-size: 12px; margin-left: .4em; color: #F07800; }
   .meta-line-inline { font-size: 12.5px; color: #7A8A9E; }
 
