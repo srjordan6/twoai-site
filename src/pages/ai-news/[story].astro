@@ -19,6 +19,7 @@ import { categoryOf, categoriesOf, coverageByDay, readingMinutes, titleCase, typ
 import { loadKnownEntities, entitiesInText } from '../../lib/knownEntities';
 import { storyUid, cleanSummary } from '../../lib/storyUid';
 import { EDITOR_PERSON } from '../../lib/editor';
+import { translatedFrom } from '../../lib/langs';
 export async function getStaticPaths() {
   const mods = import.meta.glob('../../../content/news/news.json', { eager: true });
   const news: any = Object.values(mods)[0]?.default ?? null;
@@ -89,8 +90,11 @@ const story: Story = {
   Orgs: s.Orgs ?? [],
   Persons: s.Persons ?? [],
   Domains: s.Domains ?? [],
-  Articles: s.Articles ?? [],
+  // Each outlet's title in English, labelled with the language it was
+  // translated from (bridge row 508).
+  Articles: (s.Articles ?? []).map((a: any) => ({ ...a, fromLang: translatedFrom(a.Title_lang, a.Title_original, a.Title) })),
 };
+const headlineFrom = translatedFrom((s as any).Headline_lang, (s as any).Headline_original, s.Headline);
 
 // The stamp reads built_at and generated; a story carries its own dates under
 // different names because a permalink must date itself from the day the story
@@ -296,6 +300,7 @@ const jsonld = JSON.stringify({
 <Base title={`${title} | AI News`} description={description} current="/ai-news/" jsonld={jsonld} ogType="article" doc={stampDoc} stampLabel="Story first published" canonicalOverride={`https://theworldofai.org${storyPath}`}>
   <p class="meta-line"><a href="/ai-news/">AI News</a> · <a href="/ai-news/daily/">Daily News</a></p>
   <h1>{story.Headline}</h1>
+  {headlineFrom && <p class="tr-note">Translated from {headlineFrom}</p>}
   <p class="dateline">
     <strong>Daily briefing</strong> · {date}
     {stamp && <> · compiled {stamp}</>}
@@ -427,7 +432,7 @@ const jsonld = JSON.stringify({
           {topCoverage.map((a) => (
             <li>
               <a href={a.URL} rel="noopener nofollow" target="_blank">{a.Title}</a>
-              <span class="meta">{a.Domain}{a.Date ? ` · ${a.Date}` : ''}</span>
+              <span class="meta">{a.Domain}{a.Date ? ` · ${a.Date}` : ''}{a.fromLang ? ` · translated from ${a.fromLang}` : ''}</span>
             </li>
           ))}
         </ul>
@@ -550,6 +555,7 @@ const jsonld = JSON.stringify({
 <style>
   h1 { max-width: 28ch; line-height: 1.2; }
   .dateline { color: #7A8A9E; font-size: 14px; }
+  .tr-note { color: #7A8A9E; font-size: 13px; margin: -.3em 0 .6em; }
   .dateline strong { color: #201868; }
   .pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 26px; }
   .pill { display: inline-block; background: #201868; color: #fff; font-size: 12px; padding: 4px 12px; border-radius: 999px;

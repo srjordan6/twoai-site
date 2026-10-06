@@ -19,6 +19,7 @@
 import Base from '../../../layouts/Base.astro';
 import { incidentUid } from '../../../lib/storyUid';
 import { capParagraphs } from '../../../lib/prose';
+import { translatedFrom } from '../../../lib/langs';
 
 export function getStaticPaths() {
   const mods = import.meta.glob('../../../../content/news/incident-*.json', { eager: true });
@@ -28,21 +29,32 @@ export function getStaticPaths() {
     .map((d: any) => ({ params: { id: String(d.incident_id) }, props: { inc: d } }));
 }
 const { inc } = Astro.props;
-const reports: any[] = inc.reports ?? [];
+// Every outlet's headline in English, with the language it was translated
+// from (bridge row 508); the outlet's own wording is never shown.
+const reports: any[] = (inc.reports ?? []).map((r: any) => ({
+  ...r,
+  fromLang: translatedFrom(r.title_lang, r.title_original, r.title),
+}));
 // THE HEADLINE IN ENGLISH. Stephen, 2026-09-11, on incident 1684: the H1
 // was a Dutch parliamentary motion, verbatim, above an English summary. The
 // summary and reading were always English because Claude wrote them; the
 // title was copied from the feed and never touched. The pipeline now
 // translates any non-English headline once and carries it as title_en with
 // title_lang. The page leads with the English rendering and says it is a
-// translation, and the publisher's own headline stays exactly as written on
-// the source link at the foot - that link label is the AIID rule and is not
-// ours to change. Language names are looked up for the handful of codes
-// that actually occur; an unknown code shows as the code.
-const LANGS: Record<string, string> = { nl: 'Dutch', de: 'German', fr: 'French', es: 'Spanish', it: 'Italian', pt: 'Portuguese', ja: 'Japanese', zh: 'Chinese', ko: 'Korean', ru: 'Russian', ar: 'Arabic', hi: 'Hindi', sv: 'Swedish', da: 'Danish', no: 'Norwegian', fi: 'Finnish', pl: 'Polish', tr: 'Turkish', he: 'Hebrew', id: 'Indonesian', cs: 'Czech', el: 'Greek', hu: 'Hungarian', ro: 'Romanian', uk: 'Ukrainian', vi: 'Vietnamese', th: 'Thai' };
-const translated = !!(inc.title_en && inc.title_lang && inc.title_lang !== 'en' && inc.title_en !== inc.title);
-const headline = translated ? inc.title_en : inc.title;
-const langName = translated ? (LANGS[inc.title_lang] || inc.title_lang) : '';
+// translation. Language names come from src/lib/langs.ts.
+//
+// EVERYTHING IN ENGLISH, 2026-10-06 (bridge row 508, after incident 1722 led
+// with a Hindi headline because the translator had been silently off since
+// 2026-09-17). Pages built since then carry the English in title and the
+// publisher's headline in title_original; pages built before carry the
+// original in title and the English in title_en. Both read the same way
+// here. The original headline is no longer printed under the H1, and the
+// source links at the foot carry the English too: the page names the
+// language and keeps the original only in the JSON-LD.
+const headline = inc.title_en || inc.title;
+const originalTitle = inc.title_original || (inc.title_en && inc.title_en !== inc.title ? inc.title : '');
+const langName = translatedFrom(inc.title_lang, originalTitle, headline);
+const translated = !!langName;
 const paras = (t: string) => capParagraphs(t);
 const dates = reports.map((r) => r.published).filter(Boolean).sort();
 const first = dates[0];
@@ -69,7 +81,7 @@ const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'Article',
   headline: headline,
-  ...(translated ? { alternativeHeadline: inc.title, inLanguage: 'en' } : {}),
+  ...(translated ? { alternativeHeadline: originalTitle, inLanguage: 'en' } : {}),
   description: desc.slice(0, 300),
   datePublished: inc.published || inc.generated,
   dateModified: inc.generated,
@@ -83,8 +95,7 @@ const jsonld = JSON.stringify({
     <a href="/ai-news/daily/#incidents">When AI goes wrong</a></p>
   <h1>{headline}</h1>
   {translated && (
-    <p class="meta-line original-title">Translated from {langName}. Original headline:
-      {' '}<span lang={inc.title_lang}>{inc.title}</span></p>
+    <p class="meta-line original-title">Translated from {langName}</p>
   )}
 
   <p class="answer">A report of real-world harm from a deployed AI system, catalogued by the
@@ -152,7 +163,7 @@ const jsonld = JSON.stringify({
       <span class="src-meta">incidentdatabase.ai · Responsible AI Collaborative · CC BY-SA 4.0</span></li>
     {reports.map((r) => (
       <li><a href={r.url} rel="noopener nofollow" target="_blank">{r.title}</a>
-        <span class="src-meta">{r.domain}{r.published && <> · {r.published}</>}</span></li>
+        <span class="src-meta">{r.domain}{r.published && <> · {r.published}</>}{r.fromLang && <> · translated from {r.fromLang}</>}</span></li>
     ))}
   </ul>
 
