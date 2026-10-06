@@ -439,3 +439,7 @@
 # The per-weakness pages under /ai-news/cwes/CWE-n/ are not affected.
 /ai-news/cwes/ /ai-ecosystem/enterprise-applications-governance-and-tools/aa6058ad/ 301
 /ai-news/cwes /ai-ecosystem/enterprise-applications-governance-and-tools/aa6058ad/ 301
+# Row 498: the Google bug bounty story was written by hand under 3f87c5c5,
+# the archive mints its uid from the slug as 9d251938, the live address.
+/ai-news/3f87c5c5/ /ai-news/9d251938/ 301
+/ai-news/3f87c5c5 /ai-news/9d251938/ 301
