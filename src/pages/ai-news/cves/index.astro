@@ -9,6 +9,7 @@
  */
 import Base from '../../../layouts/Base.astro';
 import { cveList, severityClass } from '../../../lib/cves';
+import PinnedNews from '../../../components/PinnedNews.astro';
 const d = cveList();
 const cves = d.cves;
 const bySev = (s: string) => cves.filter((c) => (c.cvss_severity || '').toUpperCase() === s).length;
@@ -71,6 +72,7 @@ const jsonld = JSON.stringify({
     MCP server or AI library the site covers: <b>{critical}</b> rated critical, <b>{high}</b> high, and
     <b>{d.kev}</b> on CISA's list of vulnerabilities exploited in the wild. Newest first. A CVE
     leaves the ten shown on the AI News page as newer ones arrive, but never leaves this list.</p>
+  <PinnedNews pins={(d as any).pinned_news} />
   <p class="meta-line">Last verified: <time datetime={d.generated}>{d.generated}</time></p>
 
   <h2>What qualifies</h2>

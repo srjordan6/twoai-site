@@ -17,6 +17,7 @@ import { categoryOf, type Story } from '../../lib/newsTopics';
 import { storyUid, cleanSummary, incidentUid } from '../../lib/storyUid';
 import { latestCves, cveList, severityClass } from '../../lib/cves';
 import { readFileSync, existsSync } from 'node:fs';
+import PinnedNews from '../../components/PinnedNews.astro';
 // AI CVE TRACKER, Stephen 2026-10-01: the ten newest, at the FOOT of this page
 // so nothing already here loses its place. Every CVE stays on /ai-news/cves/.
 const cvesTop = latestCves(10);
@@ -45,6 +46,10 @@ const tlLandmarks: any[] = (() => {
 })();
 const tlBlurb = 'From the 1940s to the present: Turing, the perceptron, expert systems, backpropagation, deep learning, AlexNet, transformers, and what followed.';
 
+// THE FRONT PAGE PIN (theworldofai row 498): a story pinned to news/front.json
+// leads the page for 36 hours. Empty, and nothing renders, the rest of the time.
+const front: any = existsSync('content/news/front.json') ? JSON.parse(readFileSync('content/news/front.json', 'utf8')) : null;
+const frontPins: any[] = front && Array.isArray(front.pinned_news) ? front.pinned_news : [];
 const newsMods = import.meta.glob('../../../content/news/news.json', { eager: true });
 const news: any = Object.values(newsMods)[0]?.default ?? null;
 // Every story is an entity with its own uid, and every place a story appears
@@ -164,6 +169,8 @@ const jsonld = JSON.stringify({
       {stamp && <> · last compiled {stamp}</>}
     </p>
   )}
+
+  <PinnedNews pins={frontPins} heading="Top story" />
 
   <div class="answer-box">
     <p class="answer-label">{incidents.length > 0 ? "Three sections" : "Two sections"}</p>

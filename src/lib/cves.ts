@@ -25,7 +25,9 @@ export function cveList() {
   const p = 'content/news/cves.json';
   if (!existsSync(p)) return (cache = { generated: '', total: 0, kev: 0, cves: [] });
   const d = JSON.parse(readFileSync(p, 'utf8'));
-  cache = { generated: d.generated ?? '', total: d.total ?? 0, kev: d.kev ?? 0, cves: Array.isArray(d.cves) ? d.cves : [] };
+  cache = { generated: d.generated ?? '', total: d.total ?? 0, kev: d.kev ?? 0, cves: Array.isArray(d.cves) ? d.cves : [],
+    // Stories pinned to the tracker in twoai_page_news, merged by the publisher.
+    pinned_news: Array.isArray(d.pinned_news) ? d.pinned_news : [] };
   return cache;
 }
 

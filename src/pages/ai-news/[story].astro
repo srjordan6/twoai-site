@@ -114,6 +114,18 @@ const whyRaw: any = (story as any).why_it_matters;
 const whyHere: any = whyRaw && typeof whyRaw === 'object' && typeof whyRaw.text === 'string' && whyRaw.text.trim() !== '' && !whyRaw.none ? whyRaw : null;
 const whyCites: any[] = whyHere && Array.isArray(whyHere.cites) ? whyHere.cites.filter((c: any) => c && c.href && c.name) : [];
 
+// The editor's own analysis (theworldofai row 498): story.analysis is
+// { label, author, text }, written by hand, never by the pipeline.
+const anRaw: any = (story as any).analysis;
+const editorView: any = anRaw && typeof anRaw === 'object' && typeof anRaw.text === 'string' && anRaw.text.trim() !== ''
+  ? {
+      label: (typeof anRaw.label === 'string' && anRaw.label.trim()) || 'Analysis',
+      author: (typeof anRaw.author === 'string' && anRaw.author.trim()) || '',
+      byJordan: typeof anRaw.author === 'string' && anRaw.author.includes('Jordan'),
+      paras: anRaw.text.split(/\n\s*\n/).map((p: string) => p.trim()).filter(Boolean),
+    }
+  : null;
+
 const cat = categoryOf(story);
 const cats = categoriesOf(story);
 // Onward links: terms this story actually names, and the company pages for any
@@ -370,6 +382,17 @@ const jsonld = JSON.stringify({
         </div>
       )}
 
+      {editorView && (
+        /* THE EDITOR'S OWN VIEW, theworldofai row 498 (Stephen, 2026-10-05).
+           Written by a person, so it carries no AI marker, and kept apart
+           from the news facts above with its label and byline. */
+        <div class="why editor-view" id="analysis">
+          <p class="analysis-tag">{editorView.label}</p>
+          {editorView.paras.map((t: string) => <p>{t}</p>)}
+          {editorView.author && <p class="byline">By {editorView.byJordan ? <a href="/stephen-jordan/">{editorView.author}</a> : editorView.author}</p>}
+        </div>
+      )}
+
       {whyHere && (
         <div class="why" id="why-here">
           <span data-llm="drafted" hidden></span>
@@ -553,6 +576,7 @@ const jsonld = JSON.stringify({
   .rule { width: 56px; height: 3px; background: #F07800; margin: 0 0 18px; }
   .box-label { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #F07800; margin: 0 0 10px; }
 
+  .editor-view .byline { margin: 10px 0 0; font-size: 14px; color: #7A8A9E; }
   .why { background: #FFF6EC; border: 1px solid #F0D6B0; border-radius: 6px; padding: 20px 24px; margin: 6px 0 8px; scroll-margin-top: 80px; }
   .why p { font-size: 16px; line-height: 1.7; color: #2C2C2A; margin: 0; }
 

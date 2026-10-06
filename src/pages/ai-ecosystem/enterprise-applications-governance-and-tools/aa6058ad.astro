@@ -12,6 +12,7 @@
  */
 import Base from '../../../layouts/Base.astro';
 import CweTable from '../../../components/CweTable.astro';
+import PinnedNews from '../../../components/PinnedNews.astro';
 import { cweList } from '../../../lib/cwes';
 const BASE = '/ai-ecosystem/enterprise-applications-governance-and-tools';
 const UID = 'aa6058ad';
@@ -34,6 +35,7 @@ const jsonld = JSON.stringify({
   <h1>The weaknesses behind AI vulnerabilities</h1>
   {d.generated && <p class="meta-line">Last verified: <time datetime={d.generated}>{d.generated}</time>
     {' '}&middot; <span class="uid" title="This page's identifier on theworldofai.org">uid {UID}</span></p>}
+  <PinnedNews pins={(d as any).pinned_news} />
   {d.total === 0 && <p>The weakness list is being built and appears here after the next update.</p>}
   <CweTable />
   <div class="cite-box">Cite this page: <code>"The weaknesses behind AI vulnerabilities." The World of AI,
