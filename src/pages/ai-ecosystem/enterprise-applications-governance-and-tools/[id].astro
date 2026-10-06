@@ -11,6 +11,7 @@ import { capParagraphs } from '../../../lib/prose';
 import Reading from '../../../components/Reading.astro';
 import PinnedNews from '../../../components/PinnedNews.astro';
 import SourcedFacts from '../../../components/SourcedFacts.astro';
+import CheriWatch from '../../../components/CheriWatch.astro';
 import Faq from '../../../components/Faq.astro';
 import CweTable from '../../../components/CweTable.astro';
 import StateLawsuitMap from '../../../components/StateLawsuitMap.astro';
@@ -562,6 +563,7 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
     <>
       <h1>{secu.name}</h1>
       <p class="answer">{secu.blurb}</p>
+      <PinnedNews pins={secu.pinned_news} />
       <p class="meta-line">Last verified: {secu.generated} · The threat picture first, MITRE
         ATLAS, the OWASP Top 10 for LLM Applications and AVID, then {secu.topic_count} topics
         organized under the six domains of a security program. The same risk reads differently to
@@ -704,6 +706,7 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
     <>
       <h1>{secu.name}</h1>
       <p class="answer">{secu.blurb}</p>
+      <PinnedNews pins={secu.pinned_news} />
       <p class="meta-line">Last verified: {secu.generated} · One of the six domains of a security
         program in <a href={secu.hub_path}>{secu.hub_name}</a>. How each of {secu.topic_count} AI
         security topics lands for this domain, and what this part of the program has to do about it.</p>
@@ -751,7 +754,8 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
           </ul>
         </>
       )}
-      <SourcedFacts doc={secu} />
+      <CheriWatch doc={secu} />
+      <SourcedFacts doc={secu} skip={secu.cheri_watch && secu.cheri_watch.facts} />
       <div class="cite-box">Cite this page: <code>"{secu.name}." The World of AI,
         theworldofai.org{BASE}/{secu.uid}/. Retrieved {secu.generated}.</code></div>
     </>
@@ -761,6 +765,7 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
     <>
       <h1>{secu.name}</h1>
       <p class="answer">{secu.blurb}</p>
+      <PinnedNews pins={secu.pinned_news} />
       <p class="meta-line">Last verified: {secu.generated} · Part of
         {' '}<a href={`${BASE}/`}>AI Security and Risk</a>. Every entry below carries a source
         that was verified before it was published and is re-verified daily; the spine is

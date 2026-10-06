@@ -5,9 +5,13 @@
  * Written in the theworldofai session, so the page carries the AI disclosure.
  * Renders nothing without data.
  */
-interface Props { doc?: any }
-const { doc } = Astro.props;
-const items: any[] = doc?.sourced_facts && Array.isArray(doc.sourced_facts.items) ? doc.sourced_facts.items : [];
+interface Props { doc?: any; skip?: any[] }
+const { doc, skip } = Astro.props;
+// Facts another block on the page already shows (the CHERI section on
+// Architecture and Engineering, row 501), matched by their claim text.
+const shown = new Set((Array.isArray(skip) ? skip : []).map((x) => x && x.claim).filter(Boolean));
+const all: any[] = doc?.sourced_facts && Array.isArray(doc.sourced_facts.items) ? doc.sourced_facts.items : [];
+const items: any[] = all.filter((x) => !shown.has(x.claim));
 const topics = [...new Set(items.map((x) => x.topic || ''))];
 ---
 {items.length > 0 && (

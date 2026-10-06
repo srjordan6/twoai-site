@@ -1,0 +1,53 @@
+---
+/**
+ * CHERI ON ARCHITECTURE AND ENGINEERING (theworldofai bridge row 501, Stephen
+ * 2026-10-06). The pipeline's twoai_cheri_watch stage attaches cheri_watch to
+ * the page through twoai_page_extras: the sourced facts about CHERI the
+ * content project wrote for this page, and the five newest items from the
+ * CHERI watch (releases, papers, announcements, and news coverage marked as
+ * such). The same facts are left out of the page's general facts block.
+ * Renders nothing without data.
+ */
+interface Props { doc?: any }
+const { doc } = Astro.props;
+const cw = doc && doc.cheri_watch ? doc.cheri_watch : null;
+const facts: any[] = cw && Array.isArray(cw.facts) ? cw.facts : [];
+const items: any[] = cw && Array.isArray(cw.items) ? cw.items.filter((x: any) => x && x.url && x.title) : [];
+const show = facts.length + items.length > 0;
+---
+{show && (
+  <section class="cheri-watch" id="cheri">
+    <h2>CHERI: memory safety in hardware</h2>
+    {facts.length > 0 && (
+      <>
+        <span data-llm="drafted" hidden></span>
+        <ul>
+          {facts.map((x) => (
+            <li>{x.date && <b>{x.date}: </b>}{x.claim}
+              <span class="cw-src">Source: <a href={x.source_url} rel="noopener">{x.source_title || x.source_url}</a></span></li>
+          ))}
+        </ul>
+      </>
+    )}
+    {items.length > 0 && (
+      <>
+        <h3>CHERI development tracker</h3>
+        <p class="meta-line">The newest releases, papers and announcements on CHERI, CHERIoT and Morello,
+          gathered from the projects' own feeds and checked several times a day. An item marked news
+          coverage is a press report, not the project's own announcement.</p>
+        <ul>
+          {items.map((x) => (
+            <li>{x.date && <b>{x.date}: </b>}<a href={x.url} rel="noopener">{x.title}</a>
+              <span class="cw-src">{x.source}{x.coverage && ', news coverage'}</span></li>
+          ))}
+        </ul>
+        {cw.as_of && <p class="meta-line">Tracker last checked {cw.as_of}.</p>}
+      </>
+    )}
+  </section>
+)}
+
+<style>
+  .cheri-watch li { padding: .35em 0; }
+  .cheri-watch .cw-src { display: block; font-size: 13px; color: #7A8A9E; }
+</style>
