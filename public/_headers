@@ -25,3 +25,14 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
   Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://challenges.cloudflare.com https://www.statcounter.com https://www.googletagmanager.com https://www.clarity.ms https://*.clarity.ms https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.google.com https://*.googleadservices.com https://translate.google.com https://translate.googleapis.com https://translate-pa.googleapis.com https://www.gstatic.com https://fundingchoicesmessages.google.com; style-src 'self' 'unsafe-inline' https://www.gstatic.com https://translate.googleapis.com; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://c.statcounter.com https://www.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com https://*.clarity.ms https://c.bing.com https://*.google.com https://*.googlesyndication.com https://*.doubleclick.net https://*.googleadservices.com https://translate.googleapis.com https://translate-pa.googleapis.com https://fundingchoicesmessages.google.com https://*.adtrafficquality.google; frame-src 'self' https://challenges.cloudflare.com https://*.googlesyndication.com https://*.doubleclick.net https://www.google.com https://fundingchoicesmessages.google.com https://*.adtrafficquality.google; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests
+
+# Long browser and edge caching for the files Meta's crawler fetched most
+# on 2026-10-06 (theworldofai row 519). Not immutable: these names carry no
+# content hash, so a changed og.png or print.css must reach readers within
+# the max-age, a month for the brand files, a week for the print files.
+/brand/*
+  Cache-Control: public, max-age=2592000
+/print.css
+  Cache-Control: public, max-age=604800
+/js/print.js
+  Cache-Control: public, max-age=604800

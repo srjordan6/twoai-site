@@ -28,6 +28,9 @@ Content-Signal: search=yes, ai-input=yes, ai-train=yes
 User-agent: meta-externalagent
 Disallow: /covers/
 Disallow: /_astro/
+Disallow: /brand/
+Disallow: /print.css
+Disallow: /js/
 Allow: /
 Content-Signal: search=yes, ai-input=yes, ai-train=yes
 
