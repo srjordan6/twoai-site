@@ -99,7 +99,14 @@ const widest = stories[0];
 // for AIID here twice. Same news.json, same field the daily page reads.
 const incidents: any[] = (news?.incidents ?? []).map((i: any) => ({ ...i, uid: incidentUid(i.incident_id, i.uid) }));
 const top3Incidents = incidents.slice(0, 3);
-const incidentOutlets = new Set(incidents.map((i: any) => i.domain).filter(Boolean)).size;
+// Every outlet that reported any of these incidents, not only the first
+// report's (theworldofai row 509: the line said 11 outlets when 20 had
+// reported the 12 incidents), and the dates the list spans, because the list
+// is the newest twelve, not a fixed window.
+const incidentOutlets = new Set(incidents.flatMap((i: any) => [i.domain, ...((i.reports || []).map((r: any) => r.domain))]).filter(Boolean)).size;
+const incidentDates = incidents.map((i: any) => i.published).filter(Boolean).sort();
+const incidentFrom = incidentDates[0] || '';
+const incidentTo = incidentDates[incidentDates.length - 1] || '';
 
 const vendMods = import.meta.glob('../../../content/news/vendor.json', { eager: true });
 const vn: any = Object.values(vendMods)[0]?.default ?? null;
@@ -279,7 +286,7 @@ const jsonld = JSON.stringify({
           <h2><a href="/ai-news/daily/#incidents">When AI Goes Wrong</a></h2>
           <p class="sec-sub">The harms a deployed system actually caused</p>
           <p class="sec-desc">
-            {`${incidents.length} logged harms from ${incidentOutlets} outlets, each catalogued by the AI Incident Database with its incident number.`}
+            {`The ${incidents.length} newest logged harms${incidentFrom ? `, reported from ${incidentFrom} to ${incidentTo}` : ''}, carried by ${incidentOutlets} outlets between them, each catalogued by the AI Incident Database with its incident number.`}
           </p>
           <a class="go" href="/ai-news/daily/#incidents">All logged harms &rarr;</a>
           <p class="sec-desc">An incident is one reported event. The recurring failure modes
