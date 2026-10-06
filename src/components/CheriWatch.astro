@@ -23,7 +23,7 @@ const show = facts.length + items.length > 0;
         <span data-llm="drafted" hidden></span>
         <ul>
           {facts.map((x) => (
-            <li>{x.date && <b>{x.date}: </b>}{x.claim}
+            <li>{x.date && <b>{x.date}: </b>}{x.person_path ? <>{x.pre}<a href={x.person_path}>{x.person}</a>{x.post}</> : x.claim}
               <span class="cw-src">Source: <a href={x.source_url} rel="noopener">{x.source_title || x.source_url}</a></span></li>
           ))}
         </ul>
