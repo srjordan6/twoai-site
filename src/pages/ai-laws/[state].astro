@@ -183,6 +183,31 @@ const jsonld = JSON.stringify({
       record, it appears here automatically.</p>
   )}
 
+  {/* EXECUTIVE ACTIONS. theworldofai row 566, 2026-10-07: a governor's
+      executive order, an attorney general's guidance or a task force never
+      passes through LegiScan, so a page built from bills alone could not
+      carry Utah's 2026-10-06 order. twoai_state_actions holds them, with the
+      primary source beside each and the story that reported it. */}
+  {Array.isArray(d.executive_actions) && d.executive_actions.length > 0 && (
+    <section id="executive-actions">
+      <h2>Executive actions in {d.name}</h2>
+      <p>Orders, guidance and task forces from the governor and the attorney general: what each does, with its primary source.</p>
+      <table>
+        <thead><tr><th>Date</th><th>Action</th><th>What it does</th><th>Source</th></tr></thead>
+        <tbody>
+          {d.executive_actions.map((a) => (
+            <tr>
+              <td>{a.date}</td>
+              <td>{a.title}{a.kind && <span class="meta-line"> ({a.kind})</span>}</td>
+              <td>{a.what}{a.story_url && <> <a href={a.story_url}>Coverage</a>.</>}</td>
+              <td>{a.source_url ? <a href={a.source_url} rel="noopener">{a.source_title || 'Primary source'}</a> : (a.source_title || '')}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  )}
+
   {/* NEWS ABOUT THIS STATE'S AI POLICY. Stephen, 2026-09-24: executive
       orders, governors' actions and enforcement do not arrive as bills, so a
       page built from bills alone missed them. The pipeline picks the stories
