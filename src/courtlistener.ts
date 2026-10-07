@@ -20,7 +20,11 @@
 //   - the URL carries a long random secret, CL_WEBHOOK_SECRET, set with
 //     `npx wrangler secret put CL_WEBHOOK_SECRET` and entered once as part of
 //     the endpoint URL on CourtListener's webhooks page.
-// Anything else is answered 404, the same as a path that does not exist.
+// A wrong secret is answered 404, the same as a path that does not exist.
+// The right secret from another address is answered 403: only someone who
+// already holds the secret learns that, and it tells a sender problem apart
+// from a secret problem. Both refusals are logged with the reason
+// (Workers Logs, observability is on).
 // Each event carries an Idempotency-Key, unique in the table, so a retried
 // delivery is stored once.
 
@@ -48,14 +52,26 @@ function sameSecret(a: string, b: string): boolean {
 }
 
 export async function handleCLWebhook(request: Request, env: CLEnv): Promise<Response> {
-  const secret = env.CL_WEBHOOK_SECRET || "";
-  const given = new URL(request.url).pathname.replace(/^\/api\/cl-webhook\/?/, "").replace(/\/$/, "");
+  // Trimmed: a secret pasted into the dashboard or a wrangler prompt easily
+  // carries a trailing space or newline, which would never match.
+  const secret = (env.CL_WEBHOOK_SECRET || "").trim();
+  const given = decodeURIComponent(new URL(request.url).pathname.replace(/^\/api\/cl-webhook\/?/, "").replace(/\/$/, "")).trim();
+  const ip = request.headers.get("cf-connecting-ip") || "";
   // No secret configured means the route is off, never open.
-  if (secret.length < 24 || !sameSecret(given, secret)) return notFound();
+  if (secret.length < 24) {
+    console.log(`cl-webhook refused: CL_WEBHOOK_SECRET not set on the Worker (length ${secret.length}), from ${ip}`);
+    return notFound();
+  }
+  if (!sameSecret(given, secret)) {
+    console.log(`cl-webhook refused: secret in the URL does not match (got ${given.length} characters, expected ${secret.length}), from ${ip}`);
+    return notFound();
+  }
   const senders = (env.CL_WEBHOOK_IPS || "").split(",").map((s) => s.trim()).filter(Boolean);
   const allowed = senders.length ? senders : CL_SENDERS;
-  const ip = request.headers.get("cf-connecting-ip") || "";
-  if (!allowed.includes(ip)) return notFound();
+  if (!allowed.includes(ip)) {
+    console.log(`cl-webhook refused: sender ${ip} is not one of ${allowed.join(", ")}`);
+    return new Response("Forbidden", { status: 403 });
+  }
   if (request.method !== "POST") return new Response("POST only", { status: 405 });
 
   const body = await request.text();
