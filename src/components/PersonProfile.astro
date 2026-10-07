@@ -221,6 +221,15 @@ const personFaqLd = faqSchema && pf.length >= 2
 
   {person.on_site && (
     <>
+      {(person.on_site.glossary || []).length > 0 && (
+        <>
+          {/* Glossary terms the profile itself names (theworldofai row 532). */}
+          <h3>Terms in the AI Glossary</h3>
+          <ul class="cites">
+            {person.on_site.glossary.map((g) => <li><a href={g.path}>{g.name}</a></li>)}
+          </ul>
+        </>
+      )}
       {(person.on_site.companies || []).length > 0 && (
         <>
           <h3>Companies on this site</h3>
