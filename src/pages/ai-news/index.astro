@@ -13,7 +13,7 @@
  * date and compile time per the standing date-stamp directive.
  */
 import Base from '../../layouts/Base.astro';
-import { categoryOf, type Story } from '../../lib/newsTopics';
+import { categoryOf, storyDate, isEarlier, type Story } from '../../lib/newsTopics';
 import { storyUid, cleanSummary, incidentUid } from '../../lib/storyUid';
 import { latestCves, cveList, severityClass } from '../../lib/cves';
 import { readFileSync, existsSync } from 'node:fs';
@@ -81,14 +81,22 @@ const firstSentence = (t: string) => {
   const cut = clean.indexOf('. ');
   return cut > 40 ? clean.slice(0, cut + 1) : clean.slice(0, 220);
 };
-const digest = stories.map((s: any) => ({
+const generatedAt = news?.generated ? new Date(news.generated) : null;
+// Each story carries its own date, its newest article's (row 547), and one
+// whose newest article is over 36 hours older than the briefing is listed
+// under "Earlier this week" rather than as today's.
+const digestAll = stories.map((s: any) => ({
   slug: s.Slug,
   uid: s.uid,
   headline: s.Headline,
   line: firstSentence(s.Summary),
   outlets: s.DomainCount,
   category: categoryOf(s).name,
+  date: storyDate(s, news?.date || ''),
+  earlier: isEarlier(s, generatedAt),
 }));
+const digest = digestAll.filter((d) => !d.earlier);
+const digestEarlier = digestAll.filter((d) => d.earlier);
 const articleTotal = stories.reduce((n: number, s: any) => n + (s.ArticleCount || 0), 0);
 const outletTotal = new Set(stories.flatMap((s: any) => s.Domains)).size;
 const widest = stories[0];
@@ -197,10 +205,10 @@ const jsonld = JSON.stringify({
     )}
   </div>
 
-  {digest.length > 0 && (
+  {digestAll.length > 0 && (
     <section class="today">
       <p class="sec-kicker">What&rsquo;s happening in AI today</p>
-      <h2>{news.date}, in a couple of minutes</h2>
+      <h2>The day in AI{stamp && <>, as of {stamp}</>}</h2>
       <p class="today-lede">
         <b>{digest.length} {digest.length === 1 ? 'story' : 'stories'}</b> today, drawn from
         {' '}{articleTotal} articles across {outletTotal} outlets worldwide
@@ -209,16 +217,34 @@ const jsonld = JSON.stringify({
           {' '}{widest.DomainCount} independent outlets</>}. Stories rank by how many outlets
         carried them, which measures how far a story travelled rather than how much it matters.
       </p>
-      <ol class="today-list">
-        {digest.map((d) => (
-          <li>
-            <a href={`/ai-news/${d.uid || d.slug}/`}>{d.headline}</a>
-            <span class="pmeta">{d.category} &middot; {d.outlets} {d.outlets === 1 ? 'outlet' : 'outlets'}
-              &middot; {news.date} &middot; <span class="uid" title="This story's identifier on theworldofai.org">uid {d.uid}</span></span>
-            {d.line && <p>{d.line}</p>}
-          </li>
-        ))}
-      </ol>
+      {digest.length > 0 && (
+        <ol class="today-list">
+          {digest.map((d) => (
+            <li>
+              <a href={`/ai-news/${d.uid || d.slug}/`}>{d.headline}</a>
+              <span class="pmeta">{d.category} &middot; {d.outlets} {d.outlets === 1 ? 'outlet' : 'outlets'}
+                &middot; {d.date} &middot; <span class="uid" title="This story's identifier on theworldofai.org">uid {d.uid}</span></span>
+              {d.line && <p>{d.line}</p>}
+            </li>
+          ))}
+        </ol>
+      )}
+      {digestEarlier.length > 0 && (
+        <>
+          <h3>Earlier this week</h3>
+          <p class="meta-line">Stories whose newest coverage is more than 36 hours older than this briefing, each with its own date.</p>
+          <ol class="today-list">
+            {digestEarlier.map((d) => (
+              <li>
+                <a href={`/ai-news/${d.uid || d.slug}/`}>{d.headline}</a>
+                <span class="pmeta">{d.category} &middot; {d.outlets} {d.outlets === 1 ? 'outlet' : 'outlets'}
+                  &middot; {d.date} &middot; <span class="uid" title="This story's identifier on theworldofai.org">uid {d.uid}</span></span>
+                {d.line && <p>{d.line}</p>}
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
       <a class="go" href="/ai-news/daily/">The full briefing, with every source &rarr;</a>
     </section>
   )}
@@ -238,7 +264,7 @@ const jsonld = JSON.stringify({
           {top3.map((s) => (
             <li>
               <a href={`/ai-news/${(s as any).uid || s.Slug}/`}>{s.Headline}</a>
-              <span class="pmeta">{categoryOf(s).name} · {s.DomainCount} outlets · {news.date} · <span class="uid" title="This story's identifier on theworldofai.org">uid {(s as any).uid}</span></span>
+              <span class="pmeta">{categoryOf(s).name} · {s.DomainCount} outlets · {storyDate(s, news.date)} · <span class="uid" title="This story's identifier on theworldofai.org">uid {(s as any).uid}</span></span>
             </li>
           ))}
         </ol>
@@ -286,9 +312,12 @@ const jsonld = JSON.stringify({
           <h2><a href="/ai-news/daily/#incidents">When AI Goes Wrong</a></h2>
           <p class="sec-sub">The harms a deployed system actually caused</p>
           <p class="sec-desc">
-            {`The ${incidents.length} newest logged harms${incidentFrom ? `, reported from ${incidentFrom} to ${incidentTo}` : ''}, carried by ${incidentOutlets} outlets between them, each catalogued by the AI Incident Database with its incident number.`}
+            {/* Row 547, after row 509: the count is the list's cap, not a
+                total, and each item is a report of an incident, not a harm
+                established, so neither is claimed. */}
+            {`The latest reports of AI incidents${incidentFrom ? `, from ${incidentFrom} to ${incidentTo}` : ''}, carried by ${incidentOutlets} outlets between them, each catalogued by the AI Incident Database with its incident number.`}
           </p>
-          <a class="go" href="/ai-news/daily/#incidents">All logged harms &rarr;</a>
+          <a class="go" href="/ai-news/daily/#incidents">All incident reports &rarr;</a>
           <p class="sec-desc">An incident is one reported event. The recurring failure modes
             underneath them are catalogued in
             {' '}<a href="/ai-ecosystem/enterprise-applications-governance-and-tools/0ff57218/#avid">AVID, the AI Vulnerability Database</a>, alongside
