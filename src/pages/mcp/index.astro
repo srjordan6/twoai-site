@@ -120,9 +120,12 @@ for (const g of groups) {
     };
   });
 }
+// Row 549: position 4.8 with no click; the title and description now say
+// what a searcher gets, with the count and the cadence.
 const desc =
-  `A browsable directory of ${idx.total} active Model Context Protocol servers from the official ` +
-  `MCP registry: who publishes each one, what it does, and where to get it.`;
+  `Find an MCP server: ${idx.total.toLocaleString()} active Model Context Protocol servers from the official ` +
+  `registry, ${idx.remote.toLocaleString()} hosted and ${idx.local.toLocaleString()} local, with who publishes each one, what it does and where to get it. Updated daily.`;
+const pageTitle = `MCP Servers: ${idx.total.toLocaleString()} Model Context Protocol Servers by Publisher, Updated Daily`;
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',
@@ -132,7 +135,7 @@ const jsonld = JSON.stringify({
   dateModified: idx.generated,
 });
 ---
-<Base title="MCP Server Directory: every active Model Context Protocol server" description={desc} current="/mcp/" jsonld={jsonld}>
+<Base title={pageTitle} description={desc} current="/mcp/" jsonld={jsonld}>
   <p class="meta-line"><a href="/">AI Ecosystem</a> ·
     <a href="/ai-ecosystem/technology-and-core-infrastructure/">Technology and Core Infrastructure</a></p>
   <h1>MCP Server Directory</h1>

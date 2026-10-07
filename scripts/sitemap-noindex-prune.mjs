@@ -34,7 +34,9 @@ const canonicalRe = /<link[^>]+rel=["']canonical["'][^>]*href=["']([^"']+)["']/i
 
 function sitemapFiles() {
   if (!existsSync(DIST)) return [];
-  return readdirSync(DIST).filter((f) => /^sitemap-\d+\.xml$/.test(f));
+  // sitemap-0.xml, or with the core tier (row 548) sitemap-core-0.xml and
+  // sitemap-pages-0.xml. Missing the named form would silently stop pruning.
+  return readdirSync(DIST).filter((f) => /^sitemap-([a-z]+-)?\d+\.xml$/.test(f));
 }
 
 // Two ways a page tells crawlers not to treat this URL as the canonical one,

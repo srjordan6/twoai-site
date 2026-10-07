@@ -10,7 +10,9 @@ const caseUid = (c) => c.uid || createHash('sha256').update(`lawsuit:${c.slug}`)
 const s = existsSync('content/lawsuits/lawsuits.json')
   ? JSON.parse(readFileSync('content/lawsuits/lawsuits.json', 'utf8'))
   : { cases: [], count: 0, generated: '' };
-const desc = `${s.count} AI lawsuits tracked in United States courts as of ${s.generated || 'today'}: copyright, privacy, hiring and safety cases against AI companies, with dockets checked in rotation, every case at least every two weeks.`;
+// Row 549: position 5.7 with no click; the description leads with what a
+// searcher gets.
+const desc = `Every AI lawsuit we track: ${s.count} cases in United States courts against AI companies, on copyright, privacy, hiring and safety, each with its docket timeline. Updated as of ${s.generated || 'today'}.`;
 
 // THE ANSWER FIRST. Microsoft Clarity's citation report for 2026-09-12 to 18
 // showed this hub cited 85 times in AI answers in one week, and the questions
@@ -77,7 +79,7 @@ const jsonld = JSON.stringify({
   ],
 });
 ---
-<Base title={`AI Lawsuit Tracker: ${s.count} cases followed live — The World of AI`} description={desc} current="/ai-lawsuits/" jsonld={jsonld} doc={s} stampLabel="Dockets last checked">
+<Base title={`AI Lawsuits: ${s.count} Cases Against AI Companies, Tracked Live With Dockets`} description={desc} current="/ai-lawsuits/" jsonld={jsonld} doc={s} stampLabel="Dockets last checked">
   <h1>The AI Lawsuit Tracker</h1>
   <p class="answer">As of {asOf || 'today'}, this tracker follows <b>{s.count} AI lawsuits</b> in United States courts.
     {catList.length > 0 && <> By claim: {catList.slice(0, 5).map(([k, v]) => `${v} ${k}`).join(', ')}.</>}

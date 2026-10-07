@@ -259,7 +259,7 @@ const desc = clampDesc(art
   : jdisc
   ? `${jdisc.count} open ${jdisc.name} ${jdisc.count === 1 ? 'role' : 'roles'} in AI and computer security, refreshed daily from USAJobs, company career boards, and free job feeds. Every listing links to the original posting.`
   : hub
-  ? `Profiles of ${hub.total} people shaping artificial intelligence: researchers, founders, executives, and policymakers, each with a timeline, achievements, and sources.`
+  ? `Who's who in AI: ${hub.total} profiles of researchers, founders, executives and policymakers, each with a timeline, achievements and sources.`
   : chub
   ? `${chub.total} companies building AI, with what each one ships, whether it is a defendant in a tracked lawsuit, and whether it publishes to the Model Context Protocol registry.`
   : company
@@ -292,7 +292,7 @@ const title = art
   : jdisc
   ? `${jdisc.name} Jobs — The World of AI`
   : hub
-  ? 'AI People Directory — The World of AI'
+  ? `AI People Directory: ${hub.total} AI Researchers, Founders and Executives, With Sources`
   : chub
   ? 'AI Company Directory — The World of AI'
   : company
