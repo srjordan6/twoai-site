@@ -162,12 +162,17 @@ const jsonld = JSON.stringify({
 
   {d.count > 0 ? (
     <table>
-      <thead><tr><th>Bill</th><th>Title</th><th>Last action date</th></tr></thead>
+      {/* Status column, theworldofai row 553: without it California's five
+          vetoed AI bills of 2026-09-30 read exactly like the sixteen signed
+          the same day. LegiScan's "Passed" is rendered as Signed. Absent on a
+          build before the pipeline carries it, the cell is blank. */}
+      <thead><tr><th>Bill</th><th>Title</th><th>Status</th><th>Last action date</th></tr></thead>
       <tbody>
         {d.bills.map((b) => (
           <tr>
             <td><a href={b.url} rel="noopener">{d.code} {b.number}</a></td>
             <td>{b.title}</td>
+            <td class={b.status === 'Vetoed' || b.status === 'Failed' ? 'st-no' : (b.status === 'Passed' ? 'st-yes' : '')}>{b.status === 'Passed' ? 'Signed' : (b.status || '')}</td>
             <td>{b.date}</td>
           </tr>
         ))}
@@ -217,6 +222,8 @@ const jsonld = JSON.stringify({
 </Base>
 
 <style>
+  td.st-yes { color: var(--ok, #1a7f37); }
+  td.st-no { color: var(--warn, #9a3412); }
   /* The explainer card: what this state has enacted, in our own words, above
      the bill table. Added 2026-09-18 from the AI citation report. */
   .explainer { margin: 22px 0 28px; padding: 18px 22px; background: #faf8f3; border: 1px solid #e8e2d4;
