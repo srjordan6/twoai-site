@@ -145,6 +145,22 @@ try {
   }
 } catch { /* no bundle yet, or no industries directory: nothing to exclude */ }
 
+// THE CORE TIER (theworldofai row 548). The pipeline writes the paths that
+// matter most, hubs, sections, companies, people, model families, laws,
+// lawsuits, compliance, health and life sciences, to meta/sitemap-core.json,
+// and they get a sitemap of their own, sitemap-core-0.xml, listed first in
+// the index. Everything else the sitemap keeps goes to sitemap-pages-N.xml.
+// Without the file (a build before the pipeline has written it) the sitemap
+// is one tier, as before.
+const corePaths = new Set();
+try {
+  const { readFileSync, existsSync } = await import('node:fs');
+  if (existsSync('content/meta/sitemap-core.json')) {
+    const m = JSON.parse(readFileSync('content/meta/sitemap-core.json', 'utf8'));
+    for (const p of m?.paths ?? []) if (typeof p === 'string') corePaths.add(p);
+  }
+} catch { /* unreadable: one tier */ }
+
 function sitemapKeeps(page) {
   // Story URLs are uids since 2026-09-17. A story's slug URL still builds,
   // as a redirect page to its uid, and must not be submitted: the uid page
@@ -159,6 +175,15 @@ function sitemapKeeps(page) {
   if (/\/mcp\/[^/]+\/$/.test(page) && !page.endsWith('/mcp/')) return false;
   // Vendor permalinks out, the hub itself in.
   if (/\/ai-news\/vendor\/[^/]+\/$/.test(page)) return false;
+  // CVE, CWE, incident and research paper DETAIL pages out, their hubs in
+  // (theworldofai row 548, 2026-10-07): 6,046 pages sat in Discovered,
+  // currently not indexed, and these families were a large share of the
+  // sample. They stay published, linked from their hubs and indexable; they
+  // are simply not advertised, the way vendor permalinks have not been since
+  // 2026-08-26. unlisted-urls.json records them, so the URL guard still
+  // protects every one.
+  if (/^\/ai-news\/(cves|cwes|incident)\/[^/]+\/$/.test(sp)) return false;
+  if (/^\/research\/paper\/[^/]+\/$/.test(sp)) return false;
   const path = new URL(page).pathname;
   return !excluded.has(path);
 }
@@ -435,6 +460,9 @@ function neutraliseDeadLinks() {
 // scripts/fetch-content.mjs before every build (see package.json prebuild).
 export default defineConfig({
   site: 'https://theworldofai.org',
-  integrations: [sitemap({ filter: sitemapKeeps }), unlistedManifest(), capParagraphsInHtml(), neutraliseDeadLinks()],
+  integrations: [sitemap({
+    filter: sitemapKeeps,
+    ...(corePaths.size > 0 ? { chunks: { core: (item) => (corePaths.has(new URL(item.url).pathname) ? item : undefined) } } : {}),
+  }), unlistedManifest(), capParagraphsInHtml(), neutraliseDeadLinks()],
   build: { format: 'directory' },
 });

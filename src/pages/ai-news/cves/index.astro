@@ -57,7 +57,11 @@ for (const p of Object.keys(byProduct)) {
 const prodId = (p: string) => `prod-${String(p).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
 const azAnchor = (l: string) => (l === '0-9' ? 'p-0-9' : `p-${l.toLowerCase()}`);
 const topProducts = Object.entries(products).sort((a, b) => b[1] - a[1]).slice(0, 12);
-const desc = `${cves.length} CVEs naming AI tools, models, agents, MCP servers and frameworks, newest first, with CVSS severity and CISA's exploited-in-the-wild flag. ${critical} critical, ${high} high. Updated ${d.generated}.`;
+// Row 549: on page one (position 5.3, 593 impressions in a week) with no
+// click, so the title and description say what a searcher gets, with the
+// counts and the cadence, and match the answer paragraph below.
+const desc = `${cves.length} CVEs in AI tools, models, agents and MCP servers, newest first: ${critical} critical, ${high} high and ${d.kev} exploited in the wild per CISA, each with its CVSS severity. Updated daily, last on ${d.generated}.`;
+const pageTitle = `AI CVEs: ${cves.length} Vulnerabilities in AI Tools, Models and MCP Servers, Updated Daily`;
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org', '@type': 'CollectionPage',
   name: 'AI CVE tracker', description: desc.slice(0, 300), dateModified: d.generated,
@@ -65,7 +69,7 @@ const jsonld = JSON.stringify({
   isPartOf: { '@type': 'CollectionPage', name: 'AI News', url: 'https://theworldofai.org/ai-news/' },
 });
 ---
-<Base title="AI CVE tracker: vulnerabilities in AI tools, models and agents" description={desc.slice(0, 300)} current="/ai-news/" jsonld={jsonld}>
+<Base title={pageTitle} description={desc.slice(0, 300)} current="/ai-news/" jsonld={jsonld}>
   <p class="meta-line"><a href="/ai-news/">AI News</a> · AI CVE tracker</p>
   <h1>AI CVE tracker</h1>
   <p class="answer"><b>{cves.length}</b> CVEs on record that name an AI product, tool, model, agent framework,
