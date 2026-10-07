@@ -16,6 +16,7 @@ import Base from '../../../layouts/Base.astro';
 import {
   groupByCategory, categoryOf, entityCounts, summaryParagraph, readingMinutes, titleCase,
   type Story,
+  storyDate,
 } from '../../../lib/newsTopics';
 import { loadKnownEntities, resolveEntities, reportUnresolved } from '../../../lib/knownEntities';
 import { storyUid, cleanSummary, incidentUid } from '../../../lib/storyUid';
@@ -228,7 +229,7 @@ const jsonld = JSON.stringify({
           {top5.map((s) => (
             <li>
               <a href={`/ai-news/${(s as any).uid}/`}>{s.Headline}</a>
-              <span class="t5meta">{categoryOf(s).name} · <strong>{s.DomainCount}</strong> outlets · {news.date} · <span class="uid" title="This story's identifier on theworldofai.org">uid {(s as any).uid}</span></span>
+              <span class="t5meta">{categoryOf(s).name} · <strong>{s.DomainCount}</strong> outlets · {storyDate(s, news.date)} · <span class="uid" title="This story's identifier on theworldofai.org">uid {(s as any).uid}</span></span>
             </li>
           ))}
         </ol>
@@ -258,7 +259,7 @@ const jsonld = JSON.stringify({
                 <span class="num"><strong>{s.DomainCount}</strong> outlets</span>
                 <span class="num"><strong>{s.ArticleCount}</strong> articles</span>
                 <span class="num"><strong>{s.Orgs.length + s.Persons.length}</strong> entities</span>
-                <span class="num stamp">{news.date} · <span class="uid" title="This story's identifier on theworldofai.org">uid {(s as any).uid}</span></span>
+                <span class="num stamp">{storyDate(s, news.date)} · <span class="uid" title="This story's identifier on theworldofai.org">uid {(s as any).uid}</span></span>
               </div>
               <a class="more" href={`/ai-news/${(s as any).uid}/`}>Full coverage and sources &rarr;</a>
             </article>
@@ -285,7 +286,7 @@ const jsonld = JSON.stringify({
                 <span class="num"><strong>{s.DomainCount}</strong> outlets</span>
                 <span class="num"><strong>{s.ArticleCount}</strong> articles</span>
                 <span class="num"><strong>{s.Orgs.length + s.Persons.length}</strong> entities</span>
-                <span class="num stamp">{news.date} · <span class="uid" title="This story's identifier on theworldofai.org">uid {(s as any).uid}</span></span>
+                <span class="num stamp">{storyDate(s, news.date)} · <span class="uid" title="This story's identifier on theworldofai.org">uid {(s as any).uid}</span></span>
               </div>
               <a class="more" href={`/ai-news/${(s as any).uid}/`}>Full coverage and sources &rarr;</a>
             </article>

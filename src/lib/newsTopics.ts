@@ -289,3 +289,37 @@ export function summaryParagraph(stories: Story[], topN = 5): string {
     `story travelled rather than how much it matters.`
   );
 }
+
+/**
+ * A STORY'S OWN DATE, theworldofai row 547 (Stephen, 2026-10-07: "it says
+ * 2026-10-07 but a lot of the information is old"). Every story on the hub
+ * and the daily briefing was stamped with the briefing's date, so a story
+ * whose newest article was two days old read as today's. The date shown is
+ * now the newest article's own date, and `isEarlier` says whether that is
+ * more than 36 hours before the briefing was built, which moves the story
+ * out of "today" into "Earlier this week".
+ */
+export function storyDate(s: Pick<Story, 'Articles'>, fallback = ''): string {
+  let best = '';
+  for (const a of s.Articles ?? []) {
+    const d = String(a.Date || '').slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d) && d > best) best = d;
+  }
+  return best || fallback;
+}
+
+export function newestArticleTime(s: Pick<Story, 'Articles'>): number {
+  let best = 0;
+  for (const a of s.Articles ?? []) {
+    const raw = String(a.Date || '');
+    const t = Date.parse(raw.length === 10 ? `${raw}T12:00:00Z` : raw);
+    if (!Number.isNaN(t) && t > best) best = t;
+  }
+  return best;
+}
+
+export function isEarlier(s: Pick<Story, 'Articles'>, generated: Date | null, hours = 36): boolean {
+  const t = newestArticleTime(s);
+  if (!t || !generated) return false;
+  return generated.getTime() - t > hours * 3600 * 1000;
+}
