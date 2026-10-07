@@ -58,7 +58,9 @@
     // /api/feed-fetch added 2026-10-02: the first deploy of the route (3ccef40)
     // answered 404 because the asset layer took the path first, exactly as
     // this note warns. Every Worker route must be listed here.
-    "run_worker_first": ["/embed/*", "/api/ask", "/api/translate", "/api/talent/*", "/api/feed-fetch", "/sitemap.xml"]
+    // /api/cl-webhook/* added 2026-10-07: CourtListener docket alert
+    // webhooks (src/courtlistener.ts).
+    "run_worker_first": ["/embed/*", "/api/ask", "/api/translate", "/api/talent/*", "/api/feed-fetch", "/api/cl-webhook/*", "/sitemap.xml"]
   },
   "ai": {
     "binding": "AI"

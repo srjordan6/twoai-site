@@ -41,6 +41,7 @@ import { wikidataLookup, lastWikidataError, subjectOf, wikidataThin, wikidataIsO
 import { openAlexAuthor, huggingFaceModel, recordLookup, cachedLookup, promoteFacts } from "./lookups";
 import { researchAnswer } from "./research";
 import postgres from "postgres";
+import { handleCLWebhook } from "./courtlistener";
 
 interface Env {
   AI: any;
@@ -248,6 +249,12 @@ export default {
 
     if (url.pathname === "/api/feed-fetch") {
       return handleFeedFetch(request, env);
+    }
+
+    if (url.pathname.startsWith("/api/cl-webhook/")) {
+      // CourtListener docket alert webhooks, stored for the pipeline. Its own
+      // module, like talent: see src/courtlistener.ts.
+      return handleCLWebhook(request, env as unknown as Parameters<typeof handleCLWebhook>[1]);
     }
 
     if (url.pathname === "/api/translate") {
