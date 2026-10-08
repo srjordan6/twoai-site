@@ -157,12 +157,12 @@ const jsonld = JSON.stringify({
 
   <h2>Sources</h2>
   <p class="meta-line">Everything above is written here. These are the records and the
-    reporting it was written from, and they open in a new tab.</p>
+    reporting it was written from.</p>
   <ul class="sources">
-    <li><a href={inc.cite_url} rel="noopener" target="_blank">AI Incident Database, incident {inc.incident_id}</a>
+    <li>AI Incident Database, incident {inc.incident_id}
       <span class="src-meta">incidentdatabase.ai · Responsible AI Collaborative · CC BY-SA 4.0</span></li>
     {reports.map((r) => (
-      <li><a href={r.url} rel="noopener nofollow" target="_blank">{r.title}</a>
+      <li>{r.title}
         <span class="src-meta">{r.domain}{r.published && <> · {r.published}</>}{r.fromLang && <> · translated from {r.fromLang}</>}</span></li>
     ))}
   </ul>

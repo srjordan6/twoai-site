@@ -159,7 +159,7 @@ const jsonld = JSON.stringify({
               <li>
                 {it.slug && it.has_page !== false
                   ? <a href={`/ai-news/vendor/${it.slug}/`}>{it.title}</a>
-                  : <a href={it.url} rel="noopener nofollow" target="_blank">{it.title}</a>}
+                  : <span>{it.title}</span>}
                 <span class="meta">
                   {entityHref(it)
                     ? <a class="vlink" href={entityHref(it)}>{it.vendor}</a>

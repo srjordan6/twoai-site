@@ -94,9 +94,9 @@ const jsonld = JSON.stringify({
             <h3>{e.title}</h3>
             <p class="detail">{e.detail}</p>
             <p class="src">
-              {e.source_url
-                ? <>Source: <a href={e.source_url} rel="noopener" target="_blank">{e.source_name || 'primary source'}</a></>
-                : e.source_name ? <>Source: {e.source_name}</> : null}
+              {(e.source_url || e.source_name)
+                ? <>Source: {e.source_name || (() => { try { return new URL(e.source_url).hostname.replace(/^www\./, ''); } catch { return 'primary source'; } })()}</>
+                : null}
               {e.case_slug && <> &middot; <a href={`/ai-lawsuits/${e.case_slug}/`}>Full case page</a></>}
               {e.reviewed_on && e.origin !== 'auto-lawsuit' && <> &middot; reviewed {e.reviewed_on}</>}
             </p>

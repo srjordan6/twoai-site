@@ -60,6 +60,9 @@ const jsonld = JSON.stringify({
     { '@type': 'CreativeWork', name: `${c.cve_id} at NVD`, url: c.nvd_url },
   ],
 });
+// No external links on the news section (rows 581, 582): records are named,
+// not linked; the URLs stay in the JSON.
+const hostOf = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } };
 ---
 <Base title={`${headline} — AI CVE tracker — The World of AI`} description={desc} current="/ai-news/" jsonld={jsonld}
   doc={{ page_uid: c.uid, built_at: c.generated, generated: c.published }} stampLabel="CVE recorded" provenance="drafted">
@@ -88,7 +91,7 @@ const jsonld = JSON.stringify({
       {def.kev_open && <p class="kev-open"><b>Exploited in the wild.</b> {def.kev_open}</p>}
       <h3>Fix</h3>
       <p>{def.fix?.text}
-        {def.fix?.advisory_url && <> <a href={def.fix.advisory_url} rel="noopener nofollow" target="_blank">Vendor advisory</a>.</>}</p>
+        {def.fix?.advisory_url && <> Vendor advisory at {hostOf(def.fix.advisory_url)}.</>}</p>
       {untilPatched.length > 0 && (
         <>
           <h3>Until you can patch</h3>
@@ -159,12 +162,12 @@ const jsonld = JSON.stringify({
 
   <h2>Sources</h2>
   <ul class="sources">
-    <li><a href={c.cve_org_url} rel="noopener" target="_blank">{c.cve_id} at cve.org</a>
+    <li>{c.cve_id}, cve.org record
       <span class="src-meta">The CVE Program, MITRE. The record of truth.</span></li>
-    <li><a href={c.nvd_url} rel="noopener" target="_blank">{c.cve_id} at NVD</a>
+    <li>{c.cve_id}, NVD record
       <span class="src-meta">National Vulnerability Database, NIST. Score, weakness class, affected products.</span></li>
     {refs.map((r) => (
-      <li><a href={r} rel="noopener nofollow" target="_blank">{r}</a></li>
+      <li>{hostOf(r)}</li>
     ))}
   </ul>
 

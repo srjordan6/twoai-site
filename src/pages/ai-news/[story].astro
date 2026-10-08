@@ -270,6 +270,12 @@ const jsonld = JSON.stringify({
     },
   ],
 });
+// NO EXTERNAL LINKS ON THE NEWS SECTION. Stephen, 2026-10-07 (theworldofai
+// rows 581 and 582): a trial on /ai-news/ only. Attribution stays, as plain
+// text (outlet and date); the URLs stay in the JSON and the database so the
+// change is a render change and reversible. scripts/news-no-external-links.mjs
+// fails the build if an external href appears under /ai-news/.
+const summaryArticle = (story.Articles || []).find((a: any) => a.URL === story.SummaryURL);
 ---
 {story.retired && story.duplicate_of ? (
   /* MERGED DUPLICATE, 2026-10-02 (row 368). One event is one story: this
@@ -380,8 +386,7 @@ const jsonld = JSON.stringify({
             .map((p: string) => <p>{p}</p>)}
           {story.SummaryURL && (
             <p class="summary-attribution">
-              Summarized from reporting first published by {story.SummaryDomain}.
-              <a href={story.SummaryURL} rel="nofollow noopener" target="_blank">Read the original coverage.</a>
+              Summarized from reporting first published by {story.SummaryDomain}{summaryArticle?.Date ? `, ${String(summaryArticle.Date).slice(0, 10)}` : ''}.
             </p>
           )}
         </div>
@@ -431,8 +436,8 @@ const jsonld = JSON.stringify({
         <ul class="cov">
           {topCoverage.map((a) => (
             <li>
-              <a href={a.URL} rel="noopener nofollow" target="_blank">{a.Title}</a>
-              <span class="meta">{a.Domain}{a.Date ? ` · ${a.Date}` : ''}{a.fromLang ? ` · translated from ${a.fromLang}` : ''}</span>
+              <span class="cov-title">{a.Title}</span>
+              <span class="meta">{a.Domain}{a.Date ? ` · ${String(a.Date).slice(0, 10)}` : ''}{a.fromLang ? ` · translated from ${a.fromLang}` : ''}</span>
             </li>
           ))}
         </ul>
