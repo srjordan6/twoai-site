@@ -2,19 +2,22 @@
 /**
  * One page per top story, mirroring the srjconsultingservices.com structure:
  * header with date and compile time, the pipeline-written summary, key
- * numbers, coverage sources, a day-level coverage timeline, and a sticky
- * contents rail. Both sites render the same news.json artifact.
+ * numbers, coverage sources, and a sticky contents rail. Both sites render
+ * the same news.json artifact.
  *
- * WHAT IS NOT HERE, AND WHY. The structure asks for intraday timestamps.
- * GDELT carries them; the pipeline stores only the date. Grouping by hour
- * would mean inventing times, so the timeline groups by DAY and says so.
+ * WHAT IS NOT HERE, AND WHY. A day-level coverage timeline was here until
+ * 2026-10-08, when Stephen said the information was not needed; the outlet
+ * and article counts carry what it said. Since 2026-10-07 (rows 581, 582)
+ * no external hyperlink is rendered on the news section: attribution is
+ * outlet and date as text, and scripts/news-no-external-links.mjs fails the
+ * build if one comes back.
  * "Why it matters" renders from s.Why when the pipeline supplies analysis,
  * and is otherwise absent rather than guessed.
  */
 import Base from '../../layouts/Base.astro';
 import KeepReading from '../../components/KeepReading.astro';
 import { matchTerms, companyFor } from '../../lib/related';
-import { categoryOf, categoriesOf, coverageByDay, readingMinutes, titleCase, type Story } from '../../lib/newsTopics';
+import { categoryOf, categoriesOf, readingMinutes, titleCase, type Story } from '../../lib/newsTopics';
 
 import { loadKnownEntities, entitiesInText } from '../../lib/knownEntities';
 import { storyUid, cleanSummary } from '../../lib/storyUid';
@@ -157,7 +160,6 @@ const known4 = onPage.slice(0, 6);
 const knownPersons = onPage.filter((e) => /\/ecosystem-entities-market-and-operations\/[0-9a-f]{8}\/$/.test(e.href));
 const knownOrgs = onPage.filter((e) => !knownPersons.includes(e));
 
-const timeline = coverageByDay(story.Articles);
 // THREE LINKS, NOT EIGHTY. Stephen, 2026-09-29, on a story carried by 79
 // outlets: too many links, keep it to two or three. The coverage list shows
 // the three best sources: national and trade outlets first, one per outlet,
@@ -212,7 +214,7 @@ const minutes = readingMinutes(story.Headline, ...story.Articles.map((a) => a.Ti
 const title = story.Headline.length <= 58 ? story.Headline : `${story.Headline.slice(0, 57).replace(/\s+\S*$/, '')}…`;
 const _fullDesc =
   `${story.Headline}. Covered by ${story.DomainCount} outlets across ${story.ArticleCount} ` +
-  `articles: the leading sources, named entities, and coverage timeline.`;
+  `articles: the leading sources and named entities.`;
 const description = _fullDesc.length <= 158 ? _fullDesc : `${_fullDesc.slice(0, 157).replace(/\s+\S*$/, '')}…`;
 // The NewsArticle carries the why-it-matters line where it fits (row 371);
 // the meta description stays the short one.
@@ -330,7 +332,6 @@ const summaryArticle = (story.Articles || []).find((a: any) => a.URL === story.S
           {story.Summary && <li><a href="#the-story">The story</a></li>}
           {story.Why && <li><a href="#why">Why it matters</a></li>}
           <li><a href="#coverage">Coverage</a></li>
-          {timeline.length > 0 && <li><a href="#timeline">Coverage timeline</a></li>}
           <li><a href="/ai-news/daily/">Back to the briefing</a></li>
         </ul>
       </div>
@@ -341,7 +342,6 @@ const summaryArticle = (story.Articles || []).find((a: any) => a.URL === story.S
           <tbody>
             <tr><th scope="row">Outlets</th><td>{story.DomainCount}</td></tr>
             <tr><th scope="row">Articles in 36h</th><td>{story.ArticleCount}</td></tr>
-            <tr><th scope="row">Days of coverage</th><td>{timeline.length}</td></tr>
             <tr><th scope="row">Category</th><td>{cat.name}</td></tr>
           </tbody>
         </table>
@@ -384,6 +384,15 @@ const summaryArticle = (story.Articles || []).find((a: any) => a.URL === story.S
             .filter((p: string) => p && !/^#{1,6}\s/.test(p))
             .map((p: string) => p.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/(^|\s)\*([^*]+)\*/g, '$1$2'))
             .map((p: string) => <p>{p}</p>)}
+          {story.summary_thin && (
+            /* A breaking story's summary is allowed to be short (Stephen,
+               2026-10-08); the label says why, and the pipeline rewrites it
+               once the coverage has grown. */
+            <p class="meta-line">Developing story: the coverage so far is thin, and this summary is rewritten as more outlets report.</p>
+          )}
+          {story.summary_by && (
+            <p class="meta-line">Written by the editors from the coverage below.</p>
+          )}
           {story.SummaryURL && (
             <p class="summary-attribution">
               Summarized from reporting first published by {story.SummaryDomain}{summaryArticle?.Date ? `, ${String(summaryArticle.Date).slice(0, 10)}` : ''}.
@@ -443,27 +452,9 @@ const summaryArticle = (story.Articles || []).find((a: any) => a.URL === story.S
         </ul>
       </section>
 
-      {timeline.length > 0 && (
-        <section id="timeline">
-          <h2>Coverage timeline</h2>
-          <div class="rule"></div>
-          <ol class="tl">
-            {timeline.map((t) => (
-              <li>
-                <span class="tl-day">{t.day}</span>
-                <span class="tl-body">
-                  <strong>{t.count}</strong> {t.count === 1 ? 'article' : 'articles'} across
-                  <strong> {t.outlets}</strong> {t.outlets === 1 ? 'outlet' : 'outlets'}
-                </span>
-              </li>
-            ))}
-          </ol>
-          <p class="tl-note">
-            Grouped by day. The pipeline records publication dates, not times, so
-            hour-level sequencing is not shown rather than estimated.
-          </p>
-        </section>
-      )}
+      {/* The coverage timeline (one line per day of coverage) was removed on
+          2026-10-08: Stephen, "we really do not need this information". The
+          counts above say how wide the coverage was. */}
 
       {enacted && (
         <section>

@@ -147,14 +147,17 @@ const jsonld = JSON.stringify({
         rather than sitting there inert. */}
     {vendorCompany
       ? <a class="pill" href={`/companies/${vendorCompany.uid}/`}>{vendor}</a>
-      : <a class="pill" href="/ai-news/vendor/">{vendor}</a>}
+      : <span class="vplain">{vendor}</span>}
     Surfaced <time datetime={it.date}>{it.date}</time> · Announcement · {host}
     · <span class="byline">Editor <a href="/stephen-jordan/" rel="author">Stephen Jordan</a></span></p>
 
   <div class="answer-box">
     <p class="answer-label">{it.summary ? `In ${vendor}\u2019s words` : 'What this is'}</p>
     {it.summary ? (
-      <p>{it.summary}</p>
+      {/* The vendor's description arrives as the page gave it, sometimes
+          with its own markup; Stephen, 2026-10-08, saw a literal <p> in
+          the box. Tags come off here; the words stay the vendor's. */}
+      <p>{String(it.summary).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()}</p>
     ) : (
       <p>
         An announcement published by {vendor} on its own site. We have no description
@@ -174,9 +177,7 @@ const jsonld = JSON.stringify({
     </div>
   )}
 
-  <p class="cta-wrap">
-    <span class="cta-plain">Published by {vendor} at {host}{it.date ? `, ${it.date}` : ''}</span>
-  </p>
+  <p class="meta-line">Published by {vendor} at {host}{it.date ? `, ${it.date}` : ''}.</p>
 
   <p class="note">
     {it.summary && <>The summary above is {vendor}&rsquo;s own published description of the post,
@@ -215,9 +216,7 @@ const jsonld = JSON.stringify({
   .reader-note p { font-size: 16px; line-height: 1.7; color: #2C2C2A; margin: 0 0 12px; }
   .rn-foot { font-size: 13px !important; color: #7A8A9E; font-style: italic; margin-bottom: 0 !important; }
 
-  .cta-wrap { margin: 22px 0; }
-  .cta { display: inline-block; background: #201868; color: #fff; font-weight: 600; font-size: 15px; padding: 12px 22px; border-radius: 6px; text-decoration: none; }
-  .cta:hover { background: #F07800; }
+  .vplain { font-weight: 600; color: var(--ink, #1b1b2f); }
 
   .note { font-size: 13.5px; color: #7A8A9E; font-style: italic; max-width: 68ch; }
 </style>
