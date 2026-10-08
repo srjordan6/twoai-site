@@ -384,6 +384,15 @@ const summaryArticle = (story.Articles || []).find((a: any) => a.URL === story.S
             .filter((p: string) => p && !/^#{1,6}\s/.test(p))
             .map((p: string) => p.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/(^|\s)\*([^*]+)\*/g, '$1$2'))
             .map((p: string) => <p>{p}</p>)}
+          {story.summary_thin && (
+            /* A breaking story's summary is allowed to be short (Stephen,
+               2026-10-08); the label says why, and the pipeline rewrites it
+               once the coverage has grown. */
+            <p class="meta-line">Developing story: the coverage so far is thin, and this summary is rewritten as more outlets report.</p>
+          )}
+          {story.summary_by && (
+            <p class="meta-line">Written by the editors from the coverage below.</p>
+          )}
           {story.SummaryURL && (
             <p class="summary-attribution">
               Summarized from reporting first published by {story.SummaryDomain}{summaryArticle?.Date ? `, ${String(summaryArticle.Date).slice(0, 10)}` : ''}.
