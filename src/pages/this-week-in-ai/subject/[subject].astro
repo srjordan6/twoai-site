@@ -1,0 +1,116 @@
+---
+/**
+ * One subject of AI legislation across every week in the digest, at
+ * /this-week-in-ai/subject/{slug}/.
+ *
+ * The hub and each week page count bills by subject. Stephen, 2026-10-08:
+ * "all of these list multiple stories but no links to them". This is where
+ * the count goes: every bill and federal document that carried the subject,
+ * grouped by the week it moved, each linking to its entry on that week's
+ * page and to the state's own bill tracker. The counts here are computed
+ * from the same loader the hub uses, so the pill on the hub and the list on
+ * this page cannot disagree.
+ */
+import Base from '../../../layouts/Base.astro';
+import KeepReading from '../../../components/KeepReading.astro';
+import { loadWeeks, themeRows, THEME_BLURBS, themeSlug } from '../../../lib/weeks';
+import { citeUID } from '../../../lib/cite';
+
+export function getStaticPaths() {
+  const weeks = loadWeeks();
+  const rows = themeRows(weeks);
+  return rows.map((r) => ({ params: { subject: r.slug }, props: { row: r } }));
+}
+const { row } = Astro.props;
+const weeks = loadWeeks();
+const latest = weeks[0];
+const plural = (n, s, p) => `${n} ${n === 1 ? s : p || s + 's'}`;
+
+// Group the subject's items by week, newest first, for the page body.
+const byWeek = weeks
+  .map((w) => ({
+    w,
+    bills: w.bills.filter((b) => (b.themes || []).includes(row.name)),
+    federal: w.federal.filter((f) => (f.themes || []).includes(row.name)),
+  }))
+  .filter((g) => g.bills.length + g.federal.length > 0);
+const states = new Map<string, { slug: string; n: number }>();
+for (const g of byWeek) for (const b of g.bills) {
+  const cur = states.get(b.state) || { slug: b.slug, n: 0 };
+  cur.n++;
+  states.set(b.state, cur);
+}
+const stateRows = [...states.entries()].sort((a, b) => b[1].n - a[1].n || a[0].localeCompare(b[0]));
+const billTotal = byWeek.reduce((n, g) => n + g.bills.length, 0);
+const fedTotal = byWeek.reduce((n, g) => n + g.federal.length, 0);
+
+const lede = `${row.blurb} Across ${plural(byWeek.length, 'week')} of the digest, ${plural(billTotal, 'bill')}${fedTotal ? ` and ${plural(fedTotal, 'federal document')}` : ''} carried this subject${stateRows.length ? `, in ${plural(stateRows.length, 'jurisdiction')}` : ''}.`;
+const desc = lede.length <= 158 ? lede : `${lede.slice(0, 157).replace(/\s+\S*$/, '')}…`;
+const others = themeRows(weeks).filter((r) => r.slug !== row.slug).slice(0, 6);
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: `${row.name}: AI bills and federal documents`,
+  description: desc,
+  url: `https://theworldofai.org/this-week-in-ai/subject/${row.slug}/`,
+  dateModified: latest?.generated || undefined,
+  isPartOf: { '@type': 'WebPage', url: 'https://theworldofai.org/this-week-in-ai/' },
+});
+const citeUid = citeUID(Astro.url.pathname, undefined);
+---
+<Base title={`${row.name}: every AI bill on this subject, week by week`} description={desc} current="/this-week-in-ai/" jsonld={jsonld} doc={{ generated: latest?.generated }} stampLabel="Last verified">
+  <p class="meta-line"><a href="/this-week-in-ai/">This Week in AI</a> &middot; subject</p>
+  <h1>{row.name}</h1>
+  <p class="answer">{lede}</p>
+  <p class="meta-line">A bill is listed under a subject because of the words in its own title and
+    description, not an editorial judgement about it. A bill that moved in more than one week
+    appears under each.</p>
+
+  {stateRows.length > 0 && (
+    <p><b>Where.</b> {stateRows.map(([name, s], i) => (
+      <>{i > 0 && ', '}<a href={`/ai-laws/${s.slug}/`}>{name}</a> ({s.n})</>
+    ))}.</p>
+  )}
+
+  {byWeek.map((g) => (
+    <section class="wk">
+      <h2><a href={`/this-week-in-ai/${g.w.slug}/`}>{g.w.label}</a> <span class="dates">{g.w.start} to {g.w.end}</span></h2>
+      {g.bills.map((b) => (
+        <div class="entry">
+          <h3><a href={`/this-week-in-ai/${g.w.slug}/#${b.anchor}`}>{b.state} {b.number}</a>: {b.title}</h3>
+          {b.detail && <p>{b.detail}</p>}
+          <p class="meta-line">{b.date} &middot; <a href={`/ai-laws/${b.slug}/`}>All {b.state} AI bills</a></p>
+        </div>
+      ))}
+      {g.federal.map((f) => (
+        <div class="entry">
+          <h3><a href={`/this-week-in-ai/${g.w.slug}/#${f.anchor}`}>{f.title}</a></h3>
+          <p class="meta-line">Federal Register{f.agency && <> &middot; {f.agency}</>}{f.note && <> &middot; {f.note}</>} &middot; {f.date}</p>
+        </div>
+      ))}
+    </section>
+  ))}
+
+  <div class="cite-box">Cite this page: <code>"{row.name}: AI bills and federal documents."
+    The World of AI, theworldofai.org/this-week-in-ai/subject/{row.slug}/.
+    {latest?.generated ? ` Verified ${latest.generated}.` : ''}{' '}UID {citeUid}.</code></div>
+
+  <KeepReading blocks={[
+    { label: 'Other subjects', links: others.map((r) => ({ href: `/this-week-in-ai/subject/${r.slug}/`, label: r.name, note: plural(r.count, 'item') })) },
+    { label: 'Across the site', links: [
+      { href: '/this-week-in-ai/', label: 'Every weekly digest', note: 'the archive' },
+      { href: '/ai-laws/', label: 'AI laws by state', note: 'every bill we track' },
+      { href: '/state-of-ai-laws/', label: 'The state of AI laws', note: 'what has passed' },
+    ] },
+  ]} />
+</Base>
+
+<style>
+  .wk { margin: 1.6em 0 0; }
+  .wk h2 { font-size: 1.15rem; margin: 0 0 .2em; }
+  .wk .dates { font-weight: 400; font-size: .85rem; color: #5b5b66; margin-left: .4em; }
+  .entry { padding: .9em 0; border-bottom: 1px solid #ececf2; }
+  .entry:last-of-type { border-bottom: 0; }
+  .entry h3 { font-size: 1.02rem; margin: 0 0 .3em; line-height: 1.4; }
+  .entry p { margin: 0 0 .35em; }
+</style>

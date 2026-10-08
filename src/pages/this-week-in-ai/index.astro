@@ -9,6 +9,7 @@
  */
 import Base from '../../layouts/Base.astro';
 import { readFileSync, existsSync } from 'node:fs';
+import { loadWeeks, themeRows } from '../../lib/weeks';
 
 const idx = existsSync('content/week/index.json')
   ? JSON.parse(readFileSync('content/week/index.json', 'utf8'))
@@ -38,7 +39,10 @@ for (const [p, mod] of Object.entries(weekMods)) {
   });
 }
 weeks.sort((a, b) => (b.slug || '').localeCompare(a.slug || ''));
-const themes = idx.themes || [];
+// Subjects are counted from every week file through the shared loader, the
+// same loader the subject pages list from, so the pill and the page agree.
+const allWeeks = loadWeeks();
+const themes = themeRows(allWeeks).slice(0, 10);
 const latest = weeks[0];
 const total = idx.total_items || 0;
 const plural = (n, s, p) => `${n} ${n === 1 ? s : p || s + 's'}`;
@@ -77,8 +81,8 @@ const jsonld = JSON.stringify({
       <dl class="themes">
         {themes.map((t) => (
           <>
-            <dt>{t.name} <span class="n">{t.count}</span></dt>
-            <dd>{t.blurb}</dd>
+            <dt><a href={`/this-week-in-ai/subject/${t.slug}/`}>{t.name}</a> <span class="n">{t.count}</span></dt>
+            <dd>{t.blurb} <a href={`/this-week-in-ai/subject/${t.slug}/`}>Every bill on this subject &rarr;</a></dd>
           </>
         ))}
       </dl>
