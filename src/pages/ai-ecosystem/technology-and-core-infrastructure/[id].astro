@@ -549,6 +549,9 @@ const facBare = sec.shape === 'dc-facility' && !(
   (sec.reading && sec.reading.body && String(sec.reading.body).length > 300)
   || (typeof sec.profile?.reading === 'string' && sec.profile.reading.length > 300)
 );
+import { citeUID } from '../../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, sec.uid);
 ---
 <Base title={`${pageTitle}${sec.shape === 'dc-facility' && sec.uid ? ` (${sec.uid})` : ''} — The World of AI`} description={desc.slice(0, 300)}
   current={`${BASE}/`} jsonld={jsonld} noindex={facBare || metricBare || Boolean(facMovedTo)} doc={sec} stampLabel="Last verified"
@@ -647,7 +650,7 @@ const facBare = sec.shape === 'dc-facility' && !(
         ))}
       </ul>
       <div class="cite-box">Cite this page: <code>"{secName}." The World of AI,
-        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
+        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 
@@ -2959,7 +2962,7 @@ const facBare = sec.shape === 'dc-facility' && !(
   <Reading reading={isDCChild ? null : sec.reading} heading="What does this tell us about AI?" />
 
   <div class="cite-box">Cite this page: <code>"{pageTitle}." The World of AI,
-    theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
+    theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.{' '}UID {citeUid}.</code></div>
   <CveList cves={cvesFor(`${BASE}/${sec.uid}/`)} name={pageTitle} />
 </Base>
 

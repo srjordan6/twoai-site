@@ -88,6 +88,9 @@ const jsonld = JSON.stringify({
     },
   ],
 });
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title={`${d.name} AI Laws (${d.count} bills tracked) — The World of AI`} description={desc} current="/ai-laws/" jsonld={jsonld} doc={d} stampLabel="Bill list last refreshed">
   <h1>{d.name} AI Laws</h1>
@@ -233,7 +236,7 @@ const jsonld = JSON.stringify({
 
   <Reading reading={d.reading} heading={`What does ${d.name}’s AI legislation add up to?`} />
   <div class="cite-box">Cite this page: <code>"{d.name} AI Laws." The World of AI,
-    theworldofai.org/ai-laws/{d.slug}/. Verified {d.generated}.</code></div>
+    theworldofai.org/ai-laws/{d.slug}/. Verified {d.generated}.{' '}UID {citeUid}.</code></div>
   <KeepReading blocks={[
     { label: 'Terms in these bills, defined',
       links: krTerms.map((t) => ({ href: `/ai-glossary/${t.slug}/`, label: t.term, note: t.category })) },

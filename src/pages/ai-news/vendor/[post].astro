@@ -114,7 +114,7 @@ const head = `${headCut}${dateTag}`;
 const shortForm = `${head}${suffix}`;
 const longForm = `${head} — an announcement from ${vendor}`;
 const title = shortForm.length < 30 && longForm.length <= 60 ? longForm : shortForm;
-const description = (it.summary || `An announcement from ${vendor}, surfaced ${it.date}, with a link to the original post at ${host}.`).slice(0, 158);
+const description = (it.summary || `An announcement from ${vendor}, surfaced ${it.date}, published at ${host}.`).slice(0, 158);
 
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
@@ -175,7 +175,7 @@ const jsonld = JSON.stringify({
   )}
 
   <p class="cta-wrap">
-    <a class="cta" href={it.url} rel="noopener" target="_blank">Read the original at {host} &rarr;</a>
+    <span class="cta-plain">Published by {vendor} at {host}{it.date ? `, ${it.date}` : ''}</span>
   </p>
 
   <p class="note">

@@ -39,6 +39,9 @@ const jsonld = JSON.stringify({
 const all = cweList();
 const rank = all.cwes.find((c) => c.cwe_id === w.cwe_id)?.rank;
 const phases = (m: any) => (Array.isArray(m.phase) ? m.phase.join(', ') : '');
+import { citeUID } from '../../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, w.uid);
 ---
 <Base title={`${title} — AI weakness classes — The World of AI`} description={desc} current="/ai-news/" jsonld={jsonld}
   doc={{ page_uid: w.uid, built_at: w.generated, generated: w.generated }}>
@@ -110,11 +113,11 @@ const phases = (m: any) => (Array.isArray(m.phase) ? m.phase.join(', ') : '');
   </ul>
 
   <div class="cite-box">Cite this page: <code>"{w.cwe_id}: {w.name}." AI weakness classes, The World of AI,
-    theworldofai.org/ai-news/cwes/{w.cwe_id}/. Retrieved {w.generated}.</code></div>
+    theworldofai.org/ai-news/cwes/{w.cwe_id}/. Retrieved {w.generated}.{' '}UID {citeUid}.</code></div>
 
   <h2>Sources</h2>
   <ul class="sources">
-    <li><a href={w.mitre_url} rel="noopener" target="_blank">{w.cwe_id} at cwe.mitre.org</a>
+    <li>{w.cwe_id} at cwe.mitre.org
       <span class="src-meta">The CWE List, The MITRE Corporation. Name, definition, consequences and mitigations.</span></li>
     <li><a href="/ai-news/cves/">AI CVE tracker</a>
       <span class="src-meta">This site. The CVEs in this class and their counts.</span></li>

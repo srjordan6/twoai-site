@@ -7,6 +7,9 @@ const jsonld = JSON.stringify({
   operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   url: 'https://theworldofai.org/calculators/ai-fabric/',
 });
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title="AI Cluster Network Fabric Calculator: spine-leaf sizing and oversubscription — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>AI Fabric Sizing Calculator</h1>
@@ -64,7 +67,7 @@ const jsonld = JSON.stringify({
     capacity constraint on a large training run.</p>
 
   <div class="cite-box">Cite this tool: <code>"AI Fabric Sizing Calculator." The World of AI,
-    theworldofai.org/calculators/ai-fabric/.</code></div>
+    theworldofai.org/calculators/ai-fabric/.{' '}UID {citeUid}.</code></div>
 
   <script is:inline>
   (function () {

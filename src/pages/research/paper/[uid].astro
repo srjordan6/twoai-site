@@ -82,6 +82,9 @@ const jsonld = JSON.stringify({
   url: `https://theworldofai.org/research/paper/${p.uid}/`,
   dateModified: p.generated,
 });
+import { citeUID } from '../../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title={pageTitle} description={desc} current="/research/" jsonld={jsonld} ogType="article" noindex={thin} doc={p}>
   <p class="meta-line">
@@ -183,7 +186,7 @@ const jsonld = JSON.stringify({
   <Reading reading={p.reading} heading="Why does this paper matter?" />
 
   <div class="cite-box">
-    Cite this paper on The World of AI: <code>{authors || 'Author(s)'}{p.year ? `. (${p.year}).` : '.'} {p.title}.{p.journal ? ` ${p.journal}` : ''}{p.volume ? `, ${p.volume}` : ''}.{p.doi ? ` https://doi.org/${p.doi}` : ''} Cataloged at theworldofai.org/research/paper/{p.uid}/.{p.generated ? ` Verified ${p.generated}.` : ''}</code>
+    Cite this paper on The World of AI: <code>{authors || 'Author(s)'}{p.year ? `. (${p.year}).` : '.'} {p.title}.{p.journal ? ` ${p.journal}` : ''}{p.volume ? `, ${p.volume}` : ''}.{p.doi ? ` https://doi.org/${p.doi}` : ''} Cataloged at theworldofai.org/research/paper/{p.uid}/.{p.generated ? ` Verified ${p.generated}.` : ''}{' '}UID {citeUid}.</code>
   </div>
 
   {/* A paper page must always point at the publisher. The DOI row does it

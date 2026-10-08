@@ -21,6 +21,9 @@ const faqs = [
   { q: 'Is flow the whole hydraulic problem?',
     a: 'No. Pressure drop across cold plates, manifolds, hoses and quick disconnects sets the pump head required, and it depends on pipe sizing and fitting count that this calculator does not model. A loop can be specified with correct flow and still fail because the pump cannot deliver it against the resistance in the path.' },
 ];
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title="Liquid Cooling Flow Rate Calculator: GPM and CDU sizing — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>Liquid Cooling Flow Rate Calculator</h1>
@@ -76,7 +79,7 @@ const faqs = [
   <Faq items={faqs} />
 
   <div class="cite-box">Cite this tool: <code>"Liquid Cooling Flow Rate Calculator." The World of AI,
-    theworldofai.org/calculators/liquid-cooling/.</code></div>
+    theworldofai.org/calculators/liquid-cooling/.{' '}UID {citeUid}.</code></div>
 
   <script is:inline>
   (function () {

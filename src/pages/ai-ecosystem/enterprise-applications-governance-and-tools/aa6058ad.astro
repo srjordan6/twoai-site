@@ -25,6 +25,9 @@ const jsonld = JSON.stringify({
   url: `https://theworldofai.org${BASE}/${UID}/`,
   isPartOf: { '@type': 'CollectionPage', name: 'Application and Product Security', url: `https://theworldofai.org${BASE}/72cf7bba/` },
 });
+import { citeUID } from '../../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, UID);
 ---
 <Base title="The weaknesses behind AI vulnerabilities (CWE) — AI Security and Risk — The World of AI"
   description={desc.slice(0, 300)} current="/ai-ecosystem/" jsonld={jsonld} noindex={d.total === 0}
@@ -39,7 +42,7 @@ const jsonld = JSON.stringify({
   {d.total === 0 && <p>The weakness list is being built and appears here after the next update.</p>}
   <CweTable />
   <div class="cite-box">Cite this page: <code>"The weaknesses behind AI vulnerabilities." The World of AI,
-    theworldofai.org{BASE}/{UID}/. Retrieved {d.generated}.</code></div>
+    theworldofai.org{BASE}/{UID}/. Retrieved {d.generated}.{' '}UID {citeUid}.</code></div>
   <p><a href={`${BASE}/72cf7bba/`}>&larr; Application and Product Security</a></p>
 </Base>
 

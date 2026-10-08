@@ -24,6 +24,9 @@ const faqs = [
   { q: 'Does this estimate cover training?',
     a: 'No. This is inference. Training additionally holds gradients and optimizer state, and Adam-style optimizers keep two moments per parameter, so a full fine-tune commonly needs several times the memory of inference at the same precision. Parameter-efficient methods such as LoRA avoid most of that by training a small number of added weights.' },
 ];
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title="GPU VRAM Estimator: memory needed to run any LLM locally — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>GPU VRAM Estimator</h1>
@@ -76,7 +79,7 @@ const faqs = [
   <Faq items={faqs} />
 
   <div class="cite-box">Cite this tool: <code>"GPU VRAM Estimator." The World of AI,
-    theworldofai.org/calculators/vram/.</code></div>
+    theworldofai.org/calculators/vram/.{' '}UID {citeUid}.</code></div>
 
   <script is:inline>
   (function () {

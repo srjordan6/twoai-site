@@ -89,6 +89,9 @@ const jsonld = JSON.stringify({
   isPartOf: { '@type': 'CollectionPage', name: 'AI News', url: 'https://theworldofai.org/ai-news/' },
   citation: reports.map((r) => ({ '@type': 'CreativeWork', name: r.title, url: r.url })),
 });
+import { citeUID } from '../../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, incidentUid(inc.incident_id, inc.uid));
 ---
 <Base title={`${headline} — logged harm — The World of AI`} description={desc.slice(0, 300)} current="/ai-news/" jsonld={jsonld} doc={stampDoc} stampLabel="Incident recorded">
   <p class="meta-line"><a href="/ai-news/">AI News</a> ·
@@ -153,16 +156,16 @@ const jsonld = JSON.stringify({
     {' '}<a href="/ai-lawsuits/">AI lawsuit tracker</a>.</p>
 
   <div class="cite-box">Cite this page: <code>"{headline}." AI Incident {inc.incident_id},
-    The World of AI, theworldofai.org/ai-news/incident/{inc.incident_id}/. Retrieved {inc.generated}.</code></div>
+    The World of AI, theworldofai.org/ai-news/incident/{inc.incident_id}/. Retrieved {inc.generated}.{' '}UID {citeUid}.</code></div>
 
   <h2>Sources</h2>
   <p class="meta-line">Everything above is written here. These are the records and the
-    reporting it was written from, and they open in a new tab.</p>
+    reporting it was written from.</p>
   <ul class="sources">
-    <li><a href={inc.cite_url} rel="noopener" target="_blank">AI Incident Database, incident {inc.incident_id}</a>
+    <li>AI Incident Database, incident {inc.incident_id}
       <span class="src-meta">incidentdatabase.ai · Responsible AI Collaborative · CC BY-SA 4.0</span></li>
     {reports.map((r) => (
-      <li><a href={r.url} rel="noopener nofollow" target="_blank">{r.title}</a>
+      <li>{r.title}
         <span class="src-meta">{r.domain}{r.published && <> · {r.published}</>}{r.fromLang && <> · translated from {r.fromLang}</>}</span></li>
     ))}
   </ul>

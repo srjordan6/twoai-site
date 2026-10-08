@@ -52,6 +52,9 @@ const jsonld = JSON.stringify({
     },
   ],
 });
+import { citeUID } from '../../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title="AI Historical Timeline: From 1943 to the Present" description={desc} current="/ai-news/" jsonld={jsonld}>
   <p class="meta-line"><a href="/ai-news/">AI News</a></p>
@@ -94,9 +97,9 @@ const jsonld = JSON.stringify({
             <h3>{e.title}</h3>
             <p class="detail">{e.detail}</p>
             <p class="src">
-              {e.source_url
-                ? <>Source: <a href={e.source_url} rel="noopener" target="_blank">{e.source_name || 'primary source'}</a></>
-                : e.source_name ? <>Source: {e.source_name}</> : null}
+              {(e.source_url || e.source_name)
+                ? <>Source: {e.source_name || (() => { try { return new URL(e.source_url).hostname.replace(/^www\./, ''); } catch { return 'primary source'; } })()}</>
+                : null}
               {e.case_slug && <> &middot; <a href={`/ai-lawsuits/${e.case_slug}/`}>Full case page</a></>}
               {e.reviewed_on && e.origin !== 'auto-lawsuit' && <> &middot; reviewed {e.reviewed_on}</>}
             </p>
@@ -123,7 +126,7 @@ const jsonld = JSON.stringify({
 
   <div class="cite-box">
     <p><b>Cite this page</b></p>
-    <code>"AI Historical Timeline." The World of AI, https://theworldofai.org/ai-news/timeline/. Verified {tl.generated}.</code>
+    <code>"AI Historical Timeline." The World of AI, https://theworldofai.org/ai-news/timeline/. Verified {tl.generated}.{' '}UID {citeUid}.</code>
   </div>
 
   <p class="api-line">

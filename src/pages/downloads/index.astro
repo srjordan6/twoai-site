@@ -43,6 +43,9 @@ const jsonld = JSON.stringify({
       abstract: i.summary,
     }))),
 });
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title={title} description={description} current="/downloads/" jsonld={jsonld}>
   <p class="meta-line"><a href="/ai-ecosystem/enterprise-applications-governance-and-tools/">Enterprise Applications, Governance and Tools</a></p>
@@ -94,7 +97,7 @@ const jsonld = JSON.stringify({
   )}
 
   <div class="cite-box">Cite this page: <code>"Downloads and Asset Repository."
-    The World of AI, theworldofai.org/downloads/.{hub.generated ? ` Verified ${hub.generated}.` : ''}</code></div>
+    The World of AI, theworldofai.org/downloads/.{hub.generated ? ` Verified ${hub.generated}.` : ''}{' '}UID {citeUid}.</code></div>
 </Base>
 
 <style>

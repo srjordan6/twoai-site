@@ -139,6 +139,9 @@ const jsonld = JSON.stringify({
   ...(s.repo_url ? { codeRepository: s.repo_url } : {}),
   ...(s.vendor ? { author: { '@type': 'Organization', name: s.vendor } } : {}),
 });
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title={`${label} — MCP server — The World of AI`} titleTail={titleTail} description={desc} current="/mcp/" jsonld={jsonld} noindex={!indexable} doc={stamp}>
   <p class="meta-line"><a href="/">AI Ecosystem</a> ·
@@ -249,7 +252,7 @@ const jsonld = JSON.stringify({
   <Faq items={faqItems} heading={`Questions about ${label}`} />
 
   <div class="cite-box">Cite this page: <code>"{label}." MCP Server Directory, The World of AI,
-    theworldofai.org/mcp/{s.slug}/.{generated ? ` Verified ${generated}.` : ''}</code></div>
+    theworldofai.org/mcp/{s.slug}/.{generated ? ` Verified ${generated}.` : ''}{' '}UID {citeUid}.</code></div>
 
   <p><a href="/mcp/">All MCP servers</a></p>
   <CveList cves={cvesFor(`/mcp/${s.slug}/`)} name={label} />

@@ -104,6 +104,9 @@ const jsonld = JSON.stringify({
     })),
   }],
 });
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, t.uid);
 ---
 <Base title={`What is ${t.term}? Definition and AI usage — The World of AI`.length <= 70
     ? `What is ${t.term}? Definition and AI usage — The World of AI`
@@ -172,7 +175,7 @@ const jsonld = JSON.stringify({
   <Reading reading={reading} heading={`Why does ${t.term} matter?`} />
 
   <div class="cite-box">Cite this definition: <code>"{t.term}." The World of AI Glossary,
-    theworldofai.org/ai-glossary/{t.slug}/.{generated ? ` Verified ${generated}.` : ''}</code></div>
+    theworldofai.org/ai-glossary/{t.slug}/.{generated ? ` Verified ${generated}.` : ''}{' '}UID {citeUid}.</code></div>
   <KeepReading blocks={[
     { label: 'Companies named in this entry',
       links: krCompanies.map((x) => ({ href: `/companies/${x.uid}/`, label: `${x.name} profile`, note: 'what they ship and what is contested' })) },

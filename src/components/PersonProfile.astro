@@ -95,6 +95,9 @@ const personFaqLd = faqSchema && pf.length >= 2
   ? JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage',
       mainEntity: pf.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }).replace(/</g, '\\u003c')
   : '';
+import { citeUID } from '../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, person?.uid);
 ---
 <section class="person" id={person.uid}>
   <h2>{person.name}</h2>
@@ -285,7 +288,7 @@ const personFaqLd = faqSchema && pf.length >= 2
 
   <div class="cite-box">Cite this profile: <code>"{person.name}." AI People Directory,
     The World of AI, theworldofai.org{base}/{person.home_uid}/#{person.uid}.
-    {person.generated ? ` Verified ${person.generated}.` : ''}</code></div>
+    {person.generated ? ` Verified ${person.generated}.` : ''}{' '}UID {citeUid}.</code></div>
   {personFaqLd && <script type="application/ld+json" set:html={personFaqLd} />}
 </section>
 

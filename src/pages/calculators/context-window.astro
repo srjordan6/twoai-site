@@ -21,6 +21,9 @@ const faqs = [
   { q: 'What does a longer context cost?',
     a: 'Money and latency. Input tokens are billed, so a long prompt is charged on every request that carries it. Long inputs also enlarge the key-value cache, which raises memory use during generation and can slow the response. Prompt caching reduces the money side when the long part repeats.' },
 ];
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title="Context Window Calculator: will your document fit? — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>Context Window Calculator</h1>
@@ -88,7 +91,7 @@ const faqs = [
   <Faq items={faqs} />
 
   <div class="cite-box">Cite this tool: <code>"Context Window Calculator." The World of AI,
-    theworldofai.org/calculators/context-window/.</code></div>
+    theworldofai.org/calculators/context-window/.{' '}UID {citeUid}.</code></div>
 
   <p class="meta-line">Costing the same text instead? Use the
     <a href="/calculators/token-cost/">token cost calculator</a>.</p>

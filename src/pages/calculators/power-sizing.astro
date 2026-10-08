@@ -7,6 +7,9 @@ const jsonld = JSON.stringify({
   operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   url: 'https://theworldofai.org/calculators/power-sizing/',
 });
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title="Data Center Power Sizing Calculator: racks to megawatts — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <p class="meta-line"><a href="/calculators/">AI Calculators</a></p>
@@ -99,7 +102,7 @@ const jsonld = JSON.stringify({
     connection can take years regardless of what you are willing to pay.</p>
 
   <div class="cite-box">Cite this tool: <code>"Power Sizing Calculator." The World of AI,
-    theworldofai.org/calculators/power-sizing/.</code></div>
+    theworldofai.org/calculators/power-sizing/.{' '}UID {citeUid}.</code></div>
 
   <script is:inline>
   (function () {

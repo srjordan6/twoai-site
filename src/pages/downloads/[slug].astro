@@ -87,6 +87,9 @@ const jsonld = JSON.stringify({
   isAccessibleForFree: true,
   publisher: { '@type': 'Organization', name: 'SRJ Consulting & Services LLC' },
 });
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title={`${item.title}: a template you can adapt`} description={description} current="/downloads/" jsonld={jsonld} doc={stamp}>
   <p class="meta-line"><a href="/downloads/">Downloads</a> · {section}</p>
@@ -113,7 +116,7 @@ const jsonld = JSON.stringify({
   )}
 
   <div class="cite-box">Cite this page: <code>"{item.title}." Downloads and Asset Repository,
-    The World of AI, theworldofai.org/downloads/{item.slug}/.{item.reviewed_on ? ` Verified ${item.reviewed_on}.` : ''}</code></div>
+    The World of AI, theworldofai.org/downloads/{item.slug}/.{item.reviewed_on ? ` Verified ${item.reviewed_on}.` : ''}{' '}UID {citeUid}.</code></div>
 
   <p><a href="/downloads/">All downloads</a></p>
 

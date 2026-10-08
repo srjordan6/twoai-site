@@ -41,6 +41,9 @@ const jsonld = JSON.stringify({
   dateModified: idx.generated,
   isPartOf: { '@type': 'CollectionPage', name: 'The World of AI', url: 'https://theworldofai.org/' },
 });
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title={`AI Company Directory — ${idx.total || 0} companies building AI`} description={desc} current="/companies/" jsonld={jsonld}>
   <p class="meta-line" id="top"><a href="/ai-ecosystem/ecosystem-entities-market-and-operations/">Ecosystem Entities, Market and Operations</a></p>
@@ -75,7 +78,7 @@ const jsonld = JSON.stringify({
 
   {(idx.companies || []).length === 0 && <p>The first data synchronization is running; the directory appears within the day.</p>}
 
-  <div class="cite-box">Cite this directory: <code>"AI Company Directory." The World of AI, theworldofai.org/companies/.{idx.generated ? ` Verified ${idx.generated}.` : ''}</code></div>
+  <div class="cite-box">Cite this directory: <code>"AI Company Directory." The World of AI, theworldofai.org/companies/.{idx.generated ? ` Verified ${idx.generated}.` : ''}{' '}UID {citeUid}.</code></div>
 
   <p class="api-line">Machine readable: <a href="/api/companies.json">/api/companies.json</a></p>
 </Base>

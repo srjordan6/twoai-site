@@ -21,6 +21,9 @@ const faqs = [
   { q: 'Does an annual average carbon intensity overstate how clean a load is?',
     a: 'It can, badly. Grid intensity swings by hour: solar-heavy grids are cleanest at midday and dirtiest at the evening peak. A continuously running training job is exposed to that whole curve, so an annual average is the right figure for it, but a load that could shift into clean hours and does not is dirtier than any annual number suggests. Hourly matched procurement exists to close that gap.' },
 ];
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title="WUE and CUE Calculator: data center water and carbon — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>WUE and CUE Calculator</h1>
@@ -80,7 +83,7 @@ const faqs = [
   <Faq items={faqs} />
 
   <div class="cite-box">Cite this tool: <code>"WUE and CUE Calculator." The World of AI,
-    theworldofai.org/calculators/wue-cue/.</code></div>
+    theworldofai.org/calculators/wue-cue/.{' '}UID {citeUid}.</code></div>
 
   <script is:inline>
   (function () {

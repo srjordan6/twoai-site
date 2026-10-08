@@ -64,6 +64,9 @@ const jsonld = JSON.stringify({
   documentation: 'https://theworldofai.org/api/',
   provider: { '@type': 'Organization', name: 'SRJ Consulting & Services LLC' },
 });
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title="Public Data API: AI Laws, Lawsuits, Tools, and Research" description={desc} current="/api/" jsonld={jsonld}>
   <h1>Public data API</h1>
@@ -116,7 +119,7 @@ const jsonld = JSON.stringify({
   </p>
   <div class="cite-box">
     <p><b>Suggested attribution</b></p>
-    <code>Data from The World of AI, https://theworldofai.org/. Retrieved {new Date().toISOString().slice(0, 10)}.</code>
+    <code>Data from The World of AI, https://theworldofai.org/. Retrieved {new Date().toISOString().slice(0, 10)}.{' '}UID {citeUid}.</code>
   </div>
 
   <p class="api-line">

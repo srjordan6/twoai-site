@@ -27,6 +27,9 @@ const jsonld = JSON.stringify({
     item: { '@type': 'Organization', name: p.name, url: p.website },
   }))),
 });
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title="GPU Compute Providers: who rents AI accelerators — The World of AI" description={desc} current="/compute/" jsonld={jsonld}>
   <h1>GPU Compute Providers</h1>
@@ -109,7 +112,7 @@ const jsonld = JSON.stringify({
     no pricing link rather than a guessed one.</p>
 
   <div class="cite-box">Cite this page: <code>"GPU Compute Providers." The World of AI,
-    theworldofai.org/compute/.</code></div>
+    theworldofai.org/compute/.{' '}UID {citeUid}.</code></div>
 </Base>
 
 <style>

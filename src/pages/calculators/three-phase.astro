@@ -21,6 +21,9 @@ const faqs = [
   { q: 'Should I plan A and B feeds at half load each?',
     a: 'No, and this is the common and expensive error. In a dual-corded 2N design each feed must be able to carry the entire rack load, because the whole point is that either one can fail. Sizing each at half means the survivor trips during the event the redundancy existed for. Design each feed for full load and expect each to run near half in normal operation.' },
 ];
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title="Three-Phase Amperage Calculator for Data Center Racks — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>Three-Phase Amperage Calculator</h1>
@@ -77,7 +80,7 @@ const faqs = [
   <Faq items={faqs} />
 
   <div class="cite-box">Cite this tool: <code>"Three-Phase Amperage Calculator." The World of AI,
-    theworldofai.org/calculators/three-phase/.</code></div>
+    theworldofai.org/calculators/three-phase/.{' '}UID {citeUid}.</code></div>
 
   <script is:inline>
   (function () {

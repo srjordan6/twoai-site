@@ -282,6 +282,9 @@ const jsonld = JSON.stringify(
         },
       }
 );
+import { citeUID } from '../../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, art?.uid ?? section?.uid ?? learn?.uid ?? topic?.uid ?? hub?.uid);
 ---
 <Base title={title} description={desc} current="/ai-ecosystem/research-knowledge-and-learning/" jsonld={jsonld} noindex={Boolean(art?.noindex)}>
   <p class="meta-line" id="top">
@@ -351,7 +354,7 @@ const jsonld = JSON.stringify(
           The words on this page are written for the site from that volume.</p>
       )}
       <div class="cite-box">Cite this page: <code>"{art.name}." The World of AI,
-        theworldofai.org{BASE}/{art.uid}/. Retrieved {art.generated}.</code></div>
+        theworldofai.org{BASE}/{art.uid}/. Retrieved {art.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 
@@ -484,7 +487,7 @@ const jsonld = JSON.stringify(
 
       <p><a href={`${BASE}/${learn.section_uid}/`}>All {(learn.section_name || '').toLowerCase()}</a></p>
       <div class="cite-box">Cite this page: <code>"{entry.name}." The World of AI,
-        theworldofai.org{BASE}/{learn.uid}/. Retrieved {learn.generated}.</code></div>
+        theworldofai.org{BASE}/{learn.uid}/. Retrieved {learn.generated}.{' '}UID {citeUid}.</code></div>
       <p class="meta-line">Official page, {entry.provider}: <a href={entry.source_url} rel="noopener">{entry.source_url}</a></p>
     </>
   )}
@@ -509,7 +512,7 @@ const jsonld = JSON.stringify(
       ))}
       <Reading reading={learn.reading} heading="What does this graph show?" />
       <div class="cite-box">Cite this page: <code>"Entity Graph." The World of AI,
-        theworldofai.org{BASE}/{learn.uid}/. Retrieved {learn.generated}.</code></div>
+        theworldofai.org{BASE}/{learn.uid}/. Retrieved {learn.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 
@@ -531,7 +534,7 @@ const jsonld = JSON.stringify(
       ))}
       <Reading reading={learn.reading} heading="What does this graph show?" />
       <div class="cite-box">Cite this page: <code>"Relationships." The World of AI,
-        theworldofai.org{BASE}/{learn.uid}/. Retrieved {learn.generated}.</code></div>
+        theworldofai.org{BASE}/{learn.uid}/. Retrieved {learn.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 
@@ -551,7 +554,7 @@ const jsonld = JSON.stringify(
       ))}
       <Reading reading={learn.reading} heading={`What does this ${learn.name.toLowerCase()} catalogue show?`} />
       <div class="cite-box">Cite this page: <code>"{learn.name}." The World of AI,
-        theworldofai.org{BASE}/{learn.uid}/. Retrieved {learn.generated}.</code></div>
+        theworldofai.org{BASE}/{learn.uid}/. Retrieved {learn.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 
@@ -629,7 +632,7 @@ const jsonld = JSON.stringify(
           reproduced as such; no description or review text is copied.</p>
         <Reading reading={learn.reading} heading={`What does this ${learn.name.toLowerCase()} catalogue show?`} />
         <div class="cite-box">Cite this page: <code>"{learn.name}." The World of AI,
-          theworldofai.org{BASE}/{learn.uid}/. Retrieved {learn.generated}.</code></div>
+          theworldofai.org{BASE}/{learn.uid}/. Retrieved {learn.generated}.{' '}UID {citeUid}.</code></div>
       </>
     );
   })()}
@@ -693,7 +696,7 @@ const jsonld = JSON.stringify(
       )}
       <Reading reading={learn.reading} heading={`What does this ${learn.name.toLowerCase()} catalogue show?`} />
       <div class="cite-box">Cite this page: <code>"{learn.name}." The World of AI,
-        theworldofai.org{BASE}/{learn.uid}/. Retrieved {learn.generated}.</code></div>
+        theworldofai.org{BASE}/{learn.uid}/. Retrieved {learn.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 

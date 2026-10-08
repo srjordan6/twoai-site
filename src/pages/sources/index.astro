@@ -71,6 +71,9 @@ const jsonld = JSON.stringify({
   dateModified: hub.generated,
   isPartOf: { '@type': 'CollectionPage', name: 'The World of AI', url: 'https://theworldofai.org/' },
 });
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title={`Sources & References — ${total} cited sources and ${dataSources.length} live feeds — The World of AI`} description={desc} current="/sources/" jsonld={jsonld}>
   <p class="meta-line">
@@ -219,7 +222,7 @@ const jsonld = JSON.stringify({
   )}
 
   <div class="cite-box">
-    Cite this page: <code>"Sources &amp; References." The World of AI, theworldofai.org/sources/.{hub.generated ? ` Verified ${hub.generated}.` : ''}</code>
+    Cite this page: <code>"Sources &amp; References." The World of AI, theworldofai.org/sources/.{hub.generated ? ` Verified ${hub.generated}.` : ''}{' '}UID {citeUid}.</code>
   </div>
 
   {usesOnet && <OnetAttribution />}

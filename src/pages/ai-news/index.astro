@@ -285,7 +285,7 @@ const jsonld = JSON.stringify({
         <ol class="preview">
           {latestVendorPosts.map((it) => (
             <li>
-              <a href={it.url} rel="noopener nofollow" target="_blank">{it.title}</a>
+              {it.slug && it.has_page !== false ? <a href={`/ai-news/vendor/${it.slug}/`}>{it.title}</a> : <span>{it.title}</span>}
               <span class="pmeta">{it.vendor} · surfaced {it.date}</span>
             </li>
           ))}
@@ -335,9 +335,9 @@ const jsonld = JSON.stringify({
             ))}
           </ol>
         </div>
-        <p class="meta-line wide-foot">Incident records from the <a href="https://incidentdatabase.ai/"
-          rel="noopener">AI Incident Database</a>, Responsible AI Collaborative, licensed
-          CC BY-SA 4.0. Headlines and articles belong to the publishers linked. Listing an
+        <p class="meta-line wide-foot">Incident records from the AI Incident Database
+          (incidentdatabase.ai), Responsible AI Collaborative, licensed
+          CC BY-SA 4.0. Headlines and articles belong to the publishers named. Listing an
           incident is not a finding of fault, it is a record that the harm was reported.</p>
       </section>
     )}

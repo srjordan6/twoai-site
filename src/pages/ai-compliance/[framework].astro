@@ -153,6 +153,9 @@ const jsonld = JSON.stringify({
     url: 'https://srjconsultingservices.com/',
   },
 });
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, d?.page_uid ?? d?.uid);
 ---
 <Base title={d.seo_title || `${d.title} — The World of AI`} description={desc}
   current="/ai-compliance/" jsonld={jsonld} canonicalOverride={d.canonical} doc={d} stampLabel="Last reviewed">
@@ -326,7 +329,7 @@ const jsonld = JSON.stringify({
   )}
 
   <div class="cite-box">Cite this page: <code>"{d.title}." The World of AI,
-    theworldofai.org/ai-compliance/{d.slug}/.{d.generated ? ` Verified ${d.generated}.` : ''}</code></div>
+    theworldofai.org/ai-compliance/{d.slug}/.{d.generated ? ` Verified ${d.generated}.` : ''}{' '}UID {citeUid}.</code></div>
 
   <p class="meta-line">This is reference material, not legal advice. See our
     <a href="/disclaimer/">disclaimer</a>. Advisory work on these frameworks is handled by

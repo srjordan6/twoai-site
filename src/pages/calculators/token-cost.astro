@@ -21,6 +21,9 @@ const faqs = [
   { q: 'What is not in this number?',
     a: 'Embedding calls, retrieval infrastructure, vector storage, egress, and any tokens spent on retries, evaluation runs and guardrail checks. On production systems the retry and evaluation traffic is routinely a double-digit percentage of the bill, and none of it appears in a per-request estimate.' },
 ];
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title="LLM Token Cost Calculator: price any model's API usage — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>LLM Token Cost Calculator</h1>
@@ -65,7 +68,7 @@ const faqs = [
   <Faq items={faqs} />
 
   <div class="cite-box">Cite this tool: <code>"LLM Token Cost Calculator." The World of AI,
-    theworldofai.org/calculators/token-cost/.</code></div>
+    theworldofai.org/calculators/token-cost/.{' '}UID {citeUid}.</code></div>
 
   <script is:inline>
   (function () {
