@@ -2,12 +2,15 @@
 /**
  * One page per top story, mirroring the srjconsultingservices.com structure:
  * header with date and compile time, the pipeline-written summary, key
- * numbers, coverage sources, a day-level coverage timeline, and a sticky
- * contents rail. Both sites render the same news.json artifact.
+ * numbers, coverage sources, and a sticky contents rail. Both sites render
+ * the same news.json artifact.
  *
- * WHAT IS NOT HERE, AND WHY. The structure asks for intraday timestamps.
- * GDELT carries them; the pipeline stores only the date. Grouping by hour
- * would mean inventing times, so the timeline groups by DAY and says so.
+ * WHAT IS NOT HERE, AND WHY. A day-level coverage timeline was here until
+ * 2026-10-08, when Stephen said the information was not needed; the outlet
+ * and article counts carry what it said. Since 2026-10-07 (rows 581, 582)
+ * no external hyperlink is rendered on the news section: attribution is
+ * outlet and date as text, and scripts/news-no-external-links.mjs fails the
+ * build if one comes back.
  * "Why it matters" renders from s.Why when the pipeline supplies analysis,
  * and is otherwise absent rather than guessed.
  */
