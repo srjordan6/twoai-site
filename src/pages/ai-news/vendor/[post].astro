@@ -153,10 +153,10 @@ const jsonld = JSON.stringify({
 
   <div class="answer-box">
     <p class="answer-label">{it.summary ? `In ${vendor}\u2019s words` : 'What this is'}</p>
+    {/* The vendor's description arrives as the page gave it, sometimes
+        with its own markup; Stephen, 2026-10-08, saw a literal <p> in
+        the box. Tags come off here; the words stay the vendor's. */}
     {it.summary ? (
-      {/* The vendor's description arrives as the page gave it, sometimes
-          with its own markup; Stephen, 2026-10-08, saw a literal <p> in
-          the box. Tags come off here; the words stay the vendor's. */}
       <p>{String(it.summary).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()}</p>
     ) : (
       <p>
