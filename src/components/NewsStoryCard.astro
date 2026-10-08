@@ -1,0 +1,57 @@
+---
+/**
+ * One story card on the daily briefing, the same card wherever a story
+ * appears on that page. Stephen, 2026-10-08: the Policy & Regulation stories
+ * had a box and the top stories did not, and a Society & workforce story
+ * showed an empty orange box, which was the site-wide .answer lede style
+ * wrapped around a story whose one-line answer was blank. Every story now
+ * renders through this one component: headline, the coverage line, the
+ * why-it-matters box when there is one, the counts, and the link to the
+ * story page. Nothing on the card is model-written except the why line,
+ * which the story page labels the same way.
+ */
+interface Props {
+  href: string;
+  headline: string;
+  fromLang?: string;
+  brief: string;
+  why?: string;
+  outlets: number;
+  articles: number;
+  entities: number;
+  stamp: string;
+  uid: string;
+}
+const { href, headline, fromLang, brief, why, outlets, articles, entities, stamp, uid } = Astro.props;
+const whyText = String(why || '').trim();
+---
+<article class="story">
+  <h3><a href={href}>{headline}</a></h3>
+  {fromLang && <p class="tr-note">Translated from {fromLang}</p>}
+  <p class="brief">{brief}</p>
+  {whyText && <p class="why" data-llm="drafted"><span class="why-label">Why it matters</span>{whyText}</p>}
+  <div class="nums">
+    <span class="num"><strong>{outlets}</strong> outlets</span>
+    <span class="num"><strong>{articles}</strong> articles</span>
+    <span class="num"><strong>{entities}</strong> entities</span>
+    <span class="num stamp">{stamp} · <span class="uid" title="This story's identifier on theworldofai.org">uid {uid}</span></span>
+  </div>
+  <a class="more" href={href}>Full coverage and sources &rarr;</a>
+</article>
+
+<style>
+  .story { border: 1px solid #e8e6e0; border-radius: 8px; padding: 20px 22px; margin: 0 0 16px; background: #fff; }
+  .story h3 { font-size: 19px; line-height: 1.35; margin: 0 0 8px; }
+  .story h3 a { color: #201868; text-decoration: none; }
+  .story h3 a:hover { color: #F07800; }
+  .tr-note { font-size: 12.5px; color: #7A8A9E; margin: -.2em 0 .5em; }
+  .brief { font-size: 14.5px; line-height: 1.65; color: #2C2C2A; margin: 0 0 10px; }
+  .why { font-size: 14.5px; line-height: 1.65; color: #2C2C2A; background: #F6F5F1; border-left: 3px solid #F07800; padding: 10px 14px; margin: 0 0 10px; }
+  .why-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #F07800; margin-bottom: 4px; }
+  .nums { display: flex; flex-wrap: wrap; gap: 14px; margin: 0 0 10px; }
+  .num { font-size: 12.5px; color: #7A8A9E; }
+  .num strong { font-size: 17px; color: #201868; margin-right: 3px; }
+  .uid { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  .more { font-size: 13.5px; color: #201868; text-decoration: none; font-weight: 600; }
+  .more:hover { color: #F07800; }
+</style>
