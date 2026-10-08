@@ -56,6 +56,9 @@ const jsonld = JSON.stringify({
   url: 'https://theworldofai.org/skills/',
   dateModified: hub?.generated,
 });
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title="AI Skills Graph — what AI and security roles require — The World of AI" description={desc} current="/skills/" jsonld={jsonld}>
   <p class="meta-line">
@@ -135,7 +138,7 @@ const jsonld = JSON.stringify({
       )}
 
       <div class="cite-box">
-        Cite this page: <code>"AI Skills Graph." The World of AI, theworldofai.org/skills/. Verified {hub.generated}.</code>
+        Cite this page: <code>"AI Skills Graph." The World of AI, theworldofai.org/skills/. Verified {hub.generated}.{' '}UID {citeUid}.</code>
       </div>
 
       <OnetAttribution />

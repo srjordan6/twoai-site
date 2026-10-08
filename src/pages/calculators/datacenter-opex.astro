@@ -21,6 +21,9 @@ const faqs = [
   { q: 'What is missing from this number?',
     a: 'Everything that is not electricity. Staff, maintenance contracts, spares, water, connectivity, insurance, property tax, and the amortised capital cost of the building and the plant. Energy is the largest single operating line in most facilities but it is not the whole of OpEx, and it is nowhere near total cost of ownership.' },
 ];
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title="Data Center Energy Cost Calculator: annual OpEx from load and tariff — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>Data Center Energy Cost Calculator</h1>
@@ -72,7 +75,7 @@ const faqs = [
   <Faq items={faqs} />
 
   <div class="cite-box">Cite this tool: <code>"Data Center Energy Cost Calculator." The World of AI,
-    theworldofai.org/calculators/datacenter-opex/.</code></div>
+    theworldofai.org/calculators/datacenter-opex/.{' '}UID {citeUid}.</code></div>
 
   <script is:inline>
   (function () {

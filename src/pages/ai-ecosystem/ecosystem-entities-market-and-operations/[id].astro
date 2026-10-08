@@ -568,6 +568,9 @@ const jsonld = JSON.stringify(
       }
     : {}
 );
+import { citeUID } from '../../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, art?.uid ?? company?.uid);
 ---
 <Base title={title}
   description={desc} current={`${BASE}/`} jsonld={jsonld}
@@ -627,7 +630,7 @@ const jsonld = JSON.stringify(
         </>
       )}
       <div class="cite-box">Cite this page: <code>"{art.name}." The World of AI,
-        theworldofai.org{BASE}/{art.uid}/. Retrieved {art.generated}.</code></div>
+        theworldofai.org{BASE}/{art.uid}/. Retrieved {art.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 
@@ -647,7 +650,7 @@ const jsonld = JSON.stringify(
         ))}
       </ul>
       <div class="cite-box">Cite this page: <code>"{ehub.title || ehub.name}." The World of AI,
-        theworldofai.org{BASE}/{ehub.uid}/. Retrieved {ehub.generated}.</code></div>
+        theworldofai.org{BASE}/{ehub.uid}/. Retrieved {ehub.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 
@@ -845,7 +848,7 @@ const jsonld = JSON.stringify(
       <SourcedFacts doc={jhub} />
       <Reading reading={jhub.reading} heading="What does the hiring data show?" />
       <div class="cite-box">Cite this page: <code>"AI Jobs and Market Dynamics." The World of AI,
-        theworldofai.org{BASE}/{jhub.uid}/. Verified {jhub.generated}.</code></div>
+        theworldofai.org{BASE}/{jhub.uid}/. Verified {jhub.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 
@@ -889,7 +892,7 @@ const jsonld = JSON.stringify(
       </ul>
       <p><a href={`${BASE}/${jhubUid}/`}>All disciplines and market data</a></p>
       <div class="cite-box">Cite this page: <code>"{jdisc.name} Jobs." The World of AI,
-        theworldofai.org{BASE}/{jdisc.uid}/. Verified {jdisc.generated}.</code></div>
+        theworldofai.org{BASE}/{jdisc.uid}/. Verified {jdisc.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 
@@ -991,7 +994,7 @@ const jsonld = JSON.stringify(
       <Reading reading={companyReading} heading={`What does the record on ${company.name} show?`} />
       <div class="cite-box">Cite this page: <code>"{company.name}." AI Company Directory,
         The World of AI, theworldofai.org{BASE}/{company.uid}/.
-        {generated ? ` Verified ${generated}.` : ''}</code></div>
+        {generated ? ` Verified ${generated}.` : ''}{' '}UID {citeUid}.</code></div>
 
       {company.sec && (
         <>
@@ -1219,7 +1222,7 @@ const jsonld = JSON.stringify(
 
       <p><a href={`${BASE}/${hubUid}/`}>All people in the directory</a></p>
       <div class="cite-box">Cite this page: <code>"{pcat.name}." AI People Directory,
-        The World of AI, theworldofai.org{BASE}/{pcat.uid}/. Retrieved {pcat.generated}.</code></div>
+        The World of AI, theworldofai.org{BASE}/{pcat.uid}/. Retrieved {pcat.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 
@@ -1276,7 +1279,7 @@ const jsonld = JSON.stringify(
       ))}
       <Reading reading={csec.reading} heading="What does the public-company set show?" />
       <div class="cite-box">Cite this page: <code>"Public AI Companies." The World of AI,
-        theworldofai.org{BASE}/{csec.uid}/. Retrieved {csec.generated}.</code></div>
+        theworldofai.org{BASE}/{csec.uid}/. Retrieved {csec.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 
@@ -1309,7 +1312,7 @@ const jsonld = JSON.stringify(
       ))}
       <Reading reading={cpat.reading} heading="What do these patent portfolios show?" />
       <div class="cite-box">Cite this page: <code>"AI Patents by Company." The World of AI,
-        theworldofai.org{BASE}/{cpat.uid}/. Retrieved {cpat.generated}.</code></div>
+        theworldofai.org{BASE}/{cpat.uid}/. Retrieved {cpat.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 
@@ -1440,7 +1443,7 @@ const jsonld = JSON.stringify(
       <Reading reading={obs.reading} heading="What does this measurement show?" />
       <div class="cite-box">Cite this page: <code>"{obs.name}." The World of AI Observatory,
         theworldofai.org/ai-ecosystem/ecosystem-entities-market-and-operations/{obs.uid}/.
-        Retrieved {obs.generated}.</code></div>
+        Retrieved {obs.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 
@@ -1488,7 +1491,7 @@ const jsonld = JSON.stringify(
       <Reading reading={cma.reading} heading="What do these filings show about AI consolidation?" />
       <div class="cite-box">Cite this page: <code>"Acquisitions and Partnerships." The World of AI,
         theworldofai.org/ai-ecosystem/ecosystem-entities-market-and-operations/{cma.uid}/.
-        Retrieved {cma.generated}.</code></div>
+        Retrieved {cma.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 
@@ -1553,7 +1556,7 @@ const jsonld = JSON.stringify(
       )}
       <Reading reading={cpriv.reading} heading="What does the private-company set show?" />
       <div class="cite-box">Cite this page: <code>"Private AI Companies." The World of AI,
-        theworldofai.org{BASE}/{cpriv.uid}/. Retrieved {cpriv.generated}.</code></div>
+        theworldofai.org{BASE}/{cpriv.uid}/. Retrieved {cpriv.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 
@@ -1619,7 +1622,7 @@ const jsonld = JSON.stringify(
       ))}
       <Reading reading={corg.reading} heading={`What does this set of ${corg.name.toLowerCase()} show?`} />
       <div class="cite-box">Cite this page: <code>"{corg.name}." The World of AI,
-        theworldofai.org{BASE}/{corg.uid}/. Retrieved {corg.generated}.</code></div>
+        theworldofai.org{BASE}/{corg.uid}/. Retrieved {corg.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 
@@ -1654,7 +1657,7 @@ const jsonld = JSON.stringify(
       </table>
       <Reading reading={cfund.reading} heading="What does this funding record show?" />
       <div class="cite-box">Cite this page: <code>"AI Funding: SEC Form D Disclosures." The World
-        of AI, theworldofai.org{BASE}/{cfund.uid}/. Retrieved {cfund.generated}.</code></div>
+        of AI, theworldofai.org{BASE}/{cfund.uid}/. Retrieved {cfund.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 

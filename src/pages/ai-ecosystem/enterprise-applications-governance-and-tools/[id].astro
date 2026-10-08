@@ -211,6 +211,9 @@ const isDraft = Boolean((art || clx || law || secu || sec)?.draft);
 // A live page can still be kept out of search while its data is thin, the
 // politics entity pages from 2026-09-22 (noindex set by the pipeline).
 const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
+import { citeUID } from '../../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, art?.uid ?? sec?.uid ?? law?.uid ?? clx?.uid);
 ---
 <Base noindex={isDraft || isThin} redirect={art?.redirect_to || undefined} title={art ? `${art.name} — The World of AI` : clc ? `${dcase.case_name} — AI Case Law — The World of AI` : clx ? 'AI Case Law: The Precedents Behind the Defenses — The World of AI' : law ? 'Enacted AI Laws: US Bills That Became Law — The World of AI' : secu ? `${secu.name} — AI Security and Risk — The World of AI` : isCases ? `AI Case Studies: Real Deployments, Indexed — The World of AI` : (isCoverage || isInsHub) ? (sec.name === 'AI Insurance' ? `AI Insurance: Coverage for AI Risk — The World of AI` : `${sec.name} — ${(sec.tax || '').startsWith('ins-') || sec.tax === 'ai-insurance' || isCoverage ? 'AI Insurance' : (sec.parent_name || CATEGORY_NAME)} — The World of AI`) : `AI in ${sec.name} — The World of AI`} description={desc}
   current={`${BASE}/`} jsonld={jsonld}>
@@ -433,7 +436,7 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
         </>
       )}
       <div class="cite-box">Cite this page: <code>"{art.name}." The World of AI,
-        theworldofai.org{BASE}/{art.uid}/. Retrieved {art.generated}.</code></div>
+        theworldofai.org{BASE}/{art.uid}/. Retrieved {art.generated}.{' '}UID {citeUid}.</code></div>
       {art.source_url && !(art.site_pages && art.site_pages.length) && (
         /* SOURCE SUMMARY PAGES, 2026-09-25. The whole page is our reading of
            one outside source; the link to that source sits at the very
@@ -555,7 +558,7 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
       </section>
 
       <div class="cite-box">Cite this page: <code>"{sec.name}." The World of AI,
-        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
+        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 
@@ -698,7 +701,7 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
 
       <SourcedFacts doc={secu} />
       <div class="cite-box">Cite this page: <code>"{secu.name}." The World of AI,
-        theworldofai.org{BASE}/{secu.uid}/. Retrieved {secu.generated}.</code></div>
+        theworldofai.org{BASE}/{secu.uid}/. Retrieved {secu.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 
@@ -757,7 +760,7 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
       <CheriWatch doc={secu} />
       <SourcedFacts doc={secu} skip={secu.cheri_watch && secu.cheri_watch.facts} />
       <div class="cite-box">Cite this page: <code>"{secu.name}." The World of AI,
-        theworldofai.org{BASE}/{secu.uid}/. Retrieved {secu.generated}.</code></div>
+        theworldofai.org{BASE}/{secu.uid}/. Retrieved {secu.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 
@@ -868,7 +871,7 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
 
       <SourcedFacts doc={secu} />
       <div class="cite-box">Cite this page: <code>"{secu.name}." The World of AI,
-        theworldofai.org{BASE}/{secu.uid}/. Retrieved {secu.generated}.</code></div>
+        theworldofai.org{BASE}/{secu.uid}/. Retrieved {secu.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 
@@ -977,7 +980,7 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
         <a href="/ai-ecosystem/technology-and-core-infrastructure/b441a27b/">the data centre registry</a>.</p>
 
       <div class="cite-box">Cite this page: <code>"{sec.name}." The World of AI,
-        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
+        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 
@@ -1088,7 +1091,7 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
     <a href="/skills/">the AI skills graph</a>.</p>
 
   <div class="cite-box">Cite this page: <code>"AI in {sec.name}." The World of AI,
-    theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
+    theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 
@@ -1139,7 +1142,7 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
         <a href="/ai-compliance/state-ai-laws/">state AI laws explained</a>.</p>
 
       <div class="cite-box">Cite this page: <code>"Enacted AI Laws." The World of AI,
-        theworldofai.org{BASE}/{law.uid}/. Retrieved {law.generated}.</code></div>
+        theworldofai.org{BASE}/{law.uid}/. Retrieved {law.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 
@@ -1186,7 +1189,7 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
 
       <Reading reading={clx.reading} heading="What does this body of case law establish?" />
       <div class="cite-box">Cite this page: <code>"{clx.name}." The World of AI,
-        theworldofai.org{BASE}/{clx.uid}/. Retrieved {clx.generated}.</code></div>
+        theworldofai.org{BASE}/{clx.uid}/. Retrieved {clx.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 
@@ -1297,7 +1300,7 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
 
       <Reading reading={clc.reading} heading={`What does ${dcase.case_name} decide?`} />
       <div class="cite-box">Cite this page: <code>"{dcase.case_name}: AI Case Law." The World of
-        AI, theworldofai.org{BASE}/{dcase.uid}/. Retrieved {clc.generated}.</code></div>
+        AI, theworldofai.org{BASE}/{dcase.uid}/. Retrieved {clc.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 
@@ -1360,7 +1363,7 @@ const isThin = Boolean((art || clx || law || secu || sec)?.noindex);
         {' '}<a href="/ai-compliance/">the governance library</a>.</p>
 
       <div class="cite-box">Cite this page: <code>"AI Case Studies." The World of AI,
-        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.</code></div>
+        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.{' '}UID {citeUid}.</code></div>
     </>
   )}
 

@@ -63,6 +63,9 @@ const jsonld = JSON.stringify({
 // No external links on the news section (rows 581, 582): records are named,
 // not linked; the URLs stay in the JSON.
 const hostOf = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } };
+import { citeUID } from '../../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, c.uid);
 ---
 <Base title={`${headline} — AI CVE tracker — The World of AI`} description={desc} current="/ai-news/" jsonld={jsonld}
   doc={{ page_uid: c.uid, built_at: c.generated, generated: c.published }} stampLabel="CVE recorded" provenance="drafted">
@@ -158,7 +161,7 @@ const hostOf = (u: string) => { try { return new URL(u).hostname.replace(/^www\.
     profiled company's CVE is about AI.</p>
 
   <div class="cite-box">Cite this page: <code>"{c.cve_id}." AI CVE tracker, The World of AI,
-    theworldofai.org/ai-news/cves/{c.cve_id}/. Retrieved {c.generated}.</code></div>
+    theworldofai.org/ai-news/cves/{c.cve_id}/. Retrieved {c.generated}.{' '}UID {citeUid}.</code></div>
 
   <h2>Sources</h2>
   <ul class="sources">

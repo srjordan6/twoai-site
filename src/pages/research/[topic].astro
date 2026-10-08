@@ -55,6 +55,9 @@ const jsonld = JSON.stringify({
     })),
   },
 });
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title={`${t.name} in AI Research: ${papers.length} curated papers — The World of AI`} description={desc} current="/research/" jsonld={jsonld} doc={t} stampLabel="Shelf last refreshed">
   <p class="meta-line"><a href="/research/">AI Research Library</a></p>
@@ -102,7 +105,7 @@ const jsonld = JSON.stringify({
   )}
 
   <div class="cite-box">Cite this shelf: <code>"{t.name}." AI Research Library, The World of AI,
-    theworldofai.org/research/{t.slug}/.{(t.refreshed || t.generated) ? ` Verified ${t.refreshed || t.generated}.` : ''}</code></div>
+    theworldofai.org/research/{t.slug}/.{(t.refreshed || t.generated) ? ` Verified ${t.refreshed || t.generated}.` : ''}{' '}UID {citeUid}.</code></div>
 </Base>
 
 <style>

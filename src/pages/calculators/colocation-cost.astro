@@ -21,6 +21,9 @@ const faqs = [
   { q: 'Can I get AI racks on a standard rate card?',
     a: 'Usually not. Standard cabinet products assume 5 to 10 kW; racks at 40 kW and above need dedicated power distribution, containment or liquid cooling, and often a different part of the building. Those deals are quoted individually, priced per kilowatt rather than per cabinet, and the lead time on capacity is frequently the binding constraint rather than the price.' },
 ];
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title="Colocation Cost Calculator: monthly space, power and cross-connects — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>Colocation Cost Calculator</h1>
@@ -78,7 +81,7 @@ const faqs = [
   <Faq items={faqs} />
 
   <div class="cite-box">Cite this tool: <code>"Colocation Cost Calculator." The World of AI,
-    theworldofai.org/calculators/colocation-cost/.</code></div>
+    theworldofai.org/calculators/colocation-cost/.{' '}UID {citeUid}.</code></div>
 
   <script is:inline>
   (function () {

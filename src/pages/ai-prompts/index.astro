@@ -39,6 +39,9 @@ const jsonld = JSON.stringify({
     })),
   },
 });
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title="AI Prompt Library and Prompting Techniques"
   description={desc} current="/ai-ecosystem/enterprise-applications-governance-and-tools/" jsonld={jsonld}>
@@ -94,6 +97,6 @@ const jsonld = JSON.stringify({
   <SourcedFacts doc={hub} />
   <div class="cite-box">
     <strong>Cite this page:</strong>
-    <code>The World of AI, "AI Prompt Library and Techniques," theworldofai.org/ai-prompts/, verified {hub.generated}.</code>
+    <code>The World of AI, "AI Prompt Library and Techniques," theworldofai.org/ai-prompts/, verified {hub.generated}.{' '}UID {citeUid}.</code>
   </div>
 </Base>

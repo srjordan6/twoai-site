@@ -21,6 +21,9 @@ const faqs = [
   { q: 'Does more GPUs make it cheaper?',
     a: 'It makes it faster, not cheaper, and past a point it makes it more expensive. Total GPU hours are fixed by the compute required, so adding accelerators divides wall-clock time without changing the bill. Scaling also lowers MFU, because more devices mean more communication, so a very large cluster can burn more GPU hours for the same run.' },
 ];
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title="Training Cost Estimator: GPU hours and dollars for a model run — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>Training Cost Estimator</h1>
@@ -87,7 +90,7 @@ const faqs = [
   <Faq items={faqs} />
 
   <div class="cite-box">Cite this tool: <code>"Training Cost Estimator." The World of AI,
-    theworldofai.org/calculators/training-cost/.</code></div>
+    theworldofai.org/calculators/training-cost/.{' '}UID {citeUid}.</code></div>
 
   <p class="meta-line">Power and emissions for the same run:
     <a href="/calculators/energy-carbon/">energy and carbon estimator</a>.</p>

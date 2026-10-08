@@ -104,6 +104,9 @@ const jsonld = JSON.stringify({
     },
   ],
 });
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title={`State of AI Laws, ${monthYear}: the numbers, the map and what changed — The World of AI`} description={desc.slice(0, 300)} current="/ai-laws/" jsonld={jsonld} doc={stampDoc} stampLabel="Data as of">
   <h1>State of AI Laws, {monthYear}</h1>
@@ -181,7 +184,7 @@ const jsonld = JSON.stringify({
     company or an AI system. A count here is a count of records we hold, so it is a floor, not a census.</p>
 
   <h2 id="cite">Cite or embed this</h2>
-  <div class="cite-box">Cite this page: <code>{cite}</code></div>
+  <div class="cite-box">Cite this page: <code>{cite}{' '}UID {citeUid}.</code></div>
   <p>The map and the lawsuit count are available as live widgets for any website, free with a credit line:
     {' '}<a href="/embed/">embed our data</a>. The underlying records are open JSON at <a href="/api/">/api/</a>.
     Journalists and researchers who need a cut of the data that is not here can <a href="/contact/">ask</a>.</p>

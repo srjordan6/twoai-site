@@ -25,6 +25,9 @@ const jsonld = JSON.stringify({
   dateModified: hub.generated,
   isPartOf: { '@type': 'CollectionPage', name: 'The World of AI', url: 'https://theworldofai.org/' },
 });
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title={`AI Research Library — ${hub.total || 0} papers across ${topics.length} topics`} description={desc} current="/research/" jsonld={jsonld}>
   <p class="meta-line"><a href="/ai-ecosystem/research-knowledge-and-learning/">Research, Knowledge and Learning</a></p>
@@ -77,7 +80,7 @@ const jsonld = JSON.stringify({
     <p>Every paper and primary instrument this site cites is indexed on the <a href="/sources/">Sources &amp; References</a> page — the site's central bibliography.</p>
   </div>
 
-  <div class="cite-box">Cite this library: <code>"AI Research Library." The World of AI, theworldofai.org/research/.{hub.generated ? ` Verified ${hub.generated}.` : ''}</code></div>
+  <div class="cite-box">Cite this library: <code>"AI Research Library." The World of AI, theworldofai.org/research/.{hub.generated ? ` Verified ${hub.generated}.` : ''}{' '}UID {citeUid}.</code></div>
 
   <p class="api-line">Machine readable: <a href="/api/research.json">/api/research.json</a></p>
 </Base>

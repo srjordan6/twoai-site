@@ -21,6 +21,9 @@ const faqs = [
   { q: 'Where do I get a per-accelerator throughput number?',
     a: 'From your own benchmark, on your own model, at your own batch size and sequence length, on your own serving stack. It is not a property of the hardware: quantization, attention implementation, batch policy and context length all move it, often by more than a hardware generation does.' },
 ];
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title="LLM Inference Throughput Calculator: tokens per second and GPUs needed — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>Inference Throughput Calculator</h1>
@@ -78,7 +81,7 @@ const faqs = [
   <Faq items={faqs} />
 
   <div class="cite-box">Cite this tool: <code>"Inference Throughput Calculator." The World of AI,
-    theworldofai.org/calculators/inference-throughput/.</code></div>
+    theworldofai.org/calculators/inference-throughput/.{' '}UID {citeUid}.</code></div>
 
   <script is:inline>
   (function () {

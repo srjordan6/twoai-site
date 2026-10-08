@@ -7,6 +7,9 @@ const jsonld = JSON.stringify({
   operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   url: 'https://theworldofai.org/calculators/roi/',
 });
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title="AI ROI Calculator: does the rollout pay for itself? — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <p class="meta-line"><a href="/calculators/">AI Calculators</a></p>
@@ -132,7 +135,7 @@ const jsonld = JSON.stringify({
     everything modelled here, in either direction.</p>
 
   <div class="cite-box">Cite this tool: <code>"AI ROI Calculator." The World of AI,
-    theworldofai.org/calculators/roi/.</code></div>
+    theworldofai.org/calculators/roi/.{' '}UID {citeUid}.</code></div>
 
   <p class="meta-line">This is a planning tool, not financial advice. See our
     <a href="/disclaimer/">disclaimer</a>.</p>

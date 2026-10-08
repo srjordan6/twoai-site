@@ -55,6 +55,9 @@ const jsonld = JSON.stringify({
   author: { '@type': 'Organization', name: 'The World of AI' },
   isPartOf: { '@type': 'CollectionPage', name: 'AI Benchmarks and Performance', url: 'https://theworldofai.org/benchmarks/' },
 });
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title={`${b.name}: What It Measures and What It Does Not`}
   description={desc} current="/ai-ecosystem/enterprise-applications-governance-and-tools/" jsonld={jsonld} doc={b}>
@@ -128,7 +131,7 @@ const jsonld = JSON.stringify({
   <SourcedFacts doc={b} />
   <div class="cite-box">
     <strong>Cite this page:</strong>
-    <code>The World of AI, "{b.name}: What It Measures," theworldofai.org/benchmarks/{b.slug}/, verified {b.last_reviewed || b.generated}.</code>
+    <code>The World of AI, "{b.name}: What It Measures," theworldofai.org/benchmarks/{b.slug}/, verified {b.last_reviewed || b.generated}.{' '}UID {citeUid}.</code>
   </div>
   {b.last_reviewed && (
     <p class="meta-line">Last verified {b.last_reviewed} · Reviewed on a {b.review_interval_days || 90}-day cycle · Corrections republish automatically on the next daily build.</p>

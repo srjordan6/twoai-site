@@ -7,6 +7,9 @@ const jsonld = JSON.stringify({
   operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   url: 'https://theworldofai.org/calculators/datacenter-capex/',
 });
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title="Data Center Build Cost Calculator: cost per megawatt — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>Data Center Build Cost Calculator</h1>
@@ -63,7 +66,7 @@ const jsonld = JSON.stringify({
     AI-dense one, adjustable by moving the cost-per-MW figure up for a liquid-cooled design.</p>
 
   <div class="cite-box">Cite this tool: <code>"Data Center Build Cost Calculator." The World of AI,
-    theworldofai.org/calculators/datacenter-capex/.</code></div>
+    theworldofai.org/calculators/datacenter-capex/.{' '}UID {citeUid}.</code></div>
 
   <script is:inline>
   (function () {

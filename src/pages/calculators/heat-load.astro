@@ -21,6 +21,9 @@ const faqs = [
   { q: 'Does more tonnage let me run denser racks?',
     a: 'Not past a point. Total capacity and per-cabinet delivery are different constraints, and above roughly 30 kW a rack the binding limit is how much air can physically move through one cabinet, not how much cooling the plant can make. That is the threshold where liquid cooling stops being an option and becomes the requirement.' },
 ];
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title="Data Center Heat Load Calculator: kW to BTU and tons of cooling — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>Heat Load Calculator</h1>
@@ -73,7 +76,7 @@ const faqs = [
   <Faq items={faqs} />
 
   <div class="cite-box">Cite this tool: <code>"Heat Load Calculator." The World of AI,
-    theworldofai.org/calculators/heat-load/.</code></div>
+    theworldofai.org/calculators/heat-load/.{' '}UID {citeUid}.</code></div>
 
   <script is:inline>
   (function () {

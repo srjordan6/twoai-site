@@ -73,6 +73,9 @@ const jsonld = JSON.stringify({
     : {}),
   skills: skills.slice(0, 12).map((s: any) => s.name).join(', '),
 });
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title={`${o.title} — skills, pay, and openings — The World of AI`} description={desc} current="/skills/" jsonld={jsonld} doc={stamp}>
   <p class="meta-line"><a href="/skills/">AI Skills Graph</a> · {o.soc}</p>
@@ -138,7 +141,7 @@ const jsonld = JSON.stringify({
   )}
 
   <div class="cite-box">
-    Cite this page: <code>"{o.title}." The World of AI, theworldofai.org/skills/{o.soc}/. Verified {o.reviewed_on || generated}.</code>
+    Cite this page: <code>"{o.title}." The World of AI, theworldofai.org/skills/{o.soc}/. Verified {o.reviewed_on || generated}.{' '}UID {citeUid}.</code>
   </div>
 
   <OnetAttribution />

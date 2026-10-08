@@ -68,6 +68,9 @@ const jsonld = JSON.stringify({
   url: 'https://theworldofai.org/ai-news/cves/',
   isPartOf: { '@type': 'CollectionPage', name: 'AI News', url: 'https://theworldofai.org/ai-news/' },
 });
+import { citeUID } from '../../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title={pageTitle} description={desc.slice(0, 300)} current="/ai-news/" jsonld={jsonld}>
   <p class="meta-line"><a href="/ai-news/">AI News</a> · AI CVE tracker</p>
@@ -139,7 +142,7 @@ const jsonld = JSON.stringify({
   ))}
 
   <div class="cite-box">Cite this page: <code>"AI CVE tracker." The World of AI,
-    theworldofai.org/ai-news/cves/. Retrieved {d.generated}.</code></div>
+    theworldofai.org/ai-news/cves/. Retrieved {d.generated}.{' '}UID {citeUid}.</code></div>
 
   <p class="meta-line">CVE records are published by the CVE Program (MITRE, cve.org)
     and enriched by the National Vulnerability Database (NIST, nvd.nist.gov);

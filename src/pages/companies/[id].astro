@@ -236,6 +236,9 @@ const jsonld = JSON.stringify({
     },
   ],
 });
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, company?.uid);
 ---
 <Base title={`${n}: AI products, lawsuits, and MCP servers`} description={desc.slice(0, 300)} current="/companies/" jsonld={jsonld} noindex={thin || Boolean(movedTo)}
   canonicalOverride={movedTo ? `https://theworldofai.org/companies/${movedTo}/` : undefined}
@@ -504,7 +507,7 @@ const jsonld = JSON.stringify({
 
   <Reading reading={reading} heading={`What does the record on ${n} show?`} />
   <div class="cite-box">Cite this page: <code>"{n}." AI Company Directory,
-    The World of AI, theworldofai.org/companies/{company.uid}/.{generated ? ` Verified ${generated}.` : ''}</code></div>
+    The World of AI, theworldofai.org/companies/{company.uid}/.{generated ? ` Verified ${generated}.` : ''}{' '}UID {citeUid}.</code></div>
 
   <p class="meta-line">Entity ID <code>{company.uid}</code>. That identifier is stable across
     this whole site, so the same company is the same record wherever it appears, whatever

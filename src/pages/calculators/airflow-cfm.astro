@@ -21,6 +21,9 @@ const faqs = [
   { q: 'Is this the airflow I need or the airflow I have?',
     a: 'What the load demands. The room delivers something different, and the gap is where most thermal problems live: bypass air that returns to the cooling unit without passing through a server, and recirculation where exhaust is drawn back into an intake. Blanking panels, sealed floor cutouts and containment address the gap; no amount of extra tonnage does.' },
 ];
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title="Data Center Airflow Calculator: CFM from kW and delta-T — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>Airflow (CFM) Calculator</h1>
@@ -68,7 +71,7 @@ const faqs = [
   <Faq items={faqs} />
 
   <div class="cite-box">Cite this tool: <code>"Airflow (CFM) Calculator." The World of AI,
-    theworldofai.org/calculators/airflow-cfm/.</code></div>
+    theworldofai.org/calculators/airflow-cfm/.{' '}UID {citeUid}.</code></div>
 
   <script is:inline>
   (function () {

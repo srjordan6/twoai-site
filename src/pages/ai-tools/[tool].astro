@@ -75,6 +75,9 @@ const jsonld = JSON.stringify({
     })),
   }] : [])],
 });
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, t.uid);
 ---
 <Base title={`${t.name}: what it does, what it costs, and where it falls short`} description={desc} current="/ai-tools/" jsonld={jsonld}
   doc={t.uid ? { page_uid: t.uid, built_at: t.generated, generated: t.generated } : undefined}>
@@ -166,7 +169,7 @@ const jsonld = JSON.stringify({
 
   <Reading reading={t.reading} heading={`Where does ${t.name} fit?`} />
   <div class="cite-box">Cite this profile: <code>"{t.name}." The World of AI Tools Directory,
-    theworldofai.org/ai-tools/{t.slug}/.{t.generated ? ` Verified ${t.generated}.` : ''}</code></div>
+    theworldofai.org/ai-tools/{t.slug}/.{t.generated ? ` Verified ${t.generated}.` : ''}{' '}UID {citeUid}.</code></div>
 
   <p class="meta-line">We are not paid by the vendors we profile. Verdicts are never for sale:
     <a href="/disclosure/">disclosure</a>.</p>

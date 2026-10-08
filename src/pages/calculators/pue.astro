@@ -21,6 +21,9 @@ const faqs = [
   { q: 'What should I look at instead, or as well?',
     a: 'Water and carbon, which PUE says nothing about. A 1.1 facility on coal emits more than a 1.4 on hydro, and an evaporatively cooled site can hit a low PUE precisely by spending water. Water Usage Effectiveness and Carbon Usage Effectiveness exist for that gap and are on the WUE and CUE calculator.' },
 ];
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title="PUE Calculator: Power Usage Effectiveness and DCiE — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>PUE Calculator</h1>
@@ -69,7 +72,7 @@ const faqs = [
   <Faq items={faqs} />
 
   <div class="cite-box">Cite this tool: <code>"PUE Calculator." The World of AI,
-    theworldofai.org/calculators/pue/.</code></div>
+    theworldofai.org/calculators/pue/.{' '}UID {citeUid}.</code></div>
 
   <script is:inline>
   (function () {

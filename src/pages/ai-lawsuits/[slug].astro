@@ -103,6 +103,9 @@ const jsonld = JSON.stringify({
     })),
   }] : [])],
 });
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title={`${c.case_name} — AI lawsuit tracker`} description={desc} current="/ai-lawsuits/" jsonld={jsonld} doc={stamp} stampLabel="Docket last checked">
   <h1>{c.case_name}</h1>
@@ -227,7 +230,7 @@ const jsonld = JSON.stringify({
      Inc.." on 2026-09-20, and most defendants in this tracker are an Inc.,
      an LLC or a Corp., so it was most of them. */}
   <div class="cite-box">Cite this page: <code>"{c.case_name}{/\.$/.test(c.case_name) ? '' : '.'}" The World of AI Lawsuit Tracker,
-    theworldofai.org/ai-lawsuits/{c.slug}/.{generated ? ` Verified ${generated}.` : ''}</code></div>
+    theworldofai.org/ai-lawsuits/{c.slug}/.{generated ? ` Verified ${generated}.` : ''}{' '}UID {citeUid}.</code></div>
   <KeepReading blocks={[
     { label: 'Companies named in this case',
       links: krCompanies.map((x) => ({ href: `/companies/${x.uid}/`, label: `${x.name} profile`, note: 'products, filings, other cases' })) },

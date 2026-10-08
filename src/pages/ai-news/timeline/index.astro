@@ -52,6 +52,9 @@ const jsonld = JSON.stringify({
     },
   ],
 });
+import { citeUID } from '../../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title="AI Historical Timeline: From 1943 to the Present" description={desc} current="/ai-news/" jsonld={jsonld}>
   <p class="meta-line"><a href="/ai-news/">AI News</a></p>
@@ -123,7 +126,7 @@ const jsonld = JSON.stringify({
 
   <div class="cite-box">
     <p><b>Cite this page</b></p>
-    <code>"AI Historical Timeline." The World of AI, https://theworldofai.org/ai-news/timeline/. Verified {tl.generated}.</code>
+    <code>"AI Historical Timeline." The World of AI, https://theworldofai.org/ai-news/timeline/. Verified {tl.generated}.{' '}UID {citeUid}.</code>
   </div>
 
   <p class="api-line">

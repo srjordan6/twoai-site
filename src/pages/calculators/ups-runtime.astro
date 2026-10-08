@@ -7,6 +7,9 @@ const jsonld = JSON.stringify({
   operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   url: 'https://theworldofai.org/calculators/ups-runtime/',
 });
+import { citeUID } from '../../lib/cite';
+// The uid every citation of this page carries (Stephen, 2026-10-08).
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
 <Base title="UPS Sizing and Battery Runtime Calculator — The World of AI" description={desc} current="/calculators/" jsonld={jsonld}>
   <h1>UPS and Battery Runtime Calculator</h1>
@@ -68,7 +71,7 @@ const jsonld = JSON.stringify({
     property of the chemistry itself.</p>
 
   <div class="cite-box">Cite this tool: <code>"UPS and Battery Runtime Calculator." The World of AI,
-    theworldofai.org/calculators/ups-runtime/.</code></div>
+    theworldofai.org/calculators/ups-runtime/.{' '}UID {citeUid}.</code></div>
 
   <script is:inline>
   (function () {
