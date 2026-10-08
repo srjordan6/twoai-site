@@ -51,6 +51,15 @@ const stories: Story[] = raw.map((s: any) => ({
 // 2026-10-06 carries the original in title and the English in title_en;
 // one built since carries the English in title and the original in
 // title_original. Both read the same way here.
+// The first two sentences of a summary, for the list. A sentence ends at a
+// full stop, question or exclamation mark followed by a space and a capital,
+// so "Dr. Smith" and "U.S. law" do not cut it short.
+const teaser = (text: string, n = 2): string => {
+  const t = String(text || '').replace(/\s+/g, ' ').trim();
+  const parts = t.split(/(?<=[.!?])\s+(?=[A-Z"\u201c(])/);
+  const out = parts.slice(0, n).join(' ');
+  return out.length < t.length && !/[.!?]$/.test(out) ? out + '\u2026' : out;
+};
 const incidents = (news?.incidents ?? []).map((i: any) => {
   const headline = i.title_en || i.title;
   const original = i.title_original || (i.title_en && i.title_en !== i.title ? i.title : '');
@@ -323,14 +332,13 @@ const jsonld = JSON.stringify({
                 {inc.outlet_count > 1 && <> &middot; carried by {inc.outlet_count} outlets</>}
                 {' '}&middot; <span class="uid" title="This incident's identifier on theworldofai.org">uid {inc.uid}</span>
               </p>
+              {/* Two sentences, no more (Stephen, 2026-10-08: "give one or two
+                  sentences that make the user want to read more and then have
+                  them open up the whole page"). The full account lives on the
+                  incident page; this list only has to earn the click. */}
               {inc.summary && (
-                <>
-                  {String(inc.summary).split(/\n\n+/).map((p) => <p>{p}</p>)}
-                  <p class="inc-meta">Summarized from reporting first published by
-                    {' '}{inc.summary_domain}.
-                    {' '}<a href={`/ai-news/incident/${inc.incident_id}/`}>The full account, with
-                    every source &rarr;</a></p>
-                </>
+                <p class="inc-teaser">{teaser(inc.summary)}
+                  {' '}<a href={`/ai-news/incident/${inc.incident_id}/`}>Read the full account &rarr;</a></p>
               )}
               {inc.reports && inc.reports.length > 1 && (
                 <details class="inc-reports">
