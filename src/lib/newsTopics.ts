@@ -247,7 +247,11 @@ export function entityCounts(stories: Story[]): Map<string, number> {
 export function coverageByDay(articles: Story['Articles']) {
   const byDay = new Map<string, Story['Articles']>();
   for (const a of articles ?? []) {
-    const d = a.Date || 'undated';
+    // A DAY, NOT A TIMESTAMP. Stephen, 2026-10-08, on a story page whose
+    // "coverage timeline" listed seven "days" inside two, one per article,
+    // because GDELT dates articles to the second and this grouped on the
+    // whole string. The first ten characters are the day.
+    const d = a.Date ? String(a.Date).slice(0, 10) : 'undated';
     if (!byDay.has(d)) byDay.set(d, []);
     byDay.get(d)!.push(a);
   }
