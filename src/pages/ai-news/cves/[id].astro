@@ -63,6 +63,47 @@ const jsonld = JSON.stringify({
 // No external links on the news section (rows 581, 582): records are named,
 // not linked; the URLs stay in the JSON.
 const hostOf = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } };
+
+// WHAT EACH REFERENCE IS, without the link. The sources list is plain text
+// under the no-outbound-links rule, and a bare host says nothing: Stephen,
+// 2026-10-08, "do we need to list 5 github.com". Each reference is described
+// from its own URL (a GitHub advisory, commit, pull request, issue or
+// release in a named repository; a vendor advisory elsewhere), and
+// references to the same thing collapse into one line with a count.
+const describeRef = (u: string): string => {
+  let url: URL;
+  try { url = new URL(u); } catch { return u; }
+  const host = url.hostname.replace(/^www\./, '');
+  const seg = url.pathname.split('/').filter(Boolean);
+  if (host === 'github.com' && seg[0] === 'advisories') return `GitHub advisory ${seg[1] || ''}`.trim();
+  if (host === 'github.com' && seg.length >= 2) {
+    const repo = `${seg[0]}/${seg[1]}`;
+    const kind = seg[2] || '';
+    const id = seg[3] || '';
+    if (kind === 'security' && seg[3] === 'advisories') return `GitHub security advisory ${seg[4] || ''} for ${repo}`.trim();
+    if (kind === 'commit') return `Fix commit ${id.slice(0, 7)} in ${repo}`;
+    if (kind === 'pull') return `Pull request ${id} in ${repo}`;
+    if (kind === 'issues') return `Issue ${id} in ${repo}`;
+    if (kind === 'releases') return `Release ${seg[4] || ''} of ${repo}`.trim();
+    if (kind === 'blob' || kind === 'tree') return `Source file ${seg.slice(4).join('/') || ''} in ${repo}`.replace('  ', ' ');
+    return `Repository ${repo} on GitHub`;
+  }
+  if (host === 'vulncheck.com') return 'VulnCheck advisory';
+  if (host === 'huggingface.co' && seg.length >= 2) return `Hugging Face page for ${seg[0]}/${seg[1]}`;
+  if (host === 'pypi.org' && seg[0] === 'project') return `PyPI listing for ${seg[1]}`;
+  if (host === 'nvd.nist.gov' || host === 'cve.org' || host === 'cve.mitre.org') return '';
+  const first = seg[0] ? `/${seg[0]}` : '';
+  return `${host}${first}${seg.length > 1 ? '/\u2026' : ''}`;
+};
+const refRows = (() => {
+  const seen = new Map<string, number>();
+  for (const r of refs) {
+    const d = describeRef(r);
+    if (!d) continue;
+    seen.set(d, (seen.get(d) || 0) + 1);
+  }
+  return [...seen.entries()].map(([label, n]) => ({ label, n }));
+})();
 import { citeUID } from '../../../lib/cite';
 // The uid every citation of this page carries (Stephen, 2026-10-08).
 const citeUid = citeUID(Astro.url.pathname, c.uid);
@@ -169,8 +210,8 @@ const citeUid = citeUID(Astro.url.pathname, c.uid);
       <span class="src-meta">The CVE Program, MITRE. The record of truth.</span></li>
     <li>{c.cve_id}, NVD record
       <span class="src-meta">National Vulnerability Database, NIST. Score, weakness class, affected products.</span></li>
-    {refs.map((r) => (
-      <li>{hostOf(r)}</li>
+    {refRows.map((r) => (
+      <li>{r.label}{r.n > 1 && <span class="src-meta">{r.n} references</span>}</li>
     ))}
   </ul>
 
