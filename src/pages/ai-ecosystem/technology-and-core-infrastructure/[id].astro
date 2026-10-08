@@ -838,7 +838,7 @@ const citeUid = citeUID(Astro.url.pathname, sec.uid);
             {famLive.map((m) => (
               <tr>
                 <td class="fam-ver"><a href={m.url} rel="noopener">{famShort(m.name)}</a>
-                  <span class="fam-mods">{(Array.isArray(m.input) && m.input.length ? m.input : ['text']).map((x) => <span class="tag">{x}</span>)}{m.open_weights && <span class="tag tag-ow">open weights</span>}{m.expires && <span class="tag tag-ret">retiring {m.expires}</span>}</span></td>
+                  <span class="fam-mods">{(Array.isArray(m.input) && m.input.length ? m.input : ['text']).map((x) => <span class="tag">{x}</span>)}{m.open_weights && <a class="tag tag-ow" href="/ai-glossary/open-weights/" title="Open weights, defined in the AI Glossary">open weights</a>}{m.expires && <span class="tag tag-ret">retiring {m.expires}</span>}</span></td>
                 <td class="nw">{m.released}</td>
                 <td class="num">{famTok(m.context)}</td>
                 <td class="num">{famTok(m.max_output)}</td>
@@ -2989,7 +2989,10 @@ const citeUid = citeUID(Astro.url.pathname, sec.uid);
   .fam-ver a { font-weight: 600; }
   .fam-mods { display: block; margin-top: .25em; }
   .fam-mods .tag.tag { margin: 0 .3em .2em 0; font-size: 11.5px; }
-  .tag.tag-ow { background: #201868; color: #FFFFFF; }
+  /* The pill is a link to the glossary term (Stephen, 2026-10-08: "we use
+     the term open weights - is it in the AI Glossary"). */
+  .tag.tag-ow { background: #201868; color: #FFFFFF; text-decoration: none; }
+  a.tag.tag-ow:hover { background: #F07800; color: #FFFFFF; }
   .tag.tag-ret { background: #F07800; color: #FFFFFF; }
   .fam-list { margin: 1.4em 0 1.8em; }
   .fam-also { margin-top: .8em; color: #201868; }
