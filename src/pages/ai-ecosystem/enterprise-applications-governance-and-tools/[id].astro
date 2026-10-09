@@ -10,6 +10,7 @@ import Base from '../../../layouts/Base.astro';
 import { capParagraphs } from '../../../lib/prose';
 import Reading from '../../../components/Reading.astro';
 import PinnedNews from '../../../components/PinnedNews.astro';
+import LawWeekHub from '../../../components/LawWeekHub.astro';
 import SourcedFacts from '../../../components/SourcedFacts.astro';
 import CheriWatch from '../../../components/CheriWatch.astro';
 import Faq from '../../../components/Faq.astro';
@@ -153,7 +154,10 @@ const isInsHub = !!sec && !isCoverage && (sec.is_hub || (Array.isArray(sec.child
 // This route's per-industry branch was written as "any sec that is not the
 // hub", so every new sec shape added later fell into it and crashed on
 // sec.points. It now names what it renders instead of what it excludes.
-const isIndustry = !!sec && sec.shape !== 'industry-hub' && !isCases && !isCoverage && !isInsHub;
+// THIS WEEK IN AI LAWS AND COMPLIANCE (Stephen, 2026-10-09): the weekly
+// policy digest's hub, rendered from the week files by LawWeekHub.
+const isLawWeek = !!sec && sec.shape === 'law-week-hub';
+const isIndustry = !!sec && sec.shape !== 'industry-hub' && !isCases && !isCoverage && !isInsHub && !isLawWeek;
 const needs = isCoverage ? (sec.insured_needs_secured || {}) : {};
 const p2 = needs.part_2_paper_type_and_limit_structure || {};
 const p4 = needs.part_4_program_structure_and_limits || {};
@@ -182,7 +186,7 @@ const desc = clamp158(art
   ? `${clx.total} pre-AI court decisions that current AI litigation is argued from: the holding, why AI parties cite each one, and where the analogy fails, every citation verified against the court record.`
   : law
   ? `${law.total} AI-related bills that have become law across ${law.states} US states, detected from the legislative record on the day the status changes, each linked to the bill itself.`
-  : secu ? `${secu.blurb}` : isCases
+  : secu ? `${secu.blurb}` : isLawWeek ? `${sec.blurb}` : isCases
   ? `${sec.total} published accounts of real AI deployments from ${sec.publishers.length} research publishers, newest first, sector-tagged and linked to the original. Updated daily.`
   : (isCoverage || isInsHub) ? `${sec.summary || sec.blurb || ''}`
   : `${sec.summary || sec.blurb || ''}`);
@@ -199,7 +203,7 @@ const jsonld = JSON.stringify(clc ? {
 } : {
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',
-  name: art ? `${art.name} — The World of AI` : clx ? `AI Case Law: The Precedents Behind the Defenses — The World of AI` : law ? `Enacted AI Laws — The World of AI` : secu ? `${secu.name} — AI Security and Risk — The World of AI` : (sec.shape === 'industry-hub' || isCases || isCoverage || isInsHub ? `${sec.name} — The World of AI` : `AI in ${sec.name} — The World of AI`),
+  name: art ? `${art.name} — The World of AI` : clx ? `AI Case Law: The Precedents Behind the Defenses — The World of AI` : law ? `Enacted AI Laws — The World of AI` : secu ? `${secu.name} — AI Security and Risk — The World of AI` : (sec.shape === 'industry-hub' || isCases || isCoverage || isInsHub || isLawWeek ? `${sec.name} — The World of AI` : `AI in ${sec.name} — The World of AI`),
   description: desc,
   url: `https://theworldofai.org${BASE}/${(art || clx || law || secu || sec).uid}/`,
   dateModified: (art || clx || law || secu || sec).generated,
@@ -226,7 +230,7 @@ import { citeUID } from '../../../lib/cite';
 // The uid every citation of this page carries (Stephen, 2026-10-08).
 const citeUid = citeUID(Astro.url.pathname, art?.uid ?? sec?.uid ?? law?.uid ?? clx?.uid);
 ---
-<Base noindex={isDraft || isThin} redirect={art?.redirect_to || undefined} title={art ? `${art.name} — The World of AI` : clc ? `${dcase.case_name} — AI Case Law — The World of AI` : clx ? 'AI Case Law: The Precedents Behind the Defenses — The World of AI' : law ? 'Enacted AI Laws: US Bills That Became Law — The World of AI' : secu ? `${secu.name} — AI Security and Risk — The World of AI` : isCases ? `AI Case Studies: Real Deployments, Indexed — The World of AI` : (isCoverage || isInsHub) ? (sec.name === 'AI Insurance' ? `AI Insurance: Coverage for AI Risk — The World of AI` : `${sec.name} — ${(sec.tax || '').startsWith('ins-') || sec.tax === 'ai-insurance' || isCoverage ? 'AI Insurance' : (sec.parent_name || CATEGORY_NAME)} — The World of AI`) : `AI in ${sec.name} — The World of AI`} description={desc}
+<Base noindex={isDraft || isThin} redirect={art?.redirect_to || undefined} title={art ? `${art.name} — The World of AI` : clc ? `${dcase.case_name} — AI Case Law — The World of AI` : clx ? 'AI Case Law: The Precedents Behind the Defenses — The World of AI' : law ? 'Enacted AI Laws: US Bills That Became Law — The World of AI' : secu ? `${secu.name} — AI Security and Risk — The World of AI` : isCases ? `AI Case Studies: Real Deployments, Indexed — The World of AI` : isLawWeek ? `This Week in AI Laws and Compliance: bills, federal rules and lawsuits, week by week — The World of AI` : (isCoverage || isInsHub) ? (sec.name === 'AI Insurance' ? `AI Insurance: Coverage for AI Risk — The World of AI` : `${sec.name} — ${(sec.tax || '').startsWith('ins-') || sec.tax === 'ai-insurance' || isCoverage ? 'AI Insurance' : (sec.parent_name || CATEGORY_NAME)} — The World of AI`) : `AI in ${sec.name} — The World of AI`} description={desc}
   current={`${BASE}/`} jsonld={jsonld}>
 
   {art && (
@@ -909,6 +913,16 @@ const citeUid = citeUID(Astro.url.pathname, art?.uid ?? sec?.uid ?? law?.uid ?? 
     </>
   )}
 
+  {isLawWeek && (
+    <>
+      <p class="meta-line"><a href={`${BASE}/4d0aabb4/`}>AI Compliance, Law and Regulation</a> &middot; weekly</p>
+      <h1>{sec.name}</h1>
+      <LawWeekHub />
+      <div class="cite-box">Cite this page: <code>"{sec.name}." The World of AI,
+        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.{' '}UID {citeUid}.</code></div>
+    </>
+  )}
+
   {(isInsHub || isCoverage) && (
     <>
       {sec.parent_href && (
@@ -922,6 +936,9 @@ const citeUid = citeUID(Astro.url.pathname, art?.uid ?? sec?.uid ?? law?.uid ?? 
       {sec.uid === 'de99d3d0' && <StateLawsuitMap />}
       {sec.summary && <p class="answer">{sec.summary}</p>}
       <p class="meta-line">Last verified: {sec.generated}</p>
+      {/* The week in AI law, at the top of AI Compliance, Law and Regulation
+          (Stephen, 2026-10-09). */}
+      {sec.uid === '4d0aabb4' && <LawWeekHub compact={true} />}
 
       {sec.blurb && sec.blurb !== sec.summary && (
         <section>{sec.blurb.split('\n\n').map((para) => <p>{para}</p>)}</section>

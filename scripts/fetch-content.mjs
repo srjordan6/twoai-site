@@ -27,7 +27,7 @@ import { createHash } from 'node:crypto';
 
 const REPO = 'https://github.com/srjordan6/twoai-content';
 const R2 = 'https://pub-b8347c6e4e8c40febe3c83d8860826e2.r2.dev';
-const dirs = ['laws', 'glossary', 'lawsuits', 'caselaw', 'static', 'tools', 'week', 'ecosystem', 'compliance', 'mcp', 'people', 'companies', 'research', 'sources', 'benchmarks', 'prompts', 'news', 'timeline', 'jobs', 'skills', 'models', 'repos', 'status', 'tech', 'learn', 'industries', 'observatory', 'security', 'downloads', 'talent', 'meta', 'compute', 'politics'];
+const dirs = ['laws', 'glossary', 'lawsuits', 'caselaw', 'static', 'tools', 'week', 'newsweek', 'ecosystem', 'compliance', 'mcp', 'people', 'companies', 'research', 'sources', 'benchmarks', 'prompts', 'news', 'timeline', 'jobs', 'skills', 'models', 'repos', 'status', 'tech', 'learn', 'industries', 'observatory', 'security', 'downloads', 'talent', 'meta', 'compute', 'politics'];
 // 'politics' added 2026-09-21 for the press room: the downloadable datasets,
 // the 72-hour digest behind /press/feed.xml, and press.json with the counts.
 // 'downloads' was missing here while the pipeline was already writing
@@ -366,6 +366,7 @@ const api = [
   ['content/lawsuits/lawsuits.json', 'public/api/lawsuits.json'],
   ['content/tools/index.json', 'public/api/tools.json'],
   ['content/week/index.json', 'public/api/weeks.json'],
+  ['content/newsweek/index.json', 'public/api/news-weeks.json'],
   ['content/compliance/index.json', 'public/api/compliance.json'],
   ['content/mcp/index.json', 'public/api/mcp.json'],
   ['content/talent/matches.json', 'public/api/talent-matches.json'],

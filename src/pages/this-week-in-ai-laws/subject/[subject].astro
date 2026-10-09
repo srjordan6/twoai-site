@@ -1,7 +1,7 @@
 ---
 /**
  * One subject of AI legislation across every week in the digest, at
- * /this-week-in-ai/subject/{slug}/.
+ * /this-week-in-ai-laws/subject/{slug}/.
  *
  * The hub and each week page count bills by subject. Stephen, 2026-10-08:
  * "all of these list multiple stories but no links to them". This is where
@@ -52,14 +52,14 @@ const jsonld = JSON.stringify({
   '@type': 'CollectionPage',
   name: `${row.name}: AI bills and federal documents`,
   description: desc,
-  url: `https://theworldofai.org/this-week-in-ai/subject/${row.slug}/`,
+  url: `https://theworldofai.org/this-week-in-ai-laws/subject/${row.slug}/`,
   dateModified: latest?.generated || undefined,
-  isPartOf: { '@type': 'WebPage', url: 'https://theworldofai.org/this-week-in-ai/' },
+  isPartOf: { '@type': 'WebPage', url: 'https://theworldofai.org/ai-ecosystem/enterprise-applications-governance-and-tools/8ec3f244/' },
 });
 const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
-<Base title={`${row.name}: every AI bill on this subject, week by week`} description={desc} current="/this-week-in-ai/" jsonld={jsonld} doc={{ generated: latest?.generated }} stampLabel="Last verified">
-  <p class="meta-line"><a href="/this-week-in-ai/">This Week in AI</a> &middot; subject</p>
+<Base title={`${row.name}: every AI bill on this subject, week by week`} description={desc} current="/ai-ecosystem/enterprise-applications-governance-and-tools/8ec3f244/" jsonld={jsonld} doc={{ generated: latest?.generated }} stampLabel="Last verified">
+  <p class="meta-line"><a href="/ai-ecosystem/enterprise-applications-governance-and-tools/8ec3f244/">This Week in AI Laws and Compliance</a> &middot; subject</p>
   <h1>{row.name}</h1>
   <p class="answer">{lede}</p>
   <p class="meta-line">A bill is listed under a subject because of the words in its own title and
@@ -74,17 +74,17 @@ const citeUid = citeUID(Astro.url.pathname, undefined);
 
   {byWeek.map((g) => (
     <section class="wk">
-      <h2><a href={`/this-week-in-ai/${g.w.slug}/`}>{g.w.label}</a> <span class="dates">{g.w.start} to {g.w.end}</span></h2>
+      <h2><a href={`/this-week-in-ai-laws/${g.w.slug}/`}>{g.w.label}</a> <span class="dates">{g.w.start} to {g.w.end}</span></h2>
       {g.bills.map((b) => (
         <div class="entry">
-          <h3><a href={`/this-week-in-ai/${g.w.slug}/#${b.anchor}`}>{b.state} {b.number}</a>: {b.title}</h3>
+          <h3><a href={`/this-week-in-ai-laws/${g.w.slug}/#${b.anchor}`}>{b.state} {b.number}</a>: {b.title}</h3>
           {b.detail && <p>{b.detail}</p>}
           <p class="meta-line">{b.date} &middot; <a href={`/ai-laws/${b.slug}/`}>All {b.state} AI bills</a></p>
         </div>
       ))}
       {g.federal.map((f) => (
         <div class="entry">
-          <h3><a href={`/this-week-in-ai/${g.w.slug}/#${f.anchor}`}>{f.title}</a></h3>
+          <h3><a href={`/this-week-in-ai-laws/${g.w.slug}/#${f.anchor}`}>{f.title}</a></h3>
           <p class="meta-line">Federal Register{f.agency && <> &middot; {f.agency}</>}{f.note && <> &middot; {f.note}</>} &middot; {f.date}</p>
         </div>
       ))}
@@ -92,13 +92,13 @@ const citeUid = citeUID(Astro.url.pathname, undefined);
   ))}
 
   <div class="cite-box">Cite this page: <code>"{row.name}: AI bills and federal documents."
-    The World of AI, theworldofai.org/this-week-in-ai/subject/{row.slug}/.
+    The World of AI, theworldofai.org/this-week-in-ai-laws/subject/{row.slug}/.
     {latest?.generated ? ` Verified ${latest.generated}.` : ''}{' '}UID {citeUid}.</code></div>
 
   <KeepReading blocks={[
-    { label: 'Other subjects', links: others.map((r) => ({ href: `/this-week-in-ai/subject/${r.slug}/`, label: r.name, note: plural(r.count, 'item') })) },
+    { label: 'Other subjects', links: others.map((r) => ({ href: `/this-week-in-ai-laws/subject/${r.slug}/`, label: r.name, note: plural(r.count, 'item') })) },
     { label: 'Across the site', links: [
-      { href: '/this-week-in-ai/', label: 'Every weekly digest', note: 'the archive' },
+      { href: '/ai-ecosystem/enterprise-applications-governance-and-tools/8ec3f244/', label: 'This Week in AI Laws and Compliance', note: 'every week' },
       { href: '/ai-laws/', label: 'AI laws by state', note: 'every bill we track' },
       { href: '/state-of-ai-laws/', label: 'The state of AI laws', note: 'what has passed' },
     ] },

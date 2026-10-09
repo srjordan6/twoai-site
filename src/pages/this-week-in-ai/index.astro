@@ -1,143 +1,86 @@
 ---
 /**
- * This Week in AI, the weekly digest hub.
+ * This Week in AI: the week's news (Stephen, 2026-10-09).
  *
- * The hub is a summary of the whole archive, not a table of contents for it:
- * how much has moved, what the recurring subjects are, and which weeks were
- * busy. Everything on it is computed by the pipeline from the items in the
- * weeks below, so the numbers here and the pages they link to cannot disagree.
+ * "Everything moves from the daily headline to the weekly headline and then
+ * it is archived." Each day's stories, vendor posts and incidents appear on
+ * the daily pages; the ones readers opened most, or that mattered most, carry
+ * into this week's page; when the week ends its page stays as the archive.
+ * The weekly policy digest that used to live here is now This Week in AI
+ * Laws and Compliance, under AI Compliance, Law and Regulation.
  */
 import Base from '../../layouts/Base.astro';
-import { readFileSync, existsSync } from 'node:fs';
-import { loadWeeks, themeRows } from '../../lib/weeks';
+import NewsWeekLists from '../../components/NewsWeekLists.astro';
+import { loadNewsWeeks, plural } from '../../lib/newsWeeks';
+import { citeUID } from '../../lib/cite';
 
-const idx = existsSync('content/week/index.json')
-  ? JSON.parse(readFileSync('content/week/index.json', 'utf8'))
-  : { weeks: [], themes: [], total_items: 0, generated: '' };
-const weeks = idx.weeks || [];
-
-// The pipeline's index carries a recent window, but a week page lives
-// forever. Any week file the index no longer mentions still gets a row, or
-// its page is reachable only through the sitemap - an orphan, per the crawl.
-const known = new Set(weeks.map((w) => w.slug));
-const weekMods = import.meta.glob('../../../content/week/*.json', { eager: true });
-for (const [p, mod] of Object.entries(weekMods)) {
-  if (p.endsWith('/index.json')) continue;
-  const w: any = (mod as any).default ?? mod;
-  const slug = w.slug || p.split('/').pop().replace('.json', '');
-  if (known.has(slug)) continue;
-  known.add(slug);
-  weeks.push({
-    slug,
-    label: w.label || slug,
-    start: w.start || '', end: w.end || '',
-    bills: w.bills?.length ?? w.bills ?? 0,
-    federal: w.federal?.length ?? w.federal ?? 0,
-    courts: w.courts?.length ?? w.courts ?? 0,
-    top_theme: w.top_theme || null,
-    total: w.total || 0,
-  });
-}
-weeks.sort((a, b) => (b.slug || '').localeCompare(a.slug || ''));
-// Subjects are counted from every week file through the shared loader, the
-// same loader the subject pages list from, so the pill and the page agree.
-const allWeeks = loadWeeks();
-const themes = themeRows(allWeeks).slice(0, 10);
-const latest = weeks[0];
-const total = idx.total_items || 0;
-const plural = (n, s, p) => `${n} ${n === 1 ? s : p || s + 's'}`;
-const busiest = weeks.reduce((m, w) => (!m || w.total > m.total ? w : m), null);
-
-const lede = weeks.length
-  ? `Over the last ${plural(weeks.length, 'week')} we recorded ${plural(total, 'change')} across American AI policy and litigation: state and congressional bills that moved, documents published in the Federal Register, and lawsuits whose dockets saw activity. ${themes.length ? `The subject that came up most was ${themes[0].name.toLowerCase()}.` : ''}`
-  : 'The first weekly digest publishes on the next pipeline run.';
-const desc =
-  'A weekly record of what moved in AI policy and litigation: bills that changed status, federal documents published, and lawsuits with new docket activity.';
+const weeks = loadNewsWeeks();
+const cur = weeks[0];
+const lede = cur
+  ? `${cur.current ? 'This week so far' : cur.label}: ${plural(cur.counts.stories, 'headline story', 'headline stories')}, ${plural(cur.counts.vendor, 'vendor announcement')} and ${plural(cur.counts.incidents, 'logged AI harm')}. Below are the ones readers opened most and the ones covered most widely, each with its own page.`
+  : 'The first week publishes with the next pipeline run.';
+const desc = 'The week in AI news: the top headline stories, vendor announcements and AI incidents, chosen by traffic and importance from the daily briefing, then archived week by week.';
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',
   name: 'This Week in AI',
   description: desc,
   url: 'https://theworldofai.org/this-week-in-ai/',
-  dateModified: idx.generated,
+  dateModified: cur?.generated,
 });
+const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
-<Base title="This Week in AI: what actually moved in policy and litigation" description={desc} current="/this-week-in-ai/" jsonld={jsonld}>
+<Base title="This Week in AI: the week's top AI news, vendor announcements and AI incidents" description={desc} current="/this-week-in-ai/" jsonld={jsonld}>
   <h1>This Week in AI</h1>
   <p class="answer">{lede}</p>
-  {idx.generated && <p class="meta-line">Last verified: {idx.generated} · Sources: LegiScan, the Federal Register, CourtListener</p>}
+  <p class="meta-line">{cur?.generated && <>Last verified: {cur.generated} · </>}From the
+    {' '}<a href="/ai-news/daily/">AI Headline News</a>, <a href="/ai-news/vendor/">AI Vendor News</a>
+    {' '}and <a href="/ai-news/daily/#incidents">When AI Goes Wrong</a>. The week in AI law is at
+    {' '}<a href="/ai-ecosystem/enterprise-applications-governance-and-tools/8ec3f244/">This Week in AI Laws and Compliance</a>.</p>
 
-  <p>Nothing here is aggregated from other people's coverage. Each entry is a record we
-    hold and check ourselves, and each links to the primary document. A quiet week is
-    reported as a quiet week, because a tracker that always claims a busy one is useless
-    for telling the difference.</p>
-
-  {themes.length > 0 && (
+  {cur && (
     <>
-      <h2>What American AI policy is actually about</h2>
-      <p>Across every week in this archive, bills and federal documents fall into a small
-        number of recurring subjects. This is the shape of the field as legislators are
-        treating it, counted from their own language rather than from commentary.</p>
-      <dl class="themes">
-        {themes.map((t) => (
-          <>
-            <dt><a href={`/this-week-in-ai/subject/${t.slug}/`}>{t.name}</a> <span class="n">{t.count}</span></dt>
-            <dd>{t.blurb} <a href={`/this-week-in-ai/subject/${t.slug}/`}>Every bill on this subject &rarr;</a></dd>
-          </>
-        ))}
-      </dl>
-    </>
-  )}
-
-  {latest && (
-    <>
-      <h2>Most recent week</h2>
-      <p><a href={`/this-week-in-ai/${latest.slug}/`}>{latest.label}, {latest.start} to {latest.end}</a>
-        {latest.total === 0
-          ? ': nothing recorded yet.'
-          : `: ${plural(latest.bills, 'bill')} across ${plural(latest.jurisdictions || 0, 'jurisdiction')}, ${plural(latest.federal, 'federal document')}, and ${plural(latest.courts, 'case update')}.`}
-        {latest.top_theme && <> Leading subject: {latest.top_theme.toLowerCase()}.</>}
-      </p>
-      {busiest && busiest.slug !== latest.slug && (
-        <p>The busiest week in the archive was <a href={`/this-week-in-ai/${busiest.slug}/`}>{busiest.label}</a>,
-          with {plural(busiest.total, 'recorded change')}.</p>
-      )}
+      <h2 class="nw-week"><a href={`/this-week-in-ai/${cur.slug}/`}>{cur.label}</a> <span class="meta-line">{cur.start} to {cur.end}</span></h2>
+      <NewsWeekLists w={cur} limit={5} headingLevel={3} />
+      <p><a href={`/this-week-in-ai/${cur.slug}/`}>The whole week &rarr;</a></p>
     </>
   )}
 
   {weeks.length > 1 && (
     <>
-      <h2>Every week</h2>
-      <table>
-        <thead><tr><th>Week</th><th>Dates</th><th>Bills</th><th>Federal</th><th>Courts</th><th>Leading subject</th></tr></thead>
-        <tbody>
-          {weeks.map((w) => (
-            <tr>
-              <td><a href={`/this-week-in-ai/${w.slug}/`}>{w.label}</a></td>
-              <td>{w.start} to {w.end}</td>
-              <td>{w.bills}</td>
-              <td>{w.federal}</td>
-              <td>{w.courts}</td>
-              <td>{w.top_theme || '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <h2>The archive, week by week</h2>
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr><th>Week</th><th>Dates</th><th>Lead story</th><th class="num">Stories</th><th class="num">Vendor</th><th class="num">Incidents</th></tr></thead>
+          <tbody>
+            {weeks.map((w) => (
+              <tr>
+                <td><a href={`/this-week-in-ai/${w.slug}/`}>{w.label}</a></td>
+                <td>{w.start} to {w.end}</td>
+                <td>{w.stories[0] ? <a href={w.stories[0].href}>{w.stories[0].title}</a> : '—'}</td>
+                <td class="num">{w.counts.stories}</td>
+                <td class="num">{w.counts.vendor}</td>
+                <td class="num">{w.counts.incidents}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </>
   )}
 
-  <p class="meta-line">Prefer the underlying records? The archive is available as
-    <a href="/api/weeks.json">weeks.json</a>, and the sources behind it as
-    <a href="/api/laws.json">laws.json</a> and <a href="/api/lawsuits.json">lawsuits.json</a>.</p>
+  <p class="meta-line">How a week is chosen: every item of the week is ranked by how many readers
+    opened its page here and by how widely it was covered, and the top twelve stories, ten vendor
+    posts and six incidents carry into the week. Nothing leaves the daily archive. RSS:
+    {' '}<a href="/this-week-in-ai/feed.xml">this-week-in-ai/feed.xml</a>.</p>
+
+  <div class="cite-box">Cite this page: <code>"This Week in AI." The World of AI,
+    theworldofai.org/this-week-in-ai/.{cur?.generated ? ` Verified ${cur.generated}.` : ''}{' '}UID {citeUid}.</code></div>
 </Base>
 
 <style>
-  .themes { margin: 0 0 1.4em; }
-  .themes dt { font-weight: 600; margin-top: .9em; }
-  .themes dt .n {
-    display: inline-block; margin-left: .4em; padding: 1px 8px;
-    background: var(--cream); border-radius: 10px;
-    font-size: .8rem; font-weight: 600; color: var(--navy);
-  }
-  .themes dd { margin: .2em 0 0; color: #3d3d46; }
+  .nw-week { margin-top: 1.4em; }
+  .nw-week .meta-line { font-weight: 400; font-size: .85rem; margin-left: .4em; }
+  .cite-box { margin: 1.6em 0; padding: .9em 1em; background: #FFF6EC; border-left: 3px solid #201868; font-size: .9rem; }
+  .cite-box code { display: block; margin-top: .3em; font-family: 'Poppins', sans-serif; font-weight: 600; color: #201868; }
 </style>

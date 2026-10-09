@@ -281,9 +281,12 @@ ${generated}.
   and peer-reviewed research.
 - [AI Calculators](https://theworldofai.org/calculators/): token cost, GPU
   VRAM, ROI, training cost, energy and carbon, and context window estimators.
-- [This Week in AI](https://theworldofai.org/this-week-in-ai/): a weekly
-  digest of what changed across law, litigation, research, and product,
-  with permalinked ISO-week archives.
+- [This Week in AI](https://theworldofai.org/this-week-in-ai/): the week's
+  top AI news, vendor announcements and AI incidents, chosen by traffic and
+  importance from the daily briefing, with permalinked ISO-week archives.
+- [This Week in AI Laws and Compliance](https://theworldofai.org/ai-ecosystem/enterprise-applications-governance-and-tools/8ec3f244/):
+  the weekly digest of AI bills, Federal Register documents and lawsuits,
+  grouped by subject, with week pages at /this-week-in-ai-laws/{week}/.
 - [The AI Ecosystem](https://theworldofai.org/): the map that ties every
   section together, organised into four categories: Technology and Core
   Infrastructure, Ecosystem Entities Market and Operations, Research
