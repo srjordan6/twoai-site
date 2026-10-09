@@ -215,6 +215,27 @@ const famPrices = (m: any) => {
   const a = famPrice(m.prompt_pm), b = famPrice(m.completion_pm);
   return a === 'not listed' && b === 'not listed' ? 'not listed' : `${a} / ${b}`;
 };
+// EVERY MODEL HAS ITS OWN PAGE (Stephen, 2026-10-09: "each link goes to
+// Anthropic, each model gets its own web page"). The family's tables link each
+// version to its page here; the catalog listing is one click further, on it.
+const isModel = sec.shape === 'model';
+const memberPages: Record<string, string> = isFamily && sec.member_pages && typeof sec.member_pages === 'object' ? sec.member_pages : {};
+const pageByName: Record<string, string> = {};
+for (const m of famMembers) {
+  const pg = m.page || memberPages[m.id];
+  if (pg) { pageByName[String(m.name).toLowerCase()] = pg; pageByName[famShort(m.name).toLowerCase()] = pg; }
+}
+const memberHref = (m: any): string | null =>
+  m?.page || memberPages[m?.id] || pageByName[String(m?.name || '').toLowerCase()] || pageByName[famShort(m?.name).toLowerCase()] || null;
+const modelSibs: any[] = isModel && Array.isArray(sec.siblings) ? sec.siblings : [];
+const modelProviders: any[] = isModel && Array.isArray(sec.providers) ? sec.providers : [];
+const modelFaq: any[] = isModel && Array.isArray(sec.faq) ? sec.faq.filter((f: any) => f && f.q && f.a) : [];
+// THE FOUNDATION MODELS HUB LEADS TO THE FAMILIES (theworldofai row 628).
+const hubFamilies: any[] = Array.isArray(sec.model_families) ? sec.model_families : [];
+const hubLatest: any[] = Array.isArray(sec.latest_models) ? sec.latest_models : [];
+// SINGLE MODELS (row 629): current models that are the only version of their
+// line, listed on their category page under the families.
+const singleModels: any[] = Array.isArray(sec.single_models) ? sec.single_models : [];
 // The Large Language Models page lists its families and links each model in
 // its table to its family page.
 const secFamilies: any[] = Array.isArray(sec.families) ? sec.families : [];
@@ -385,6 +406,7 @@ const pageTitle =
   isHub ? secName :
   isProfile ? (sec.title || sec.name) :
   isFamily ? (sec.title || `${sec.name} model family`) :
+  isModel ? (sec.title || sec.name) :
   isDCTopic ? (sec.title || sec.name) :
   sec.shape === 'dc-state' ? `Data centers in ${sec.state}` :
   sec.shape === 'dc-facility'
@@ -401,7 +423,7 @@ const pageTitle =
   sec.shape === 'dc-grid' ? 'The Grid Observatory' :
   secName;
 
-const _descRaw = (isProfile || isFamily || isDCTopic)
+const _descRaw = (isProfile || isFamily || isDCTopic || isModel)
   ? String(sec.answer || '')
   : isHub
   ? `${secName}: ${hubKids.length} section${hubKids.length === 1 ? '' : 's'} on The World of AI. ${sec.answer || sec.blurb || ''}`
@@ -640,6 +662,20 @@ const citeUid = citeUID(Astro.url.pathname, sec.uid);
       <p class="answer">{sec.answer || sec.blurb}</p>
       <p class="meta-line">{hubKids.length} section{hubKids.length === 1 ? '' : 's'} &middot;
         uid {sec.uid} &middot; generated {sec.generated}</p>
+      {hubLatest.length > 0 && (
+        <section class="fam-list">
+          <h2>Latest models</h2>
+          <p class="meta-line">The ten newest model releases across every family tracked here, newest first.</p>
+          <table class="pay">
+            <thead><tr><th>Model</th><th>Family</th><th>Developer</th><th>Released</th></tr></thead>
+            <tbody>
+              {hubLatest.map((m: any) => (
+                <tr><td>{m.page ? <a href={m.page}>{famShort(m.model)}</a> : famShort(m.model)}</td><td>{m.href ? <a href={m.href}>{m.family}</a> : 'Single model'}</td><td>{m.developer}</td><td class="nw">{m.released}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
       <h2>Sections in {secName}</h2>
       <ul class="co-list">
         {hubKids.map((c: any) => (
@@ -649,6 +685,26 @@ const citeUid = citeUID(Astro.url.pathname, sec.uid);
           </li>
         ))}
       </ul>
+      {hubFamilies.length > 0 && (
+        <section class="fam-list">
+          <h2>Model families</h2>
+          <p>A model family is a developer's named model line with every version under it. Each has its own page,
+            grouped here by the category it was first paged under.</p>
+          {hubFamilies.map((c: any) => (
+            <>
+              <h3><a href={c.href}>{c.category}</a></h3>
+              <table class="pay">
+                <thead><tr><th>Family</th><th>Developer</th><th>Latest version</th><th class="num">Versions</th></tr></thead>
+                <tbody>
+                  {(c.families || []).map((f: any) => (
+                    <tr><td><a href={f.href}>{f.name}</a></td><td>{f.developer}</td><td>{famShort(f.latest)} <span class="meta-line-inline">{f.latest_on}</span></td><td class="num">{f.versions}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          ))}
+        </section>
+      )}
       <div class="cite-box">Cite this page: <code>"{secName}." The World of AI,
         theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.{' '}UID {citeUid}.</code></div>
     </>
@@ -692,7 +748,8 @@ const citeUid = citeUID(Astro.url.pathname, sec.uid);
   <p class="meta-line"><a href="/">AI Ecosystem</a> ·
     <a href={`${BASE}/`}>{CATEGORY_NAME}</a></p>
 
-  <h1>{pageTitle}</h1>
+  {/* A hub prints its own heading above (Foundation Models showed its name twice). */}
+  {!isHub && <h1>{pageTitle}</h1>}
 
   {isProfile && (
     <>
@@ -763,6 +820,75 @@ const citeUid = citeUID(Astro.url.pathname, sec.uid);
     </>
   )}
 
+  {isModel && (
+    <>
+      <p class="meta-line"><a href={sec.hub_path}>{sec.hub_name}</a> &middot; <a href={sec.parent_path}>{sec.parent_name}</a>{sec.family && <> &middot; <a href={sec.family.href}>{sec.family.name} family</a></>}</p>
+      <p class="answer">{sec.answer}</p>
+      {Array.isArray(sec.compare) && sec.compare.length > 0 && <p>{sec.compare.join(' ')}</p>}
+      <p class="meta-line">Last verified: {sec.generated} &middot; uid {sec.uid} &middot; from the
+        {' '}<a href={sec.source?.url} rel="noopener">{sec.source?.name}</a></p>
+      <h2>Specifications</h2>
+      <table class="pay">
+        <tbody>
+          <tr><th>Developer</th><td>{sec.developer}</td></tr>
+          <tr><th>Family</th><td>{sec.family ? <a href={sec.family.href}>{sec.family.name}</a> : 'None yet: the only version of its line in the catalog'}</td></tr>
+          <tr><th>Catalog id</th><td><code>{sec.id}</code></td></tr>
+          <tr><th>First listed</th><td>{sec.released}</td></tr>
+          <tr><th>Input</th><td>{famMods(sec.input)}</td></tr>
+          <tr><th>Output</th><td>{famMods(sec.output)}</td></tr>
+          <tr><th>Context window</th><td>{famTok(sec.context)}</td></tr>
+          <tr><th>Max output</th><td>{famTok(sec.max_output)}</td></tr>
+          <tr><th>Price per million tokens, in / out</th><td>{famPrices(sec)}</td></tr>
+          <tr><th>Knowledge cutoff</th><td>{sec.knowledge_cutoff || 'not published'}</td></tr>
+          <tr><th>Reasoning mode</th><td>{sec.reasoning ? 'Yes' : 'No'}</td></tr>
+          <tr><th><a href="/ai-glossary/open-weights/">Open weights</a></th><td>{sec.open_weights ? <a href={`https://huggingface.co/${sec.hf_id}`} rel="noopener">{sec.hf_id}</a> : 'No'}</td></tr>
+          {sec.expires && <tr><th>Retirement</th><td>{sec.expires}</td></tr>}
+          {sec.delisted && <tr><th>Status</th><td>No longer listed in the catalog</td></tr>}
+        </tbody>
+      </table>
+      {modelProviders.length > 0 && (
+        <>
+          <h2>Where to run it</h2>
+          <p class="meta-line">Providers serving this model in the OpenRouter catalog, cheapest input price first.
+            Prices are per million tokens.</p>
+          <div class="fam-scroll">
+            <table class="pay">
+              <thead><tr><th>Provider</th><th class="num">$/M in</th><th class="num">$/M out</th><th class="num">Context</th></tr></thead>
+              <tbody>
+                {modelProviders.map((p: any) => (
+                  <tr><td>{p.provider}</td><td class="num nw">{famPrice(p.prompt_pm)}</td><td class="num nw">{famPrice(p.completion_pm)}</td><td class="num">{famTok(p.context)}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+      {modelSibs.length > 1 && (
+        <>
+          <h2>Other versions in the {sec.family?.name} family</h2>
+          <div class="fam-scroll">
+            <table class="pay">
+              <thead><tr><th>Version</th><th>First listed</th><th class="num">Context</th><th class="num">$/M in / out</th></tr></thead>
+              <tbody>
+                {modelSibs.filter((m: any) => m.id !== sec.id).map((m: any) => (
+                  <tr><td><a href={m.href}>{m.name}</a>{m.delisted && <span class="fam-mods"><span class="tag">no longer listed</span></span>}</td><td class="nw">{m.released}</td><td class="num">{famTok(m.context)}</td><td class="num nw">{famPrices(m)}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+      {modelFaq.length > 0 && (
+        <>
+          <h2>Questions</h2>
+          {modelFaq.map((f: any) => (<><h3>{f.q}</h3><p>{f.a}</p></>))}
+        </>
+      )}
+      <div class="cite-box">Cite this page: <code>"{sec.name}." The World of AI,
+        theworldofai.org{BASE}/{sec.uid}/. Retrieved {sec.generated}.{' '}UID {citeUid}.</code></div>
+    </>
+  )}
+
   {isFamily && (
     <>
       <p class="meta-line"><a href={sec.hub_path}>{sec.hub_name}</a> &middot; <a href={sec.parent_path}>{sec.parent_name}</a>{(sec.also_in || []).map((c) => <> &middot; <a href={c.href}>{c.name}</a></>)}</p>
@@ -804,7 +930,7 @@ const citeUid = citeUID(Astro.url.pathname, sec.uid);
               <tbody>
                 {famDevLines.map((l: any) => (
                   <tr>
-                    <td class="fam-ver"><a href={l.url} rel="noopener">{l.name}</a></td>
+                    <td class="fam-ver">{pageByName[String(l.name || '').toLowerCase()] ? <a href={pageByName[String(l.name).toLowerCase()]}>{l.name}</a> : <a href={l.url} rel="noopener">{l.name}</a>}</td>
                     <td>{l.modality || 'not stated'}</td>
                     <td class="nw">{l.announced || 'not stated'}</td>
                     <td>{famArr(l.sources).slice(0, 2).map((s: string, i: number) => <>{i > 0 && ', '}<a href={s} rel="noopener">{famPageShort(s)}</a></>)}</td>
@@ -837,7 +963,7 @@ const citeUid = citeUID(Astro.url.pathname, sec.uid);
           <tbody>
             {famLive.map((m) => (
               <tr>
-                <td class="fam-ver"><a href={m.url} rel="noopener">{famShort(m.name)}</a>
+                <td class="fam-ver">{memberHref(m) ? <a href={memberHref(m)}>{famShort(m.name)}</a> : <a href={m.url} rel="noopener">{famShort(m.name)}</a>}
                   <span class="fam-mods">{(Array.isArray(m.input) && m.input.length ? m.input : ['text']).map((x) => <span class="tag">{x}</span>)}{m.open_weights && <a class="tag tag-ow" href="/ai-glossary/open-weights/" title="Open weights, defined in the AI Glossary">open weights</a>}{m.expires && <span class="tag tag-ret">retiring {m.expires}</span>}</span></td>
                 <td class="nw">{m.released}</td>
                 <td class="num">{famTok(m.context)}</td>
@@ -866,7 +992,7 @@ const citeUid = citeUID(Astro.url.pathname, sec.uid);
               <tbody>
                 {famPL.rows.map((m: any) => (
                   <tr>
-                    <td class="fam-ver"><a href={m.url} rel="noopener">{m.name}</a>
+                    <td class="fam-ver">{memberHref(m) ? <a href={memberHref(m)}>{m.name}</a> : <a href={m.url} rel="noopener">{m.name}</a>}
                       {(m.cheapest || m.largest_context) && <span class="fam-mods">{m.cheapest && <span class="tag tag-ow">cheapest</span>}{m.largest_context && <span class="tag tag-ow">largest context</span>}</span>}</td>
                     <td class="num nw">{famUsd(m.prompt_pm)}</td>
                     <td class="num nw">{famUsd(m.completion_pm)}</td>
@@ -2917,6 +3043,20 @@ const citeUid = citeUID(Astro.url.pathname, sec.uid);
               <td>{f.first}</td>
             </tr>
           ))}
+        </tbody>
+      </table>
+    </section>
+  )}
+
+  {singleModels.length > 0 && (
+    <section class="fam-list">
+      <h2>Single models</h2>
+      <p class="meta-line">Current models that are the only version of their line so far, each with its own page.
+        When a second version arrives, the line becomes a family.</p>
+      <table class="pay">
+        <thead><tr><th>Model</th><th>Developer</th><th>First listed</th></tr></thead>
+        <tbody>
+          {singleModels.map((m: any) => (<tr><td><a href={m.href}>{m.name}</a></td><td>{m.developer}</td><td class="nw">{m.released}</td></tr>))}
         </tbody>
       </table>
     </section>
