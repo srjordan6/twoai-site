@@ -108,9 +108,12 @@ import { citeUID } from '../../../lib/cite';
 // The uid every citation of this page carries (Stephen, 2026-10-08).
 const citeUid = citeUID(Astro.url.pathname, c.uid);
 ---
-<Base title={`${headline} — AI CVE tracker — The World of AI`} description={desc} current="/ai-news/" jsonld={jsonld}
+<Base title={`${headline} — AI CVE tracker — The World of AI`} description={desc} current="/ai-news/" jsonld={jsonld} noindex={Boolean(c.retired)}
   doc={{ page_uid: c.uid, built_at: c.generated, generated: c.published }} stampLabel="CVE recorded" provenance="drafted">
-  <p class="meta-line"><a href="/ai-news/">AI News</a> · <a href="/ai-news/cves/">AI CVE tracker</a></p>
+  <p class="meta-line"><a href="/ai-news/">AI News</a> · <a href="/ai-news/cves/">AI CVE tracker</a> · <a href="/ai-news/cves/archive/">Archive</a></p>
+  {/* ARCHIVED, NOT DELETED (Stephen, 2026-10-09). A CVE the tracker no
+      longer counts as AI keeps its page, says so, and leaves search. */}
+  {c.retired && <p class="kev-open">This CVE is no longer on the AI CVE tracker{c.retired_on ? ` as of ${c.retired_on}` : ''}{c.retired_reason ? `: ${c.retired_reason}` : ''}. The page is kept as the archive record.</p>}
   <h1>{written ? written : c.cve_id}</h1>
   {written && <p class="cve-id"><code>{c.cve_id}</code></p>}
   <p class="answer">
