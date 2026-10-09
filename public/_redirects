@@ -443,3 +443,7 @@
 # the archive mints its uid from the slug as 9d251938, the live address.
 /ai-news/3f87c5c5/ /ai-news/9d251938/ 301
 /ai-news/3f87c5c5 /ai-news/9d251938/ 301
+
+# ARTEX case study moved to AI Security and Risk (Stephen, 2026-10-09).
+/ai-compliance/artex-south-korea-bank-breaches/ /ai-ecosystem/enterprise-applications-governance-and-tools/3ef7db58/ 301
+/ai-compliance/artex-south-korea-bank-breaches /ai-ecosystem/enterprise-applications-governance-and-tools/3ef7db58/ 301
