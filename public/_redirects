@@ -447,3 +447,6 @@
 # ARTEX case study moved to AI Security and Risk (Stephen, 2026-10-09).
 /ai-compliance/artex-south-korea-bank-breaches/ /ai-ecosystem/enterprise-applications-governance-and-tools/3ef7db58/ 301
 /ai-compliance/artex-south-korea-bank-breaches /ai-ecosystem/enterprise-applications-governance-and-tools/3ef7db58/ 301
+
+# The weekly policy digest moved to This Week in AI Laws and Compliance (Stephen, 2026-10-09).
+/this-week-in-ai/subject/* /this-week-in-ai-laws/subject/:splat 301

@@ -1,0 +1,125 @@
+---
+/**
+ * THIS WEEK IN AI LAWS AND COMPLIANCE.
+ *
+ * Stephen, 2026-10-09: the weekly policy digest moved off /this-week-in-ai/
+ * (which now holds the week's news) and into AI Compliance, Law and
+ * Regulation (4d0aabb4), as its own hub, 8ec3f244. The week pages live at
+ * /this-week-in-ai-laws/{week}/ and the subject pages at
+ * /this-week-in-ai-laws/subject/{slug}/.
+ *
+ * Two views from one loader (src/lib/weeks.ts), so the numbers agree with
+ * the week pages: the full hub, and a compact block for the top of 4d0aabb4
+ * with the latest week and its leading subjects.
+ */
+import { loadWeeks, themeRows } from '../lib/weeks';
+
+interface Props { compact?: boolean }
+const { compact = false } = Astro.props as Props;
+
+const HUB = '/ai-ecosystem/enterprise-applications-governance-and-tools/8ec3f244/';
+const weeks = loadWeeks().map((w) => {
+  const states = new Set(w.bills.map((b) => b.state));
+  const t = themeRows([w])[0];
+  return {
+    ...w,
+    nb: w.bills.length, nf: w.federal.length, nc: w.courts.length,
+    total: w.bills.length + w.federal.length + w.courts.length,
+    jur: states.size, top: t ? t.name : '',
+  };
+});
+const latest = weeks[0];
+const themes = themeRows(weeks).slice(0, 10);
+const total = weeks.reduce((n, w) => n + w.total, 0);
+const busiest = weeks.reduce((m, w) => (!m || w.total > m.total ? w : m), null as any);
+const plural = (n: number, s: string, p?: string) => `${n} ${n === 1 ? s : p || s + 's'}`;
+const latestLine = latest
+  ? (latest.total === 0
+    ? 'nothing recorded yet.'
+    : `${plural(latest.nb, 'bill')} across ${plural(latest.jur, 'jurisdiction')}, ${plural(latest.nf, 'federal document')}, and ${plural(latest.nc, 'case update')}.`)
+  : '';
+const latestThemes = latest ? themeRows([latest]).slice(0, 3) : [];
+---
+{compact ? (
+  latest && (
+    <section class="lwh-compact">
+      <h2><a href={HUB}>This Week in AI Laws and Compliance</a></h2>
+      <p><a href={`/this-week-in-ai-laws/${latest.slug}/`}>{latest.label}, {latest.start} to {latest.end}</a>: {latestLine}
+        {latestThemes.length > 0 && <> Leading subjects: {latestThemes.map((t, i) => (<>{i > 0 && ', '}<a href={`/this-week-in-ai-laws/subject/${t.slug}/`}>{t.name.toLowerCase()}</a> ({t.count})</>))}.</>}</p>
+      <p class="meta-line"><a href={HUB}>Every week, and every bill by subject &rarr;</a></p>
+    </section>
+  )
+) : (
+  <>
+    <p class="answer">{weeks.length
+      ? `Over the last ${plural(weeks.length, 'week')} we recorded ${plural(total, 'change')} across American AI law and compliance: state and congressional bills that moved, documents published in the Federal Register, and lawsuits whose dockets saw activity.${themes.length ? ` The subject that came up most was ${themes[0].name.toLowerCase()}.` : ''}`
+      : 'The first weekly digest publishes with the next pipeline run.'}</p>
+    <p class="meta-line">Sources: LegiScan, the Federal Register, CourtListener · Part of <a href="/ai-ecosystem/enterprise-applications-governance-and-tools/4d0aabb4/">AI Compliance, Law and Regulation</a> · The week's news is at <a href="/this-week-in-ai/">This Week in AI</a></p>
+    <p>Nothing here is aggregated from other people's coverage. Each entry is a record we hold and
+      check ourselves, and each links to the primary document. A quiet week is reported as a quiet
+      week, because a tracker that always claims a busy one is useless for telling the difference.</p>
+
+    {latest && (
+      <>
+        <h2>Most recent week</h2>
+        <p><a href={`/this-week-in-ai-laws/${latest.slug}/`}>{latest.label}, {latest.start} to {latest.end}</a>: {latestLine}
+          {latest.top && <> Leading subject: <a href={`/this-week-in-ai-laws/subject/${themeRows([latest])[0].slug}/`}>{latest.top.toLowerCase()}</a>.</>}</p>
+        {busiest && busiest.slug !== latest.slug && (
+          <p>The busiest week in the archive was <a href={`/this-week-in-ai-laws/${busiest.slug}/`}>{busiest.label}</a>,
+            with {plural(busiest.total, 'recorded change')}.</p>
+        )}
+      </>
+    )}
+
+    {themes.length > 0 && (
+      <>
+        <h2>What American AI policy is actually about</h2>
+        <p>Across every week in this archive, bills and federal documents fall into a small number of
+          recurring subjects, counted from their own language rather than from commentary.</p>
+        <dl class="lwh-themes">
+          {themes.map((t) => (
+            <>
+              <dt><a href={`/this-week-in-ai-laws/subject/${t.slug}/`}>{t.name}</a> <span class="n">{t.count}</span></dt>
+              <dd>{t.blurb} <a href={`/this-week-in-ai-laws/subject/${t.slug}/`}>Every bill on this subject &rarr;</a></dd>
+            </>
+          ))}
+        </dl>
+      </>
+    )}
+
+    {weeks.length > 0 && (
+      <>
+        <h2>Every week</h2>
+        <div class="tbl-scroll">
+          <table>
+            <thead><tr><th>Week</th><th>Dates</th><th>Bills</th><th>Federal</th><th>Courts</th><th>Leading subject</th></tr></thead>
+            <tbody>
+              {weeks.map((w) => (
+                <tr>
+                  <td><a href={`/this-week-in-ai-laws/${w.slug}/`}>{w.label}</a></td>
+                  <td>{w.start} to {w.end}</td>
+                  <td>{w.nb}</td><td>{w.nf}</td><td>{w.nc}</td>
+                  <td>{w.top || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </>
+    )}
+
+    <p class="meta-line">The records behind this page: <a href="/api/weeks.json">weeks.json</a>,
+      <a href="/api/laws.json">laws.json</a> and <a href="/api/lawsuits.json">lawsuits.json</a>.
+      RSS: <a href="/this-week-in-ai-laws/feed.xml">this-week-in-ai-laws/feed.xml</a>.</p>
+  </>
+)}
+
+<style>
+  .lwh-compact { margin: 0 0 1.6em; padding: 1em 1.2em; border-left: 3px solid #F07800; background: #fbfaff; }
+  .lwh-compact h2 { margin: 0 0 .4em; font-size: 1.15rem; }
+  .lwh-compact p { margin: 0 0 .4em; }
+  .lwh-themes { margin: 0 0 1.4em; }
+  .lwh-themes dt { font-weight: 600; margin-top: .9em; }
+  .lwh-themes dt .n { display: inline-block; margin-left: .4em; padding: 1px 8px; background: var(--cream); border-radius: 10px; font-size: .8rem; font-weight: 600; color: var(--navy); }
+  .lwh-themes dd { margin: .2em 0 0; color: #3d3d46; }
+</style>

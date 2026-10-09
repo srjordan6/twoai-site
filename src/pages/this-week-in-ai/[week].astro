@@ -1,215 +1,58 @@
 ---
 /**
- * One week of AI policy and litigation, permalinked as /this-week-in-ai/{ISO week}/.
- *
- * The page is written to be read, not scanned. Every item carries the
- * explanatory text the pipeline attached to it, and all of that text is
- * sourced: LegiScan's own bill description, the Federal Register's abstract,
- * which is government-written and public domain, and the why_it_matters
- * paragraph from our lawsuit records. The thematic summary at the top is
- * computed from the items below it, so the two can never disagree.
+ * One week of AI news, permalinked as /this-week-in-ai/{ISO week}/
+ * (Stephen, 2026-10-09). The week's headline stories, vendor news and AI
+ * incidents, chosen by traffic and importance from the daily pages; a week
+ * that has ended is the archive and does not change.
  */
 import Base from '../../layouts/Base.astro';
-import Reading from '../../components/Reading.astro';
-import KeepReading from '../../components/KeepReading.astro';
-import { companiesNamedIn } from '../../lib/related';
+import NewsWeekLists from '../../components/NewsWeekLists.astro';
+import { loadNewsWeeks, plural } from '../../lib/newsWeeks';
 import { EDITOR_PERSON } from '../../lib/editor';
-import { loadWeeks, themeRows, themeSlug } from '../../lib/weeks';
+import { citeUID } from '../../lib/cite';
 
-// Every week goes through the shared loader (src/lib/weeks.ts), which applies
-// the relevance gate and the description clean-up, so this page, the hub and
-// the subject pages show the same bills with the same counts.
 export function getStaticPaths() {
-  return loadWeeks().map((w) => ({ params: { week: w.slug }, props: { w } }));
+  const weeks = loadNewsWeeks();
+  return weeks.map((w, i) => ({ params: { week: w.slug }, props: { w, newer: weeks[i - 1] || null, older: weeks[i + 1] || null } }));
 }
-const { w } = Astro.props;
-const krCompanies = companiesNamedIn(JSON.stringify(w ?? {}), { limit: 6 });
-// Counts and subjects are computed from the items rendered below, not read
-// from the file, so the lede can never claim a bill the page does not list.
-const c = { bills: w.bills.length, federal: w.federal.length, courts: w.courts.length,
-  total: w.bills.length + w.federal.length + w.courts.length };
-const jurCount = new Map<string, number>();
-for (const b of w.bills) jurCount.set(b.state, (jurCount.get(b.state) || 0) + 1);
-const jurs = [...jurCount.entries()].map(([name, count]) => ({ name, count }))
-  .sort((x, y) => y.count - x.count || x.name.localeCompare(y.name)).slice(0, 8);
-const a = { jurisdiction_count: jurCount.size, unthemed_bills: w.bills.filter((b) => !(b.themes || []).length).length };
-const themes = themeRows([w]).slice(0, 8);
-const plural = (n, s, p) => `${n} ${n === 1 ? s : p || s + 's'}`;
-
-// The opening paragraph. Built from counts, so it is true by construction.
-let lede;
-if (c.total === 0) {
-  lede = `Nothing we track moved between ${w.start} and ${w.end}. No state bill changed status, no AI document was published in the Federal Register, and no tracked lawsuit saw docket activity.`;
-} else {
-  const parts = [];
-  if (c.bills) parts.push(`${plural(c.bills, 'bill')} moved in ${plural(a.jurisdiction_count, 'jurisdiction')}`);
-  if (c.federal) parts.push(`${plural(c.federal, 'document')} appeared in the Federal Register`);
-  if (c.courts) parts.push(`${plural(c.courts, 'lawsuit')} saw new docket activity`);
-  const focus = themes.length
-    ? ` The week's dominant subject was ${themes[0].name.toLowerCase()}, on ${plural(themes[0].count, 'item')}.`
-    : '';
-  lede = `Between ${w.start} and ${w.end}, ${parts.join(', ')}.${focus}`;
-}
-const desc = lede.length <= 158 ? lede : `${lede.slice(0, 157).replace(/\s+\S*$/, '')}\u2026`;
+const { w, newer, older } = Astro.props;
+const lede = `${w.current ? `${w.label} so far` : w.label}, ${w.start} to ${w.end}: ${plural(w.counts.stories, 'headline story', 'headline stories')}, ${plural(w.counts.vendor, 'vendor announcement')} and ${plural(w.counts.incidents, 'logged AI harm')}.${w.stories[0] ? ` The week's lead: ${w.stories[0].title}.` : ''}`;
+const desc = lede.length <= 158 ? lede : `${lede.slice(0, 157).replace(/\s+\S*$/, '')}…`;
 const jsonld = JSON.stringify({
   '@context': 'https://schema.org',
-  '@type': 'NewsArticle',
-  headline: `AI policy and litigation, ${w.start} to ${w.end}`,
+  '@type': 'CollectionPage',
+  name: `This Week in AI: ${w.label}`,
   description: desc,
   url: `https://theworldofai.org/this-week-in-ai/${w.slug}/`,
-  mainEntityOfPage: `https://theworldofai.org/this-week-in-ai/${w.slug}/`,
-  datePublished: w.end,
   dateModified: w.generated,
-  isAccessibleForFree: true,
-  author: { '@type': 'Organization', name: 'The World of AI', url: 'https://theworldofai.org/about/' },
-  editor: EDITOR_PERSON, // one identity with /stephen-jordan/ (row 420)
-  image: 'https://theworldofai.org/brand/og.png',
-  publisher: {
-    '@type': 'Organization',
-    name: 'The World of AI',
-    url: 'https://theworldofai.org/',
-    logo: { '@type': 'ImageObject', url: 'https://theworldofai.org/brand/og.png', width: 1200, height: 630 },
-    publishingPrinciples: 'https://theworldofai.org/editorial-policy/',
-    correctionsPolicy: 'https://theworldofai.org/data-quality/',
-    ownershipFundingInfo: 'https://theworldofai.org/disclosure/',
-  },
+  editor: EDITOR_PERSON,
+  isPartOf: { '@type': 'CollectionPage', name: 'This Week in AI', url: 'https://theworldofai.org/this-week-in-ai/' },
 });
-import { citeUID } from '../../lib/cite';
-// The uid every citation of this page carries (Stephen, 2026-10-08).
 const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
-<Base title={`This Week in AI: ${w.start} to ${w.end}`} description={desc} current="/this-week-in-ai/" jsonld={jsonld} doc={w}>
-  <h1>{w.label}</h1>
-  <p class="meta-line byline">Compiled by The World of AI · editor <a href="/stephen-jordan/" rel="author">Stephen Jordan</a> · <time datetime={w.end}>{w.end}</time></p>
+<Base title={`This Week in AI: ${w.label} (${w.start} to ${w.end})`} description={desc} current="/this-week-in-ai/" jsonld={jsonld} doc={w}>
+  <p class="meta-line"><a href="/this-week-in-ai/">This Week in AI</a> &middot; {w.current ? 'this week' : 'archive'}</p>
+  <h1>This Week in AI: {w.label}</h1>
+  <p class="meta-line byline">Compiled by The World of AI · editor <a href="/stephen-jordan/" rel="author">Stephen Jordan</a> · <time datetime={w.end}>{w.start} to {w.end}</time></p>
   <p class="answer">{lede}</p>
-  {w.recap && (
-    <div class="recap">
-      {w.recap.split('\n').filter((p) => p.trim()).map((p) => <p>{p}</p>)}
-      <p class="meta-line recap-note">This recap is written from the computed counts on this page
-        only. It is written without sight of the individual bills or cases, so it cannot
-        characterise any single matter, and every figure in it appears in the tables below.</p>
-    </div>
-  )}
-  {w.generated && <p class="meta-line">Last verified: <time datetime={w.generated}>{w.generated}</time> · Sources: LegiScan, the Federal Register, CourtListener</p>}
+  <p class="meta-line">Chosen from the daily <a href="/ai-news/daily/">AI Headline News</a>,
+    {' '}<a href="/ai-news/vendor/">AI Vendor News</a> and <a href="/ai-news/daily/#incidents">When AI Goes Wrong</a>
+    {' '}by how many readers opened each page here and how widely it was covered.{w.current && ' The week is still open, so its list can change until Sunday.'}</p>
 
-  {themes.length > 0 && (
-    <>
-      <h2>What the week was about</h2>
-      <p>Bills and federal documents are grouped by subject using the language they use about
-        themselves. An item can appear under more than one subject, and {a.unthemed_bills > 0
-          ? `${plural(a.unthemed_bills, 'bill')} matched none of these, appearing below without a subject rather than being forced into one.`
-          : 'every item this week matched at least one.'}</p>
-      {/* Each subject links to its page across every week, and lists the
-          week's own items under it as links to their entries below
-          (Stephen, 2026-10-08: the counts listed stories but linked none). */}
-      <dl class="themes">
-        {themes.map((t) => (
-          <>
-            <dt><a href={`/this-week-in-ai/subject/${t.slug}/`}>{t.name}</a> <span class="n">{t.count}</span></dt>
-            <dd>{t.blurb}
-              <span class="theme-items">
-                {t.bills.map((b, i) => (<>{i > 0 && ' \u00b7 '}<a href={`#${b.anchor}`}>{b.state} {b.number}</a></>))}
-                {t.federal.map((f, i) => (<>{(i > 0 || t.bills.length > 0) && ' \u00b7 '}<a href={`#${f.anchor}`}>{f.agency || 'Federal Register'}: {f.title.length > 70 ? f.title.slice(0, 68).replace(/\s+\S*$/, '') + '\u2026' : f.title}</a></>))}
-              </span>
-            </dd>
-          </>
-        ))}
-      </dl>
-      {jurs.length > 1 && (
-        <p><b>Where the activity was.</b> {jurs.map((j, i) => (
-          <>{i > 0 && ', '}{j.name} ({j.count})</>
-        ))}{a.jurisdiction_count > jurs.length && <>, and {a.jurisdiction_count - jurs.length} more</>}.</p>
-      )}
-    </>
-  )}
+  <NewsWeekLists w={w} />
 
-  {c.bills > 0 && (
-    <>
-      <h2>Legislation</h2>
-      <p class="meta-line">A bill appears here because its LegiScan record changed status during
-        this week. That means it moved, not that it passed.</p>
-      {w.bills.map((b) => (
-        <div class="entry" id={b.anchor}>
-          <h3><a href={b.url} rel="noopener nofollow">{b.state} {b.number}</a>: {b.title}</h3>
-          {b.detail && <p>{b.detail}</p>}
-          <p class="meta-line">{b.date}
-            {b.themes?.length > 0 && <> · {b.themes.map((t, i) => (<>{i > 0 && ' · '}<a href={`/this-week-in-ai/subject/${themeSlug(t)}/`}>{t}</a></>))}</>}
-            {' · '}<a href={`/ai-laws/${b.slug}/`}>All {b.state} AI bills</a></p>
-        </div>
-      ))}
-    </>
-  )}
+  <p class="nw-nav">
+    {older && <a href={`/this-week-in-ai/${older.slug}/`}>&larr; {older.label}</a>}
+    {newer && <a href={`/this-week-in-ai/${newer.slug}/`}>{newer.label} &rarr;</a>}
+  </p>
+  <p class="meta-line">The same week in AI law: <a href={`/this-week-in-ai-laws/${w.slug}/`}>This Week in AI Laws and Compliance, {w.label}</a>.</p>
 
-  {c.federal > 0 && (
-    <>
-      <h2>Federal Register</h2>
-      <p class="meta-line">Rules, notices, and proposals published by federal agencies. The
-        summary under each is the agency's own abstract.</p>
-      {w.federal.map((f) => (
-        <div class="entry" id={f.anchor}>
-          <h3><a href={f.url} rel="noopener nofollow">{f.title}</a></h3>
-          {f.detail && <p>{f.detail}</p>}
-          <p class="meta-line">{f.agency && <>{f.agency} · </>}{f.note && <>{f.note} · </>}{f.date}</p>
-        </div>
-      ))}
-    </>
-  )}
-
-  {c.courts > 0 && (
-    <>
-      <h2>Courts</h2>
-      <p class="meta-line">Tracked AI lawsuits whose docket moved this week.</p>
-      {w.courts.map((t) => (
-        <div class="entry">
-          <h3><a href={t.url}>{t.title}</a></h3>
-          {t.note && <p><b>What happened.</b> {t.note}</p>}
-          {t.detail && <p><b>Why it matters.</b> {t.detail}</p>}
-          <p class="meta-line">{t.state && <>{t.state} · </>}{t.agency && <>{t.agency} · </>}{t.date}</p>
-        </div>
-      ))}
-    </>
-  )}
-
-  {c.total === 0 && (
-    <p>That happens, particularly when legislatures are out of session, and we would rather
-      say so than manufacture a story. The archive shows which weeks were busy and which
-      were not, which is only useful if the quiet ones are reported honestly.</p>
-  )}
-
-  <Reading reading={w.reading} heading="What was the pattern this week?" />
-  <div class="cite-box">Cite this week: <code>"AI policy and litigation, {w.start} to {w.end}."
-    The World of AI, theworldofai.org/this-week-in-ai/{w.slug}/.
-    {w.generated ? ` Verified ${w.generated}.` : ''}{' '}UID {citeUid}.</code></div>
-
-  <p><a href="/this-week-in-ai/">All weeks</a></p>
-  <KeepReading blocks={[
-    { label: 'Companies in this week\u2019s digest',
-      links: krCompanies.map((x) => ({ href: `/companies/${x.uid}/`, label: `${x.name} profile` })) },
-    { label: 'Across the site', links: [
-      { href: '/this-week-in-ai/', label: 'Every weekly digest', note: 'the archive' },
-      { href: '/ai-news/daily/', label: 'Today\u2019s briefing', note: 'more recent than this page' },
-      { href: '/ai-news/vendor/', label: 'Vendor announcements', note: 'straight from the source' },
-      { href: '/ai-lawsuits/', label: 'The AI lawsuit tracker', note: 'live case status' },
-    ] },
-  ]} />
+  <div class="cite-box">Cite this page: <code>"This Week in AI: {w.label}." The World of AI,
+    theworldofai.org/this-week-in-ai/{w.slug}/.{w.generated ? ` Verified ${w.generated}.` : ''}{' '}UID {citeUid}.</code></div>
 </Base>
 
 <style>
-  .recap { margin: 0 0 1.6em; padding: 1.1em 1.3em; background: #fbfaff;
-    border-left: 3px solid var(--gray); border-radius: 0 4px 4px 0; }
-  .recap p { margin: 0 0 .7em; }
-  .recap-note { margin: .4em 0 0; font-size: .8rem; }
-  .themes { margin: 0 0 1.4em; }
-  .themes dt { font-weight: 600; margin-top: .9em; }
-  .themes dt .n {
-    display: inline-block; margin-left: .4em; padding: 1px 8px;
-    background: var(--cream); border-radius: 10px;
-    font-size: .8rem; font-weight: 600; color: var(--navy);
-  }
-  .themes dd { margin: .2em 0 0; color: #3d3d46; }
-  .themes .theme-items { display: block; margin-top: .25em; font-size: .9rem; line-height: 1.7; }
-  .entry { padding: 1.1em 0; border-bottom: 1px solid #ececf2; }
-  .entry:last-of-type { border-bottom: 0; }
-  .entry h3 { font-size: 1.03rem; margin: 0 0 .35em; line-height: 1.4; }
-  .entry p { margin: 0 0 .4em; }
+  .nw-nav { display: flex; justify-content: space-between; gap: 1em; margin: 1.6em 0 .6em; }
+  .cite-box { margin: 1.6em 0; padding: .9em 1em; background: #FFF6EC; border-left: 3px solid #201868; font-size: .9rem; }
+  .cite-box code { display: block; margin-top: .3em; font-family: 'Poppins', sans-serif; font-weight: 600; color: #201868; }
 </style>

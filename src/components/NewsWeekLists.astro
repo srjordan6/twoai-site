@@ -1,0 +1,70 @@
+---
+/**
+ * The three lists of a news week: the headlines, vendor news, and When AI
+ * Goes Wrong. Every item links to its own page on this site; the teaser is
+ * the first two sentences of our summary, so the list earns the click and
+ * the page carries the rest.
+ */
+import type { NewsWeek } from '../lib/newsWeeks';
+
+interface Props { w: NewsWeek; limit?: number; headingLevel?: 2 | 3 }
+const { w, limit = 0, headingLevel = 2 } = Astro.props as Props;
+const cut = <T,>(a: T[]) => (limit > 0 ? a.slice(0, limit) : a);
+const H = headingLevel === 2 ? 'h2' : 'h3';
+const stories = cut(w.stories);
+const vendor = cut(w.vendor);
+const incidents = cut(w.incidents);
+---
+{stories.length > 0 && (
+  <section class="nw-sec">
+    <H>The headlines</H>
+    <ol class="nw-list">
+      {stories.map((s) => (
+        <li>
+          <a class="nw-t" href={s.href}>{s.title}</a>
+          <div class="meta-line">{s.date}{s.outlets ? ` · ${s.outlets} outlets` : ''}{s.views ? ` · ${s.views} views` : ''}</div>
+          {s.teaser && <p class="nw-sum">{s.teaser}</p>}
+        </li>
+      ))}
+    </ol>
+  </section>
+)}
+
+{vendor.length > 0 && (
+  <section class="nw-sec">
+    <H>Vendor news</H>
+    <ol class="nw-list">
+      {vendor.map((v) => (
+        <li>
+          <a class="nw-t" href={v.href}>{v.title}</a>
+          <div class="meta-line">{v.source}{v.date ? ` · ${v.date}` : ''}</div>
+          {v.teaser && <p class="nw-sum">{v.teaser}</p>}
+        </li>
+      ))}
+    </ol>
+  </section>
+)}
+
+{incidents.length > 0 && (
+  <section class="nw-sec">
+    <H>When AI goes wrong</H>
+    <ol class="nw-list">
+      {incidents.map((i) => (
+        <li>
+          <a class="nw-t" href={i.href}>{i.title}</a>
+          <div class="meta-line">{i.date}{i.outlets ? ` · ${i.outlets} ${i.outlets === 1 ? 'outlet' : 'outlets'}` : ''}{i.uid ? ` · AIID incident #${i.uid}` : ''}</div>
+          {i.teaser && <p class="nw-sum">{i.teaser}</p>}
+        </li>
+      ))}
+    </ol>
+  </section>
+)}
+
+<style>
+  .nw-sec { margin: 0 0 2em; }
+  .nw-list { padding-left: 1.3em; margin: 0; }
+  .nw-list li { margin: 0 0 1em; }
+  .nw-t { font-weight: 600; color: #201868; text-decoration: none; }
+  .nw-t:hover { color: #F07800; }
+  .nw-sum { margin: .3em 0 0; font-size: .95rem; line-height: 1.6; color: #2C2C2A; }
+</style>
