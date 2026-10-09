@@ -39,6 +39,17 @@ export function getStaticPaths() {
       paths.push({ params: { id: d.uid }, props: { sec: d } });
     }
   }
+  // THIS WEEK IN AI LAWS AND COMPLIANCE renders from the week files alone;
+  // its document carries only the name and blurb. When the pipeline has not
+  // written it yet (on 2026-10-09 the build stopped before it), the hub is
+  // built from these defaults rather than going missing.
+  if (!paths.some((p) => p.params.id === '8ec3f244')) {
+    paths.push({ params: { id: '8ec3f244' }, props: { sec: {
+      uid: '8ec3f244', page_uid: '8ec3f244', shape: 'law-week-hub', tax: 'this-week-in-ai-laws',
+      name: 'This Week in AI Laws and Compliance', parent_uid: '4d0aabb4', refresh_every_days: 1,
+      blurb: 'The week in AI law and compliance: state bills that changed status, Federal Register documents, and AI lawsuits with new docket activity, grouped by subject and computed from the record every day.',
+    } } });
+  }
   if (existsSync('content/security')) {
     for (const f of readdirSync('content/security')) {
       if (!f.endsWith('.json')) continue;
