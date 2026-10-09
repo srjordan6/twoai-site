@@ -8,17 +8,27 @@
 import Base from '../../layouts/Base.astro';
 import NewsWeekLists from '../../components/NewsWeekLists.astro';
 import { loadNewsWeeks, plural } from '../../lib/newsWeeks';
+import { loadWeeks } from '../../lib/weeks';
 import { EDITOR_PERSON } from '../../lib/editor';
 import { citeUID } from '../../lib/cite';
 
 export function getStaticPaths() {
   const weeks = loadNewsWeeks();
-  return weeks.map((w, i) => ({ params: { week: w.slug }, props: { w, newer: weeks[i - 1] || null, older: weeks[i + 1] || null } }));
+  const paths: any[] = weeks.map((w, i) => ({ params: { week: w.slug }, props: { w, newer: weeks[i - 1] || null, older: weeks[i + 1] || null } }));
+  // Before the split these addresses held the weekly law digest. A week with
+  // no news week of its own points to the digest's new home, so no published
+  // URL is dropped; once the pipeline writes the news week, it takes over.
+  const have = new Set(weeks.map((w) => w.slug));
+  for (const lw of loadWeeks()) {
+    if (lw.slug && !have.has(lw.slug)) paths.push({ params: { week: lw.slug }, props: { moved: lw.slug } });
+  }
+  return paths;
 }
-const { w, newer, older } = Astro.props;
-const lede = `${w.current ? `${w.label} so far` : w.label}, ${w.start} to ${w.end}: ${plural(w.counts.stories, 'headline story', 'headline stories')}, ${plural(w.counts.vendor, 'vendor announcement')} and ${plural(w.counts.incidents, 'logged AI harm')}.${w.stories[0] ? ` The week's lead: ${w.stories[0].title}.` : ''}`;
-const desc = lede.length <= 158 ? lede : `${lede.slice(0, 157).replace(/\s+\S*$/, '')}…`;
-const jsonld = JSON.stringify({
+const { w, newer, older, moved } = Astro.props as any;
+const movedTo = moved ? `/this-week-in-ai-laws/${moved}/` : '';
+const lede = moved ? '' : `${w.current ? `${w.label} so far` : w.label}, ${w.start} to ${w.end}: ${plural(w.counts.stories, 'headline story', 'headline stories')}, ${plural(w.counts.vendor, 'vendor announcement')} and ${plural(w.counts.incidents, 'logged AI harm')}.${w.stories[0] ? ` The week's lead: ${w.stories[0].title}.` : ''}`;
+const desc = moved ? `This Week in AI Laws and Compliance for ${moved} has moved.` : lede.length <= 158 ? lede : `${lede.slice(0, 157).replace(/\s+\S*$/, '')}…`;
+const jsonld = moved ? undefined : JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',
   name: `This Week in AI: ${w.label}`,
@@ -30,6 +40,14 @@ const jsonld = JSON.stringify({
 });
 const citeUid = citeUID(Astro.url.pathname, undefined);
 ---
+{moved ? (
+<Base title={`This Week in AI Laws and Compliance, ${moved}`} description={desc} current="/this-week-in-ai/" noindex={true}
+  canonicalOverride={`https://theworldofai.org${movedTo}`} redirect={movedTo}>
+  <h1>This week's law digest has moved</h1>
+  <p class="answer">The law and compliance digest for {moved} is now at
+    {' '}<a href={movedTo}>This Week in AI Laws and Compliance</a>.</p>
+</Base>
+) : (
 <Base title={`This Week in AI: ${w.label} (${w.start} to ${w.end})`} description={desc} current="/this-week-in-ai/" jsonld={jsonld} doc={w}>
   <p class="meta-line"><a href="/this-week-in-ai/">This Week in AI</a> &middot; {w.current ? 'this week' : 'archive'}</p>
   <h1>This Week in AI: {w.label}</h1>
@@ -50,6 +68,7 @@ const citeUid = citeUID(Astro.url.pathname, undefined);
   <div class="cite-box">Cite this page: <code>"This Week in AI: {w.label}." The World of AI,
     theworldofai.org/this-week-in-ai/{w.slug}/.{w.generated ? ` Verified ${w.generated}.` : ''}{' '}UID {citeUid}.</code></div>
 </Base>
+)}
 
 <style>
   .nw-nav { display: flex; justify-content: space-between; gap: 1em; margin: 1.6em 0 .6em; }
