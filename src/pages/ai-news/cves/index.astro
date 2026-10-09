@@ -1,8 +1,10 @@
 ---
 /**
- * The AI CVE tracker: every CVE that names an AI product, tool, model, MCP
- * server or framework the site covers, newest first. Nothing is deleted. The
- * ten newest also appear at the foot of /ai-news/; the rest live only here.
+ * The AI CVE tracker: the ten newest CVEs that name an AI product, tool,
+ * model, MCP server or framework the site covers (Stephen, 2026-10-09: show
+ * the last ten, first in first out, archive the rest, delete nothing). Every
+ * CVE stays at /ai-news/cves/archive/, keeps its own page, and stays in the
+ * index the ask box answers from.
  *
  * Stephen, 2026-10-01. Sources: cve.org is the record of truth, NVD supplies
  * the score and affected products, CISA KEV marks the exploited ones.
@@ -17,19 +19,8 @@ const critical = bySev('CRITICAL');
 const high = bySev('HIGH');
 const products: Record<string, number> = {};
 for (const c of cves) if (c.product) products[c.product] = (products[c.product] || 0) + 1;
-// A TO Z BY PRODUCT. Stephen, 2026-10-03: keep the list newest first, and
-// add an A to Z indexer after its heading. CVE ids all start with "CVE", so
-// the letters index the products: each letter jumps to that letter's
-// products in the section after the list, where every product opens to its
-// CVEs, newest first. Static HTML, no script.
 const byProduct: Record<string, typeof cves> = {};
 for (const c of cves) (byProduct[c.product || 'Product not named'] ||= []).push(c);
-const sortKey = (n: string) => String(n || '').trim().replace(/^the\s+/i, '').toLowerCase();
-const letterOf = (n: string) => { const ch = sortKey(n).charAt(0).toUpperCase(); return ch >= 'A' && ch <= 'Z' ? ch : '0-9'; };
-const productNames = Object.keys(byProduct).sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
-const azGroups: Record<string, string[]> = {};
-for (const p of productNames) (azGroups[letterOf(p)] ||= []).push(p);
-const azLetters = [...(azGroups['0-9'] ? ['0-9'] : []), ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')];
 // PRODUCT LINKS. Stephen, 2026-10-03: the most-named products should link
 // to the products and to their CVEs. A product links to the page its CVEs
 // are matched to when that page carries the product's own name (a tool page
@@ -55,7 +46,7 @@ for (const p of Object.keys(byProduct)) {
   if (best) productHref[p] = best;
 }
 const prodId = (p: string) => `prod-${String(p).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
-const azAnchor = (l: string) => (l === '0-9' ? 'p-0-9' : `p-${l.toLowerCase()}`);
+const latest = cves.slice(0, 10);
 const topProducts = Object.entries(products).sort((a, b) => b[1] - a[1]).slice(0, 12);
 // Row 549: on page one (position 5.3, 593 impressions in a week) with no
 // click, so the title and description say what a searcher gets, with the
@@ -77,8 +68,9 @@ const citeUid = citeUID(Astro.url.pathname, undefined);
   <h1>AI CVE tracker</h1>
   <p class="answer"><b>{cves.length}</b> CVEs on record that name an AI product, tool, model, agent framework,
     MCP server or AI library the site covers: <b>{critical}</b> rated critical, <b>{high}</b> high, and
-    <b>{d.kev}</b> on CISA's list of vulnerabilities exploited in the wild. Newest first. A CVE
-    leaves the ten shown on the AI News page as newer ones arrive, but never leaves this list.</p>
+    <b>{d.kev}</b> on CISA's list of vulnerabilities exploited in the wild. The ten newest are
+    below; as newer ones arrive the oldest move to the <a href="/ai-news/cves/archive/">archive</a>,
+    where every CVE stays, each with its own page. Nothing is deleted.</p>
   <PinnedNews pins={(d as any).pinned_news} />
   <p class="meta-line">Last verified: <time datetime={d.generated}>{d.generated}</time></p>
 
@@ -93,19 +85,13 @@ const citeUid = citeUID(Astro.url.pathname, undefined);
   {topProducts.length > 0 && (
     <>
       <h2>Most named products</h2>
-      <p class="meta-line top-products">{topProducts.map(([p, n], i) => <>{i > 0 && ' · '}{productHref[p] ? <a href={productHref[p]}>{p}</a> : p} (<a href={`#${prodId(p)}`} title={`${p} CVEs`}>{n}</a>)</>)}</p>
+      <p class="meta-line top-products">{topProducts.map(([p, n], i) => <>{i > 0 && ' · '}{productHref[p] ? <a href={productHref[p]}>{p}</a> : p} (<a href={`/ai-news/cves/archive/#${prodId(p)}`} title={`${p} CVEs`}>{n}</a>)</>)}</p>
     </>
   )}
 
-  <h2>All AI CVEs, newest first</h2>
-  <nav class="az-index" id="az-index" aria-label="AI CVEs by product, A to Z">
-    <span class="az-label">Products A to Z</span>
-    {azLetters.map((l) => (azGroups[l]
-      ? <a href={`#${azAnchor(l)}`}>{l}</a>
-      : <span class="az-empty" aria-hidden="true">{l}</span>))}
-  </nav>
+  <h2>Latest 10 CVEs</h2>
   <ul class="cve-list">
-    {cves.map((c) => (
+    {latest.map((c) => (
       <li>
         <a href={`/ai-news/cves/${c.cve_id}/`}>{c.headline ? c.headline : <code>{c.cve_id}</code>}</a>
         {c.headline && <code class="cve-id">{c.cve_id}</code>}
@@ -120,26 +106,7 @@ const citeUid = citeUID(Astro.url.pathname, undefined);
       </li>
     ))}
   </ul>
-
-  <h2 id="by-product">AI CVEs by product, A to Z</h2>
-  <p class="meta-line">{productNames.length} products. Open a product to see its CVEs, newest first.</p>
-  {azLetters.filter((l) => azGroups[l]).map((l) => (
-    <section class="az-group">
-      <h3 id={azAnchor(l)}>{l}</h3>
-      {azGroups[l].map((p) => (
-        <details class="az-product">
-          <summary>{p} <span class="az-n">{byProduct[p].length}</span></summary>
-          {productHref[p] && <p class="az-prodlink"><a href={productHref[p]}>{p} on this site</a></p>}
-          <ul id={prodId(p)}>
-            {byProduct[p].map((c) => (
-              <li><a href={`/ai-news/cves/${c.cve_id}/`}>{c.headline || c.cve_id}</a> <span class="cve-id">{c.cve_id}</span> <span class="cve-date">{c.published}</span></li>
-            ))}
-          </ul>
-        </details>
-      ))}
-      <p class="az-top"><a href="#az-index">Back to top</a></p>
-    </section>
-  ))}
+  <p><a href="/ai-news/cves/archive/">All {cves.length} AI CVEs in the archive, newest first and by product &rarr;</a></p>
 
   <div class="cite-box">Cite this page: <code>"AI CVE tracker." The World of AI,
     theworldofai.org/ai-news/cves/. Retrieved {d.generated}.{' '}UID {citeUid}.</code></div>

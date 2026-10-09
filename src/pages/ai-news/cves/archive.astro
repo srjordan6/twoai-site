@@ -1,0 +1,87 @@
+---
+/**
+ * The AI CVE archive (Stephen, 2026-10-09): the tracker page shows the ten
+ * newest, first in first out; every CVE is kept here, newest first, and by
+ * product, each linking to its own page. Nothing is deleted, and every CVE
+ * page stays in the index the site's ask box answers from.
+ */
+import Base from '../../../layouts/Base.astro';
+import { cveList, severityClass } from '../../../lib/cves';
+import { citeUID } from '../../../lib/cite';
+
+const d = cveList();
+const cves = d.cves;
+const byProduct: Record<string, typeof cves> = {};
+for (const c of cves) (byProduct[c.product || 'Product not named'] ||= []).push(c);
+const sortKey = (n: string) => String(n || '').trim().replace(/^the\s+/i, '').toLowerCase();
+const productNames = Object.keys(byProduct).sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+const prodId = (p: string) => `prod-${String(p).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
+const desc = `Every AI CVE on record, ${cves.length} in all, newest first and by product: vulnerabilities in AI tools, models, agents and MCP servers, each with its own page.`;
+const jsonld = JSON.stringify({
+  '@context': 'https://schema.org', '@type': 'CollectionPage',
+  name: 'AI CVE archive', description: desc, dateModified: d.generated,
+  url: 'https://theworldofai.org/ai-news/cves/archive/',
+  isPartOf: { '@type': 'CollectionPage', name: 'AI CVE tracker', url: 'https://theworldofai.org/ai-news/cves/' },
+});
+const citeUid = citeUID(Astro.url.pathname, undefined);
+---
+<Base title={`AI CVE Archive: All ${cves.length} AI Vulnerabilities, Newest First`} description={desc} current="/ai-news/" jsonld={jsonld}>
+  <p class="meta-line"><a href="/ai-news/">AI News</a> · <a href="/ai-news/cves/">AI CVE tracker</a> · Archive</p>
+  <h1>AI CVE archive</h1>
+  <p class="answer">All <b>{cves.length}</b> CVEs the tracker has recorded in AI tools, models, agents,
+    MCP servers and AI libraries, newest first. The <a href="/ai-news/cves/">tracker</a> shows the ten
+    newest; when a newer one arrives the oldest moves here. Nothing is deleted.</p>
+  <p class="meta-line">Last verified: <time datetime={d.generated}>{d.generated}</time> · Jump to
+    {' '}<a href="#by-product">CVEs by product</a></p>
+
+  <h2>All AI CVEs, newest first</h2>
+  <ul class="cve-list">
+    {cves.map((c) => (
+      <li>
+        <a href={`/ai-news/cves/${c.cve_id}/`}>{c.headline ? c.headline : <code>{c.cve_id}</code>}</a>
+        {c.headline && <code class="cve-id">{c.cve_id}</code>}
+        {c.cvss_severity && <span class={`sev ${severityClass(c.cvss_severity)}`}>{c.cvss_severity}{c.cvss_score != null && <> {c.cvss_score}</>}</span>}
+        {c.kev && <span class="kev">Exploited in the wild</span>}
+        <span class="cve-date">{c.published}</span>
+        {c.product && <span class="cve-prod">{c.product}</span>}
+      </li>
+    ))}
+  </ul>
+
+  <h2 id="by-product">AI CVEs by product</h2>
+  <p class="meta-line">{productNames.length} products. Open a product to see its CVEs, newest first.</p>
+  {productNames.map((p) => (
+    <details class="az-product">
+      <summary>{p} <span class="az-n">{byProduct[p].length}</span></summary>
+      <ul id={prodId(p)}>
+        {byProduct[p].map((c) => (
+          <li><a href={`/ai-news/cves/${c.cve_id}/`}>{c.headline || c.cve_id}</a> <span class="cve-id">{c.cve_id}</span> <span class="cve-date">{c.published}</span></li>
+        ))}
+      </ul>
+    </details>
+  ))}
+
+  <div class="cite-box">Cite this page: <code>"AI CVE archive." The World of AI,
+    theworldofai.org/ai-news/cves/archive/. Retrieved {d.generated}.{' '}UID {citeUid}.</code></div>
+</Base>
+
+<style>
+  code { font-family: 'Poppins', sans-serif; font-weight: 600; color: #201868; }
+  .cve-list { list-style: none; padding: 0; margin: .6em 0 1em; }
+  .cve-list li { padding: .5em 0; border-bottom: 1px solid rgba(122, 138, 158, 0.25); font-size: 14.5px; line-height: 1.6; }
+  .cve-list .cve-id, .az-product .cve-id { font-weight: 400; color: #7A8A9E; margin-left: .5em; font-size: 13px; }
+  .cve-date, .cve-prod { color: #7A8A9E; margin-left: .5em; font-size: 13px; }
+  .sev { display: inline-block; margin-left: .5em; padding: 0 .45em; border-radius: 3px; font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #fff; background: #7A8A9E; }
+  .sev-critical { background: #F07800; }
+  .sev-high { background: #201868; }
+  .sev-medium { background: #7A8A9E; }
+  .sev-low { background: #FFFFFF; color: #7A8A9E; box-shadow: inset 0 0 0 1px #7A8A9E; }
+  .kev { display: inline-block; margin-left: .5em; padding: 0 .45em; border-radius: 3px; font-size: 11.5px; font-weight: 700; color: #F07800; border: 1px solid #F07800; }
+  .az-product { border-bottom: 1px solid rgba(122, 138, 158, 0.25); padding: .35em 0; }
+  .az-product summary { cursor: pointer; color: #201868; font-weight: 600; }
+  .az-n { display: inline-block; margin-left: .4em; padding: 0 .5em; border-radius: 10px; background: #FFF6EC; color: #201868; font-size: 12px; font-weight: 600; }
+  .az-product ul { list-style: none; padding: 0 0 0 1em; margin: .4em 0; scroll-margin-top: 90px; }
+  .az-product li { padding: .2em 0; font-size: 14px; }
+  .cite-box { margin: 1.6em 0; padding: .9em 1em; background: #FFF6EC; border-left: 3px solid #201868; font-size: .9rem; }
+  .cite-box code { display: block; margin-top: .3em; }
+</style>
