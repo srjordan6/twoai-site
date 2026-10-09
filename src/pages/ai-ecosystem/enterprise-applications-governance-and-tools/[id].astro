@@ -112,6 +112,17 @@ const yrMax = yrs.length ? Math.max(...yrs) : 0;
 
 const clamp158 = (s) => (s.length <= 158 ? s : `${s.slice(0, 157).replace(/\s+\S*$/, '')}…`);
 const isCases = !!sec && sec.shape === 'case-studies';
+// CASE STUDIES WE WRITE OURSELVES (Stephen, 2026-10-09: the ARTEX case study
+// belongs in AI Security and Risk and on AI Case Studies, not in the
+// compliance library). Each is a security page document with shape
+// security-case, rendered below at its own uid, and listed at the top of the
+// security hub and of the case studies index.
+const ownCases: any[] = existsSync('content/security')
+  ? readdirSync('content/security').filter((f) => f.endsWith('.json'))
+      .map((f) => { try { return JSON.parse(readFileSync(`content/security/${f}`, 'utf8')); } catch { return null; } })
+      .filter((d) => d && d.shape === 'security-case' && d.uid)
+      .sort((a, b) => String(b.event_date || b.generated || '').localeCompare(String(a.event_date || a.generated || '')))
+  : [];
 // COVERAGE ITEMS AND INSURANCE HUBS. Stephen, 2026-09-16: every one of the
 // 100 AI Insurance items gets its own page, and each carries two fixed
 // sections, What the Underwriter Wants to Know and What the Insured Needs
@@ -567,6 +578,16 @@ const citeUid = citeUID(Astro.url.pathname, art?.uid ?? sec?.uid ?? law?.uid ?? 
       <h1>{secu.name}</h1>
       <p class="answer">{secu.blurb}</p>
       <PinnedNews pins={secu.pinned_news} />
+      {ownCases.length > 0 && (
+        <section class="own-cases">
+          <h2>Case studies</h2>
+          <ul class="sections">
+            {ownCases.map((c) => (
+              <li><a href={`${BASE}/${c.uid}/`}>{c.name}</a>{c.teaser && <span class="meta-line"> {c.teaser}</span>}</li>
+            ))}
+          </ul>
+        </section>
+      )}
       <p class="meta-line">Last verified: {secu.generated} · The threat picture first, MITRE
         ATLAS, the OWASP Top 10 for LLM Applications and AVID, then {secu.topic_count} topics
         organized under the six domains of a security program. The same risk reads differently to
@@ -764,7 +785,20 @@ const citeUid = citeUID(Astro.url.pathname, art?.uid ?? sec?.uid ?? law?.uid ?? 
     </>
   )}
 
-  {secu && secu.shape !== 'security-hub' && secu.shape !== 'security-domain' && (
+  {secu && secu.shape === 'security-case' && (
+    <>
+      <p class="meta-line"><a href={`${BASE}/0ff57218/`}>AI Security and Risk</a> · <a href={`${BASE}/eebf0091/`}>AI Case Studies</a> · Case study</p>
+      <h1>{secu.name}</h1>
+      {secu.subtitle && <p class="meta-line">{secu.subtitle}</p>}
+      <p class="answer">{secu.blurb}</p>
+      <p class="meta-line">Written by The World of AI · editor <a href="/stephen-jordan/" rel="author">Stephen Jordan</a> · <time datetime={secu.generated}>{secu.generated}</time>{secu.story_uid && <> · News coverage: <a href={`/ai-news/${secu.story_uid}/`}>{secu.story_headline || 'the story'}</a></>}</p>
+      <div class="case-body" set:html={secu.body_html} />
+      <div class="cite-box">Cite this page: <code>"{secu.name}." The World of AI,
+        theworldofai.org{BASE}/{secu.uid}/. Retrieved {secu.generated}.{' '}UID {citeUid}.</code></div>
+    </>
+  )}
+
+  {secu && secu.shape !== 'security-hub' && secu.shape !== 'security-domain' && secu.shape !== 'security-case' && (
     <>
       <h1>{secu.name}</h1>
       <p class="answer">{secu.blurb}</p>
@@ -1321,6 +1355,22 @@ const citeUid = citeUID(Astro.url.pathname, art?.uid ?? sec?.uid ?? law?.uid ?? 
         organisation actually deploying AI. Product announcements live on
         {' '}<a href="/ai-news/vendor/">vendor news</a>.</p>
 
+      {ownCases.length > 0 && (
+        <section class="own-cases">
+          <h2>Case studies by The World of AI</h2>
+          <p class="meta-line">Written and sourced here, from the primary reports.</p>
+          <ol class="cs-list">
+            {ownCases.map((c) => (
+              <li>
+                <a href={`${BASE}/${c.uid}/`}>{c.name}</a>
+                <div class="meta-line">The World of AI{c.generated ? ` · ${c.generated}` : ''} · <a href={`${BASE}/0ff57218/`}>AI Security and Risk</a></div>
+                {c.teaser && <p class="cs-sum">{c.teaser}</p>}
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
       <section>
         <h2>Where these come from</h2>
         <table class="pay">
@@ -1370,6 +1420,10 @@ const citeUid = citeUID(Astro.url.pathname, art?.uid ?? sec?.uid ?? law?.uid ?? 
 </Base>
 
 <style>
+  .case-body table { width: 100%; border-collapse: collapse; margin: 0 0 1.2em; }
+  .case-body th, .case-body td { text-align: left; vertical-align: top; padding: .45em .6em; border-bottom: 1px solid #ececf2; }
+  .case-body h2 { margin-top: 1.6em; }
+  .own-cases { margin: 0 0 1.6em; }
   /* A point title that leads to our own page. Navy at rest, orange under the
      pointer, no underline at rest so a list of ten reads as headings and not
      as a column of links. Stephen, 2026-09-18. */
