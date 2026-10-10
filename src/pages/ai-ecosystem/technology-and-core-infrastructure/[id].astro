@@ -225,6 +225,18 @@ for (const m of famMembers) {
   const pg = m.page || memberPages[m.id];
   if (pg) { pageByName[String(m.name).toLowerCase()] = pg; pageByName[famShort(m.name).toLowerCase()] = pg; }
 }
+// A developer's line name matches a catalog version when the names agree, or
+// the version adds only a size or a date to it ("Mistral Small 3.2" is
+// "Mistral Small 3.2 24B"; "Mistral Large 3" is "Mistral Large 3 2512").
+const linePage = (name: string): string | null => {
+  const n = String(name || '').toLowerCase().trim();
+  if (!n) return null;
+  if (pageByName[n]) return pageByName[n];
+  for (const [k, v] of Object.entries(pageByName)) {
+    if (k.startsWith(n + ' ') && /^(\d+(\.\d+)?b|\d{4})$/i.test(k.slice(n.length).trim())) return v;
+  }
+  return null;
+};
 const memberHref = (m: any): string | null =>
   m?.page || memberPages[m?.id] || pageByName[String(m?.name || '').toLowerCase()] || pageByName[famShort(m?.name).toLowerCase()] || null;
 const modelSibs: any[] = isModel && Array.isArray(sec.siblings) ? sec.siblings : [];
@@ -923,14 +935,15 @@ const citeUid = citeUID(Astro.url.pathname, sec.uid);
         <>
           <h2>Model lines from the developer</h2>
           <p class="meta-line">Every model line named on {famWho}'s own website, including lines no marketplace sells,
-            with the date the developer gives where it gives one. Each links to the page it was read from.</p>
+            with the date the developer gives where it gives one. A line we track links to its own page here; the
+            Read from column names the developer page it came from.</p>
           <div class="fam-scroll">
             <table class="pay">
               <thead><tr><th>Line</th><th>Modality</th><th>Announced</th><th>Read from</th></tr></thead>
               <tbody>
                 {famDevLines.map((l: any) => (
                   <tr>
-                    <td class="fam-ver">{pageByName[String(l.name || '').toLowerCase()] ? <a href={pageByName[String(l.name).toLowerCase()]}>{l.name}</a> : <a href={l.url} rel="noopener">{l.name}</a>}</td>
+                    <td class="fam-ver">{linePage(l.name) ? <a href={linePage(l.name)}>{l.name}</a> : l.name}</td>
                     <td>{l.modality || 'not stated'}</td>
                     <td class="nw">{l.announced || 'not stated'}</td>
                     <td>{famArr(l.sources).slice(0, 2).map((s: string, i: number) => <>{i > 0 && ', '}<a href={s} rel="noopener">{famPageShort(s)}</a></>)}</td>
